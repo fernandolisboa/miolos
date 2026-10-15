@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-07-31
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — the root barrel's shared substrate gains `normalizeWord`, so the crossword board reaches no Termo module.
+**Superseded in part by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — Termo has three subpaths: `./termo` (engine and dictionary), `./termo-answers` (the answer list, server and tests only) and `./termo-free` (the free pool).
 
 ## Context
 

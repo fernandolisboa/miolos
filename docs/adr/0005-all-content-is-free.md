@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-07-29
 **Depends on:** [ADR-0001](./0001-web-is-the-launch-platform.md)
 **Supersedes:** two lines in [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) — *"arquivo histórico/temas/stats avançadas são o inventário premium futuro"* and the launch cut *"sem modo livre"*.
+**Superseded in part by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — "Termo is excluded from free play initially": free play draws from a pool of crossword-lexicon words that are never a daily answer, so the answer list is not spent.
 
 ## Context
 

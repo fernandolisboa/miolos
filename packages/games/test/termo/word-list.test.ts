@@ -4,13 +4,16 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { renderTermoWordsModule } from "../../scripts/render-termo-words";
+import {
+  renderTermoAnswersModule,
+  renderTermoValidationModule,
+} from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
 import {
   isValidGuess,
-  TERMO_ANSWERS,
   TERMO_VALIDATION_WORDS,
 } from "../../src/termo/word-list";
+import { TERMO_ANSWERS } from "../../src/termo-answers";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(testDir, "..", "..", "..", "..");
@@ -116,17 +119,20 @@ describe("termo word-list harness (ADR-0015)", () => {
     }
   });
 
-  it("words.generated.ts is byte-identical to the renderer output from content/termo", () => {
+  it("words.generated.ts and answers.generated.ts are byte-identical to the renderer output from content/termo", () => {
     const answersCsv = readFileSync(join(contentDir, "answers.csv"), "utf8");
     const validationTxt = readFileSync(
       join(contentDir, "validation.txt"),
       "utf8",
     );
-    const onDisk = readFileSync(
-      join(gamesDir, "src", "termo", "words.generated.ts"),
-      "utf8",
+    const onDisk = (...path: string[]) =>
+      readFileSync(join(gamesDir, "src", ...path), "utf8");
+    expect(onDisk("termo", "words.generated.ts")).toBe(
+      renderTermoValidationModule(validationTxt),
     );
-    expect(onDisk).toBe(renderTermoWordsModule(answersCsv, validationTxt));
+    expect(onDisk("termo-answers", "answers.generated.ts")).toBe(
+      renderTermoAnswersModule(answersCsv),
+    );
   });
 
   it("TERMO_ANSWERS preserves answers.csv row order", () => {

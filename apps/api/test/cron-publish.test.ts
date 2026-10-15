@@ -24,7 +24,7 @@ import { validateCrossword } from "@miolos/games/crossword";
 import { validateNonogram } from "@miolos/games/nonogram";
 import { validateQueens } from "@miolos/games/queens";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { NextRequest } from "next/server";
 import {
   afterAll,

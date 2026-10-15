@@ -1,4 +1,3 @@
-import type { DailyTermoResponse } from "@miolos/core";
 import {
   deriveBoardStatus,
   isValidGuess,
@@ -19,9 +18,9 @@ const EMPTY_DRAFT: readonly string[] = Array.from(
   () => "",
 );
 
-export function initTermoPlayState(daily: DailyTermoResponse): TermoPlayState {
+export function initTermoPlayState(date: string): TermoPlayState {
   return {
-    date: daily.date,
+    date,
     guesses: [],
     draft: EMPTY_DRAFT,
     cursor: 0,

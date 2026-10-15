@@ -781,6 +781,42 @@ describe("the crossword lexicon wall (ADR-0088)", () => {
   });
 });
 
+describe("the Termo answer-list wall (#333, ADR-0114)", () => {
+  it("T-LINT-S70: @miolos/games/termo-answers fails lint in all apps/web source, daily and free paths, static and dynamic; a test may import it statically", async () => {
+    const paths = [
+      SOURCE_PATH,
+      APP_PATH,
+      "apps/web/src/termo/eslint-probe.ts",
+      "apps/web/app/termo/eslint-probe.ts",
+      "apps/web/src/free-play/eslint-probe.ts",
+      "apps/web/src/free-play/use-free-crossword.ts",
+      "apps/web/app/modo-livre/termo/page.tsx",
+    ];
+    const staticImport = [
+      'import { TERMO_ANSWERS } from "@miolos/games/termo-answers";',
+      "",
+      "export const list = TERMO_ANSWERS;",
+      "",
+    ].join("\n");
+    const dynamicImport = [
+      "export const load = () =>",
+      '  import("@miolos/games/termo-answers");',
+      "",
+    ].join("\n");
+
+    for (const path of paths) {
+      expect
+        .soft(ruleIds(await lintProbe(path, staticImport)), path)
+        .toContain("no-restricted-imports");
+      expect
+        .soft(ruleIds(await lintProbe(path, dynamicImport)), path)
+        .toContain("no-restricted-syntax");
+    }
+
+    expect(wallHits(await lintProbe(TEST_PATH, staticImport))).toEqual([]);
+  });
+});
+
 describe("the no-session-replay wall (#33, ADR-0069 decision 1)", () => {
   it("T-LINT-S53: a replay-capable client is an import error in every tree, and the ban is not a substring heuristic", async () => {
     const bannedAt = [

@@ -19,12 +19,8 @@ import {
   type SudokuPuzzle,
   type Weekday,
 } from "@miolos/games/sudoku";
-import {
-  MAX_GUESSES,
-  normalizeWord,
-  TERMO_ANSWERS,
-  WORD_LENGTH,
-} from "@miolos/games/termo";
+import { MAX_GUESSES, normalizeWord, WORD_LENGTH } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {

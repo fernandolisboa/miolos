@@ -180,6 +180,33 @@
   color: var(--ink-2);
 }
 
+.boardRow {
+  --board-side: 200px;
+  width: var(--board-side);
+  margin-top: var(--space-6);
+}
+
+.wordLine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-6) 0 0;
+}
+
+.wordLead {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
 /* The painted picture (Nonogram only). One <svg>, one <path> — the
    conclusion's own recorded argument: no background, no border, no radius,
    no box-shadow, so nested-cards cannot fire. Terracotta on card paper is

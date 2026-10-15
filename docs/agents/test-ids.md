@@ -41,7 +41,9 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
 | `T-WEB` | `S711` | `S710` | `T-WEB-23` |
-| `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+| `T-LINT` | `S72` | `S71` | `T-LINT-10` |
+
+#333 (Termo in free play, ADR-0114) spent **`T-WEB-S700…S704`** — `S700` (`judgeFreeGuess`), `S701` (the free board judges with zero fetch), `S702` (`TermoFreeScreen`: the tag, the back link, the won and lost cards with the finished board, *Mais uma*), `S703` (the Termo view's `chrome`), `S704` (only `/modo-livre/termo` reaches the pool and, among free-play pages, the dictionary; no page reaches `termo-answers`) — and **`T-LINT-S70`** (`@miolos/games/termo-answers` red in all `apps/web` source, static and dynamic) and **`S71`** (the reused `termo/` modules clean in free play). `S705`, `S706` are **burned**. `S662…S699` are left to sibling branches; whatever none of them spends is burned. `T-WEB-S109`, `S111…S113`, `S174`, `S374`, `S482` and `T-LINT-S12`, `S64`, `S67` were re-aimed in place.
 
 #155 (the bundle check in CI) spent **`T-WEB-S710`** (`fanout-cap.test.ts`: exactly one gate step runs `pnpm --filter @miolos/web bundle-check`, after `pnpm build`, and a commented-out step does not count). `S680…S709` are other threads' live reservations, not free space (#330 part 2 spent or burned `S670…S679`, below).
 
@@ -140,13 +142,15 @@ and never reused** — its wall half became `T-WEB-S375`, its `next/link` half
 same claim, only the clean control moved to package specifiers, because a
 relative path into `packages/games/src` is now banned across `apps/web`.
 `S58`'s Termo leg is now covered twice — by the games-wide deep-path ban and by
-`**/termo/**` — so it reds only when both go; `T-LINT-S12` and `S64` still pin
-the free-play Termo group alone.
+`**/termo/**` — so it reds only when both go. Since #333, `T-LINT-S12` pins
+`@miolos/games/termo` (engine and dictionary) clean in free play with its deep
+path red, and `S64` pins the free-play Termo allow-list (below).
 
 - **`T-WEB-S374`** (`free-play-graph.test.ts`) — the value graph of every
   free-play file reaches no I/O module (beyond `localStorage` in
   `apps/web/src/settings/settings.ts`, ADR-0102) and nothing in `packages/db/src` or
-  `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
+  `packages/games/src/termo-answers` (since #333; it reaches the free pool and
+  none of the daily Termo modules); `termo-screen`'s graph lists exactly the five I/O
   modules, which pins the token list to the tree.
 - **`T-WEB-S375`** — every bare specifier any graph member writes, and the
   relative specifiers of its `apps/web` members, pass the real config at a free-play path, both wall rules read.
@@ -156,7 +160,9 @@ the free-play Termo group alone.
 - **`T-WEB-S378`** — no `.js`, `.jsx`, `.mjs` or `.cjs` file under `app/` or
   `src/`: one would escape `tsc` and the graph proof's entries.
 - **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form (segments and
-  `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
+  `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — since #333, `termo/` banned in free play
+  except the reused modules `T-LINT-S71` pins clean: the daily ones, a new one
+  and the bare directory (trailing slash too) red, static and dynamic;
   **`S65`** (`eslint-og-wall`) — `packages/games/src` banned by relative path.
 
 #206 cluster 7 reserved **`T-WEB-S369…S370`**, contiguous, and spent both:

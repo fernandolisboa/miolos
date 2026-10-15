@@ -114,16 +114,15 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(DAILY_PATH, source))).toEqual([]);
   });
 
-  it("T-LINT-S12: @miolos/games/termo is banned in every shape; @miolos/games/binairo is clean", async () => {
-    const bare = [
-      'import { TERMO_ANSWER_WORDS } from "@miolos/games/termo";',
+  it("T-LINT-S12: @miolos/games/termo, the engine and the dictionary, is clean in free play; its deep path stays banned; @miolos/games/binairo is clean", async () => {
+    const engine = [
+      'import { evaluateGuess } from "@miolos/games/termo";',
       "",
-      "export const list = TERMO_ANSWER_WORDS;",
+      "export const judge = evaluateGuess;",
       "",
     ].join("\n");
-    expect(ruleIds(await lintProbe(FREE_PATH, bare))).toContain(
-      "no-restricted-imports",
-    );
+    expect(wallHits(await lintProbe(FREE_PATH, engine))).toEqual([]);
+    expect(wallHits(await lintProbe(ROUTE_PATH, engine))).toEqual([]);
 
     const deep = [
       'import * as termo from "../../../packages/games/src/termo/words";',
@@ -133,15 +132,6 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     ].join("\n");
     expect(ruleIds(await lintProbe(FREE_PATH, deep))).toContain(
       "no-restricted-imports",
-    );
-
-    const dynamic = [
-      "export const load = () =>",
-      '  import("@miolos/games/termo");',
-      "",
-    ].join("\n");
-    expect(ruleIds(await lintProbe(FREE_PATH, dynamic))).toContain(
-      "no-restricted-syntax",
     );
 
     const clean = [
@@ -972,19 +962,31 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     expect(wallHits(await lintProbe(FREE_PATH, clean))).toEqual([]);
   });
 
-  it("T-LINT-S64: every module under termo/ is banned from free play by directory, not by name", async () => {
-    const doors: [string, string][] = [
-      [FREE_PATH, 'import "../termo/termo-screen";\n'],
-      [FREE_PATH, 'import "../termo/use-termo-play";\n'],
-      [FREE_PATH, 'export const load = () => import("../termo/play-view");\n'],
-      [FREE_PATH, 'export const load = () => import("../Termo/play-view");\n'],
-      [ROUTE_PATH, 'import "../../../src/termo/termo-screen";\n'],
-      [ROUTE_PATH, 'import "../../../src/termo/use-termo-play";\n'],
+  it("T-LINT-S64: free play reaches termo/ only through the modules it reuses: the daily Termo modules and any new termo/ module red, static and dynamic", async () => {
+    const doors: [string, string][] = [];
+    for (const name of [
+      "termo-screen",
+      "use-termo-play",
+      "guess-client",
+      "termo-conclusion",
+      "new-thing",
+    ]) {
+      doors.push(
+        [FREE_PATH, `import "../termo/${name}";\n`],
+        [FREE_PATH, `export const load = () => import("../termo/${name}");\n`],
+        [ROUTE_PATH, `import "../../../src/termo/${name}";\n`],
+      );
+    }
+    doors.push(
+      [FREE_PATH, 'import "../termo";\n'],
+      [FREE_PATH, 'import "../termo/";\n'],
+      [FREE_PATH, 'export const load = () => import("../termo/");\n'],
       [
-        ROUTE_PATH,
-        'export const load = () => import("../../../src/termo/play-view");\n',
+        FREE_PATH,
+        'export const load = () => import("../Termo/termo-screen");\n',
       ],
-    ];
+      [FREE_PATH, 'import "../Termo/termo-screen";\n'],
+    );
     for (const [path, source] of doors) {
       expect
         .soft(wallHits(await lintProbe(path, source)), `${source} @ ${path}`)
@@ -1001,7 +1003,28 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     ).toEqual([]);
   });
 
-  it("T-LINT-S67: use-free-crossword.ts alone may import @miolos/games/crossword statically; a dynamic import, the sync module and Termo stay red there", async () => {
+  it("T-LINT-S71: the reused termo/ modules lint clean from free play", async () => {
+    for (const name of [
+      "board",
+      "keyboard",
+      "play-view",
+      "state",
+      "types",
+      "use-termo-board",
+      "termo-board.module.css",
+    ]) {
+      for (const [path, source] of [
+        [FREE_PATH, `import "../termo/${name}";\n`],
+        [ROUTE_PATH, `import "../../../src/termo/${name}";\n`],
+      ] as const) {
+        expect
+          .soft(wallHits(await lintProbe(path, source)), `${source} @ ${path}`)
+          .toEqual([]);
+      }
+    }
+  });
+
+  it("T-LINT-S67: use-free-crossword.ts alone may import @miolos/games/crossword statically; a dynamic import, the sync module, the daily Termo and the answer list stay red there", async () => {
     const exempt = "apps/web/src/free-play/use-free-crossword.ts";
 
     expect(
@@ -1020,7 +1043,11 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         ),
       ),
     ).toContain("no-restricted-syntax");
-    for (const door of ["../play/sync", "@miolos/games/termo"]) {
+    for (const door of [
+      "../play/sync",
+      "../termo/termo-screen",
+      "@miolos/games/termo-answers",
+    ]) {
       expect
         .soft(ruleIds(await lintProbe(exempt, `import "${door}";\n`)), door)
         .toContain("no-restricted-imports");

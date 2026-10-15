@@ -13,6 +13,28 @@ which word is any given day's answer is a server-side seeded choice
 ([ADR-0010](../../docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md)),
 exactly as with the grid-game generators.
 
+## Generated modules and the free pool
+
+`pnpm --filter @miolos/games generate:termo` renders three modules:
+`validation.txt` into `packages/games/src/termo/words.generated.ts`,
+`answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`,
+and the **free pool** into `packages/games/src/termo-free/pool.generated.ts`.
+The free pool is what Termo free play draws from: the five-letter words of
+`content/crossword/lexicon.tsv` that are in `validation.txt` and are neither
+an answer nor in `reserve.txt` — 2,187 words
+([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
+**Run `generate:termo` after editing `answers.csv`, `reserve.txt`,
+`validation.txt` or the crossword lexicon**, then `pnpm test --force`: a
+staleness test fails when a generated module and its sources disagree.
+
+`reserve.txt` holds the curated picks of `select_answers.py` that did not make
+`answers.csv`, one normalized word per line, sorted. They stay out of the free
+pool so a client comparing the public lists never narrows the unpublished
+answers below them. **An answer extension moves words from `reserve.txt` into
+`answers.csv`**; when the reserve floor test fails, add new reserve words
+first. A published answer is never deleted: re-curation moves it to
+`reserve.txt`, or regeneration would put it back in the pool.
+
 ## Deliverables
 
 | File | Contents |

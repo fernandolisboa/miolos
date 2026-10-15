@@ -9,11 +9,10 @@ import { isShortcut } from "../play/grid-selection";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
-import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
 import { Keyboard, KeyboardSkeleton } from "./keyboard";
 import styles from "./termo-board.module.css";
-import type { TermoPlay } from "./use-termo-play";
+import type { TermoChrome, TermoPlay } from "./types";
 
 const ACCENT = accentVars("termo");
 
@@ -26,12 +25,70 @@ const PAGE_KEYS = new Set(["Home", "End"]);
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
 
+const DAILY_CHROME: TermoChrome = {
+  back: {
+    href: routes.home,
+    label: messages.play.back,
+    ariaLabel: messages.play.backAria,
+  },
+};
+
+function TermoHeading({
+  chrome,
+  date,
+  progress,
+}: {
+  readonly chrome: TermoChrome;
+  readonly date: string;
+  readonly progress: string | null;
+}) {
+  const copy = messages.games.termo.play;
+
+  return (
+    <>
+      <header className={screen.topBar}>
+        <Link
+          className={screen.back}
+          href={chrome.back.href}
+          aria-label={chrome.back.ariaLabel}
+        >
+          {chrome.back.label}
+        </Link>
+        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
+        <span className={screen.topDate}>
+          {chrome.topTag ?? formatLongDate(date)}
+        </span>
+        {progress === null ? (
+          <span aria-hidden className={screen.progressBar}>
+            {BLANK_READOUT}
+          </span>
+        ) : (
+          <span className={screen.progressBar}>{progress}</span>
+        )}
+      </header>
+
+      <div className={screen.titleBlock}>
+        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
+
+        <div className={screen.titleRow}>
+          <h1 className={screen.title}>{copy.title}</h1>
+        </div>
+        <p className={screen.rules}>{copy.rules}</p>
+        {chrome.note === undefined ? null : (
+          <p className={chrome.note.className}>{chrome.note.text}</p>
+        )}
+      </div>
+    </>
+  );
+}
+
 export function PlayView({
   play,
-  archive,
+  chrome = DAILY_CHROME,
 }: {
   readonly play: TermoPlay;
-  readonly archive?: ArchivePlayChrome;
+  readonly chrome?: TermoChrome;
 }) {
   const { state } = play;
   const copy = messages.games.termo.play;
@@ -77,34 +134,11 @@ export function PlayView({
       style={ACCENT}
       data-play-state="playing"
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={archive?.back.href ?? routes.home}
-          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
-        >
-          {archive?.back.label ?? messages.play.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>{formatLongDate(state.date)}</span>
-
-        <span className={screen.progressBar}>
-          {copy.progressShort(play.used, MAX_GUESSES)}
-        </span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-        {archive === undefined ? null : (
-          <p className={archive.note.className}>{archive.note.text}</p>
-        )}
-      </div>
+      <TermoHeading
+        chrome={chrome}
+        date={state.date}
+        progress={copy.progressShort(play.used, MAX_GUESSES)}
+      />
 
       <div className={screen.statsCard}>
         <div aria-hidden className={screen.tape} />
@@ -211,46 +245,18 @@ function pressKey(key: string, play: TermoPlay): boolean {
 
 export function PlaySkeleton({
   date,
-  archive,
+  chrome = DAILY_CHROME,
 }: {
   readonly date: string;
-  readonly archive?: ArchivePlayChrome;
+  readonly chrome?: TermoChrome;
 }) {
-  const copy = messages.games.termo.play;
-
   return (
     <main
       className={`${screen.page} ${styles.pageTermo}`}
       style={ACCENT}
       data-play-state="skeleton"
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={archive?.back.href ?? routes.home}
-          aria-label={archive?.back.ariaLabel ?? messages.play.backAria}
-        >
-          {archive?.back.label ?? messages.play.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>{formatLongDate(date)}</span>
-        <span aria-hidden className={screen.progressBar}>
-          {BLANK_READOUT}
-        </span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-        {archive === undefined ? null : (
-          <p className={archive.note.className}>{archive.note.text}</p>
-        )}
-      </div>
+      <TermoHeading chrome={chrome} date={date} progress={null} />
 
       <div aria-hidden className={screen.statsCard}>
         <div className={screen.tape} />

@@ -5,9 +5,10 @@ export const FREE_PLAY_GAMES = [
   "binairo",
   "sudoku",
   "nonogram",
+  "termo",
   "crossword",
   "queens",
-] as const satisfies readonly Exclude<Game, "termo">[];
+] as const satisfies readonly Game[];
 
 export type FreePlayGame = (typeof FREE_PLAY_GAMES)[number];
 

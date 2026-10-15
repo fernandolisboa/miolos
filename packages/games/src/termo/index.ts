@@ -15,9 +15,4 @@ export {
   MAX_GUESSES,
   type TermoBoardStatus,
 } from "./status";
-export {
-  isValidGuess,
-  TERMO_ANSWERS,
-  TERMO_VALIDATION_WORDS,
-  type TermoAnswer,
-} from "./word-list";
+export { isValidGuess, TERMO_VALIDATION_WORDS } from "./word-list";

@@ -1,47 +1,19 @@
 import type { DailyTermoResponse } from "@miolos/core";
-import { deriveKeyboardState, type KeyboardState } from "@miolos/games/termo";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect } from "react";
 
 import { recordHeader, type TermoPlayRecord } from "../play/play-record";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import { postGuesses } from "./guess-client";
-import { initTermoPlayState, termoPlayReducer } from "./state";
-import type { TermoPlayAction, TermoPlayState } from "./types";
-
-export interface TermoPlay {
-  readonly state: TermoPlayState;
-
-  readonly used: number;
-
-  readonly activeRow: number | null;
-
-  readonly heldRow: number | null;
-
-  readonly keyboardState: KeyboardState;
-
-  readonly unavailable: boolean;
-  readonly type: (letter: string) => void;
-  readonly erase: () => void;
-  readonly select: (slot: number) => void;
-  readonly submit: () => void;
-
-  readonly retry: () => void;
-}
+import { termoPlayReducer } from "./state";
+import type { TermoPlay, TermoPlayState, TermoVerdict } from "./types";
+import { useTermoBoard } from "./use-termo-board";
 
 export function useTermoPlay(
   daily: DailyTermoResponse,
   remotelyClaimed = false,
 ): TermoPlay {
-  const [state, dispatch] = useReducer(
-    termoPlayReducer,
-    daily,
-    initTermoPlayState,
-  );
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
+  const { play, dispatch } = useTermoBoard(daily.date, judgeOnServer);
+  const { state, retry } = play;
 
   usePlayLifecycle({
     game: "termo",
@@ -54,84 +26,6 @@ export function useTermoPlay(
     persistDeps: [state.guesses],
   });
 
-  const send = useCallback(async (armed: TermoPlayState) => {
-    const pending = armed.pending;
-    if (pending === null) {
-      return;
-    }
-
-    const words = [...armed.guesses.map((row) => row.guess), pending];
-    const outcome = await postGuesses(armed.date, words);
-
-    switch (outcome.kind) {
-      case "judged": {
-        const tiles = outcome.tiles.at(-1);
-        if (tiles === undefined || outcome.tiles.length !== words.length) {
-          console.error(
-            `a termo verdict carried ${String(outcome.tiles.length)} rows for ${String(words.length)} guesses; the turn is held`,
-          );
-
-          dispatch({ type: "held", reason: "server" });
-          return;
-        }
-        dispatch({
-          type: "judged",
-          guess: pending,
-          tiles,
-          status: outcome.status,
-          answer: outcome.answer,
-        });
-        return;
-      }
-      case "held":
-        dispatch({ type: "held", reason: outcome.reason });
-        return;
-      case "rejected":
-        dispatch({ type: "rejected", reason: outcome.reason });
-        return;
-      case "gone":
-        dispatch({ type: "gone" });
-        return;
-    }
-  }, []);
-
-  const arm = useCallback(
-    (action: Extract<TermoPlayAction, { type: "submit" | "retry" }>) => {
-      const current = stateRef.current;
-      const next = termoPlayReducer(current, action);
-      if (next === current) {
-        return;
-      }
-      stateRef.current = next;
-      dispatch(action);
-
-      if (next.pending !== null) {
-        void send(next);
-      }
-    },
-    [send],
-  );
-
-  const type = useCallback((letter: string) => {
-    dispatch({ type: "type", letter });
-  }, []);
-
-  const erase = useCallback(() => {
-    dispatch({ type: "erase" });
-  }, []);
-
-  const select = useCallback((slot: number) => {
-    dispatch({ type: "select", slot });
-  }, []);
-
-  const submit = useCallback(() => {
-    arm({ type: "submit" });
-  }, [arm]);
-
-  const retry = useCallback(() => {
-    arm({ type: "retry" });
-  }, [arm]);
-
   useEffect(() => {
     const onOnline = () => {
       retry();
@@ -142,26 +36,40 @@ export function useTermoPlay(
     };
   }, [retry]);
 
-  const keyboardState = useMemo(
-    () => deriveKeyboardState(state.guesses),
-    [state.guesses],
-  );
+  return play;
+}
 
-  const live = state.status === "playing";
+async function judgeOnServer(
+  armed: TermoPlayState,
+  pending: string,
+): Promise<TermoVerdict> {
+  const words = [...armed.guesses.map((row) => row.guess), pending];
+  const outcome = await postGuesses(armed.date, words);
 
-  return {
-    state,
-    used: state.guesses.length,
-    activeRow: live && state.pending === null ? state.guesses.length : null,
-    heldRow: state.pending === null ? null : state.guesses.length,
-    keyboardState,
-    unavailable: state.gone,
-    type,
-    erase,
-    select,
-    submit,
-    retry,
-  };
+  switch (outcome.kind) {
+    case "judged": {
+      const tiles = outcome.tiles.at(-1);
+      if (tiles === undefined || outcome.tiles.length !== words.length) {
+        console.error(
+          `a termo verdict carried ${String(outcome.tiles.length)} rows for ${String(words.length)} guesses; the turn is held`,
+        );
+        return { type: "held", reason: "server" };
+      }
+      return {
+        type: "judged",
+        guess: pending,
+        tiles,
+        status: outcome.status,
+        answer: outcome.answer,
+      };
+    }
+    case "held":
+      return { type: "held", reason: outcome.reason };
+    case "rejected":
+      return { type: "rejected", reason: outcome.reason };
+    case "gone":
+      return { type: "gone" };
+  }
 }
 
 function buildRecord(

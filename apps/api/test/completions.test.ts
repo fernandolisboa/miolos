@@ -24,7 +24,8 @@ import {
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateQueens } from "@miolos/games/queens";
 import { generateDailySudoku, type SudokuPuzzle } from "@miolos/games/sudoku";
-import { isValidGuess, TERMO_ANSWERS } from "@miolos/games/termo";
+import { isValidGuess } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { readFile } from "node:fs/promises";
 import { NextRequest } from "next/server";
 import {

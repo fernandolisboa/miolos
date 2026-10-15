@@ -15,6 +15,8 @@ const PER_ROUTE_BUDGET = {
 
   "/modo-livre/nonogram": 66 * 1024,
 
+  "/modo-livre/termo": 62 * 1024,
+
   "/modo-livre/cruzadinha": 664 * 1024,
 
   "/arquivo/[data]/termo": 76 * 1024,
@@ -31,6 +33,7 @@ const BUDGETED = [
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
   "/modo-livre/sudoku",
+  "/modo-livre/termo",
   "/modo-livre/cruzadinha",
   "/modo-livre/rainhas",
 
@@ -65,8 +68,6 @@ const FREE_PLAY_ROUTES = [
   "/modo-livre/rainhas",
 ];
 
-const LEXICON_ROUTE = "/modo-livre/cruzadinha";
-
 const budgetFor = (route) => PER_ROUTE_BUDGET[route] ?? MAX_DELTA_BYTES;
 
 const FORBIDDEN_EVERYWHERE = [
@@ -75,7 +76,18 @@ const FORBIDDEN_EVERYWHERE = [
   { marker: "época\\ncarne", reason: "adjacent Termo answers" },
 ];
 
-const LEXICON_MARKER = "Calculadora de bolinhas";
+const ROUTE_EXCLUSIVE_MARKERS = [
+  {
+    route: "/modo-livre/cruzadinha",
+    marker: "Calculadora de bolinhas",
+    reason: "the crossword lexicon ships only there (ADR-0088)",
+  },
+  {
+    route: "/modo-livre/termo",
+    marker: "ábaco\\nabade",
+    reason: "the Termo free pool ships only there (ADR-0114)",
+  },
+];
 
 const FORBIDDEN_DAILY_SCOPE = [
   "Escada",
@@ -322,41 +334,45 @@ for (const marker of EXPECTED_FREE_PLAY_SCOPE) {
   }
 }
 
-const lexiconEntry = stats.find((entry) => entry.route === LEXICON_ROUTE);
-const otherRouteChunks = new Set(
-  stats
-    .filter((entry) => entry.route !== LEXICON_ROUTE)
-    .flatMap((entry) => entry.firstLoadChunkPaths.map(normalize)),
-);
-const lexiconExclusive = new Set(
-  lexiconEntry.firstLoadChunkPaths
-    .map(normalize)
-    .filter((path) => !otherRouteChunks.has(path)),
-);
-const lexiconHits = (paths) =>
-  readAll(paths).filter((source) => source.includes(LEXICON_MARKER)).length;
-const lexiconOutside = lexiconHits(
-  allChunkPaths.filter((path) => !lexiconExclusive.has(path)),
-);
-const lexiconInside = lexiconHits([...lexiconExclusive]);
+for (const { route, marker, reason } of ROUTE_EXCLUSIVE_MARKERS) {
+  const entry = stats.find((current) => current.route === route);
+  if (entry === undefined) {
+    console.error(`\`${route}\` is missing from ${STATS}. Exiting 2.`);
+    process.exit(2);
+  }
+  const otherRouteChunks = new Set(
+    stats
+      .filter((current) => current.route !== route)
+      .flatMap((current) => current.firstLoadChunkPaths.map(normalize)),
+  );
+  const exclusive = new Set(
+    entry.firstLoadChunkPaths
+      .map(normalize)
+      .filter((path) => !otherRouteChunks.has(path)),
+  );
+  const hits = (paths) =>
+    readAll(paths).filter((source) => source.includes(marker)).length;
+  const outside = hits(allChunkPaths.filter((path) => !exclusive.has(path)));
+  const inside = hits([...exclusive]);
 
-if (lexiconOutside > 0) {
-  fail(
-    `\`${LEXICON_MARKER}\` appears in ${lexiconOutside} chunk(s) outside ` +
-      `${LEXICON_ROUTE}'s exclusive set; the crossword lexicon ships only there (ADR-0088).`,
-  );
-} else {
-  console.log(
-    `ok    \`${LEXICON_MARKER}\` absent from every chunk outside ${LEXICON_ROUTE}'s exclusive set`,
-  );
-}
-if (lexiconInside === 0) {
-  fail(
-    `\`${LEXICON_MARKER}\` appears in 0 of ${LEXICON_ROUTE}'s exclusive chunks — ` +
-      "the lexicon scan is looking at the wrong files, so its negative proves nothing.",
-  );
-} else {
-  console.log(
-    `ok    \`${LEXICON_MARKER}\` present in ${lexiconInside} of ${LEXICON_ROUTE}'s exclusive chunk(s)`,
-  );
+  if (outside > 0) {
+    fail(
+      `\`${marker}\` appears in ${outside} chunk(s) outside ${route}'s ` +
+        `exclusive set; ${reason}.`,
+    );
+  } else {
+    console.log(
+      `ok    \`${marker}\` absent from every chunk outside ${route}'s exclusive set`,
+    );
+  }
+  if (inside === 0) {
+    fail(
+      `\`${marker}\` appears in 0 of ${route}'s exclusive chunks — the ` +
+        "scan is looking at the wrong files, so its negative proves nothing.",
+    );
+  } else {
+    console.log(
+      `ok    \`${marker}\` present in ${inside} of ${route}'s exclusive chunk(s)`,
+    );
+  }
 }

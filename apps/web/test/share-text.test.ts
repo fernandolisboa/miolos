@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { TERMO_MAX_GUESSES } from "@miolos/core";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { describe, expect, it } from "vitest";
 
 import { formatElapsed, formatShortDate, messages } from "../src/i18n";

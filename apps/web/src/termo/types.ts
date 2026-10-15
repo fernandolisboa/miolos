@@ -1,6 +1,14 @@
-import type { TermoBoardStatus, TileStates } from "@miolos/games/termo";
+import type {
+  KeyboardState,
+  TermoBoardStatus,
+  TileStates,
+} from "@miolos/games/termo";
 
-import type { LifecycleAction, PlayCore } from "../play/types";
+import type {
+  ArchivePlayChrome,
+  LifecycleAction,
+  PlayCore,
+} from "../play/types";
 import type { HeldReason } from "./guess-client";
 
 export interface TermoJudgedRow {
@@ -41,3 +49,32 @@ export type TermoPlayAction =
       readonly status: TermoBoardStatus;
       readonly answer: string | undefined;
     };
+
+export type TermoVerdict = Extract<
+  TermoPlayAction,
+  { readonly type: "judged" | "held" | "rejected" | "gone" }
+>;
+
+export type TermoJudge = (
+  armed: TermoPlayState,
+  guess: string,
+) => TermoVerdict | Promise<TermoVerdict>;
+
+export interface TermoPlay {
+  readonly state: TermoPlayState;
+  readonly used: number;
+  readonly activeRow: number | null;
+  readonly heldRow: number | null;
+  readonly keyboardState: KeyboardState;
+  readonly unavailable: boolean;
+  readonly type: (letter: string) => void;
+  readonly erase: () => void;
+  readonly select: (slot: number) => void;
+  readonly submit: () => void;
+  readonly retry: () => void;
+}
+
+export type TermoChrome = Omit<ArchivePlayChrome, "note"> & {
+  readonly note?: ArchivePlayChrome["note"];
+  readonly topTag?: string;
+};

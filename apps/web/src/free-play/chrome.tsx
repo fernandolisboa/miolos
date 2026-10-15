@@ -1,21 +1,15 @@
 import type { ReactElement, ReactNode } from "react";
 
-import { messages, routes } from "../i18n";
+import { messages } from "../i18n";
 import {
   PlayScreenChrome,
   type ChromeGame,
-  type PlayChromeBack,
   type PlayChromeStat,
   type PlayChromeState,
 } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
+import { FREE_PLAY_BACK } from "./back";
 import { ChoicePicker, type FreePlayChoice } from "./choice-picker";
-
-const BACK: PlayChromeBack = {
-  href: routes.freePlay,
-  label: messages.freePlay.back,
-  ariaLabel: messages.freePlay.backToIndexAria,
-};
 
 function choiceStat<T extends string | number>(
   choice: FreePlayChoice<T>,
@@ -45,7 +39,7 @@ export function FreePlayChrome<T extends string | number>({
       game={game}
       pageModifier={pageModifier}
       state={state}
-      back={BACK}
+      back={FREE_PLAY_BACK}
       topDate={messages.freePlay.modeTag}
       note={null}
       clock="none"

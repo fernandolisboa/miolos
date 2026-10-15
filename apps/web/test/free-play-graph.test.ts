@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 import { ESLint } from "eslint";
@@ -21,7 +21,7 @@ const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
 const IO =
   /\bfetch\s*\(|\bsendBeacon\b|\b(?:EventSource|WebSocket|XMLHttpRequest)\b|\bserviceWorker\b|\b(?:localStorage|sessionStorage|indexedDB)\b|\bdocument\.cookie\b|["']use server["']|\bcaches\.|\bcookieStore\b|\bnavigator\.storage\b/;
-const WALLED_SOURCE = /^packages\/(?:db\/src|games\/src\/termo)\//;
+const WALLED_SOURCE = /^packages\/(?:db\/src|games\/src\/termo-answers)\//;
 
 function freePlayEntries(): readonly string[] {
   const found: string[] = [];
@@ -123,7 +123,7 @@ const entries = freePlayEntries();
 const valueGraph = union(entries.map(valueClosureOf));
 
 describe("free play's runtime graph reaches no I/O beyond the settings store's localStorage, and no walled source (T-WEB-S374)", () => {
-  it("no module on it does network or storage I/O beyond the settings store's localStorage, or lives in packages/db/src or packages/games/src/termo", () => {
+  it("no module on it does network or storage I/O beyond the settings store's localStorage, or lives in packages/db/src or packages/games/src/termo-answers", () => {
     expect({
       io: valueGraph.filter(doesIo),
       reachesSettingsStore: valueGraph.includes(SETTINGS_STORE),
@@ -138,7 +138,14 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
       reachesQueensEngine: valueGraph.includes(
         "packages/games/src/queens/index.ts",
       ),
+      reachesFreePool: valueGraph.includes(
+        "packages/games/src/termo-free/pool.generated.ts",
+      ),
       dailyLifecycle: [
+        "apps/web/src/termo/use-termo-play.ts",
+        "apps/web/src/termo/termo-screen.tsx",
+        "apps/web/src/termo/guess-client.ts",
+        "apps/web/src/termo/termo-conclusion.tsx",
         "apps/web/src/crossword/use-crossword-play.ts",
         "apps/web/src/crossword/crossword-screen.tsx",
         "apps/web/src/queens/use-queens-play.ts",
@@ -163,6 +170,7 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
       reachesBinairo: true,
       reachesCrossword: true,
       reachesQueensEngine: true,
+      reachesFreePool: true,
       dailyLifecycle: [],
       typeEdgeIsFollowedByClosureOnly: [true, false],
       termoScreenIo: [
@@ -210,6 +218,38 @@ describe("of every page and layout, only /modo-livre/cruzadinha reaches the cros
     expect(
       routesReaching("packages/games/src/crossword/lexicon.generated.ts"),
     ).toEqual(["apps/web/app/modo-livre/cruzadinha/page.tsx"]);
+  });
+});
+
+describe("of every page and layout, only /modo-livre/termo reaches the free pool, none reaches the answer list, and of the free-play pages only it reaches the dictionary (T-WEB-S704)", () => {
+  const ANSWERS = "packages/games/src/termo-answers/answers.generated.ts";
+  const POOL = "packages/games/src/termo-free/pool.generated.ts";
+  const DICTIONARY = "packages/games/src/termo/words.generated.ts";
+
+  it("walks files that exist", () => {
+    for (const name of [
+      ANSWERS,
+      POOL,
+      DICTIONARY,
+      "packages/games/src/termo-answers/index.ts",
+      "packages/games/src/termo-free/index.ts",
+    ]) {
+      expect(existsSync(join(REPO_ROOT, name)), name).toBe(true);
+    }
+  });
+
+  it("pins each Termo word list to the routes that may carry it", () => {
+    expect({
+      pool: routesReaching(POOL),
+      answers: routesReaching(ANSWERS),
+      dictionaryInFreePlay: routesReaching(DICTIONARY).filter((route) =>
+        route.startsWith("apps/web/app/modo-livre/"),
+      ),
+    }).toEqual({
+      pool: ["apps/web/app/modo-livre/termo/page.tsx"],
+      answers: [],
+      dictionaryInFreePlay: ["apps/web/app/modo-livre/termo/page.tsx"],
+    });
   });
 });
 

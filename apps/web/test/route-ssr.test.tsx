@@ -276,6 +276,12 @@ const ROUTES: readonly RouteCase[] = [
     daily: undefined,
   },
   {
+    path: "/modo-livre/termo",
+    marker: "data-play-state=",
+    load: () => import("../app/modo-livre/termo/page"),
+    daily: undefined,
+  },
+  {
     path: "/modo-livre/cruzadinha",
     marker: "data-play-state=",
     load: () => import("../app/modo-livre/cruzadinha/page"),

@@ -52,6 +52,13 @@ const webDynamicCrosswordImport = {
     'apps/web never imports @miolos/games/crossword dynamically: `no-restricted-imports` never sees `import("@miolos/games/crossword")`, and a lazy chunk escapes the bundle-check route attribution (ADR-0088).',
 };
 
+const webDynamicTermoAnswersImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/termo-answers(\\/|$)/i]",
+  message:
+    "apps/web never imports the Termo answer list, dynamically either: no client chunk may carry it (ADR-0045 decision 5, ADR-0114).",
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -135,6 +142,14 @@ const webWallImportPatterns = [
   ...replayCapableClientGroups,
 ];
 
+const termoAnswersGroup = {
+  group: ["@miolos/games/termo-answers", "@miolos/games/termo-answers/*"],
+  message:
+    "apps/web source never imports the Termo answer list: no client chunk may carry it, and a daily answer reaches the board from the server only once the board closes (ADR-0045 decision 5, ADR-0114). Tests may import it.",
+};
+
+const webClientImportPatterns = [...webWallImportPatterns, termoAnswersGroup];
+
 const webWallImportPaths = [
   {
     name: "@miolos/db",
@@ -172,6 +187,19 @@ const webTableNameTemplate = {
   message:
     "apps/web must not name the buffer tables: raw SQL through @miolos/db's re-exported `sql` / `.execute()` bypasses the published-predicate wall (ADR-0024 amendment, named #18 duty).",
 };
+
+const freePlayTermoModules = [
+  "board",
+  "keyboard",
+  "play-view",
+  "state",
+  "types",
+  "use-termo-board",
+  "termo-board.module.css",
+];
+
+const freeTermoMessage =
+  "free Termo reuses only the Termo engine and the board, keyboard, view, state and board hook; the daily Termo modules judge on the server and record the day (ADR-0046, ADR-0114).";
 
 const freePlayBannedModuleGroups = [
   {
@@ -222,9 +250,15 @@ const freePlayBannedModuleGroups = [
       "free play is generated on the client and reads no database at all — not even the wall-safe root entry (ADR-0011, ADR-0046).",
   },
   {
-    group: ["**/termo", "**/termo/**"],
-    message:
-      "Termo is excluded from free play by project invariant: its word list is finite curated content and free play would burn it (ADR-0005, ADR-0015, ADR-0046).",
+    group: [
+      "**/termo/**",
+      ...freePlayTermoModules.map((name) => `!**/termo/${name}`),
+    ],
+    message: freeTermoMessage,
+  },
+  {
+    regex: "^(?!@miolos/games/termo/?$)(.*/)?termo/?$",
+    message: freeTermoMessage,
   },
   {
     group: ["**/streak", "**/streak/**", "**/hub-streak"],
@@ -283,11 +317,14 @@ const freePlayBannedModuleGroups = [
   },
 ];
 
+const freePlayTermoModulePattern = freePlayTermoModules
+  .map((name) => name.replaceAll(".", "\\."))
+  .join("|");
+
 const freePlayDynamicBannedModule = {
-  selector:
-    "ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route|daily-screen)|(^|\\/)termo(\\/|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|crossword\\/(use-crossword-play|crossword-screen)|queens\\/(use-queens-play|queens-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]",
+  selector: `ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route|daily-screen)|(?<!^@miolos\\/games)(^|\\/)termo(\\/(?!(${freePlayTermoModulePattern})$)|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|crossword\\/(use-crossword-play|crossword-screen)|queens\\/(use-queens-play|queens-screen)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]`,
   message:
-    "free play records nothing, fetches nothing, fires no telemetry, never touches Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
+    "free play records nothing, fetches nothing, fires no telemetry, never touches the daily Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };
 
 const ogBannedGameGroups = [
@@ -440,6 +477,7 @@ export default tseslint.config(
         webDynamicDbImport,
         webDynamicPackageSource,
         webDynamicCrosswordImport,
+        webDynamicTermoAnswersImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -452,12 +490,17 @@ export default tseslint.config(
       `apps/web/src/**/*.${webWallExtensions}`,
     ],
     rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: webClientImportPatterns, paths: webWallImportPaths },
+      ],
       "no-restricted-syntax": [
         "error",
 
         webDynamicDbImport,
         webDynamicPackageSource,
         webDynamicCrosswordImport,
+        webDynamicTermoAnswersImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -476,7 +519,7 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [...webWallImportPatterns, ...freePlayBannedModuleGroups],
+          patterns: [...webClientImportPatterns, ...freePlayBannedModuleGroups],
           paths: webWallImportPaths,
         },
       ],
@@ -485,6 +528,7 @@ export default tseslint.config(
         webDynamicDbImport,
         webDynamicPackageSource,
         webDynamicCrosswordImport,
+        webDynamicTermoAnswersImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -502,7 +546,7 @@ export default tseslint.config(
         "error",
         {
           patterns: [
-            ...webWallImportPatterns.filter(
+            ...webClientImportPatterns.filter(
               (pattern) => pattern !== crosswordEngineGroup,
             ),
             ...freePlayBannedModuleGroups,
@@ -535,6 +579,7 @@ export default tseslint.config(
         webDynamicDbImport,
         webDynamicPackageSource,
         webDynamicCrosswordImport,
+        webDynamicTermoAnswersImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -567,6 +612,7 @@ export default tseslint.config(
         webDynamicDbImport,
         webDynamicPackageSource,
         webDynamicCrosswordImport,
+        webDynamicTermoAnswersImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,

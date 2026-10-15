@@ -1,8 +1,10 @@
 # Do I need to do anything?
 
-Nothing new from #332. New, low urgency: NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing required from #333. New, low urgency: NOW §4 ⚡, Termo free play shipped on the recommended pool; answer only to change it. NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
+
+**Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily. The pool is `@miolos/games/termo-free`; the answer list is `@miolos/games/termo-answers`, banned in `apps/web` source.
 
 **Hints** (ADR-0099, ADR-0101): each game's `next<Game>Hint` (`apps/web/src/<game>/hint.ts`) sits on `nextLogicalHint` (`play/grid-hint.ts`); the reason and spotlight live in `HintState<R>`. The reason shows in a card on the hinted cell (#332, ADR-0113): the chrome lazy-loads `HintCard` (`play/hint-card.tsx`); the visually hidden live region is the screen-reader copy, so tests read it through `SPOKEN` (`test/hint-reason.ts`).
 
@@ -26,12 +28,12 @@ Nothing new from #332. New, low urgency: NOW §3, whether the daily Cruzadinha e
 
 **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 
-**The crossword lexicon is not a Turbo test input.** After editing it, run `generate:crossword` and `pnpm test --force`.
+**Content is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, `content/termo/answers.csv` or `content/termo/reserve.txt`, run `generate:crossword`, `generate:termo` and `pnpm test --force`. Re-curation moves a published answer to `reserve.txt`, never deletes it (ADR-0114).
 
 **A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Sync pending completions before rolling `apps/web` back past #326.
 
 ## Next
 
-**Next:** #333 (Termo free play, in its own thread), the last of the #321–#333 waves. Then file per-game time buckets as an issue, and #317 (settings sync, needs a migration).
+**Next:** the #321–#333 waves are done. File per-game time buckets as an issue, then #317 (settings sync, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.2 of 664 KB (ADR-0113).
