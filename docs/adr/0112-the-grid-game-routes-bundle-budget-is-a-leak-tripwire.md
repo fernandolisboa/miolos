@@ -21,7 +21,7 @@ ADR-0045 and ADR-0054 kept the constant because raising it would un-arm the leak
 
 - One constant moves, not per-route entries for the play routes. The margin on the known leaks narrows to about 3 KB on the conclusion routes (~16–17 KB over `/`), and an unnamed leak of roughly 23–31 KB there, red at 40 KB, now passes.
 - The next relief, when 48 KB is reached, is named so the constant is not the first move: load the *Ajustes* panel through `next/dynamic` behind the existing chunk-boundary pattern (~2.4 KB per grid route). Splitting `playRecordSchema`'s six-game union (`apps/web/src/play/play-record.ts`, 4.5 KB on every play route) is a refactor behind `readPlayRecord`, not a cut.
-- `/modo-livre/cruzadinha` stands at 658.3 of 660 KB; #330 part 2 (the 7×7 picker) re-measures it.
+- `/modo-livre/cruzadinha` stood at 658.3 of 660 KB; ADR-0111 and ADR-0113 re-measured it.
 - Until #155 puts the check in CI, any PR that touches a play route runs it by hand.
 
 ## Rejected

@@ -329,6 +329,9 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
         screen.getByRole("radio", { name: messages.freePlay.size.aria(size) }),
       );
       await flushGeneration();
+      expect(container.querySelectorAll("[data-cell-index]")).toHaveLength(
+        size * size,
+      );
     }
 
     fireEvent.click(
