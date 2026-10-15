@@ -140,13 +140,15 @@ and never reused** — its wall half became `T-WEB-S375`, its `next/link` half
 same claim, only the clean control moved to package specifiers, because a
 relative path into `packages/games/src` is now banned across `apps/web`.
 `S58`'s Termo leg is now covered twice — by the games-wide deep-path ban and by
-`**/termo/**` — so it reds only when both go; `T-LINT-S12` and `S64` still pin
-the free-play Termo group alone.
+`**/termo/**` — so it reds only when both go. Since #333, `T-LINT-S12` pins
+`@miolos/games/termo` (engine and dictionary) clean in free play with its deep
+path red, and `S64` pins the free-play Termo allow-list (below).
 
 - **`T-WEB-S374`** (`free-play-graph.test.ts`) — the value graph of every
   free-play file reaches no I/O module (beyond `localStorage` in
   `apps/web/src/settings/settings.ts`, ADR-0102) and nothing in `packages/db/src` or
-  `packages/games/src/termo`; `termo-screen`'s graph lists exactly the five I/O
+  `packages/games/src/termo-answers` (since #333; it reaches the free pool and
+  none of the daily Termo modules); `termo-screen`'s graph lists exactly the five I/O
   modules, which pins the token list to the tree.
 - **`T-WEB-S375`** — every bare specifier any graph member writes, and the
   relative specifiers of its `apps/web` members, pass the real config at a free-play path, both wall rules read.
@@ -156,7 +158,9 @@ the free-play Termo group alone.
 - **`T-WEB-S378`** — no `.js`, `.jsx`, `.mjs` or `.cjs` file under `app/` or
   `src/`: one would escape `tsc` and the graph proof's entries.
 - **`T-LINT-S62`, `S63`** (`eslint-db-wall`) — normal-form (segments and
-  `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — `termo/` banned by directory;
+  `?`/`#` suffixes) and code-extension bans; **`S64`** (`eslint-free-play-wall`) — since #333, `termo/` banned in free play
+  except the reused modules `T-LINT-S71` pins clean: the daily ones, a new one
+  and the bare directory (trailing slash too) red, static and dynamic;
   **`S65`** (`eslint-og-wall`) — `packages/games/src` banned by relative path.
 
 #206 cluster 7 reserved **`T-WEB-S369…S370`**, contiguous, and spent both:

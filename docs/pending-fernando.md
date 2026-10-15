@@ -46,9 +46,9 @@
 
 ### §4 ⚡ Termo in free play — which words? — issue #333
 
-- **Already shipped** on the recommended option: `/modo-livre/termo` draws from a separate pool of 2,409 words that are **never** a daily answer, so free play never spends the daily list (ADR-0114).
+- **Already shipped** on the recommended option: `/modo-livre/termo` draws from a separate pool of 2,187 words that are **never** a daily answer, so free play never spends the daily list (ADR-0114).
 - **Do:** nothing, unless you want a change. Then answer #333 (or the decision card in the "Ajustes de qualidade de vida nos jogos" thread) with one word:
-  - **keep** — stays as it is.
+  - **keep** — stays as it is. What it exposes: anyone who compares the public word lists can get a list of about 620 words that holds every daily answer, without dates. It never shows which word is a given day's answer.
   - **replay** — free play replays only answers already published as dailies (fewer words; you meet words you already solved).
   - **remove** — Termo leaves free play again.
 - **Verify:** the word is on #333.

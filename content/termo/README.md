@@ -20,13 +20,20 @@ exactly as with the grid-game generators.
 `answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`,
 and the **free pool** into `packages/games/src/termo-free/pool.generated.ts`.
 The free pool is what Termo free play draws from: the five-letter words of
-`content/crossword/lexicon.tsv` that are in `validation.txt` and are not an
-answer — 2,409 words
+`content/crossword/lexicon.tsv` that are in `validation.txt` and are neither
+an answer nor in `reserve.txt` — 2,187 words
 ([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
-**Run `generate:termo` after editing `answers.csv`, `validation.txt` or the
-crossword lexicon**, then `pnpm test --force`: a staleness test fails when a
-generated module and its sources disagree. Adding an answer removes it from
-the pool.
+**Run `generate:termo` after editing `answers.csv`, `reserve.txt`,
+`validation.txt` or the crossword lexicon**, then `pnpm test --force`: a
+staleness test fails when a generated module and its sources disagree.
+
+`reserve.txt` holds the curated picks of `select_answers.py` that did not make
+`answers.csv`, one normalized word per line, sorted. They stay out of the free
+pool so a client comparing the public lists never narrows the unpublished
+answers below them. **An answer extension moves words from `reserve.txt` into
+`answers.csv`**; when the reserve floor test fails, add new reserve words
+first. A published answer is never deleted: re-curation moves it to
+`reserve.txt`, or regeneration would put it back in the pool.
 
 ## Deliverables
 

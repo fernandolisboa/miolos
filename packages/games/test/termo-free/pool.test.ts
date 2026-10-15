@@ -4,6 +4,10 @@ import { join } from "node:path";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import {
+  LEXICON_COLUMNS,
+  parseTsv,
+} from "../../scripts/render-crossword-lexicon";
 import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool";
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
@@ -15,7 +19,8 @@ import { propertyRuns } from "../property-runs";
 const GAMES = join(import.meta.dirname, "..", "..");
 const CONTENT = join(GAMES, "..", "..", "content");
 
-const POOL_COUNT = 2409;
+const POOL_COUNT = 2187;
+const RESERVE_FLOOR = 100;
 const POOL = FREE_POOL_CANONICALS.split("\n");
 const POOL_SET: ReadonlySet<string> = new Set(POOL);
 const ANSWER_FORMS: ReadonlySet<string> = new Set(
@@ -24,6 +29,11 @@ const ANSWER_FORMS: ReadonlySet<string> = new Set(
 
 const content = (...path: string[]) =>
   readFileSync(join(CONTENT, ...path), "utf8");
+
+const RESERVE = content("termo", "reserve.txt").trimEnd().split("\n");
+const VALIDATION: ReadonlySet<string> = new Set(
+  content("termo", "validation.txt").trimEnd().split("\n"),
+);
 
 const uint32 = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -34,17 +44,18 @@ describe("the Termo free pool", () => {
         join(GAMES, "src", "termo-free", "pool.generated.ts"),
         "utf8",
       ),
-      "stale: run `pnpm --filter @miolos/games generate:termo` after editing content/crossword/lexicon.tsv (with generate:crossword) or content/termo/answers.csv",
+      "stale: run `pnpm --filter @miolos/games generate:termo` after editing content/crossword/lexicon.tsv (with generate:crossword), content/termo/answers.csv or content/termo/reserve.txt",
     ).toBe(
       renderTermoFreePoolModule(
         content("crossword", "lexicon.tsv"),
         content("termo", "validation.txt"),
         content("termo", "answers.csv"),
+        content("termo", "reserve.txt"),
       ),
     );
   });
 
-  it("holds 2409 guessable five-letter words, unique in normalized form", () => {
+  it("holds 2187 guessable five-letter words, unique in normalized form", () => {
     expect(POOL).toHaveLength(POOL_COUNT);
     expect(new Set(POOL.map(normalizeWord)).size).toBe(POOL_COUNT);
     for (const word of POOL) {
@@ -57,6 +68,11 @@ describe("the Termo free pool", () => {
     expect(
       POOL.filter((word) => ANSWER_FORMS.has(normalizeWord(word))),
     ).toEqual([]);
+  });
+
+  it("shares no word with the reserve", () => {
+    const reserve = new Set(RESERVE);
+    expect(POOL.filter((word) => reserve.has(normalizeWord(word)))).toEqual([]);
   });
 
   it("draws deterministically, for every uint32 seed, a pool word that is never an answer", () => {
@@ -72,5 +88,32 @@ describe("the Termo free pool", () => {
     for (const seed of [0, 0xffffffff]) {
       expect(POOL_SET.has(drawFreeTermoWord(seed))).toBe(true);
     }
+  });
+});
+
+describe("the Termo answer reserve", () => {
+  it("is sorted, unique, normalized, guessable and never an answer", () => {
+    expect(RESERVE).toEqual([...new Set(RESERVE)].sort());
+    for (const word of RESERVE) {
+      expect(word).toMatch(/^[a-z]{5}$/);
+      expect(VALIDATION.has(word), word).toBe(true);
+      expect(ANSWER_FORMS.has(word), word).toBe(false);
+    }
+  });
+
+  it(`keeps at least ${String(RESERVE_FLOOR)} words the free pool would otherwise hold`, () => {
+    const lexiconGuesses = new Set(
+      parseTsv(
+        "lexicon.tsv",
+        content("crossword", "lexicon.tsv"),
+        LEXICON_COLUMNS,
+      )
+        .map(([normalized = ""]) => normalized)
+        .filter((normalized) => VALIDATION.has(normalized)),
+    );
+    expect(
+      RESERVE.filter((word) => lexiconGuesses.has(word)).length,
+      "an answer extension moves words from content/termo/reserve.txt into answers.csv; add new reserve words first",
+    ).toBeGreaterThanOrEqual(RESERVE_FLOOR);
   });
 });

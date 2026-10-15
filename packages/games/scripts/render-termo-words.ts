@@ -26,11 +26,11 @@ export function parseAnswersCsv(answersCsv: string): AnswerRow[] {
   });
 }
 
-export function parseValidationTxt(validationTxt: string): string[] {
-  const lines = splitLines("validation.txt", validationTxt);
+export function parseWordLines(name: string, raw: string): string[] {
+  const lines = splitLines(name, raw);
   for (const [index, line] of lines.entries()) {
     if (line === "") {
-      throw new Error(`validation.txt: line ${String(index + 1)} is empty`);
+      throw new Error(`${name}: line ${String(index + 1)} is empty`);
     }
   }
   return lines;
@@ -69,6 +69,6 @@ export function renderTermoValidationModule(validationTxt: string): string {
     "content/termo/validation.txt",
     "VALIDATION_WORDS",
     "normalized validation words, validation.txt order",
-    parseValidationTxt(validationTxt),
+    parseWordLines("validation.txt", validationTxt),
   );
 }
