@@ -59,6 +59,24 @@
   color: var(--ink-2);
 }
 
+.dayMark {
+  display: inline-block;
+  margin-left: var(--space-3);
+  padding: 3px 7px 2px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-cell);
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  transform: rotate(-2deg);
+}
+
+.dayMark[data-mark="perfect"] {
+  border: 3px double var(--ink);
+  padding: 2px 6px 1px;
+}
+
 .streakStamp {
   background: var(--paper-desk);
   border: 1.5px solid var(--accent-app);

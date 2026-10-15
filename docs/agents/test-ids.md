@@ -37,13 +37,15 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S193`    | `S192`         | never used            |
+| `T-CORE` | `S198`    | `S197`         | never used            |
 | `T-DB`   | `S144`    | `S142`         | `T-DB-21`             |
-| `T-API`  | `S335`    | `S333`         | `T-API-16`            |
+| `T-API`  | `S338`    | `S337`         | `T-API-16`            |
 | `T-WEB`  | `S920`    | `S915`         | `T-WEB-23`            |
 | `T-LINT` | `S72`     | `S71`          | `T-LINT-10`           |
 
 #368 (Sudoku notes, *Rascunho*, ADR-0127) spent **`T-WEB-S830…S839`**, plus the siblings `S832a`, `S833a` and `S836a`. `S830…S835` are reducer and schema tests in `sudoku-notes.test.ts` (writing notes, a value clearing notes, hint/Recomeçar/eraser, Rascunho against *Número fixo*, undo, the record). `S836…S839` and the siblings `S832a` (Recomeçar on a notes-only board) and `S833a` (notes against *Número fixo*, the highlight, *Mostrar erros* and the tally) are in `sudoku-notes-screen.test.tsx`; `S836a` (the completion body is exactly five fields) is in `play-sync.test.ts`. No id is burned. `T-WEB-S34`, `S30`, `S580`, `S593` and `S821` were re-aimed in place.
+
+#370 (Dia Cheio, ADR-0129) spent **`T-CORE-S193…S197`**: `S193` and `S195` in `stats.test.ts` (`fullDays` counts three on-time wins, an outside-lineup win included; `dayMarkOf` over lineups 0–6), `S194` in `stats-properties.test.ts` (perfect ⊆ full ⊆ on-time dates, monotone, order-free), `S196` in `medals.test.ts` (the nth Dia Cheio earns `full-n`, appended last), `S197` in `stats-contract.test.ts` (the strict `{ dates }` contract); **`T-API-S335…S337`** in `stats-full-days.test.ts` (the route's 401/500/no-store branches, its dates from real rows, `/medals` returning `full-1`); **`T-WEB-S850…S853`**: `S850`, `S851` in `stats-page.test.tsx` (the Dias Cheios numeral; the calendar ring, its aria and legend), `S852` in `hub-day-mark.test.tsx` (the hub stamp), `S853` in `medal-art.test.tsx` (the `full-*` stripe set). `T-WEB-S854…S859` are **burned**. `S820…S849` and `S860…S919` are sibling threads' reservations, so next free is `S920`. `T-CORE-S70`, `S135`, `T-API-S183`, `S233`, `S234`, `T-WEB-S155`, `S163`, `S342` and `S352` were widened in place for the new kind and the 28-medal catalog.
 
 #371 part 1 (the Sudoku variant engine, ADR-0130) spent **`T-WEB-S860`** in `sudoku-logical-hint.test.ts` (the hint names a diagonal, with and without an elimination). `S861…S869` stay reserved for #371 part 2.
 

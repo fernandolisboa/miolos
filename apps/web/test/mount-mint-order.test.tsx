@@ -13,6 +13,7 @@ import type { Mock } from "vitest";
 import { useAttachState } from "../src/attach/use-attach-state";
 import { useMedals } from "../src/medals/use-medals";
 import { useStats } from "../src/stats/use-stats";
+import { useFullDays } from "../src/stats/use-full-days";
 import { useStatsCalendar } from "../src/stats/use-stats-calendar";
 import { useStreak } from "../src/streak/use-streak";
 
@@ -65,6 +66,8 @@ const STATS: StatsResponse = statsResponseSchema.parse({
   perfectDays: 0,
   todayTermoGuesses: null,
 });
+const FULL_DAYS = { dates: ["2026-08-01"] };
+
 const CALENDAR: StatsCalendarResponse = {
   days: [{ date: "2026-08-22", state: "onTime", perfect: false }],
 };
@@ -75,6 +78,7 @@ const clients = vi.hoisted(() => ({
   fetchMedals: vi.fn(),
   fetchStats: vi.fn(),
   fetchStatsCalendar: vi.fn(),
+  fetchFullDays: vi.fn(),
 }));
 vi.mock("../src/attach/attach-client", () => ({
   fetchAttachState: clients.fetchAttachState,
@@ -88,6 +92,7 @@ vi.mock("../src/medals/medals-client", () => ({
 vi.mock("../src/stats/stats-client", () => ({
   fetchStats: clients.fetchStats,
   fetchStatsCalendar: clients.fetchStatsCalendar,
+  fetchFullDays: clients.fetchFullDays,
 }));
 
 const bootstrapMock = vi.hoisted(() => ({
@@ -112,6 +117,8 @@ beforeEach(() => {
   clients.fetchStats.mockResolvedValue(STATS);
   clients.fetchStatsCalendar.mockReset();
   clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
+  clients.fetchFullDays.mockReset();
+  clients.fetchFullDays.mockResolvedValue(FULL_DAYS);
 });
 
 async function assertAwaitsTheMint<T>(
@@ -159,7 +166,7 @@ describe("useMedals awaits the mint before it reads (T-WEB-S341)", () => {
   });
 });
 
-describe("useStats and useStatsCalendar await the mint before they read (T-WEB-S342)", () => {
+describe("useStats, useStatsCalendar and useFullDays await the mint before they read (T-WEB-S342)", () => {
   it("neither GET /stats nor GET /stats/calendar is issued until ensureSession resolves — one claim over two hooks, since use-stats-calendar.ts is use-stats.ts's twin over the same client module", async () => {
     await assertAwaitsTheMint(useStats, clients.fetchStats, STATS);
     await assertAwaitsTheMint(
@@ -167,5 +174,6 @@ describe("useStats and useStatsCalendar await the mint before they read (T-WEB-S
       clients.fetchStatsCalendar,
       CALENDAR,
     );
+    await assertAwaitsTheMint(useFullDays, clients.fetchFullDays, FULL_DAYS);
   });
 });

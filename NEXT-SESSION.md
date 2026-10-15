@@ -24,6 +24,8 @@ New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, 
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
 
+**Dia Cheio** (#370, ADR-0129): the day-mark rule is `dayMarkOf` (`packages/core/src/stats.ts`); `/estatisticas` reads `GET /stats/full-days`. The medal catalog is 28 of 30.
+
 **Sudoku variants** (#371 part 1, ADR-0130): units are data. `SudokuLayout` (regions + extra units) feeds `geometryOf`; `generateSudokuVariant` makes Diagonal and Formas (irregular) puzzles; classic output is pinned by `test/sudoku/golden.test.ts`. No UI yet; part 2 (free-play picker, region borders, hint copy for a non-square region) is next, and must pass the layout to the notes cleanup (`withoutPeerNote` in `sudoku/notes.ts` uses classic peers).
 
 ## Traps

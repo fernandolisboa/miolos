@@ -47,6 +47,8 @@ function canonicalRule(
       return `streakReached, ${String(rule.days)}`;
     case "perfectDaysReached":
       return `perfectDaysReached, ${String(rule.count)}`;
+    case "fullDaysReached":
+      return `fullDaysReached, ${String(rule.count)}`;
     case "termoGuessWins":
       return `termoGuessWins, ${String(rule.guesses)} ${
         rule.guesses === 1 ? "guess" : "guesses"
@@ -178,6 +180,7 @@ describe("the medal content harness (T-WEB-S163)", () => {
       const threshold =
         rule.kind === "totalWins" ||
         rule.kind === "perfectDaysReached" ||
+        rule.kind === "fullDaysReached" ||
         rule.kind === "termoGuessWins"
           ? rule.count
           : rule.kind === "streakReached"

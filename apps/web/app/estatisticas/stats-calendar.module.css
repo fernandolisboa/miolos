@@ -1,7 +1,8 @@
 /* Per-date states ride geometry first and colour second, so they survive
    greyscale: filled (on the day), accent ring (later), hairline ring
    (missed), bare numeral (outside the tracked range, or today while it is
-   still playable). The perfect day is a shape, never a word (ADR-0041). */
+   still playable). The Dia Cheio ring and the Dia Perfeito diamond are
+   shapes, never words (ADR-0041). */
 
 .calendar {
   margin-top: var(--space-12);
@@ -127,14 +128,33 @@
   box-shadow: none;
 }
 
-.perfectMark {
+.mark {
   position: absolute;
   top: 3px;
   right: 3px;
   width: 6px;
   height: 6px;
   background: var(--paper-card);
+}
+
+.mark[data-mark="perfect"] {
   transform: rotate(45deg);
+}
+
+.mark[data-mark="full"] {
+  box-sizing: border-box;
+  border: 1.5px solid var(--paper-card);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.legendSwatch[data-state="onTime"] {
+  position: relative;
+}
+
+.legendSwatch .mark {
+  top: 2px;
+  right: 2px;
 }
 
 @media (max-width: 768px) {
