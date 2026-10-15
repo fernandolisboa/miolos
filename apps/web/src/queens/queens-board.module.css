@@ -5,7 +5,7 @@
   --stats-card-rot: 0.7deg;
   --tape-rot: -2deg;
   --board-max: 580px;
-  --board-below: calc(var(--space-6) + 20px);
+  --board-below: calc(var(--space-6) + 24px);
 }
 
 /* `none`, not `manipulation`: a drag crosses cells, and a touch drag that
@@ -136,9 +136,8 @@
 }
 
 .affordance {
+  display: flex;
   margin: var(--space-6) 0 0;
-  font-size: 13px;
-  color: var(--ink-2);
 }
 
 @media (max-width: 768px) {

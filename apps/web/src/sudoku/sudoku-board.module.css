@@ -332,8 +332,6 @@
   grid-column: 1 / 8;
   display: flex;
   align-items: center;
-  font-size: 13px;
-  color: var(--ink-2);
 }
 
 .keypadErase {

@@ -14,11 +14,17 @@ import type { TermoJudgedRow, TermoPlayAction, TermoPlayState } from "./types";
 
 const copy = messages.games.termo.play;
 
+const EMPTY_DRAFT: readonly string[] = Array.from(
+  { length: WORD_LENGTH },
+  () => "",
+);
+
 export function initTermoPlayState(daily: DailyTermoResponse): TermoPlayState {
   return {
     date: daily.date,
     guesses: [],
-    draft: "",
+    draft: EMPTY_DRAFT,
+    cursor: 0,
     pending: null,
     notice: null,
     noticeNonce: 0,
@@ -53,46 +59,68 @@ export function termoPlayReducer(
 
     case "type": {
       const letter = typedLetter(action.letter);
-      if (
-        !accepting(state) ||
-        state.draft.length >= WORD_LENGTH ||
-        letter === null
-      ) {
+      if (!accepting(state) || letter === null) {
         return state;
       }
-      const draft = state.draft + letter;
+      const draft = withSlot(state.draft, state.cursor, letter);
       return {
         ...state,
         draft,
-        announcement: copy.letterTypedAria(letter, draft.length, WORD_LENGTH),
+        cursor: nextCursor(draft, state.cursor),
+        announcement: copy.letterTypedAria(
+          letter,
+          state.cursor + 1,
+          WORD_LENGTH,
+        ),
       };
     }
 
     case "erase": {
-      if (!accepting(state) || state.draft === "") {
+      if (!accepting(state)) {
         return state;
       }
-      const erased = state.draft.slice(-1);
-      const draft = state.draft.slice(0, -1);
+      const slot =
+        state.draft[state.cursor] === "" ? state.cursor - 1 : state.cursor;
+      const erased = state.draft[slot];
+      if (erased === undefined) {
+        return state;
+      }
+      if (erased === "") {
+        return { ...state, cursor: slot };
+      }
       return {
         ...state,
-        draft,
-        announcement: copy.letterErasedAria(erased, draft.length, WORD_LENGTH),
+        draft: withSlot(state.draft, slot, ""),
+        cursor: slot,
+        announcement: copy.letterErasedAria(erased, slot + 1, WORD_LENGTH),
       };
     }
 
-    case "submit": {
-      if (!accepting(state) || state.draft.length !== WORD_LENGTH) {
+    case "select": {
+      if (
+        !accepting(state) ||
+        action.slot === state.cursor ||
+        state.draft[action.slot] === undefined
+      ) {
         return state;
       }
-      if (!isValidGuess(state.draft)) {
+      return { ...state, cursor: action.slot };
+    }
+
+    case "submit": {
+      const word = state.draft.join("");
+      if (!accepting(state) || word.length !== WORD_LENGTH) {
+        return state;
+      }
+      if (!isValidGuess(word)) {
         return noticed(state, copy.notInList);
       }
 
       return {
         ...state,
-        draft: "",
-        pending: state.draft,
+        draft: EMPTY_DRAFT,
+        cursor: 0,
+        pending: word,
         held: false,
         notice: null,
         noticeNonce: state.noticeNonce + 1,
@@ -142,7 +170,8 @@ export function termoPlayReducer(
             refused: copy.failed,
           }[action.reason],
         ),
-        draft: state.pending,
+        draft: [...state.pending],
+        cursor: WORD_LENGTH - 1,
         pending: null,
         held: false,
       };
@@ -179,6 +208,24 @@ export function termoPlayReducer(
 
 function accepting(state: TermoPlayState): boolean {
   return state.status === "playing" && state.pending === null;
+}
+
+function withSlot(
+  draft: readonly string[],
+  slot: number,
+  letter: string,
+): readonly string[] {
+  return draft.map((current, index) => (index === slot ? letter : current));
+}
+
+function nextCursor(draft: readonly string[], from: number): number {
+  for (let step = 1; step < WORD_LENGTH; step += 1) {
+    const slot = (from + step) % WORD_LENGTH;
+    if (draft[slot] === "") {
+      return slot;
+    }
+  }
+  return Math.min(from + 1, WORD_LENGTH - 1);
 }
 
 function noticed(state: TermoPlayState, notice: string): TermoPlayState {

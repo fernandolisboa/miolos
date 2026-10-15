@@ -1,6 +1,7 @@
 import type { SudokuGrid } from "@miolos/games/sudoku";
 
 import { messages } from "../i18n";
+import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import { KeyGlyph } from "../play/key-glyph";
 import { digitTally, placedCount, type DigitTally } from "./engine";
 import type { SudokuDigit } from "./state";
@@ -51,7 +52,9 @@ export function Keypad({
           </button>
         );
       })}
-      <span className={styles.affordance}>{copy.affordance}</span>
+      <span className={styles.affordance}>
+        <InfoTip text={copy.affordance} align="start" />
+      </span>
       <button
         type="button"
         className={styles.keypadErase}
@@ -79,8 +82,6 @@ function digitAria(digit: SudokuDigit, tally: DigitTally, count: number) {
 }
 
 export function KeypadSkeleton() {
-  const copy = messages.games.sudoku.play.keypad;
-
   return (
     <div aria-hidden className={styles.keypad}>
       {DIGITS.map((digit) => (
@@ -91,7 +92,9 @@ export function KeypadSkeleton() {
           {digit}
         </div>
       ))}
-      <span className={styles.affordance}>{copy.affordance}</span>
+      <span className={styles.affordance}>
+        <InfoTipSkeleton />
+      </span>
       <div className={`${styles.keypadErase} ${styles.placeholder}`}>
         <KeyGlyph name="backspace" />
       </div>
