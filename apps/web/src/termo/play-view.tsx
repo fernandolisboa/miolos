@@ -1,10 +1,11 @@
-import { MAX_GUESSES } from "@miolos/games/termo";
+import { MAX_GUESSES, WORD_LENGTH } from "@miolos/games/termo";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { BoardCard } from "../play/board-card";
+import { isShortcut } from "../play/grid-selection";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
 import type { ArchivePlayChrome } from "../play/types";
@@ -18,6 +19,8 @@ const ACCENT = accentVars("termo");
 const BLANK_READOUT = " ";
 
 const ZWSP = "​";
+
+const PAGE_KEYS = new Set(["Home", "End"]);
 
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
@@ -38,13 +41,14 @@ export function PlayView({
     playRef.current = play;
   });
 
+  const onKey = useCallback((key: string) => {
+    const current = playRef.current;
+    return current.state.status === "playing" && pressKey(key, current);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const current = playRef.current;
-      if (current.state.status !== "playing") {
-        return;
-      }
-      if (event.metaKey || event.ctrlKey || event.altKey) {
+      if (isShortcut(event)) {
         return;
       }
       if (
@@ -53,26 +57,18 @@ export function PlayView({
       ) {
         return;
       }
-      if (event.key === "Enter") {
-        current.submit();
+      if (PAGE_KEYS.has(event.key)) {
         return;
       }
-      if (event.key === "Backspace") {
+      if (onKey(event.key) && event.key === "Backspace") {
         event.preventDefault();
-        current.erase();
-        return;
-      }
-
-      const letter = typedLetter(event.key);
-      if (letter !== null) {
-        current.type(letter);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [onKey]);
 
   return (
     <main
@@ -128,7 +124,10 @@ export function PlayView({
             activeRow={play.activeRow}
             heldRow={play.heldRow}
             draft={state.draft}
+            cursor={state.cursor}
             pending={state.pending}
+            onSelect={play.select}
+            onKey={onKey}
           />
         </BoardCard>
 
@@ -174,6 +173,37 @@ export function PlayView({
       </section>
     </main>
   );
+}
+
+function pressKey(key: string, play: TermoPlay): boolean {
+  const { cursor } = play.state;
+  switch (key) {
+    case "Enter":
+      play.submit();
+      return true;
+    case "Backspace":
+    case "Delete":
+      play.erase();
+      return true;
+    case "ArrowLeft":
+      play.select(cursor - 1);
+      return true;
+    case "ArrowRight":
+      play.select(cursor + 1);
+      return true;
+    case "Home":
+      play.select(0);
+      return true;
+    case "End":
+      play.select(WORD_LENGTH - 1);
+      return true;
+  }
+  const letter = typedLetter(key);
+  if (letter === null) {
+    return false;
+  }
+  play.type(letter);
+  return true;
 }
 
 export function PlaySkeleton({

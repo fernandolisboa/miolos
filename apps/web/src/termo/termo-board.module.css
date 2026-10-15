@@ -126,16 +126,9 @@
    geometrically. ADR-0035's "never a wrapper element" rule protects a single
    flat grid whose TRACKS compute the geometry, and does not transfer.
 
-   NO `touch-action` here, and the absence is deliberate. The board is
-   READ-ONLY OUTPUT (ADR-0042) — there is nothing to tap, so there is no tap
-   delay to remove — and `manipulation` would cost DOUBLE-TAP-TO-ZOOM on a
-   surface whose glyphs are 24px on a phone. That is a real magnification
-   affordance on the one element of this screen a low-vision player wants to
-   enlarge. The three shipped boards go the other way for reasons Termo does
-   not share: sudoku-board.module.css:64 is `manipulation` on a board whose
-   cells are TAP TARGETS, and nonogram/binairo are `none` because they
-   drag-paint. `touch-action: manipulation` lives on `.keyboard` below, where
-   the tap delay is actually paid. */
+   NO `touch-action` here: `manipulation` would cost double-tap-to-zoom on
+   glyphs that are 24px on a phone, the one element a low-vision player wants
+   to enlarge. A tap on a cell only moves the cursor, so no tap delay is paid. */
 .grid {
   display: flex;
   flex-direction: column;
@@ -196,12 +189,19 @@
   border-style: dashed;
 }
 
-/* The repo's shipped inset-outline idiom (sudoku-board.module.css:195-199,
-   nonogram-board.module.css:398-402) reused as a PURE STATE CLASS, because
-   nothing on this board is focusable and `:focus-visible` can never match.
-   STATIC — a blinking caret is exactly `pulsing-dot`'s and
-   `blinking-cursor`'s shape. --ink on --paper-desk is 15.0124:1. */
+/* A state class, so the caret shows whether or not the row holds focus; focus
+   only ever sits on the caret cell (ADR-0106), so the focus ring is the same
+   mark. */
 .tileCaret {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.tileEditable {
+  cursor: pointer;
+}
+
+.tileEditable:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
 }

@@ -855,18 +855,18 @@ export const messages = {
         rowEmptyAria: (row: number, max: number) =>
           `tentativa ${row} de ${max}, vazia`,
 
-        rowActiveAria: (row: number, max: number, draft: string) =>
-          draft === ""
-            ? `tentativa ${row} de ${max}, sua vez`
-            : `tentativa ${row} de ${max}, escrevendo: ${termoLetters(draft)}`,
+        rowActiveAria: (row: number, max: number) =>
+          `tentativa ${row} de ${max}, sua vez`,
+        cellAria: (slot: number, length: number, letter: string) =>
+          `letra ${slot} de ${length}: ${letter === "" ? "vazia" : letter}`,
 
         rowHeldAria: (row: number, max: number, guess: string) =>
           `tentativa ${row} de ${max}: ${termoLetters(guess)}, aguardando resposta`,
 
-        letterTypedAria: (letter: string, filled: number, length: number) =>
-          `${letter}, ${filled} de ${length}`,
-        letterErasedAria: (letter: string, filled: number, length: number) =>
-          `${letter} apagada, ${filled} de ${length}`,
+        letterTypedAria: (letter: string, slot: number, length: number) =>
+          `${letter}, ${slot} de ${length}`,
+        letterErasedAria: (letter: string, slot: number, length: number) =>
+          `${letter} apagada, ${slot} de ${length}`,
 
         notInList: "não está na lista",
         offline: "Sem conexão — a tentativa vai assim que a conexão voltar.",
@@ -876,7 +876,7 @@ export const messages = {
         keyboard: {
           label: "teclado",
           enterAria: "enviar a tentativa",
-          eraseAria: "apagar a última letra",
+          eraseAria: "apagar a letra",
 
           letterAria,
           letterStateAria: (

@@ -124,6 +124,7 @@ interface PlayFixture {
   readonly play: TermoPlay;
   readonly type: ReturnType<typeof vi.fn>;
   readonly erase: ReturnType<typeof vi.fn>;
+  readonly select: ReturnType<typeof vi.fn>;
   readonly submit: ReturnType<typeof vi.fn>;
   readonly retry: ReturnType<typeof vi.fn>;
 }
@@ -138,6 +139,7 @@ function playFixture(overrides: Partial<TermoPlayState> = {}): PlayFixture {
   const handlers = {
     type: vi.fn(),
     erase: vi.fn(),
+    select: vi.fn(),
     submit: vi.fn(),
     retry: vi.fn(),
   };
@@ -153,6 +155,12 @@ function playFixture(overrides: Partial<TermoPlayState> = {}): PlayFixture {
       ...handlers,
     },
   };
+}
+
+function slots(word: string): readonly string[] {
+  return Array.from({ length: WORD_LENGTH }, (_unused, slot) =>
+    word.charAt(slot),
+  );
 }
 
 function boardOf(): HTMLElement {
@@ -173,6 +181,12 @@ function rowLabels(): readonly (string | null)[] {
   return within(boardOf())
     .getAllByRole("group")
     .map((row) => row.getAttribute("aria-label"));
+}
+
+function cellLabels(): readonly (string | null)[] {
+  return within(boardOf())
+    .queryAllByRole("button")
+    .map((cell) => cell.getAttribute("aria-label"));
 }
 
 function typeOnBody(word: string): void {
@@ -208,9 +222,11 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("the board is read-only output (T-WEB-S86)", () => {
-  it("is a labelled group of six labelled row groups, with every tile hidden", () => {
-    const { play } = playFixture();
+describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0106)", () => {
+  it("is a labelled group of six labelled row groups, every tile outside the active row hidden", () => {
+    const { play } = playFixture({
+      guesses: [{ guess: VALID, tiles: TILES }],
+    });
 
     const { container } = render(<PlayView play={play} />);
 
@@ -218,23 +234,37 @@ describe("the board is read-only output (T-WEB-S86)", () => {
     expect(within(board).getAllByRole("group")).toHaveLength(MAX_GUESSES);
     const tiles = container.querySelectorAll(`.${styles.tile ?? ""}`);
     expect(tiles).toHaveLength(MAX_GUESSES * WORD_LENGTH);
-    for (const tile of tiles) {
-      expect(tile.getAttribute("aria-hidden")).toBe("true");
-    }
+    const hidden = [...tiles].filter(
+      (tile) => tile.getAttribute("aria-hidden") === "true",
+    );
+    expect(hidden).toHaveLength((MAX_GUESSES - 1) * WORD_LENGTH);
+    const active = within(board).getByRole("group", {
+      name: copy.rowActiveAria(2, MAX_GUESSES),
+    });
+    expect(within(active).getAllByRole("button")).toHaveLength(WORD_LENGTH);
   });
 
-  it("puts NOTHING focusable on the board — the keyboard is the whole input surface", () => {
-    const { play } = playFixture();
+  it("puts one tab stop on the board, on the active row's cursor cell", () => {
+    const { play } = playFixture({ cursor: 3 });
 
     render(<PlayView play={play} />);
 
     const board = boardOf();
-    expect(within(board).queryAllByRole("button")).toEqual([]);
-    expect(board.querySelectorAll("[tabindex]")).toHaveLength(0);
-
-    expect(within(keyboardOf()).getAllByRole("button").length).toBeGreaterThan(
-      0,
+    const stops = board.querySelectorAll('[tabindex="0"]');
+    expect(stops).toHaveLength(1);
+    expect(stops[0]?.getAttribute("aria-label")).toBe(
+      copy.cellAria(4, WORD_LENGTH, ""),
     );
+    expect(board.querySelectorAll("[tabindex]")).toHaveLength(WORD_LENGTH);
+  });
+
+  it("has no input row while a turn is held or the board is closed", () => {
+    for (const overrides of [{ pending: VALID }, { status: "lost" as const }]) {
+      const { play } = playFixture(overrides);
+      const { unmount } = render(<PlayView play={play} />);
+      expect(within(boardOf()).queryAllByRole("button")).toEqual([]);
+      unmount();
+    }
   });
 
   it("uses real row boxes, never `display: contents`", () => {
@@ -260,16 +290,21 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
     expect(labels[0]).toBe(copy.rowAria(1, MAX_GUESSES, VALID, TILES));
     expect(labels[0]).toContain(VALID.charAt(0));
     expect(labels[0]).not.toBe(VALID.toUpperCase());
-    expect(labels[1]).toBe(copy.rowActiveAria(2, MAX_GUESSES, ""));
+    expect(labels[1]).toBe(copy.rowActiveAria(2, MAX_GUESSES));
     expect(labels[5]).toBe(copy.rowEmptyAria(6, MAX_GUESSES));
   });
 
-  it("carries the DRAFT in the active row's name and in the announcer", () => {
+  it("carries the DRAFT in the active row's cells and in the announcer", () => {
     render(<TermoScreen daily={DAILY} />);
 
     typeOnBody("ca");
 
-    expect(rowLabels()[0]).toBe(copy.rowActiveAria(1, MAX_GUESSES, "ca"));
+    expect(rowLabels()[0]).toBe(copy.rowActiveAria(1, MAX_GUESSES));
+    expect(cellLabels()).toEqual(
+      [..."ca", "", "", ""].map((letter, slot) =>
+        copy.cellAria(slot + 1, WORD_LENGTH, letter),
+      ),
+    );
     expect(announcerText()).toBe(copy.letterTypedAria("a", 2, WORD_LENGTH));
   });
 
@@ -279,8 +314,8 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
     typeOnBody("ca");
     fireEvent.keyDown(document.body, { key: "Backspace" });
 
-    expect(rowLabels()[0]).toBe(copy.rowActiveAria(1, MAX_GUESSES, "c"));
-    expect(announcerText()).toBe(copy.letterErasedAria("a", 1, WORD_LENGTH));
+    expect(cellLabels()[1]).toBe(copy.cellAria(2, WORD_LENGTH, ""));
+    expect(announcerText()).toBe(copy.letterErasedAria("a", 2, WORD_LENGTH));
   });
 
   it("never lets one transition write BOTH live regions — walked over every action", () => {
@@ -531,7 +566,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
 
 describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", () => {
   it("does not submit when Enter lands on `enviar` — the button's own click is the one submit", () => {
-    const fixture = playFixture({ draft: VALID });
+    const fixture = playFixture({ draft: slots(VALID) });
 
     render(<PlayView play={fixture.play} />);
     const enviar = commandKey("enter");
@@ -542,7 +577,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("does not submit when Enter lands on a LETTER key", () => {
-    const fixture = playFixture({ draft: VALID });
+    const fixture = playFixture({ draft: slots(VALID) });
 
     render(<PlayView play={fixture.play} />);
     fireEvent.keyDown(letterKey("a"), { key: "Enter" });
@@ -555,7 +590,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("does not submit when Enter lands on the back link", () => {
-    const fixture = playFixture({ draft: VALID });
+    const fixture = playFixture({ draft: slots(VALID) });
 
     render(<PlayView play={fixture.play} />);
     fireEvent.keyDown(
@@ -567,7 +602,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("DOES submit when Enter lands on the body — the case it exists for", () => {
-    const fixture = playFixture({ draft: VALID });
+    const fixture = playFixture({ draft: slots(VALID) });
 
     render(<PlayView play={fixture.play} />);
     fireEvent.keyDown(document.body, { key: "Enter" });
@@ -576,7 +611,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("stands down while the board is closed, and on every modifier", () => {
-    const fixture = playFixture({ status: "lost", draft: VALID });
+    const fixture = playFixture({ status: "lost", draft: slots(VALID) });
 
     render(<PlayView play={fixture.play} />);
     fireEvent.keyDown(document.body, { key: "Enter" });
@@ -606,7 +641,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("prevents Backspace's default, because it is a history-back gesture", () => {
-    const fixture = playFixture({ draft: "ca" });
+    const fixture = playFixture({ draft: slots("ca"), cursor: 2 });
 
     render(<PlayView play={fixture.play} />);
     const event = createEvent.keyDown(document.body, { key: "Backspace" });
@@ -617,7 +652,7 @@ describe("the window keydown listener serves the UNFOCUSED page (T-WEB-S89)", ()
   });
 
   it("is torn down with the screen", () => {
-    const fixture = playFixture({ draft: VALID });
+    const fixture = playFixture({ draft: slots(VALID) });
 
     const { unmount } = render(<PlayView play={fixture.play} />);
     unmount();
@@ -1311,3 +1346,125 @@ function mobileChrome(css: string): string {
   const rest = css.slice(css.indexOf(geometry) + geometry.length);
   return bodyOf(rest, "@media (max-width: 768px)");
 }
+
+describe("the active row is a roving-focus input row (T-WEB-S641)", () => {
+  function cell(slot: number): HTMLElement {
+    const found = within(boardOf()).getAllByRole("button")[slot];
+    if (found === undefined) {
+      throw new Error(`the active row has no cell ${String(slot)}`);
+    }
+    return found;
+  }
+
+  function caretCell(): Element | null {
+    return boardOf().querySelector(`.${styles.tileCaret ?? ""}`);
+  }
+
+  it("moves the caret to a tapped cell and types there, leaving a gap", () => {
+    render(<TermoScreen daily={DAILY} />);
+
+    fireEvent.click(cell(2));
+    expect(caretCell()).toBe(cell(2));
+    expect(document.activeElement).toBe(cell(2));
+
+    fireEvent.click(letterKey("f"));
+    expect(cellLabels()).toEqual(
+      ["", "", "f", "", ""].map((letter, slot) =>
+        copy.cellAria(slot + 1, WORD_LENGTH, letter),
+      ),
+    );
+    expect(caretCell()).toBe(cell(3));
+  });
+
+  it("types into the focused cell once, and focus follows the caret", () => {
+    render(<TermoScreen daily={DAILY} />);
+
+    fireEvent.click(cell(1));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "a" });
+
+    expect(cellLabels()[1]).toBe(copy.cellAria(2, WORD_LENGTH, "a"));
+    expect(cellLabels().filter((label) => label?.endsWith(": a"))).toHaveLength(
+      1,
+    );
+    expect(document.activeElement).toBe(cell(2));
+  });
+
+  it("moves with the arrows focused or not, and with Home and End inside the row", () => {
+    render(<TermoScreen daily={DAILY} />);
+
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expect(caretCell()).toBe(cell(2));
+    fireEvent.keyDown(document.body, { key: "ArrowLeft" });
+    expect(caretCell()).toBe(cell(1));
+    const end = createEvent.keyDown(document.body, { key: "End" });
+    fireEvent(document.body, end);
+    expect(end.defaultPrevented).toBe(false);
+    expect(caretCell()).toBe(cell(1));
+
+    fireEvent.click(cell(1));
+    const home = createEvent.keyDown(cell(1), { key: "Home" });
+    fireEvent(cell(1), home);
+    expect(home.defaultPrevented).toBe(true);
+    expect(caretCell()).toBe(cell(0));
+    expect(document.activeElement).toBe(cell(0));
+
+    fireEvent.keyDown(cell(0), { key: "ArrowLeft" });
+    expect(caretCell()).toBe(cell(0));
+    fireEvent.keyDown(cell(0), { key: "ArrowRight" });
+    expect(document.activeElement).toBe(cell(1));
+  });
+
+  it("submits once on Enter from a focused cell, and gives focus back to the next row", async () => {
+    guessClient.postGuesses.mockResolvedValue(judged(0, TILES));
+    render(<TermoScreen daily={DAILY} />);
+    typeOnBody(VALID);
+
+    fireEvent.click(cell(0));
+    const enter = createEvent.keyDown(cell(0), { key: "Enter" });
+    await act(() => {
+      fireEvent(cell(0), enter);
+      return Promise.resolve();
+    });
+
+    expect(enter.defaultPrevented).toBe(true);
+    expect(guessClient.postGuesses).toHaveBeenCalledTimes(1);
+    expect(rowLabels()[1]).toBe(copy.rowActiveAria(2, MAX_GUESSES));
+    expect(document.activeElement).toBe(cell(0));
+    expect(within(boardOf()).getAllByRole("button")).toHaveLength(WORD_LENGTH);
+  });
+
+  it("gives focus back to the same row when the server refuses the word", async () => {
+    guessClient.postGuesses.mockResolvedValue({
+      kind: "rejected",
+      reason: "refused",
+    });
+    render(<TermoScreen daily={DAILY} />);
+    typeOnBody(VALID);
+
+    fireEvent.click(cell(4));
+    await act(() => {
+      fireEvent.keyDown(cell(4), { key: "Enter" });
+      return Promise.resolve();
+    });
+
+    expect(rowLabels()[0]).toBe(copy.rowActiveAria(1, MAX_GUESSES));
+    expect(document.activeElement).toBe(cell(WORD_LENGTH - 1));
+  });
+
+  it("does not take focus after a submit made from the on-screen keyboard", async () => {
+    guessClient.postGuesses.mockResolvedValue(judged(0, TILES));
+    render(<TermoScreen daily={DAILY} />);
+    typeOnBody(VALID);
+
+    const enviar = commandKey("enter");
+    enviar.focus();
+    await act(() => {
+      fireEvent.click(enviar);
+      return Promise.resolve();
+    });
+
+    expect(rowLabels()[1]).toBe(copy.rowActiveAria(2, MAX_GUESSES));
+    expect(document.activeElement).toBe(enviar);
+  });
+});

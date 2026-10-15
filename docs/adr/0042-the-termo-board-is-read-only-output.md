@@ -7,6 +7,8 @@
 **Amended in place:** #321 — decision 2's `↑`/`↓`, and decisions 6, 7 and 8's keyboard: 22 columns, `apagar` after P and `enviar` after L as on a physical keyboard, both drawn as glyphs (⌫, ↵) from `play/key-glyph.tsx`; desktop width 608px.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 3's premise that Sudoku's keypad is commands holds only while *Número fixo com toque duplo* is off; then a double-tapped digit is a mode with `aria-pressed`. Termo's keys are unchanged.
 
+**Superseded in part by:** [ADR-0106](./0106-the-termo-current-row-is-editable.md) (#327) — decision 1 for the active row: its five cells are focusable buttons with one tab stop and a cursor, and the row's name no longer carries the draft; decision 4 gains the row's own key listener (and the Rejected "container-scoped listener" no longer holds for that row); decision 5's caret is no longer a pure state class, since the focused cell is the caret; decision 10's announcer copy is positional.
+
 ## Context
 
 [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md)
