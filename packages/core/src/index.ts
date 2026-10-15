@@ -40,12 +40,15 @@ export { mergeCompletions, type MergeableCompletion } from "./merge";
 export {
   computeCalendar,
   computeStats,
+  dayMarkOf,
+  fullDays,
   perfectDays,
   TIME_BUCKET_BOUNDS_MS,
   timeBucketIndex,
   TIMED_GAMES,
   type CalendarDay,
   type CalendarDayState,
+  type DayMark,
   type PublishedDaily,
   type StatsRow,
   type StatsSummary,
@@ -156,10 +159,12 @@ export { dayResponseSchema, type DayResponse } from "./contracts/day";
 export { streakResponseSchema, type StreakResponse } from "./contracts/streak";
 export {
   calendarDayStateSchema,
+  fullDaysResponseSchema,
   statsCalendarResponseSchema,
   statsResponseSchema,
   termoStatsSchema,
   timedGameStatsSchema,
+  type FullDaysResponse,
   type StatsCalendarResponse,
   type StatsResponse,
 } from "./contracts/stats";

@@ -11,6 +11,7 @@ import { formatElapsed, messages } from "../../src/i18n";
 import { MedalsSection } from "../../src/medals/medals-section";
 import { accentVars } from "../../src/play/accent";
 import { DAY_GAMES } from "../../src/play/day-games";
+import { useFullDays } from "../../src/stats/use-full-days";
 import { useStats } from "../../src/stats/use-stats";
 import styles from "./page.module.css";
 import { StatsCalendar } from "./stats-calendar";
@@ -32,10 +33,22 @@ const TERMO_ZERO: TermoStats = {
 
 export function StatsView() {
   const stats = useStats();
+  const fullDays = useFullDays();
 
   return (
     <>
-      <PerfectDaysCard stats={stats} />
+      <div className={styles.summaries}>
+        {fullDays !== null && (
+          <SummaryCount
+            copy={messages.stats.fullDays}
+            count={fullDays?.dates.length}
+          />
+        )}
+        <SummaryCount
+          copy={messages.stats.perfectDays}
+          count={stats === undefined ? undefined : (stats?.perfectDays ?? 0)}
+        />
+      </div>
 
       <MedalsSection />
       <section className={styles.games}>
@@ -43,22 +56,26 @@ export function StatsView() {
           <GameBlock key={game} game={game} stats={stats} />
         ))}
       </section>
-      <StatsCalendar />
+      <StatsCalendar fullDays={fullDays} />
     </>
   );
 }
 
-function PerfectDaysCard({
-  stats,
+function SummaryCount({
+  copy,
+  count,
 }: {
-  readonly stats: StatsResponse | null | undefined;
+  readonly copy: {
+    readonly label: string;
+    readonly aria: (n: number) => string;
+  };
+  readonly count: number | undefined;
 }) {
-  const loaded = stats !== undefined;
-  const count = stats === undefined || stats === null ? 0 : stats.perfectDays;
+  const loaded = count !== undefined;
   return (
     <section
       className={styles.summary}
-      aria-label={loaded ? messages.stats.perfectDays.aria(count) : undefined}
+      aria-label={loaded ? copy.aria(count) : undefined}
       aria-hidden={loaded ? undefined : true}
       data-stats-state={loaded ? "value" : "skeleton"}
     >
@@ -66,7 +83,7 @@ function PerfectDaysCard({
         {loaded ? count : BLANK_VALUE}
       </span>
       <span aria-hidden className={styles.summaryLabel}>
-        {messages.stats.perfectDays.label}
+        {copy.label}
       </span>
     </section>
   );

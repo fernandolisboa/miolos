@@ -89,6 +89,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
     expect(kinds).toEqual([
       "curated",
       "eachGameWon",
+      "fullDaysReached",
       "perfectDaysReached",
       "streakReached",
       "termoGuessWins",
@@ -99,6 +100,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
       totalWins: ["count", "game", "kind"],
       streakReached: ["days", "kind"],
       perfectDaysReached: ["count", "kind"],
+      fullDaysReached: ["count", "kind"],
       termoGuessWins: ["count", "guesses", "kind"],
       eachGameWon: ["kind"],
       curated: ["kind"],
@@ -124,7 +126,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
       (d) => d.rule.kind === "totalWins" && d.rule.game === null,
     );
     expect(allWins.length).toBeGreaterThanOrEqual(4);
-    expect(allWins.length).toBeLessThanOrEqual(6);
+    expect(allWins.length).toBeLessThanOrEqual(5);
     const allWinCounts = allWins.map((d) =>
       d.rule.kind === "totalWins" ? d.rule.count : Number.NaN,
     );
@@ -147,7 +149,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
 
     const streaks = definitions.filter((d) => d.rule.kind === "streakReached");
     expect(streaks.length).toBeGreaterThanOrEqual(4);
-    expect(streaks.length).toBeLessThanOrEqual(6);
+    expect(streaks.length).toBeLessThanOrEqual(5);
     const streakDays = streaks.map((d) =>
       d.rule.kind === "streakReached" ? d.rule.days : Number.NaN,
     );
@@ -161,12 +163,21 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
       (d) => d.rule.kind === "perfectDaysReached",
     );
     expect(perfects.length).toBeGreaterThanOrEqual(3);
-    expect(perfects.length).toBeLessThanOrEqual(5);
+    expect(perfects.length).toBeLessThanOrEqual(4);
     const perfectCounts = perfects.map((d) =>
       d.rule.kind === "perfectDaysReached" ? d.rule.count : Number.NaN,
     );
     expect(perfectCounts[0]).toBe(1);
     expectMonotoneSpaced(perfectCounts);
+
+    const fulls = definitions.filter((d) => d.rule.kind === "fullDaysReached");
+    expect(fulls.length).toBeGreaterThanOrEqual(2);
+    expect(fulls.length).toBeLessThanOrEqual(3);
+    const fullCounts = fulls.map((d) =>
+      d.rule.kind === "fullDaysReached" ? d.rule.count : Number.NaN,
+    );
+    expect(fullCounts[0]).toBe(1);
+    expectMonotoneSpaced(fullCounts);
 
     const guessMedals = definitions.filter(
       (d) => d.rule.kind === "termoGuessWins",
@@ -285,8 +296,8 @@ describe("the Cruzadinha's medals (ADR-0087)", () => {
 });
 
 describe("the Rainhas medal", () => {
-  it("T-CORE-S135: queens-30 follows crossword-30, earns at the 30th Rainhas win and not the 29th, all-games ignores it, and the catalog holds 25", () => {
-    expect(MEDAL_IDS).toHaveLength(25);
+  it("T-CORE-S135: queens-30 follows crossword-30, earns at the 30th Rainhas win and not the 29th, all-games ignores it, and the catalog holds 28", () => {
+    expect(MEDAL_IDS).toHaveLength(28);
     expect(MEDAL_IDS.indexOf("queens-30")).toBe(
       MEDAL_IDS.indexOf("crossword-30") + 1,
     );
@@ -386,6 +397,46 @@ describe("earnedMedals — perfect days and guess feats (on-time-only classes)",
         [],
       ),
     ).toEqual([]);
+  });
+});
+
+describe("earnedMedals — Dias Cheios (ADR-0129)", () => {
+  function fullDay(date: string): StatsRow[] {
+    return (["binairo", "sudoku", "nonogram"] as const).map((game) =>
+      row({ game, date }),
+    );
+  }
+
+  it("T-CORE-S196: the nth Dia Cheio earns full-n, and a Dia Perfeito counts as one", () => {
+    expect(MEDAL_IDS.slice(-3)).toEqual(["full-1", "full-10", "full-50"]);
+
+    const nine = Array.from({ length: 9 }, (_, i) => fullDay(daysAgo(i + 1)));
+    const nineLineups = Array.from({ length: 9 }, (_, i) =>
+      lineup(daysAgo(i + 1)),
+    );
+    const nineEarned = earnedMedals(nine.flat(), [], TODAY, nineLineups.flat());
+    expect(nineEarned).toContain("full-1");
+    expect(nineEarned).not.toContain("full-10");
+    expect(nineEarned).not.toContain("perfect-1");
+
+    const withPerfect = earnedMedals(
+      [...nine.flat(), ...perfectDay(daysAgo(20))],
+      [],
+      TODAY,
+      [...nineLineups.flat(), ...lineup(daysAgo(20))],
+    );
+    expect(withPerfect).toContain("full-10");
+    expect(withPerfect).toContain("perfect-1");
+    expect(withPerfect).not.toContain("full-50");
+
+    expect(
+      earnedMedals(
+        fullDay(daysAgo(1)).slice(0, 2),
+        [],
+        TODAY,
+        lineup(daysAgo(1)),
+      ),
+    ).not.toContain("full-1");
   });
 });
 

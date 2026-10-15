@@ -8,6 +8,7 @@ export type MedalRule =
     }
   | { readonly kind: "streakReached"; readonly days: number }
   | { readonly kind: "perfectDaysReached"; readonly count: number }
+  | { readonly kind: "fullDaysReached"; readonly count: number }
   | {
       readonly kind: "termoGuessWins";
       readonly guesses: 1 | 2 | 6;
@@ -76,6 +77,10 @@ export const MEDAL_DEFINITIONS = [
   { id: "all-games", rule: { kind: "eachGameWon" } },
 
   { id: "founder", rule: { kind: "curated" } },
+
+  { id: "full-1", rule: { kind: "fullDaysReached", count: 1 } },
+  { id: "full-10", rule: { kind: "fullDaysReached", count: 10 } },
+  { id: "full-50", rule: { kind: "fullDaysReached", count: 50 } },
 ] as const satisfies readonly MedalDefinition[];
 
 export type MedalId = (typeof MEDAL_DEFINITIONS)[number]["id"];

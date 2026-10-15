@@ -1,6 +1,6 @@
 "use client";
 
-import type { CalendarDay } from "@miolos/core";
+import type { CalendarDay, DayMark, FullDaysResponse } from "@miolos/core";
 
 import {
   formatDayNumber,
@@ -19,7 +19,11 @@ import { useStatsCalendar } from "../../src/stats/use-stats-calendar";
 import pageStyles from "./page.module.css";
 import styles from "./stats-calendar.module.css";
 
-export function StatsCalendar() {
+export function StatsCalendar({
+  fullDays,
+}: {
+  readonly fullDays: FullDaysResponse | null | undefined;
+}) {
   const calendar = useStatsCalendar();
   const copy = messages.stats.calendar;
   if (calendar === undefined) {
@@ -34,6 +38,10 @@ export function StatsCalendar() {
   const today = todaySaoPauloDate(new Date());
   const months =
     calendar === null ? [neutralMonth(today)] : calendarMonths(calendar.days);
+  const markOf = dayMarks(calendar?.days ?? [], fullDays?.dates ?? []);
+  const shownMarks = MARKS.filter((mark) =>
+    [...markOf.values()].includes(mark),
+  );
   return (
     <section className={styles.calendar} data-stats-state="value">
       <h2 className={pageStyles.sectionHeading}>{copy.title}</h2>
@@ -50,11 +58,28 @@ export function StatsCalendar() {
               {copy.legend[state]}
             </span>
           ))}
+          {shownMarks.map((mark) => (
+            <span key={mark} className={styles.legendItem}>
+              <span
+                aria-hidden
+                className={styles.legendSwatch}
+                data-state="onTime"
+              >
+                <span className={styles.mark} data-mark={mark} />
+              </span>
+              {copy.markLegend[mark]}
+            </span>
+          ))}
         </div>
       )}
       <div className={styles.months}>
         {months.map((month) => (
-          <MonthGrid key={month.month} month={month} today={today} />
+          <MonthGrid
+            key={month.month}
+            month={month}
+            today={today}
+            markOf={markOf}
+          />
         ))}
       </div>
     </section>
@@ -64,9 +89,11 @@ export function StatsCalendar() {
 function MonthGrid({
   month,
   today,
+  markOf,
 }: {
   readonly month: CalendarMonth;
   readonly today: string;
+  readonly markOf: ReadonlyMap<string, DayMark>;
 }) {
   return (
     <div className={styles.month}>
@@ -83,7 +110,12 @@ function MonthGrid({
           cell === null ? (
             <span key={index} aria-hidden className={styles.dayPad} />
           ) : (
-            <DayCell key={cell.date} cell={cell} today={cell.date === today} />
+            <DayCell
+              key={cell.date}
+              cell={cell}
+              today={cell.date === today}
+              mark={markOf.get(cell.date)}
+            />
           ),
         )}
       </div>
@@ -94,9 +126,11 @@ function MonthGrid({
 function DayCell({
   cell,
   today,
+  mark,
 }: {
   readonly cell: CalendarCell;
   readonly today: boolean;
+  readonly mark: DayMark | undefined;
 }) {
   const numeral = (
     <span aria-hidden className={`${styles.dayNumeral} tabular-nums`}>
@@ -115,23 +149,47 @@ function DayCell({
   return (
     <span
       role="img"
-      aria-label={dayAria(day)}
+      aria-label={dayAria(day, mark)}
       className={styles.day}
       data-state={day.state}
-      data-perfect={day.perfect ? "" : undefined}
+      data-mark={mark}
       data-today={today ? "" : undefined}
     >
       {numeral}
-      {day.perfect && <span aria-hidden className={styles.perfectMark} />}
+      {mark !== undefined && (
+        <span aria-hidden className={styles.mark} data-mark={mark} />
+      )}
     </span>
   );
 }
 
-function dayAria(day: CalendarDay): string {
+const MARKS = ["full", "perfect"] as const satisfies readonly DayMark[];
+
+function dayMarks(
+  days: readonly CalendarDay[],
+  fullDates: readonly string[],
+): ReadonlyMap<string, DayMark> {
+  const full = new Set(fullDates);
+  const marks = new Map<string, DayMark>();
+  for (const day of days) {
+    if (day.perfect) {
+      marks.set(day.date, "perfect");
+    } else if (day.state === "onTime" && full.has(day.date)) {
+      marks.set(day.date, "full");
+    }
+  }
+  return marks;
+}
+
+function dayAria(day: CalendarDay, mark: DayMark | undefined): string {
   const date = formatLongDate(day.date);
   const aria = messages.stats.calendar.dayAria;
   if (day.state === "onTime") {
-    return day.perfect ? aria.onTimePerfect(date) : aria.onTime(date);
+    return mark === "perfect"
+      ? aria.onTimePerfect(date)
+      : mark === "full"
+        ? aria.onTimeFull(date)
+        : aria.onTime(date);
   }
   return day.state === "late" ? aria.late(date) : aria.missed(date);
 }

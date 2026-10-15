@@ -34,17 +34,18 @@ union lacks, the candidate is rejected, never the union widened silently
 
 | Category (rule kind) | Quota | Threshold constraints |
 |---|---|---|
-| `totalWins`, all games (`game: null`) | 4–6 | counts strictly increasing, first = 1 (the first-win medal), last ≤ 1000 |
+| `totalWins`, all games (`game: null`) | 4–5 | counts strictly increasing, first = 1 (the first-win medal), last ≤ 1000 |
 | `totalWins`, per-game | 4–6 | every game appears in ≥ 1 medal; counts strictly increasing per game |
-| `streakReached` | 4–6 | days strictly increasing, 3 ≤ days ≤ 365 |
-| `perfectDaysReached` | 3–5 | counts strictly increasing, first = 1 |
+| `streakReached` | 4–5 | days strictly increasing, 3 ≤ days ≤ 365 |
+| `perfectDaysReached` | 3–4 | counts strictly increasing, first = 1 |
+| `fullDaysReached` | 2–3 | counts strictly increasing, first = 1 (ADR-0129) |
 | `termoGuessWins` | 3–4 | `guesses ∈ {1, 2, 6}` only — win-in-1 and win-in-2 are skill feats, win-in-6 is survival; guess values 3, 4 and 5 are the middle of the distribution — ordinary outcomes the stats screen already reports, not feats — and are inexpressible in the type |
 | `eachGameWon` | exactly 1 | — |
 | `curated` | 1–2 | no rule; earned only via `medal_grants` rows (`founder` ships; the cheater medal stays unshipped — no cheat detection exists to trigger the judgment) |
 | **Total** | **20–30** | |
 
-**The quota arithmetic, shown:** sum of minima = 4 + 4 + 4 + 3 + 3 + 1 + 1 =
-**20**; sum of maxima = 6 + 6 + 6 + 5 + 4 + 1 + 2 = **30**. Both sums sit
+**The quota arithmetic, shown:** sum of minima = 4 + 4 + 4 + 3 + 2 + 3 + 1 + 1
+= **22**; sum of maxima = 5 + 6 + 5 + 4 + 3 + 4 + 1 + 2 = **30**. Both sums sit
 inside AC 1's [20, 30], so no quota-satisfying catalog can violate the total.
 The total is nonetheless **independently binding**: T-CORE-S70 asserts
 `count ∈ [20, 30]` on its own line, because quotas bound the catalog, they
@@ -123,7 +124,7 @@ trigger the judgment; when it ships, its definition must precede its first
 grant, same reason); the bug-reporter medal. v1 ships 1–2 curated definitions
 from these classes.
 
-## The catalog (25 definitions, curated 2026-08-13; `crossword-30` added 2026-09-28, `queens-30` added 2026-10-11)
+## The catalog (28 definitions, curated 2026-08-13; `crossword-30` added 2026-09-28, `queens-30` added 2026-10-11, the three `full-*` added 2026-10-15)
 
 Catalog order is display order (no date exists on the wire to sort by —
 ADR-0052). Names and descriptions may be revised; ids are frozen the moment
@@ -156,14 +157,18 @@ they ship (an id is a wire value and a grant key).
 | 23 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
 | 24 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
 | 25 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
+| 26 | `full-1` | Página cheia | Concluiu um Dia Cheio: três ou mais jogos daquele dia, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. Count-free in the copy for the same reason as `perfect-1`. |
+| 27 | `full-10` | Caderno cheio | Concluiu 10 Dias Cheios. | fullDaysReached, 10 | Ten full days; ≥ 2× spacing from 1. A Dia Perfeito counts as a Dia Cheio. |
+| 28 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, appended last so no earlier medal's tilt moves (ADR-0122). |
 
-**Quota check against the table:** all-games totalWins 5 ∈ [4, 6] (1, 10, 50,
+**Quota check against the table:** all-games totalWins 5 ∈ [4, 5] (1, 10, 50,
 100, 500 — strictly increasing, first 1, last ≤ 1000, each ≥ 2× its
 predecessor); per-game totalWins 6 ∈ [4, 6] (all six games, one mark each);
-streakReached 5 ∈ [4, 6] (3, 7, 30, 100, 365 — in [3, 365], each ≥ 2×);
-perfectDaysReached 4 ∈ [3, 5] (1, 5, 10, 30 — first 1, each ≥ 2×);
+streakReached 5 ∈ [4, 5] (3, 7, 30, 100, 365 — in [3, 365], each ≥ 2×);
+perfectDaysReached 4 ∈ [3, 4] (1, 5, 10, 30 — first 1, each ≥ 2×);
+fullDaysReached 3 ∈ [2, 3] (1, 10, 50 — first 1, each ≥ 2×);
 termoGuessWins 3 ∈ [3, 4] (guesses 1, 2, 6 — one per guess value);
-eachGameWon 1; curated 1 ∈ [1, 2]. **Total 25 ∈ [20, 30].**
+eachGameWon 1; curated 1 ∈ [1, 2]. **Total 28 ∈ [20, 30].**
 
 ## Rejected candidates (the judgment record, ≥ 10 rows)
 
@@ -180,6 +185,8 @@ tab-separated in spirit:
   feats reintroduce run-shaped arithmetic by the back door.
 - *Dias Perfeitos seguidos* → ADR-0051 rejected run-length over perfect days;
   the streak is the product's one run.
+- *Dias Cheios seguidos* → the same rejection, for the middle tier
+  (ADR-0129): a run of full days would be a second streak.
 - *Arquivista / 100 do arquivo* → provably always zero until #31 writes late
   rows; #31 may add it (additive).
 - *Maratonista do modo livre* → free play records nothing server-side

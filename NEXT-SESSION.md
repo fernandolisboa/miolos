@@ -24,6 +24,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 **Brand mark** (#354, ADR-0119): `BrandMark` and `Wordmark` (`components/brand-mark.tsx`) sit in every top bar (the conclusion's included) and on the hub, which also shows `messages.brand.tagline` and `signOff`; a placeholder `BoardCard` shows the mark shuffling. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
 
+**Dia Cheio** (#370, ADR-0129): three on-time wins in a day (or the whole lineup when it is shorter) is a Dia Cheio; the whole lineup is still Dia Perfeito. The rule is `dayMarkOf` in `packages/core/src/stats.ts`, shared by `fullDays`, `perfectDays`, the medals (`full-1/10/50`, rule kind `fullDaysReached`) and the hub stamp in `HubProgress`. `/estatisticas` reads `GET /stats/full-days` (`{ dates }`) for the Dias Cheios numeral and the calendar ring. The catalog is 28 of 30: the quota table in `content/medals/README.md` leaves room for two more medals.
+
 ## Traps
 
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change.

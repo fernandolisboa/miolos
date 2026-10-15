@@ -65,7 +65,7 @@ export default function HojePage() {
               {date.weekday}{" "}
               <span className={styles.dateRest}>{date.rest}</span>
             </p>
-            <HubProgress date={isoDate} total={DAY_GAMES.length} />
+            <HubProgress date={isoDate} />
           </div>
 
           <div className={styles.headerEnd}>

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeCalendar,
   computeStats,
+  dayMarkOf,
+  fullDays,
   perfectDays,
   timeBucketIndex,
   type Game,
@@ -191,6 +193,78 @@ describe("perfectDays over the published lineup (ADR-0087)", () => {
         (day) => day.perfect,
       ),
     ).toEqual([false, true]);
+  });
+});
+
+describe("Dia Cheio (ADR-0129)", () => {
+  const ALL_SIX: readonly Game[] = [...ORIGINAL_FOUR, "crossword", "queens"];
+  const day = "2026-10-14";
+
+  it("T-CORE-S193: three on-time wins make a full day and two do not; late wins, a lost Termo and an empty lineup never count", () => {
+    const six = lineup([day], ALL_SIX);
+    const three = perfectDay(day, ["binairo", "sudoku", "queens"]);
+    expect(fullDays(three, six)).toEqual([day]);
+    expect(fullDays(three.slice(0, 2), six)).toEqual([]);
+
+    const twoGameLineup = lineup([day], ["binairo", "sudoku"]);
+    expect(fullDays(three.slice(0, 2), twoGameLineup)).toEqual([day]);
+    expect(perfectDays(three.slice(0, 2), twoGameLineup)).toEqual([day]);
+
+    expect(
+      fullDays(
+        [
+          ...three.slice(0, 2),
+          row({ game: "queens", date: day, onTime: false }),
+        ],
+        six,
+      ),
+    ).toEqual([]);
+    expect(
+      fullDays(
+        [
+          ...three.slice(0, 2),
+          row({ game: "termo", date: day, outcome: "lost", guesses: 6 }),
+        ],
+        six,
+      ),
+    ).toEqual([]);
+
+    expect(fullDays(three, [])).toEqual([day]);
+    expect(fullDays(three.slice(0, 2), [])).toEqual([]);
+  });
+
+  it("T-CORE-S193: an on-time win on a daily outside the lineup (minted late, or killed) still counts toward the three", () => {
+    const fourGames = lineup([day], ORIGINAL_FOUR);
+    const rows = [
+      ...perfectDay(day, ["binairo", "sudoku"]),
+      row({ game: "crossword", date: day }),
+    ];
+    expect(fullDays(rows, fourGames)).toEqual([day]);
+    expect(perfectDays(rows, fourGames)).toEqual([]);
+  });
+
+  it("T-CORE-S195: dayMarkOf against lineups of every size from 0 to 6", () => {
+    const set = (games: readonly Game[]): ReadonlySet<Game> => new Set(games);
+    for (let size = 0; size <= ALL_SIX.length; size += 1) {
+      const lineupGames = set(ALL_SIX.slice(0, size));
+      for (let won = 0; won <= size; won += 1) {
+        const mark = dayMarkOf(set(ALL_SIX.slice(0, won)), lineupGames);
+        const expected =
+          size > 0 && won === size
+            ? "perfect"
+            : won >= Math.min(3, size === 0 ? 3 : size)
+              ? "full"
+              : undefined;
+        expect(mark, `${won} of ${size}`).toBe(expected);
+      }
+    }
+    expect(dayMarkOf(set(ALL_SIX.slice(0, 3)), set([]))).toBe("full");
+    expect(
+      dayMarkOf(
+        set([...ALL_SIX.slice(0, 4), "queens"]),
+        set(ALL_SIX.slice(0, 5)),
+      ),
+    ).toBe("full");
   });
 });
 
