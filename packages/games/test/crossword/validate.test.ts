@@ -56,10 +56,21 @@ describe("validateCrossword", () => {
     expect(validateCrossword(puzzle)).toEqual({ ok: true, failures: [] });
   });
 
+  it("approves a generated 7×7 puzzle", () => {
+    expect(validateCrossword(generateCrossword(42, 7))).toEqual({
+      ok: true,
+      failures: [],
+    });
+  });
+
   it("rejects a grid of the wrong size or with a non a-z cell", () => {
     expect(
       validateCrossword({ ...puzzle, grid: puzzle.grid.slice(1) }).failures,
     ).toEqual(["grid-shape"]);
+    const sixBySix = allLetterA(Array.from({ length: 6 }, () => "......"));
+    expect(validateCrossword(sixBySix).failures).toEqual(["grid-shape"]);
+    const sevenByFive = allLetterA(Array.from({ length: 7 }, () => "....."));
+    expect(validateCrossword(sevenByFive).failures).toEqual(["grid-shape"]);
     const grid = puzzle.grid.map((row, r) =>
       row.map((cell, c) => (r === 2 && c === 2 ? "É" : cell)),
     );

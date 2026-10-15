@@ -57,6 +57,40 @@ describe("deriveSlots — hand-numbered fixtures, on which validateCrossword's i
     ]);
   });
 
+  it("numbers the 7×7 cross template, including a mid-grid down-only start", () => {
+    const blocks = toBlocks([
+      "...#...",
+      ".......",
+      ".......",
+      "##...##",
+      ".......",
+      ".......",
+      "...#...",
+    ]);
+    expect(deriveSlots(blocks)).toEqual([
+      across(1, 0, 0, 3),
+      across(4, 0, 4, 3),
+      across(7, 1, 0, 7),
+      across(9, 2, 0, 7),
+      across(10, 3, 2, 3),
+      across(11, 4, 0, 7),
+      across(15, 5, 0, 7),
+      across(16, 6, 0, 3),
+      across(17, 6, 4, 3),
+      down(1, 0, 0, 3),
+      down(2, 0, 1, 3),
+      down(3, 0, 2, 7),
+      down(4, 0, 4, 7),
+      down(5, 0, 5, 3),
+      down(6, 0, 6, 3),
+      down(8, 1, 3, 5),
+      down(11, 4, 0, 3),
+      down(12, 4, 1, 3),
+      down(13, 4, 5, 3),
+      down(14, 4, 6, 3),
+    ]);
+  });
+
   it("keeps two-cell runs and skips one-cell runs", () => {
     expect(deriveSlots(toBlocks(["..#", "...", "#.."]))).toEqual([
       across(1, 0, 0, 2),

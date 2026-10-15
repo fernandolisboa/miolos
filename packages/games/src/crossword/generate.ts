@@ -8,6 +8,7 @@ import type {
   CrosswordEntry,
   CrosswordLexiconEntry,
   CrosswordPuzzle,
+  CrosswordSize,
   CrosswordSlot,
 } from "./types";
 
@@ -34,9 +35,11 @@ function assemble(
 
 export function generateFrom(
   seed: number,
+  size: CrosswordSize,
   lexicon: readonly CrosswordLexiconEntry[],
 ): CrosswordPuzzle {
   const normalizedSeed = seed >>> 0;
+  const templates = CROSSWORD_TEMPLATES[size];
   const index = buildLexiconIndex(lexicon);
   const seedRng = createSeededRandom(normalizedSeed);
 
@@ -44,8 +47,7 @@ export function generateFrom(
   while (attempts < CROSSWORD_MAX_GENERATION_ATTEMPTS) {
     attempts += 1;
     const rng = createSeededRandom(Math.floor(seedRng.next() * 0x100000000));
-    const template =
-      CROSSWORD_TEMPLATES[rng.nextInt(CROSSWORD_TEMPLATES.length)]!;
+    const template = templates[rng.nextInt(templates.length)]!;
     const blocks = toBlocks(template);
     const slots = deriveSlots(blocks);
     const words = fillSlots(slots, index, rng, CROSSWORD_NODE_BUDGET);
@@ -57,6 +59,9 @@ export function generateFrom(
   throw new CrosswordGenerationError(normalizedSeed, attempts);
 }
 
-export function generateCrossword(seed: number): CrosswordPuzzle {
-  return generateFrom(seed, CROSSWORD_LEXICON);
+export function generateCrossword(
+  seed: number,
+  size: CrosswordSize = 5,
+): CrosswordPuzzle {
+  return generateFrom(seed, size, CROSSWORD_LEXICON);
 }

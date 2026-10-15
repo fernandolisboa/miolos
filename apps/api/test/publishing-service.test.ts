@@ -915,6 +915,19 @@ describe("topUpCrosswordBuffer", () => {
     }
   }, 30_000);
 
+  it("T-API-S330: the stored daily contract refuses a 7×7 puzzle", async () => {
+    const { generateCrossword } = await vi.importActual<
+      typeof import("@miolos/games/crossword")
+    >("@miolos/games/crossword");
+
+    expect(
+      crosswordDailyContentSchema.safeParse(generateCrossword(1)).success,
+    ).toBe(true);
+    expect(
+      crosswordDailyContentSchema.safeParse(generateCrossword(1, 7)).success,
+    ).toBe(false);
+  });
+
   it("T-API-S222: a seed whose generation fails once retries and still fills the date", async () => {
     crossword.failCount = 1;
 

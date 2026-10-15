@@ -1,4 +1,3 @@
-export { CROSSWORD_SIZE } from "./templates";
 export { generateCrossword } from "./generate";
 export { validateCrossword } from "./validate";
 export { CrosswordGenerationError } from "./types";
@@ -9,5 +8,6 @@ export type {
   CrosswordLexiconEntry,
   CrosswordPuzzle,
   CrosswordRejectionReason,
+  CrosswordSize,
   CrosswordValidationResult,
 } from "./types";
