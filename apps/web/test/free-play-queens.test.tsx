@@ -17,6 +17,7 @@ import styles from "../src/queens/queens-board.module.css";
 import { bodyOf, decl, stylesheet } from "./css-source";
 import { flushGeneration } from "./free-generation";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
+import { SPOKEN } from "./hint-reason";
 
 const SEED = 20_260_928;
 const NEXT_SEED = 20_260_929;
@@ -189,7 +190,9 @@ describe("the free Rainhas spends its free hints on the solution (T-WEB-S480)", 
       "aria-disabled",
       "true",
     );
-    expect(screen.getByText(/ainda pode ter rainha\.$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ainda pode ter rainha\.$/, SPOKEN),
+    ).toBeInTheDocument();
     expect(queens()).toBe(FREE_HINTS_PER_PUZZLE);
 
     fireEvent.click(exhausted);

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
+import { hintReadout } from "../play/hint-readout";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
@@ -19,9 +20,11 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
     progressShort: copy.progressShort(state.size, board.placed, state.size),
     progressLong: copy.progressLong(board.placed, state.size),
     hint: {
+      ...hintReadout(
+        state.hint,
+        queensHintExplanation(state.size, state.hint.reason),
+      ),
       ready: board.hintReady,
-      used: state.hint.used,
-      explain: queensHintExplanation(state.size, state.hint.reason),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(state.entries) ? board.reset : null,

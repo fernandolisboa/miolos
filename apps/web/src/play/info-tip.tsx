@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
+import { useId, useRef, useState, type PointerEvent } from "react";
 
 import { messages } from "../i18n";
 import styles from "./info-tip.module.css";
+import { useDismiss } from "./use-dismiss";
 
 type Align = "start" | "center";
+
+function isEscape(event: KeyboardEvent): boolean {
+  return event.key === "Escape";
+}
 
 const ALIGN: Readonly<Record<Align, string | undefined>> = {
   start: styles.alignStart,
@@ -24,21 +29,7 @@ export function InfoTip({
   const rootRef = useRef<HTMLSpanElement>(null);
   const pressedBy = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: globalThis.PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  useDismiss(open, rootRef, setOpen, isEscape);
 
   const hover = (next: boolean) => (event: PointerEvent) => {
     if (event.pointerType !== "mouse") return;

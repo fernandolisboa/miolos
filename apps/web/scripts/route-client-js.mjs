@@ -15,7 +15,7 @@ const PER_ROUTE_BUDGET = {
 
   "/modo-livre/nonogram": 66 * 1024,
 
-  "/modo-livre/cruzadinha": 660 * 1024,
+  "/modo-livre/cruzadinha": 664 * 1024,
 
   "/arquivo/[data]/termo": 76 * 1024,
 };

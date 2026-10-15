@@ -28,6 +28,7 @@ import {
 } from "./css-source";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
+import { SPOKEN } from "./hint-reason";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -639,13 +640,13 @@ describe("the hint names its rule and lights the cells it reasons about (T-WEB-S
     expect(cellAt(container, FIRST?.index ?? -1).classList).toContain(
       styles.cellHinted,
     );
-    expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+    expect(screen.getByText(SENTENCE, SPOKEN)).toBeInTheDocument();
     expect(spotlit(container)).toEqual(FIRST?.cells);
 
     fireEvent.click(cellAt(container, FIRST_EMPTY));
 
     expect(spotlit(container)).toEqual([]);
-    expect(screen.getByText(SENTENCE)).toBeInTheDocument();
+    expect(screen.getByText(SENTENCE, SPOKEN)).toBeInTheDocument();
   });
 
   it("reads out a correction and lights nothing", () => {
@@ -662,7 +663,10 @@ describe("the hint names its rule and lights the cells it reasons about (T-WEB-S
     );
 
     expect(
-      screen.getByText(messages.games.binairo.play.hint.explain.correction),
+      screen.getByText(
+        messages.games.binairo.play.hint.explain.correction,
+        SPOKEN,
+      ),
     ).toBeInTheDocument();
     expect(spotlit(container)).toEqual([]);
   });
@@ -685,7 +689,9 @@ describe("the free hints (T-WEB-9)", () => {
     const exhausted = screen.getByText(messages.play.hint.used);
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
-    expect(screen.getByText(FREE_SENTENCES.at(-1) ?? "")).toBeInTheDocument();
+    expect(
+      screen.getByText(FREE_SENTENCES.at(-1) ?? "", SPOKEN),
+    ).toBeInTheDocument();
 
     fireEvent.click(exhausted);
 
