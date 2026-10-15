@@ -322,12 +322,14 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     };
   });
 
-  it("opens with the clock group and this game's switches, and Fechar returns focus to the button", () => {
+  it("opens with the clock group and this game's switches, and Fechar returns focus to the button", async () => {
     render(<SudokuScreen daily={DAILY} />);
     const trigger = screen.getByRole("button", { name: copy.dialog.trigger });
 
     fireEvent.click(trigger);
-    const dialog = screen.getByRole("dialog", { name: copy.dialog.title });
+    const dialog = await screen.findByRole("dialog", {
+      name: copy.dialog.title,
+    });
     expect(within(dialog).getByText(copy.dialog.note)).toBeInTheDocument();
     expect(
       within(dialog).getByRole("switch", { name: copy.flags.showClock.label }),
@@ -357,7 +359,9 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     await flushGeneration();
 
     fireEvent.click(screen.getByRole("button", { name: copy.dialog.trigger }));
-    const dialog = screen.getByRole("dialog", { name: copy.dialog.title });
+    const dialog = await screen.findByRole("dialog", {
+      name: copy.dialog.title,
+    });
     const general = within(dialog).getByRole("group", { name: copy.general });
     expect(
       within(general)
@@ -379,10 +383,12 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
     ).toBeInTheDocument();
   });
 
-  it("a switch thrown in the dialog reaches the board behind it", () => {
+  it("a switch thrown in the dialog reaches the board behind it", async () => {
     render(<SudokuScreen daily={DAILY} />);
     fireEvent.click(screen.getByRole("button", { name: copy.dialog.trigger }));
-    const dialog = screen.getByRole("dialog", { name: copy.dialog.title });
+    const dialog = await screen.findByRole("dialog", {
+      name: copy.dialog.title,
+    });
 
     const clock = within(dialog).getByRole("switch", {
       name: copy.flags.showClock.label,

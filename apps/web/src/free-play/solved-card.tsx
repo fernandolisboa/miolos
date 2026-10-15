@@ -7,8 +7,6 @@ import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { EndingFlourish } from "../play/ending-flourish";
 import { JustEnded } from "../play/just-ended";
-import { PictureArt } from "../play/picture-art";
-import type { ConclusionPicture } from "../play/types";
 import type { FreePlayGame } from "./catalog";
 import type { FreePlayChoice } from "./choice-picker";
 import styles from "./free-play.module.css";
@@ -23,7 +21,7 @@ export function FreePlaySolvedCard<T extends string | number>({
 }: {
   readonly game: FreePlayGame;
   readonly choice?: FreePlayChoice<T>;
-  readonly picture?: ConclusionPicture;
+  readonly picture?: ReactNode;
   readonly word?: { readonly canonical: string; readonly won: boolean };
   readonly onAgain: () => void;
   readonly children?: ReactNode;
@@ -64,9 +62,7 @@ export function FreePlaySolvedCard<T extends string | number>({
             </p>
           )}
           {picture !== undefined && (
-            <div className={styles.pictureRow}>
-              <PictureArt picture={picture} className={styles.picture} />
-            </div>
+            <div className={styles.pictureRow}>{picture}</div>
           )}
           <div className={styles.actions}>
             <button type="button" className={styles.again} onClick={onAgain}>

@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./binairo": "./src/binairo/index.ts",
     "./crossword": "./src/crossword/index.ts",
+    "./minesweeper": "./src/minesweeper/index.ts",
     "./nonogram": "./src/nonogram/index.ts",
     "./nonogram-colors": "./src/nonogram-colors/index.ts",
     "./queens": "./src/queens/index.ts",

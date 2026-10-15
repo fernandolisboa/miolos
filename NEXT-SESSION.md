@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-One ⚡ item: NOW §3, the free-play Nonogram budget for the picture tones (#366), one tap on the card in its thread. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
+One ⚡ item to tap: NOW §4, the free-play Nonogram budget for the picture tones (#366), on the card in its thread. New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, best times, custom size), and a STANDING note that Campo Minado fields can force a guess (#373). You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E (#354, a brain whose lobes are grid cells); both shipped and are in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
 
 ## Start here
 
@@ -16,7 +16,7 @@ One ⚡ item: NOW §3, the free-play Nonogram budget for the picture tones (#366
 
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 
-**Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
+**Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106). Up to 1023px (#375, ADR-0123) the rules sit behind an (i) beside the title (`PlayTitle`, `play/play-title.tsx`, shared with Termo; a native `popover`), and Recomeçar, Ajustes and the hint share the last row, the hint showing "Dica" and a ringed count; phones keep a 16px side margin (impeccable flags less). The Ajustes panel and `HintCard` load through `lazyChunk` (`components/lazy-chunk.ts`), outside first load.
 
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
@@ -24,7 +24,7 @@ One ⚡ item: NOW §3, the free-play Nonogram budget for the picture tones (#366
 
 ## Traps
 
-**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
+**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** Run `pnpm test --force` before trusting a green gate after an `apps/api` change. **Dependabot npm PRs cannot be merged as opened** (no lockfile change). Land one hand-made bump, outside `minimumReleaseAge` (7 days).
 
 **A perfect day needs a lineup buffered before midnight (ADR-0087).** The buffer alert exists to prevent that. **Six per-game medals is T-CORE-S70's maximum.** A seventh game needs that cap raised first.
 
@@ -34,6 +34,4 @@ One ⚡ item: NOW §3, the free-play Nonogram budget for the picture tones (#366
 
 ## Next
 
-**Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
-
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 74.9 of 76 KB (ADR-0121, after #366).
+**Next:** the #321–#333 waves are done. The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367; the plan and the list of ADRs its own screen ADR amends are on the issue. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration). **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. After #375: `/nonogram` 46.0 of 48 KB, `/modo-livre/cruzadinha` 664.0 of 667, `/modo-livre/termo` 64.2 of 65, `/modo-livre/nonogram` 73.4 of 74 (ADR-0121, after #366). ADR-0112's Ajustes relief is spent; the next one is the `playRecordSchema` split.

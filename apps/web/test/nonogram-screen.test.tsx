@@ -1053,7 +1053,9 @@ describe("the four branches (T-WEB-S47)", () => {
     );
 
     expect(
-      screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1)),
+      screen.getByRole("button", {
+        name: messages.play.hint.available(FREE_HINTS_PER_PUZZLE - 1),
+      }),
     ).toHaveAttribute("aria-disabled", "false");
     expect(screen.getByText(FIRST_SENTENCE, SPOKEN)).toBeInTheDocument();
     expect(screen.getByText(copy.progressLong(1, TARGET))).toBeInTheDocument();
@@ -1078,7 +1080,9 @@ describe("the four branches (T-WEB-S47)", () => {
 
     spendFreeHints();
 
-    const exhausted = screen.getByText(messages.play.hint.used);
+    const exhausted = screen.getByRole("button", {
+      name: messages.play.hint.used,
+    });
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
     expect(marked()).toBe(FREE_HINTS_PER_PUZZLE);
 

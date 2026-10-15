@@ -46,3 +46,16 @@
   align-items: center;
   gap: var(--space-4);
 }
+
+/* see ADR-0123 */
+@media (max-width: 1023px) {
+  .ask {
+    inset: auto 0 0;
+    z-index: 2;
+    padding: var(--space-3) var(--space-4);
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 18%, transparent);
+  }
+}
