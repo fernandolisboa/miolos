@@ -16,6 +16,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Control tips sit behind `InfoTip` (#331); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
 
+**Ajustes uses the width** (T-WEB-S800): Aparência and the reminder share a row, then the full-width Jogos card, then the account row. `GameSettings` is a size container, so its groups split into two columns only above 50rem; the in-game dialog stays one column.
+
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
