@@ -20,7 +20,7 @@ ADR-0108 gave the engine a 7×7 grid and left the player's choice for later. The
 - Every first build waits one frame; a hidden tab builds when it becomes visible.
 - A size switch and back inside one frame shows the old puzzle for a frame, then rebuilds it with a fresh seed.
 - At 360×780 the 7×7 board sits at its 232px floor and the keyboard still fits under it; shorter phones scroll (ADR-0103 decision 3).
-- `/modo-livre/cruzadinha` adds 659.4 KB raw / 158.8 KB gzip over `/`, 0.6 KB under its 660 KB budget (main: 658.3). The next client change on that route re-sizes the budget with a reason.
+- `/modo-livre/cruzadinha` adds 659.6 KB raw / 158.8 KB gzip over `/`, 0.4 KB under its 660 KB budget (main: 658.3). The next client change on that route re-sizes the budget with a reason.
 - The daily's size remains Fernando's call, now that 7×7 can be played (`docs/pending-fernando.md`).
 
 ## Rejected
