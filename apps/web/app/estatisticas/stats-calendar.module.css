@@ -1,0 +1,146 @@
+/* The Calendário section of /estatisticas. Per-date states ride geometry
+   first and colour second, so they survive greyscale: filled (on the day),
+   ringed in the app accent (later), ringed in a hairline (missed), bare
+   numeral (outside the tracked range). The perfect day is a SHAPE, never a
+   word (ADR-0041). Accent fills and rings clear WCAG 1.4.11 against
+   --paper-card; every numeral clears 4.5:1 on its own ground. */
+
+.calendar {
+  margin-top: var(--space-12);
+}
+
+/* Reserved dimensions for the unsettled state, so the enumeration landing
+   shifts nothing above it (#37). */
+.calendarSkeleton {
+  min-height: 300px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legendSwatch {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+/* Side by side, newest first, as many per row as the measure holds; one
+   column on a phone. */
+.months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+/* The neutral hard shadow: the months are a ledger, not a celebration. */
+.month {
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md) var(--line);
+  padding: var(--space-4);
+}
+
+.monthTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 550;
+  font-size: 19px;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-top: var(--space-3);
+}
+
+.weekday {
+  font: var(--text-kicker);
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-top: var(--space-2);
+}
+
+.day,
+.dayPad {
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  border-radius: var(--radius-cell);
+}
+
+.day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dayNumeral {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.day[data-state="onTime"],
+.legendSwatch[data-state="onTime"] {
+  background: var(--accent-app);
+}
+
+.day[data-state="onTime"] .dayNumeral {
+  color: var(--paper-card);
+}
+
+/* Inset, so the geometry never moves. */
+.day[data-state="late"],
+.legendSwatch[data-state="late"] {
+  box-shadow: inset 0 0 0 2px var(--accent-app);
+}
+
+.day[data-state="late"] .dayNumeral {
+  color: var(--ink);
+}
+
+.day[data-state="missed"],
+.legendSwatch[data-state="missed"] {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.perfectMark {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  background: var(--paper-card);
+  transform: rotate(45deg);
+}
+
+@media (max-width: 768px) {
+  .calendar {
+    margin-top: var(--space-8);
+  }
+
+  .dayNumeral {
+    font-size: 13px;
+  }
+}

@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S193` | `S192` | never used |
 | `T-DB` | `S144` | `S142` | `T-DB-21` |
 | `T-API` | `S335` | `S333` | `T-API-16` |
-| `T-WEB` | `S750` | `S746` | `T-WEB-23` |
+| `T-WEB` | `S800` | `S793` | `T-WEB-23` |
 | `T-LINT` | `S72` | `S71` | `T-LINT-10` |
+
+The calendars thread (Estatísticas months side by side, Arquivo month arrows) spent **`T-WEB-S790…S793`** in `calendars-wide.test.tsx`: `S790` (every day of a stats month shows its numeral, untracked days are bare and silent, weekday initials, the neutral month), `S791` (the stats months fill an auto-fill grid; the missed ring), `S792` (the archive card's previous / month / next header on the month page and the index; the current month chip), `S793` (`adjacentMonths`). `S794…S799` are **burned**; `S750…S789` are left to sibling threads. `T-WEB-S167`, `S169`, `S182` and `S311` were re-aimed in place (one archive layout, month steps on the card, the card fills the measure).
 
 #353 (the end-of-game flourish, ADR-0118) spent **`T-WEB-S740…S746`** in `ending.test.tsx`: `S740` (a daily is just ended only when the board showed in this mount), `S741` (the archive follows the same rule, and a lost day runs), `S742` (the conclusion presses a just-ended win, runs a just-ended loss, stays calm on a revisit), `S743` (free play always plays it), `S744` (`endAnimation` defaults on and a junk value falls back), `S745` (the general group always offers the switch, the clock only where there is one), `S746` (the sheet's keyframes, no bounce or loop, tokens only, the sag ends at rest, the reduce stand-down). `S747…S749` are **burned**; `S736…S739` are left to sibling threads. `T-WEB-S580` and `S593` were widened in place (the defaults and the general group gain `endAnimation`), and the free-play dialog test in `game-settings.test.tsx` now finds the general group holding only the animation switch.
 

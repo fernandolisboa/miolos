@@ -2,32 +2,20 @@
 
 import {
   MEDAL_IDS,
-  type CalendarDay,
   type StatsResponse,
   type TermoStats,
   type TimedGame,
   type TimedGameStats,
 } from "@miolos/core";
 
-import {
-  formatElapsed,
-  formatLongDate,
-  formatMonth,
-  messages,
-  todaySaoPauloDate,
-} from "../../src/i18n";
+import { formatElapsed, messages } from "../../src/i18n";
 import { medalCopy } from "../../src/medals/copy";
 import { useMedals } from "../../src/medals/use-medals";
 import { accentVars } from "../../src/play/accent";
 import { DAY_GAMES } from "../../src/play/day-games";
-import {
-  calendarMonths,
-  neutralMonth,
-  type CalendarMonth,
-} from "../../src/stats/calendar-month";
 import { useStats } from "../../src/stats/use-stats";
-import { useStatsCalendar } from "../../src/stats/use-stats-calendar";
 import styles from "./page.module.css";
+import { StatsCalendar } from "./stats-calendar";
 
 const BLANK_VALUE = " ";
 
@@ -57,7 +45,7 @@ export function StatsView() {
           <GameBlock key={game} game={game} stats={stats} />
         ))}
       </section>
-      <CalendarSection />
+      <StatsCalendar />
     </>
   );
 }
@@ -284,90 +272,5 @@ function TermoBlock({
         })}
       </div>
     </div>
-  );
-}
-
-function CalendarSection() {
-  const calendar = useStatsCalendar();
-  if (calendar === undefined) {
-    return (
-      <section className={styles.calendar} data-stats-state="skeleton">
-        <h2 className={styles.sectionHeading}>
-          {messages.stats.calendar.title}
-        </h2>
-        <div aria-hidden className={styles.calendarSkeleton} />
-      </section>
-    );
-  }
-
-  const months =
-    calendar === null
-      ? [neutralMonth(todaySaoPauloDate(new Date()))]
-      : calendarMonths(calendar.days);
-  return (
-    <section className={styles.calendar} data-stats-state="value">
-      <h2 className={styles.sectionHeading}>{messages.stats.calendar.title}</h2>
-
-      {calendar !== null && (
-        <div className={styles.legend}>
-          {(["onTime", "late", "missed"] as const).map((state) => (
-            <span key={state} className={styles.legendItem}>
-              <span
-                aria-hidden
-                className={styles.legendSwatch}
-                data-state={state}
-              />
-              {messages.stats.calendar.legend[state]}
-            </span>
-          ))}
-        </div>
-      )}
-      {months.map((month) => (
-        <MonthGrid key={month.month} month={month} />
-      ))}
-    </section>
-  );
-}
-
-function MonthGrid({ month }: { readonly month: CalendarMonth }) {
-  return (
-    <div className={styles.month}>
-      <h3 className={styles.monthTitle}>{formatMonth(month.month)}</h3>
-      <div className={styles.monthGrid}>
-        {month.cells.map((cell, index) =>
-          cell === null ? (
-            <span key={index} aria-hidden className={styles.dayPad} />
-          ) : (
-            <DayCell key={cell.date} day={cell} />
-          ),
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DayCell({ day }: { readonly day: CalendarDay }) {
-  const date = formatLongDate(day.date);
-  const aria =
-    day.state === "onTime"
-      ? day.perfect
-        ? messages.stats.calendar.dayAria.onTimePerfect(date)
-        : messages.stats.calendar.dayAria.onTime(date)
-      : day.state === "late"
-        ? messages.stats.calendar.dayAria.late(date)
-        : messages.stats.calendar.dayAria.missed(date);
-  return (
-    <span
-      role="img"
-      aria-label={aria}
-      className={styles.day}
-      data-state={day.state}
-      data-perfect={day.perfect ? "" : undefined}
-    >
-      <span aria-hidden className={`${styles.dayNumeral} tabular-nums`}>
-        {Number(day.date.slice(8))}
-      </span>
-      {day.perfect && <span aria-hidden className={styles.perfectMark} />}
-    </span>
   );
 }

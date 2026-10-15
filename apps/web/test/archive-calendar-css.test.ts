@@ -100,6 +100,6 @@ describe("the archive calendar's cell geometry (T-WEB-S311)", () => {
     expect(decl(bodyOf(mobile(), ".page"), "display")).toBeUndefined();
 
     expect(decl(bodyOf(sheet, ".calendarCard"), "display")).toBeUndefined();
-    expect(decl(bodyOf(sheet, ".calendarCard"), "width")).toBe("fit-content");
+    expect(decl(bodyOf(sheet, ".calendarCard"), "width")).toBe("100%");
   });
 });

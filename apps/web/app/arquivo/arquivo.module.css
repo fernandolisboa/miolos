@@ -97,7 +97,7 @@
 
 /* ——— the calendar ————————————————————————————————————————————————————
    The month grid that replaced the day rows on BOTH surfaces (#163, plan
-   065 D3) — the stats month register (`estatisticas/page.module.css:418`):
+   065 D3) — the stats month register (`estatisticas/stats-calendar.module.css`):
    card paper, 1px line border, NEUTRAL hard shadow, because the archive
    belongs to no game and this surface earns no accent (ADR-0041; the
    months are a ledger, not a celebration). The card sits BARE in
@@ -111,12 +111,65 @@
    width-only track would leave height to line-height. */
 
 .calendarCard {
-  width: fit-content;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 520px;
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-md) var(--line);
   padding: var(--space-5);
+}
+
+/* Previous / month / next, the shape every calendar app uses, so stepping
+   through months never leaves the grid. An edge month keeps its slot as a
+   muted chevron, so the month name never shifts. */
+.calendarHead {
+  display: grid;
+  grid-template-columns: var(--touch-target-min) 1fr var(--touch-target-min);
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.calendarMonth {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 550;
+  text-align: center;
+}
+
+.monthStep,
+.monthStepOff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border-radius: var(--radius);
+}
+
+.monthStep {
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.monthStep:hover {
+  border-color: var(--ink);
+}
+
+.monthStepOff {
+  color: var(--line);
+}
+
+.monthStepIcon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* The header row and the grid carry the SAME column template and the same
@@ -229,67 +282,10 @@
   text-decoration: none;
 }
 
-/* ——— month page: previous / next ——————————————————————————————————— */
-
-.monthNav {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-top: var(--space-8);
-}
-
-/* A REAL TOUCH TARGET (step-6 F8). These measured 118×11px and 148×11px at
-   390×844 — an 11px strip at the bottom of a 2,225px scroll, and the primary
-   way to move backwards through the archive was the hardest thing on the
-   page to hit. DESIGN.md's ≥44px floor; every other link on both archive
-   sheets already honours it (`.monthChip`, `late-result .link`). */
-/* TWO LINES, and the uppercase lives on the top one only (step-7 V1). The
-   link used to be one uppercase run of `Mês anterior · <mês>`; impeccable's
-   `all-caps-body` fires on any non-heading element with more than 30
-   characters of direct text under `text-transform: uppercase`
-   (`checks.mjs:3463-3467`) and grants no interactive or `nav` exemption —
-   that one belongs to `undersized-ui-text`, twenty lines above it. In
-   fevereiro the label is 32 characters and in setembro, novembro and dezembro
-   31, so the gate would have redded on the newest month page for four months
-   in every twelve, on the calendar rather than on a diff. Kicker over month
-   is also the anatomy this sheet already uses on the day cards
-   (`.cardKicker` + `.cardTitle`), and it scans faster: the month, the only
-   varying token, is the one in sentence case. */
-.monthNavLink {
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-1);
-  min-height: var(--touch-target-min);
-  color: var(--ink);
-  text-decoration: none;
-}
-
-/* Pushes a lone `next` to the right when there is no `previous`. */
-.monthNavLink:only-child:last-child {
-  margin-left: auto;
-}
-
-/* `next` sits at the right edge of the `space-between` row, so both of its
-   lines align to that edge rather than ragging away from it. */
-.monthNavNext {
-  align-items: flex-end;
-  text-align: right;
-}
-
-.monthNavKicker {
-  font: var(--text-kicker);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-}
-
-/* NOT uppercase and NOT tracked — the two halves of the rule above. Tracking
-   belongs to the kicker register; on sentence case at body size impeccable's
-   `wide-tracking` would be right to complain. */
-.monthNavMonth {
-  font: var(--text-body);
-  color: var(--ink);
+.monthChip[aria-current="page"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper-card);
 }
 
 /* ——— day page: the game cards —————————————————————————————————————
