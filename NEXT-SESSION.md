@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E (#354, a brain whose lobes are grid cells); both shipped and are in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
+New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, best times, custom size), and a STANDING note that Campo Minado fields can force a guess (#373). You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E (#354, a brain whose lobes are grid cells); both shipped and are in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku _Número fixo_ double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: _"run /wizard over docs/pending-fernando.md, NOW section"_.
 
 ## Start here
 
@@ -38,6 +38,6 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 ## Next
 
-**Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
+**Next:** the #321–#333 waves are done. The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367, with the plan on the issue and an ADR number of its own for the screen decisions (free-play-only type, no hint, timer, 24 px floor; it amends ADR-0046, 0077, 0095, 0098, 0103, 0030, 0094). File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 68.1 of 69 KB (ADR-0119, after #354).
