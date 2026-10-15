@@ -216,6 +216,31 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+const outsideTopBar = (container: HTMLElement, selector: string) =>
+  [...container.querySelectorAll(selector)].filter(
+    (node) => !node.closest("header"),
+  );
+
+describe("the conclusion bar carries the brand mark beside the wordmark (T-WEB-S752)", () => {
+  it("draws the decorative mark inside the wordmark and keeps its text", () => {
+    writePlayRecord(concluded());
+    render(
+      <ConclusionView
+        game="binairo"
+        date={DATE}
+        copy={messages.games.binairo.conclusion}
+      />,
+    );
+
+    const wordmark = screen.getByText(messages.brand.wordmark);
+    expect(wordmark.textContent).toBe(messages.brand.wordmark);
+    expect(wordmark.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+});
+
 describe("the stamp (T-WEB-17)", () => {
   it("renders the real elapsed time and the hint line, from the messages module", () => {
     writePlayRecord(concluded());
@@ -852,8 +877,8 @@ describe("the picture reveal (T-WEB-S50)", () => {
 
     expect(subpathsOf(figure)[0]).toBe("M1 0h1v1h-1z");
 
-    expect(container.querySelectorAll("path")).toHaveLength(1);
-    expect(container.querySelectorAll("rect")).toHaveLength(0);
+    expect(outsideTopBar(container, "path")).toHaveLength(1);
+    expect(outsideTopBar(container, "rect")).toHaveLength(0);
   });
 
   it("renders no figure at all when the caller supplies none", () => {
@@ -876,7 +901,7 @@ describe("the picture reveal (T-WEB-S50)", () => {
         ),
       }),
     ).toBeInTheDocument();
-    expect(container.querySelector("svg")).toBeNull();
+    expect(outsideTopBar(container, "svg")).toEqual([]);
     expect(
       screen.queryByRole("img", { name: PICTURE.label }),
     ).not.toBeInTheDocument();
@@ -945,8 +970,8 @@ describe("the picture reveal (T-WEB-S50)", () => {
         />,
       );
 
-      expect(container.querySelector("svg")).toBeNull();
-      expect(container.querySelector("path")).toBeNull();
+      expect(outsideTopBar(container, "svg")).toEqual([]);
+      expect(outsideTopBar(container, "path")).toEqual([]);
       expect(screen.getAllByRole("img")).toHaveLength(1);
       unmount();
     }

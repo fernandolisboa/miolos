@@ -13,11 +13,11 @@ const MAX_DELTA_BYTES = 48 * 1024;
 const PER_ROUTE_BUDGET = {
   "/termo": 76 * 1024,
 
-  "/modo-livre/nonogram": 66 * 1024,
+  "/modo-livre/nonogram": 69 * 1024,
 
-  "/modo-livre/termo": 62 * 1024,
+  "/modo-livre/termo": 65 * 1024,
 
-  "/modo-livre/cruzadinha": 664 * 1024,
+  "/modo-livre/cruzadinha": 667 * 1024,
 
   "/arquivo/[data]/termo": 76 * 1024,
 };

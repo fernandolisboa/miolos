@@ -1475,3 +1475,17 @@ describe("the active row is a roving-focus input row (T-WEB-S641)", () => {
     expect(document.activeElement).toBe(enviar);
   });
 });
+
+describe("the Termo top bar carries the brand mark beside the wordmark (T-WEB-S752)", () => {
+  it("draws the decorative mark inside the wordmark and keeps its text", () => {
+    const { play } = playFixture();
+    render(<PlayView play={play} />);
+
+    const wordmark = screen.getByText(messages.brand.wordmark);
+    expect(wordmark.textContent).toBe(messages.brand.wordmark);
+    expect(wordmark.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+});

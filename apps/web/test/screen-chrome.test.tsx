@@ -832,3 +832,16 @@ describe("the reset slot keeps its height from the skeleton to the board (T-WEB-
     }
   });
 });
+
+describe("the play top bar carries the brand mark beside the wordmark (T-WEB-S752)", () => {
+  it("draws the decorative mark inside the wordmark and keeps its text", () => {
+    const page = staticPage(chrome(DAILY_SKELETON));
+    const wordmark = page.querySelector(`.${cls("wordmark")}`);
+
+    expect(wordmark?.textContent).toBe(messages.brand.wordmark);
+    expect(wordmark?.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+});

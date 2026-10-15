@@ -1,0 +1,123 @@
+.mark {
+  display: inline-block;
+  width: 1.12em;
+  height: 1em;
+  margin-inline-end: 0.22em;
+  vertical-align: -0.16em;
+}
+
+.paper {
+  fill: var(--paper-card);
+}
+
+.ink {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linejoin: round;
+}
+
+.termo {
+  fill: var(--accent-termo);
+}
+
+.sudoku {
+  fill: var(--accent-sudoku);
+}
+
+.nonogram {
+  fill: var(--accent-nonogram);
+}
+
+.binairo {
+  fill: var(--accent-binairo);
+}
+
+.crossword {
+  fill: var(--accent-crossword);
+}
+
+.queens {
+  fill: var(--accent-queens);
+}
+
+.shuffling rect {
+  animation: shuffle-a 2.6s steps(1, end) infinite;
+}
+
+.shuffling rect:nth-child(3n) {
+  animation-name: shuffle-b;
+  animation-duration: 3.4s;
+}
+
+.shuffling rect:nth-child(5n + 1) {
+  animation-name: shuffle-c;
+  animation-duration: 2.2s;
+}
+
+.shuffling rect:nth-child(4n + 3) {
+  animation-delay: -0.7s;
+}
+
+.shuffling rect:nth-child(7n + 2) {
+  animation-delay: -1.3s;
+}
+
+.shuffling rect:nth-child(11n) {
+  animation-delay: -1.9s;
+}
+
+@keyframes shuffle-a {
+  0% {
+    fill: var(--accent-termo);
+  }
+  25% {
+    fill: var(--paper-card);
+  }
+  50% {
+    fill: var(--accent-sudoku);
+  }
+  75% {
+    fill: var(--accent-binairo);
+  }
+}
+
+@keyframes shuffle-b {
+  0% {
+    fill: var(--accent-nonogram);
+  }
+  25% {
+    fill: var(--accent-queens);
+  }
+  50% {
+    fill: var(--paper-card);
+  }
+  75% {
+    fill: var(--accent-termo);
+  }
+}
+
+@keyframes shuffle-c {
+  0% {
+    fill: var(--accent-crossword);
+  }
+  25% {
+    fill: var(--accent-sudoku);
+  }
+  50% {
+    fill: var(--accent-nonogram);
+  }
+  75% {
+    fill: var(--paper-card);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shuffling rect,
+  .shuffling rect:nth-child(3n),
+  .shuffling rect:nth-child(5n + 1),
+  .shuffling rect:nth-child(4n + 3),
+  .shuffling rect:nth-child(7n + 2),
+  .shuffling rect:nth-child(11n) {
+    animation: none;
+  }
+}
