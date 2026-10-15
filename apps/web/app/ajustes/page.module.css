@@ -1,10 +1,8 @@
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
   padding: var(--space-11) 80px var(--space-12);
-  max-width: 860px;
+  max-width: 1200px;
   margin-inline: auto;
 }
 
@@ -34,10 +32,20 @@
   text-wrap: pretty;
 }
 
+.sections {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-8);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--space-6);
+}
+
 .card {
   box-sizing: border-box;
-  margin-top: var(--space-8);
-  max-width: 60ch;
   padding: var(--space-5) var(--space-6) var(--space-6);
   background: var(--paper-card);
   border: 1px solid var(--line);
@@ -55,6 +63,7 @@
 
 .body {
   margin: var(--space-3) 0 0;
+  max-width: 60ch;
   font-size: 15px;
   line-height: 1.6;
   text-wrap: pretty;
@@ -62,6 +71,7 @@
 
 .note {
   margin: var(--space-3) 0 0;
+  max-width: 60ch;
   font-size: 14px;
   line-height: 1.6;
   color: var(--ink-2);
@@ -152,8 +162,11 @@
     line-height: 1.5;
   }
 
-  .card {
+  .sections {
     margin-top: var(--space-6);
+  }
+
+  .card {
     padding: var(--space-4) var(--space-4) var(--space-5);
   }
 

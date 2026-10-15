@@ -4,8 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminConfigSection } from "../app/admin/admin-config-section";
+import adminStyles from "../app/admin/admin.module.css";
 import AdminPage, { metadata } from "../app/admin/page";
+import settingsStyles from "../app/ajustes/page.module.css";
 import { messages } from "../src/i18n";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 vi.mock("../src/session/bootstrap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/session/bootstrap")>()),
@@ -119,6 +122,28 @@ describe("/admin is a noindex static shell (T-WEB-S530)", () => {
     expect(markup).toContain(copy.title);
     expect(markup).toContain(copy.config.heading);
     expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+});
+
+describe("/admin stacks its cards in the shared sections grid at the old card measure (T-WEB-S801)", () => {
+  it("the config card sits in a sections grid that admin holds to 60ch on the wide Ajustes sheet", () => {
+    document.body.innerHTML = renderToStaticMarkup(<AdminPage />);
+    const wrapper = document.querySelector(
+      '[aria-labelledby="admin-config-heading"]',
+    )?.parentElement;
+    expect(wrapper?.classList.contains(String(settingsStyles.sections))).toBe(
+      true,
+    );
+    expect(wrapper?.classList.contains(String(adminStyles.sections))).toBe(
+      true,
+    );
+    expect(
+      decl(
+        bodyOf(stylesheet("app/admin/admin.module.css"), ".sections"),
+        "max-width",
+      ),
+    ).toBe("60ch");
+    document.body.innerHTML = "";
   });
 });
 

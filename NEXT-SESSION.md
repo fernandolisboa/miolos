@@ -4,7 +4,7 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 ## Start here
 
-**Calendars** (the calendars thread): the Estatísticas months sit side by side in an auto-fill grid (`app/estatisticas/stats-calendar.tsx`, its own sheet), every day shows its numeral, and a missed day wears a hairline ring so it differs from an untracked one. The Arquivo index and month pages share one layout (`ArchiveBody` in `app/arquivo/archive-body.tsx`): previous / month / next on a larger card (`adjacentMonths`), then the month chips with the current one marked.
+**Calendars** (the calendars thread): the Estatísticas months sit side by side in an auto-fill grid (`app/estatisticas/stats-calendar.tsx`, its own sheet), every day shows its numeral, and a missed day wears a hairline ring so it differs from an untracked one. The Arquivo index and month pages share one layout (`ArchiveBody` in `app/arquivo/archive-body.tsx`): previous / month / next on a larger card (`adjacentMonths`), then the month chips with the current one marked. Ajustes uses the width too (T-WEB-S800): `GameSettings` is a size container, so its groups split into two columns only above 50rem and the in-game dialog stays one column.
 
 **Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily. The pool is `@miolos/games/termo-free`; the answer list is `@miolos/games/termo-answers`, banned in `apps/web` source.
 
@@ -40,4 +40,4 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 662.9 of 664 KB and `/modo-livre/nonogram` at 65.9 of 66 KB (ADR-0113, after #360).
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 661.1 of 664 KB and `/modo-livre/nonogram` at 63.9 of 66 KB (ADR-0113, after #360).

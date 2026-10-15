@@ -16,6 +16,7 @@ import { ThemeSection } from "../app/ajustes/theme-section";
 import HojePage from "../app/page";
 import PrivacyPage from "../app/privacidade/page";
 import { deleteAccountAnchor, messages, routes } from "../src/i18n";
+import { bodyOf, decl, pixels, stylesheet } from "./css-source";
 import { closureOf } from "./module-graph";
 
 const pushClient = vi.hoisted(() => ({
@@ -186,6 +187,63 @@ describe("/ajustes is a static shell that renders with the API and the database 
           module === "apps/web/src/db.ts" || module.startsWith("packages/db/"),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("a wide screen lays Ajustes out in paired rows around a full-width Jogos card (T-WEB-S800)", () => {
+  it("pairs Aparência with the reminder and keeps that reading order", () => {
+    document.body.innerHTML = renderToStaticMarkup(<SettingsPage />);
+    const headings = [...document.querySelectorAll("section")].map((section) =>
+      section.getAttribute("aria-labelledby"),
+    );
+    expect(headings).toEqual([
+      "settings-theme-heading",
+      "settings-push-heading",
+      "settings-games-heading",
+      "settings-account-heading",
+      "settings-deletion-heading",
+    ]);
+    const parent = (id: string) =>
+      document.querySelector(`[aria-labelledby="${id}"]`)?.parentElement;
+    expect(parent("settings-push-heading")).toBe(
+      parent("settings-theme-heading"),
+    );
+    expect(parent("settings-games-heading")).not.toBe(
+      parent("settings-theme-heading"),
+    );
+    expect(parent("settings-account-heading")?.className).toBe(
+      parent("settings-theme-heading")?.className,
+    );
+    expect(parent("settings-account-heading")).not.toBe(
+      parent("settings-games-heading"),
+    );
+    document.body.innerHTML = "";
+  });
+
+  it("the sheet is 1200px, a row folds to one column below two 24rem cards, and a card has no measure of its own", () => {
+    const css = stylesheet("app/ajustes/page.module.css");
+    expect(pixels(decl(bodyOf(css, ".page"), "max-width"))).toBe(1200);
+    expect(decl(bodyOf(css, ".row"), "grid-template-columns")).toBe(
+      "repeat(auto-fit, minmax(min(100%, 24rem), 1fr))",
+    );
+    expect(decl(bodyOf(css, ".card"), "max-width")).toBeUndefined();
+  });
+
+  it("the game settings split into two columns only in a container 50rem wide, so the 480px in-game dialog keeps one", () => {
+    const css = stylesheet("src/settings/game-settings.module.css");
+    expect(decl(bodyOf(css, ".frame"), "container-type")).toBe("inline-size");
+    expect(decl(bodyOf(css, ".groups"), "columns")).toBeUndefined();
+    const wide = bodyOf(css, "@container (min-width: 50rem)");
+    expect(decl(bodyOf(wide, ".groups"), "columns")).toBe("2");
+    expect(decl(bodyOf(wide, ".group + .group"), "break-inside")).toBe("avoid");
+    expect(wide).toMatch(/\.group,\s*\.group \+ \.group\s*\{/);
+    const dialog = bodyOf(
+      stylesheet("src/settings/settings-dialog.module.css"),
+      ".dialog",
+    );
+    expect(decl(dialog, "width")).toBe(
+      "min(480px, calc(100vw - 2 * var(--space-5)))",
+    );
   });
 });
 
