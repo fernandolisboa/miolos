@@ -349,9 +349,11 @@ export function topUpNonogramBuffer(
 
 export const MAX_CROSSWORD_SEED_RETRIES_PER_DATE = 8;
 
+const CROSSWORD_GENERATION_SIZE = 7;
+
 function attemptCrossword(seed: number): Attempt {
   return seededAttempt(
-    () => generateCrossword(seed),
+    () => generateCrossword(seed, CROSSWORD_GENERATION_SIZE),
     CrosswordGenerationError,
     (puzzle) => okRejection(validateCrossword(puzzle)),
     crosswordDailyContentSchema,

@@ -1,5 +1,3 @@
-import { DAILY_CROSSWORD_SIZE } from "@miolos/core";
-
 import { DailyPlayChrome } from "../play/daily-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import {
@@ -7,7 +5,7 @@ import {
   CrosswordSkeletonBody,
   crosswordReadouts,
 } from "./board-view";
-import boardStyles from "./crossword-board.module.css";
+import { pageClassName } from "./size-classes";
 import type { CrosswordPlay } from "./use-crossword-play";
 
 export function PlayView({
@@ -20,7 +18,7 @@ export function PlayView({
   return (
     <DailyPlayChrome
       game="crossword"
-      pageModifier={boardStyles.pageCrossword ?? ""}
+      pageModifier={pageClassName(play.state.size)}
       date={play.state.date}
       archive={archive}
       clock={{ elapsedMs: play.elapsed }}
@@ -34,22 +32,24 @@ export function PlayView({
 
 export function PlaySkeleton({
   date,
+  size,
   archive,
 }: {
   readonly date: string;
+  readonly size: number;
   readonly archive?: ArchivePlayChrome;
 }) {
   return (
     <DailyPlayChrome
       game="crossword"
-      pageModifier={boardStyles.pageCrossword ?? ""}
+      pageModifier={pageClassName(size)}
       date={date}
       archive={archive}
       clock="blank"
       extraStat={null}
       state={{ kind: "skeleton" }}
     >
-      <CrosswordSkeletonBody size={DAILY_CROSSWORD_SIZE} />
+      <CrosswordSkeletonBody size={size} />
     </DailyPlayChrome>
   );
 }

@@ -4,6 +4,7 @@ import { completionOutcomeSchema, hintsUsedSchema } from "../completion";
 import { gameSchema } from "../game";
 import {
   calendarDateString,
+  CROSSWORD_SIZES,
   crosswordLetterSchema,
   isoDateString,
   nonogramSizeSchema,
@@ -39,21 +40,34 @@ export type SudokuCompletionRequest = z.infer<
   typeof sudokuCompletionRequestSchema
 >;
 
-function squareBinaryGridSchema(sizes: {
-  readonly options: readonly { readonly value: number }[];
-}) {
-  const cellCounts = sizes.options.map((option) => option.value ** 2);
+function squareGridSchema<Cell extends z.ZodType>(
+  cell: Cell,
+  sides: readonly number[],
+) {
+  const cellCounts = sides.map((side) => side ** 2);
   return z
-    .array(submittedCellSchema)
+    .array(cell)
+    .max(Math.max(...cellCounts))
     .refine((g) => cellCounts.includes(g.length), {
       message: `grid length must be one of ${cellCounts.join(", ")}`,
     });
 }
 
+function sidesOf(sizes: {
+  readonly options: readonly { readonly value: number }[];
+}): readonly number[] {
+  return sizes.options.map((option) => option.value);
+}
+
+export const crosswordCellsSchema = squareGridSchema(
+  crosswordLetterSchema.nullable(),
+  CROSSWORD_SIZES,
+);
+
 export const nonogramCompletionRequestSchema = z.strictObject({
   game: z.literal("nonogram"),
   date: calendarDateString,
-  grid: squareBinaryGridSchema(nonogramSizeSchema),
+  grid: squareGridSchema(submittedCellSchema, sidesOf(nonogramSizeSchema)),
   elapsedMs: z.number().int().min(0).max(86_400_000),
   hintsUsed: hintsUsedSchema,
 });
@@ -77,7 +91,7 @@ export type TermoCompletionRequest = z.infer<
 export const crosswordCompletionRequestSchema = z.strictObject({
   game: z.literal("crossword"),
   date: calendarDateString,
-  grid: z.array(crosswordLetterSchema.nullable()).length(25),
+  grid: crosswordCellsSchema,
   elapsedMs: z.number().int().min(0).max(86_400_000),
   hintsUsed: hintsUsedSchema,
 });
@@ -89,7 +103,7 @@ export type CrosswordCompletionRequest = z.infer<
 export const queensCompletionRequestSchema = z.strictObject({
   game: z.literal("queens"),
   date: calendarDateString,
-  grid: squareBinaryGridSchema(queensSizeSchema),
+  grid: squareGridSchema(submittedCellSchema, sidesOf(queensSizeSchema)),
   elapsedMs: z.number().int().min(0).max(86_400_000),
   hintsUsed: hintsUsedSchema,
 });

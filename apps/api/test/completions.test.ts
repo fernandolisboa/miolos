@@ -20,6 +20,7 @@ import { generateBinairo } from "@miolos/games/binairo";
 import {
   generateCrossword,
   type CrosswordPuzzle,
+  type CrosswordSize,
 } from "@miolos/games/crossword";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateQueens } from "@miolos/games/queens";
@@ -230,23 +231,25 @@ async function completionRows(): Promise<unknown[]> {
   return ctx.db.select().from(completions);
 }
 
-const crosswordCache = new Map<number, CrosswordPuzzle>();
+const crosswordCache = new Map<string, CrosswordPuzzle>();
 
-function crosswordPuzzle(seed: number): CrosswordPuzzle {
-  const cached = crosswordCache.get(seed);
+function crosswordPuzzle(seed: number, size: CrosswordSize): CrosswordPuzzle {
+  const key = `${seed}:${size}`;
+  const cached = crosswordCache.get(key);
   if (cached) {
     return cached;
   }
-  const puzzle = generateCrossword(seed);
-  crosswordCache.set(seed, puzzle);
+  const puzzle = generateCrossword(seed, size);
+  crosswordCache.set(key, puzzle);
   return puzzle;
 }
 
 async function seedCrosswordDaily(
   date: string,
   seed = 7,
+  size: CrosswordSize = 5,
 ): Promise<readonly (string | null)[]> {
-  const puzzle = crosswordPuzzle(seed);
+  const puzzle = crosswordPuzzle(seed, size);
   await insertDailyPuzzle(ctx.db, {
     game: "crossword",
     date,
@@ -1461,6 +1464,54 @@ describe("POST /completions — crossword (#276, ADR-0086)", () => {
     expect(response.status).toBe(200);
     expect(completionResponseSchema.parse(await response.json())).toMatchObject(
       { date: twoDaysAgo, outcome: "won", onTime: false, recorded: true },
+    );
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+  it("T-API-S333: a 7×7 day records its 49-cell solution, and a grid of the other size is 422", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const yesterday = addDays(today, -1);
+    const seven = await seedCrosswordDaily(today, 7, 7);
+    const five = await seedCrosswordDaily(yesterday, 7, 5);
+    const { token } = await createSession();
+
+    for (const [date, grid] of [
+      [today, five],
+      [yesterday, seven],
+    ] as const) {
+      const response = await POST(
+        completionRequest({
+          token,
+          body: crosswordCompletionBody({ date, grid }),
+        }),
+      );
+      expect(response.status, `${date} ${grid.length}`).toBe(422);
+      expect(await errorOf(response)).toEqual({ error: "grid-mismatch" });
+    }
+    expect(await completionRows()).toHaveLength(0);
+
+    const padded = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({
+          date: yesterday,
+          grid: [...five, ...Array.from({ length: 24 }, () => null)],
+        }),
+      }),
+    );
+    expect(padded.status).toBe(422);
+    expect(await errorOf(padded)).toEqual({ error: "grid-mismatch" });
+    expect(await completionRows()).toHaveLength(0);
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: crosswordCompletionBody({ date: today, grid: seven }),
+      }),
+    );
+    expect(seven).toHaveLength(49);
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toMatchObject(
+      { date: today, outcome: "won", onTime: true, recorded: true },
     );
     expect(await completionRows()).toHaveLength(1);
   }, 30_000);

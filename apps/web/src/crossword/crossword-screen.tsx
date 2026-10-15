@@ -21,7 +21,7 @@ export function CrosswordScreen({
       claim={claim}
       state={play.state}
       result={{ elapsedMs: play.elapsed, hintsUsed: play.state.hint.used }}
-      skeleton={<PlaySkeleton date={daily.date} />}
+      skeleton={<PlaySkeleton date={daily.date} size={play.state.size} />}
       view={<PlayView play={play} />}
     />
   );

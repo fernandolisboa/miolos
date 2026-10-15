@@ -638,7 +638,7 @@ describe("crosswordCompletionRequestSchema", () => {
     ]);
   });
 
-  it("T-CORE-S124: every cell is one a-z letter or null, and the grid is exactly 25 long", () => {
+  it("T-CORE-S124: every cell is one a-z letter or null, and a 24- or 26-cell grid fails", () => {
     const withCell = (cell: unknown) => ({
       ...validCrossword,
       grid: [cell, ...crosswordGrid.slice(1)],
@@ -662,6 +662,25 @@ describe("crosswordCompletionRequestSchema", () => {
       ).toBe(false);
     }
     expect(completionRequestSchema.safeParse(withCell("z")).success).toBe(true);
+  });
+
+  it("T-CORE-S190: the grid holds 25 or 49 cells, a 5x5 or a 7x7, and nothing between or past", () => {
+    for (const length of [25, 49]) {
+      const body = {
+        ...validCrossword,
+        grid: Array.from({ length }, () => "a"),
+      };
+      expect(completionRequestSchema.parse(body)).toEqual(body);
+    }
+    for (const length of [0, 24, 36, 48, 50, 64]) {
+      const body = {
+        ...validCrossword,
+        grid: Array.from({ length }, () => "a"),
+      };
+      expect(completionRequestSchema.safeParse(body).success, `${length}`).toBe(
+        false,
+      );
+    }
   });
 });
 
@@ -709,6 +728,45 @@ describe("queensCompletionRequestSchema", () => {
       ).toBe(false);
     }
   });
+});
+
+describe("squareGridSchema array cap", () => {
+  const cases = [
+    {
+      name: "nonogram",
+      schema: nonogramCompletionRequestSchema,
+      body: validNonogram,
+      makeGrid: nonogramGrid,
+      largest: 15,
+    },
+    {
+      name: "queens",
+      schema: queensCompletionRequestSchema,
+      body: validQueens,
+      makeGrid: queensGrid,
+      largest: 9,
+    },
+  ];
+
+  it.each(cases)(
+    "T-CORE-S192: $name refuses a grid past its largest size with a too_big issue and accepts the largest",
+    ({ schema, body, makeGrid, largest }) => {
+      const largestBody = { ...body, grid: makeGrid(largest) };
+      expect(schema.parse(largestBody)).toEqual(largestBody);
+
+      for (const length of [largest ** 2 + 1, (largest + 1) ** 2]) {
+        const result = schema.safeParse({
+          ...body,
+          grid: Array.from({ length }, () => 0),
+        });
+        expect(result.success, `${length}`).toBe(false);
+        expect(
+          result.error?.issues.map((issue) => issue.code),
+          `${length}`,
+        ).toContain("too_big");
+      }
+    },
+  );
 });
 
 describe("apiErrorResponseSchema", () => {

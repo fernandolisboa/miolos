@@ -128,6 +128,57 @@ describe("the record schema accepts blocks (null) but never a digit or an accent
   });
 });
 
+const SEVEN_GRID: NonNullable<CrosswordPlayRecord["grid"]> = Array.from(
+  { length: 49 },
+  (_unused, index) => (index % 8 === 0 ? null : "b"),
+);
+
+describe("the record holds a 5x5 or a 7x7 board (T-WEB-S730)", () => {
+  it("parses a 49-cell record, and a 25-cell v1 record stored before 7x7 dailies", () => {
+    for (const record of [
+      pendingCrosswordRecord({ entries: SEVEN_GRID, grid: SEVEN_GRID }),
+      pendingCrosswordRecord({ entries: SEVEN_GRID, grid: undefined }),
+      pendingCrosswordRecord(),
+    ]) {
+      expect(crosswordPlayRecordSchema.parse(record)).toEqual(record);
+    }
+  });
+
+  it("refuses any other cell count, and a solved grid of another size than its entries", () => {
+    const thirtySix = Array.from({ length: 36 }, () => "a");
+    for (const record of [
+      pendingCrosswordRecord({ entries: thirtySix, grid: undefined }),
+      pendingCrosswordRecord({ entries: thirtySix, grid: thirtySix }),
+      pendingCrosswordRecord({ entries: SOLVED_GRID, grid: SEVEN_GRID }),
+      pendingCrosswordRecord({ entries: SEVEN_GRID, grid: SOLVED_GRID }),
+    ]) {
+      expect(crosswordPlayRecordSchema.safeParse(record).success).toBe(false);
+    }
+  });
+});
+
+describe("a 7x7 day syncs its 49 cells (T-WEB-S733)", () => {
+  it("posts the 49-cell solved grid", async () => {
+    writePlayRecord(
+      pendingCrosswordRecord({ entries: SEVEN_GRID, grid: SEVEN_GRID }),
+    );
+    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    const bodies = completionBodies(fetchMock);
+    expect(bodies).toHaveLength(1);
+    expect(crosswordCompletionRequestSchema.parse(bodies[0]).grid).toEqual(
+      SEVEN_GRID,
+    );
+    expect(readPlayRecord("crossword", DATE)).toMatchObject({
+      pendingSync: false,
+      syncOutcome: "recorded",
+    });
+  });
+});
+
 describe("the crossword completion body (T-WEB-S418)", () => {
   it("posts the solved grid, blocks included as null, with no seed and no clues", async () => {
     writePlayRecord(pendingCrosswordRecord());

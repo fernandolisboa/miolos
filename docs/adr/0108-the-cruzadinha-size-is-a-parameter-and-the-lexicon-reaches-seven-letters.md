@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0055](./0055-test-timeouts-are-sized-against-contention.md)
 **Amends:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md)'s small-generator consequence; [ADR-0085](./0085-cruzadinha-is-a-seeded-fill-from-a-curated-lexicon.md) decisions 1, 4 and 5 and its 5×5 context; [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md)'s size figure and the `/modo-livre/cruzadinha` budget.
 **Amended by:** [ADR-0111](./0111-cruzadinha-free-play-offers-5x5-or-7x7.md) (#330) — decision 2 and its last consequence: the split lands on the response projection, not on `crosswordDailyContentSchema`, and the build runs after a paint.
+**Superseded in part by:** [ADR-0117](./0117-the-daily-cruzadinha-is-7x7.md) (#330) — decision 2: new dailies are 7×7, and `crosswordDailyContentSchema` accepts 5×5 and 7×7.
 
 ## Context
 

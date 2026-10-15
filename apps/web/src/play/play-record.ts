@@ -1,6 +1,6 @@
 import {
   completionOutcomeSchema,
-  crosswordLetterSchema,
+  crosswordCellsSchema,
   hintsUsedSchema,
   isoDateString,
   nonogramSizeSchema,
@@ -221,20 +221,18 @@ export const termoPlayRecordSchema = z
 
 export type TermoPlayRecord = z.infer<typeof termoPlayRecordSchema>;
 
-const CROSSWORD_CELLS = 25;
-
-export const crosswordPlayRecordSchema = z.strictObject({
-  ...recordHeaderShape,
-  game: z.literal("crossword"),
-  entries: z
-    .array(z.union([crosswordLetterSchema, z.null()]))
-    .length(CROSSWORD_CELLS),
-
-  grid: z
-    .array(crosswordLetterSchema.nullable())
-    .length(CROSSWORD_CELLS)
-    .optional(),
-});
+export const crosswordPlayRecordSchema = z
+  .strictObject({
+    ...recordHeaderShape,
+    game: z.literal("crossword"),
+    entries: crosswordCellsSchema,
+    grid: crosswordCellsSchema.optional(),
+  })
+  .refine(
+    (record) =>
+      record.grid === undefined || record.grid.length === record.entries.length,
+    { message: "a solved grid has as many cells as the entries" },
+  );
 
 export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;
 

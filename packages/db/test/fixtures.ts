@@ -84,6 +84,25 @@ export function termoContentFixture(): Record<string, unknown> {
   return { canonical: "pombo", normalized: "pombo" };
 }
 
+export function crosswordContentFixture(): Record<string, unknown> {
+  const word = "palavra";
+  return {
+    seed: 7,
+    grid: Array.from({ length: 7 }, () => [...word]),
+    entries: [
+      {
+        number: 1,
+        direction: "across",
+        row: 6,
+        col: 0,
+        normalized: word,
+        canonical: word,
+        clue: "Unidade da língua",
+      },
+    ],
+  };
+}
+
 export function messages(error: unknown): string {
   let out = "";
   let current: unknown = error;

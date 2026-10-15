@@ -454,6 +454,49 @@ describe("restore (T-WEB-S428)", () => {
   });
 });
 
+describe("restore ignores a record sized for another board (T-WEB-S731)", () => {
+  function recordOf(cells: number): CrosswordPlayRecord {
+    return {
+      v: 1,
+      game: "crossword",
+      date: DATE,
+      entries: Array.from({ length: cells }, () => "a"),
+      elapsedMs: 12_000,
+      hintsUsed: 1,
+      concluded: false,
+      pendingSync: true,
+      syncOutcome: "pending",
+    };
+  }
+
+  it("hydrates blank on a 5x5 board given 49 cells, and on a 7x7 board given 25", () => {
+    for (const [state, cells] of [
+      [fresh(), 49],
+      [initCrosswordPlayState(SEVEN_DAILY), 25],
+    ] as const) {
+      const restored = play(state, {
+        type: "restore",
+        record: recordOf(cells),
+        now: 1000,
+      });
+      expect(restored.hydrated).toBe(true);
+      expect(restored.entries).toEqual(state.entries);
+      expect(restored.timer.accumulatedMs).toBe(0);
+      expect(restored.pendingSync).toBe(false);
+    }
+  });
+
+  it("restores a record whose cell count matches the 7x7 board", () => {
+    const restored = play(initCrosswordPlayState(SEVEN_DAILY), {
+      type: "restore",
+      record: recordOf(49),
+      now: 1000,
+    });
+    expect(restored.entries).toHaveLength(49);
+    expect(restored.timer.accumulatedMs).toBe(12_000);
+  });
+});
+
 describe("a 7x7 puzzle plays on its own side (T-WEB-S670)", () => {
   const seven = () => initCrosswordPlayState(SEVEN_DAILY);
 

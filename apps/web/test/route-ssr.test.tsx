@@ -17,7 +17,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import boardStyles from "../src/crossword/crossword-board.module.css";
 import { routes } from "../src/i18n";
+import { SEVEN_DAILY } from "./crossword-seven";
 
 const DATE = "2026-08-01";
 
@@ -452,6 +454,29 @@ describe("every route the impeccable preflight fetches (T-WEB-S56)", () => {
       expect(unserializableProps(element)).toEqual([]);
     },
   );
+});
+
+describe("the Cruzadinha daily and archive pages paint a 7x7 daily on seven tracks (T-WEB-S734)", () => {
+  it.each([
+    { path: "/cruzadinha", load: () => import("../app/cruzadinha/page") },
+    {
+      path: "/arquivo/[data]/cruzadinha",
+      load: () => import("../app/arquivo/[data]/cruzadinha/page"),
+    },
+  ])("$path", async ({ load }) => {
+    spies.getTodayDaily.mockResolvedValue(SEVEN_DAILY);
+    spies.getArchivedDaily.mockResolvedValue(SEVEN_DAILY);
+
+    const markup = renderToStaticMarkup(
+      await callPage(await load(), {
+        params: Promise.resolve({ data: SEVEN_DAILY.date }),
+      }),
+    );
+
+    expect(markup).toContain("--crossword-size:7");
+    expect(markup).not.toContain("--crossword-size:5");
+    expect(markup).toContain(boardStyles.pageSize7);
+  });
 });
 
 async function callPage(
