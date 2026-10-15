@@ -13,14 +13,14 @@ Fernando, 2026-10-15: needing every game for a Dia Perfeito is too heavy to keep
 1. **A date is a Dia Cheio when its distinct games won on time reach `min(3, lineup size)`**, or 3 when the date has no lineup. Every Dia Perfeito is a Dia Cheio. The count is over every on-time win of that date, so a win on a daily outside the lineup (minted late, or killed after play) still counts. The lineup sets only the threshold.
 2. **One rule, one place:** `dayMarkOf(won, lineup)` in `packages/core/src/stats.ts` returns `"full"`, `"perfect"` or nothing. `dayMarks` applies it per date for `perfectDays`, `fullDays` and `earnedMedals`; the hub stamp calls it too. `3` is the constant `FULL_DAY_GAMES`, never a share of the roster.
 3. **A new read, not a wider contract:** `GET /stats/full-days` answers `{ dates }`, strict, built from the same rule the medals use. `/stats` and `/stats/calendar` stay byte-identical, as ADR-0048 d3 and ADR-0051 d3 require for growth.
-4. **Server surfaces:** three medals `full-1`, `full-10`, `full-50` of rule kind `fullDaysReached`, appended at the end of the catalog so no tilt moves; a "Dias Cheios" numeral before "Dias Perfeitos", a statistic that shows zero like its neighbour (ADR-0051); a ring on the calendar's on-time cell (the diamond stays Dia Perfeito's), named in the legend only when one shows. The calendar waits for both reads, so the legend never shifts.
+4. **Server surfaces:** three medals `full-1`, `full-10`, `full-50` of rule kind `fullDaysReached`, appended at the end of the catalog so no tilt moves; a "Dias Cheios" numeral before "Dias Perfeitos", a statistic that shows zero like its neighbour (ADR-0051); a ring on the calendar's on-time cell (the diamond stays Dia Perfeito's), named in the legend only when one shows. The calendar waits for both reads, so the legend never shifts; a failed full-days read renders the numeral and the rings absent, never zero.
 5. **The hub stamp is an ADR-0031 d6 affordance, not an award.** "Dia Cheio" or "Dia Perfeito" sits beside "X de N concluídos" once earned, from the same device day state and roster (`DAY_GAMES`) that line already counts. It backs nothing.
 
 ## Consequences
 
 - No migration: everything derives on read from `completions` and `daily_puzzles`.
 - Any deploy order is safe. An old web never calls the new route; a new web against an old API gets a 404, so the numeral and the rings render nothing rather than a false zero.
-- The hub stamp can differ from the server, as "X de N" already does: a dark-Termo day or a daily buffered late is Perfeito on the server but only Cheio on the hub; a record that syncs late stamps the hub but never counts.
+- The hub stamp can differ from the server, as "X de N" already does: a dark-Termo day or a daily buffered late is Perfeito on the server but only Cheio, or nothing when the lineup is shorter than 3, on the hub; a record that syncs late stamps the hub but never counts.
 - `derive.ts` drops rows dated after today and the route does not; the write window cannot create such rows.
 
 ## Rejected

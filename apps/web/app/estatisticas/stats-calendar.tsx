@@ -38,7 +38,7 @@ export function StatsCalendar({
   const today = todaySaoPauloDate(new Date());
   const months =
     calendar === null ? [neutralMonth(today)] : calendarMonths(calendar.days);
-  const markOf = dayMarks(calendar?.days ?? [], fullDates);
+  const markOf = marksByDate(calendar?.days ?? [], fullDates);
   const present = new Set(markOf.values());
   const shownMarks = DAY_MARKS.filter((mark) => present.has(mark));
   return (
@@ -162,7 +162,7 @@ function DayCell({
   );
 }
 
-function dayMarks(
+function marksByDate(
   days: readonly CalendarDay[],
   fullDates: readonly string[],
 ): ReadonlyMap<string, DayMark> {
@@ -171,7 +171,7 @@ function dayMarks(
   for (const day of days) {
     if (day.perfect) {
       marks.set(day.date, "perfect");
-    } else if (full.has(day.date)) {
+    } else if (day.state === "onTime" && full.has(day.date)) {
       marks.set(day.date, "full");
     }
   }

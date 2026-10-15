@@ -296,11 +296,11 @@ describe("the Dias Cheios numeral (T-WEB-S850)", () => {
 });
 
 describe("the calendar rings a Dia Cheio apart from the Dia Perfeito diamond (T-WEB-S851)", () => {
-  it("marks a full on-time day, keeps the perfect day perfect, names both in aria and in the legend", async () => {
+  it("marks a full on-time day, never a missed one, keeps the perfect day perfect, names both in aria and in the legend", async () => {
     clients.fetchStats.mockResolvedValue(STATS);
     clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
     clients.fetchFullDays.mockResolvedValue({
-      dates: ["2026-07-31", "2026-08-01"],
+      dates: ["2026-07-31", "2026-08-01", "2026-08-02"],
     });
 
     const { container } = render(<StatsPage />);
