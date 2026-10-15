@@ -208,10 +208,16 @@ export const messages = {
 
     completedAria: (game: string) => `${game} concluído`,
     links: {
-      archive: "Arquivo",
+      aria: "Mais puzzles",
       freePlay: "Modo livre",
+      archive: "Arquivo",
+    },
+    menu: {
+      label: "Menu",
       stats: "Estatísticas",
       settings: "Ajustes",
+    },
+    footer: {
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
     },

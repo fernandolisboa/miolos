@@ -101,17 +101,16 @@ describe("the Modo livre index (T-WEB-S113)", () => {
 });
 
 describe("the hub's Modo livre entry (T-WEB-S114)", () => {
-  it("links Modo livre to routes.freePlay, Estatísticas to routes.stats and Arquivo to routes.archive", () => {
+  it("links Modo livre to routes.freePlay and Arquivo to routes.archive", () => {
     render(<HojePage />);
-    const nav = screen.getByRole("navigation");
+    const nav = screen.getByRole("navigation", {
+      name: messages.hoje.links.aria,
+    });
 
     const freePlay = within(nav).getByText(messages.hoje.links.freePlay);
     expect(freePlay.closest("a")).toHaveAttribute("href", routes.freePlay);
 
     const archive = within(nav).getByText(messages.hoje.links.archive);
     expect(archive.closest("a")).toHaveAttribute("href", routes.archive);
-
-    const stats = within(nav).getByText(messages.hoje.links.stats);
-    expect(stats.closest("a")).toHaveAttribute("href", routes.stats);
   });
 });

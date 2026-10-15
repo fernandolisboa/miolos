@@ -164,7 +164,10 @@ describe("Hoje page", () => {
 
   it("renders the secondary links from the messages module", () => {
     render(<HojePage />);
-    for (const label of Object.values(messages.hoje.links)) {
+    for (const label of [
+      messages.hoje.links.freePlay,
+      messages.hoje.links.archive,
+    ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

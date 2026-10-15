@@ -12,6 +12,7 @@ import { accentVars } from "../src/play/accent";
 import { DAY_GAMES } from "../src/play/day-games";
 import { HubAttach } from "./hub-attach";
 import { HubCardAction, HubProgress } from "./hub-day-state";
+import { HubMenu } from "./hub-menu";
 import { HubOnboarding } from "./hub-onboarding";
 import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
@@ -51,69 +52,81 @@ export default function HojePage() {
   const isoDate = todaySaoPauloDate(now);
 
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.wordmark}>{messages.brand.wordmark}</h1>
-          <p className={styles.date}>
-            {date.weekday} <span className={styles.dateRest}>{date.rest}</span>
-          </p>
-          <HubProgress date={isoDate} total={DAY_GAMES.length} />
+    <div className={styles.page}>
+      <main className={styles.main}>
+        <header className={styles.header}>
+          <div>
+            <h1 className={styles.wordmark}>{messages.brand.wordmark}</h1>
+            <p className={styles.date}>
+              {date.weekday}{" "}
+              <span className={styles.dateRest}>{date.rest}</span>
+            </p>
+            <HubProgress date={isoDate} total={DAY_GAMES.length} />
+          </div>
+
+          <div className={styles.headerEnd}>
+            <HubStreak />
+            <HubMenu />
+          </div>
+        </header>
+
+        <section className={styles.games}>
+          {DAY_GAMES.map((game) => (
+            <article
+              key={game}
+              className={styles.card}
+              style={accentVars(game)}
+            >
+              <div aria-hidden className={styles.tape} />
+              <div className={styles.cardBody}>
+                <p className={styles.kicker}>{messages.games[game].kicker}</p>
+                <h2 className={styles.cardTitle}>
+                  {messages.games[game].name}
+                </h2>
+                <p className={styles.cardDescription}>
+                  {messages.games[game].description}
+                </p>
+              </div>
+
+              <HubCardAction game={game} date={isoDate} />
+            </article>
+          ))}
+        </section>
+
+        <HubOnboarding />
+
+        <HubAttach />
+
+        <nav
+          className={styles.secondaryLinks}
+          aria-label={messages.hoje.links.aria}
+        >
+          <Link className={styles.secondaryLink} href={routes.freePlay}>
+            {messages.hoje.links.freePlay}
+          </Link>
+          <Link className={styles.secondaryLink} href={routes.archive}>
+            {messages.hoje.links.archive}
+          </Link>
+        </nav>
+
+        <div className={styles.spacer} />
+
+        <div className={styles.promoZoneDesktop}>
+          <AdSlot placement="hub-desktop" />
         </div>
+        <div className={styles.promoZoneMobile}>
+          <AdSlot placement="hub-mobile" />
+        </div>
+      </main>
 
-        <HubStreak />
-      </header>
-
-      <section className={styles.games}>
-        {DAY_GAMES.map((game) => (
-          <article key={game} className={styles.card} style={accentVars(game)}>
-            <div aria-hidden className={styles.tape} />
-            <div className={styles.cardBody}>
-              <p className={styles.kicker}>{messages.games[game].kicker}</p>
-              <h2 className={styles.cardTitle}>{messages.games[game].name}</h2>
-              <p className={styles.cardDescription}>
-                {messages.games[game].description}
-              </p>
-            </div>
-
-            <HubCardAction game={game} date={isoDate} />
-          </article>
-        ))}
-      </section>
-
-      <HubOnboarding />
-
-      <HubAttach />
-
-      <nav className={styles.secondaryLinks}>
-        <Link className={styles.secondaryLink} href={routes.archive}>
-          {messages.hoje.links.archive}
+      <footer className={styles.footer}>
+        <Link className={styles.footerLink} href={routes.privacy}>
+          {messages.hoje.footer.privacy}
         </Link>
-        <Link className={styles.secondaryLink} href={routes.freePlay}>
-          {messages.hoje.links.freePlay}
+        <Link className={styles.footerLink} href={routes.terms}>
+          {messages.hoje.footer.terms}
         </Link>
-        <Link className={styles.secondaryLink} href={routes.stats}>
-          {messages.hoje.links.stats}
-        </Link>
-        <Link className={styles.secondaryLink} href={routes.settings}>
-          {messages.hoje.links.settings}
-        </Link>
-        <Link className={styles.secondaryLink} href={routes.privacy}>
-          {messages.hoje.links.privacy}
-        </Link>
-        <Link className={styles.secondaryLink} href={routes.terms}>
-          {messages.hoje.links.terms}
-        </Link>
-      </nav>
-
-      <div className={styles.spacer} />
-
-      <div className={styles.promoZoneDesktop}>
-        <AdSlot placement="hub-desktop" />
-      </div>
-      <div className={styles.promoZoneMobile}>
-        <AdSlot placement="hub-mobile" />
-      </div>
-    </main>
+      </footer>
+    </div>
   );
 }
