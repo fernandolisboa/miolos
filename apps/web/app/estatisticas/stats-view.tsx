@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  MEDAL_IDS,
   type StatsResponse,
   type TermoStats,
   type TimedGame,
@@ -9,8 +8,7 @@ import {
 } from "@miolos/core";
 
 import { formatElapsed, messages } from "../../src/i18n";
-import { medalCopy } from "../../src/medals/copy";
-import { useMedals } from "../../src/medals/use-medals";
+import { MedalsSection } from "../../src/medals/medals-section";
 import { accentVars } from "../../src/play/accent";
 import { DAY_GAMES } from "../../src/play/day-games";
 import { useStats } from "../../src/stats/use-stats";
@@ -47,37 +45,6 @@ export function StatsView() {
       </section>
       <StatsCalendar />
     </>
-  );
-}
-
-function MedalsSection() {
-  const medals = useMedals();
-  if (medals === undefined || medals === null) {
-    return null;
-  }
-  const earned = new Set<string>(medals.medals);
-  const known = MEDAL_IDS.filter((id) => earned.has(id));
-  if (known.length === 0) {
-    return null;
-  }
-  return (
-    <section className={styles.medals}>
-      <h2 className={styles.sectionHeading}>{messages.medals.title}</h2>
-
-      <ul role="list" className={styles.medalList}>
-        {known.map((id) => (
-          <li key={id} className={styles.medalRow}>
-            <span aria-hidden className={styles.medalRing} />
-            <span className={styles.medalWords}>
-              <span className={styles.medalName}>{medalCopy[id].name}</span>
-              <span className={styles.medalDescription}>
-                {medalCopy[id].description}
-              </span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 

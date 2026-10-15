@@ -40,10 +40,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S193`    | `S192`         | never used            |
 | `T-DB`   | `S144`    | `S142`         | `T-DB-21`             |
 | `T-API`  | `S335`    | `S333`         | `T-API-16`            |
-| `T-WEB`  | `S810`    | `S800`         | `T-WEB-23`            |
+| `T-WEB`  | `S810`    | `S801`         | `T-WEB-23`            |
 | `T-LINT` | `S72`     | `S71`          | `T-LINT-10`           |
 
 The calendars thread (Estatísticas months side by side, Arquivo month arrows) spent **`T-WEB-S790…S793`** in `calendars-wide.test.tsx`: `S790` (every day of a stats month shows its numeral, untracked days are bare and silent, weekday initials, the neutral month), `S791` (the stats months fill an auto-fill grid; the missed ring), `S792` (the archive card's previous / month / next header on the month page and the index; the current month chip), `S793` (`adjacentMonths`). `S794…S799` are **burned**; `S750…S789` are left to sibling threads. `T-WEB-S167`, `S169`, `S182` and `S311` were re-aimed in place (one archive layout, month steps on a larger card).
+
+#360 (medals drawn as medals, ADR-0122) spent **`T-WEB-S780…S783`** in `medal-art.test.tsx`: `S780` (every catalog id renders a medal whose art follows its rule), `S781` (the tip waits 200 ms in CSS, opens on a mouse hover but never a touch hover, on keyboard focus and on tap) `S782` (a medal's tilt is fixed by its catalog place) and `S783` (a tip that would leave the viewport is shifted back inside it). `T-WEB-S161` was widened in place (each medal is a button named by the medal, described by its tip). `S784…S789` are burned; `S750…S769` and `S774…S779` are other threads' reservations, not free space.
 
 The wide Ajustes layout spent **`T-WEB-S800`** in `ajustes.test.tsx` (Aparência pairs with the reminder in one row ahead of the full-width Jogos card; the sheet is 1200px with `auto-fit` rows; the game settings split into two columns only inside a 50rem container, so the in-game dialog keeps one) and **`S801`** in `admin.test.tsx` (`/admin`, which borrows the Ajustes sheet, stacks its cards in the shared sections grid held to 60ch). `S802…S809` are **burned**. `S750…S799` are reservations held by sibling threads (ADR and test-id ranges handed out per thread), not free ids.
 
