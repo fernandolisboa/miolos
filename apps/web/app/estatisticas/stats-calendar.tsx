@@ -3,6 +3,7 @@
 import type { CalendarDay } from "@miolos/core";
 
 import {
+  formatDayNumber,
   formatLongDate,
   formatMonth,
   messages,
@@ -30,10 +31,9 @@ export function StatsCalendar() {
     );
   }
 
+  const today = todaySaoPauloDate(new Date());
   const months =
-    calendar === null
-      ? [neutralMonth(todaySaoPauloDate(new Date()))]
-      : calendarMonths(calendar.days);
+    calendar === null ? [neutralMonth(today)] : calendarMonths(calendar.days);
   return (
     <section className={styles.calendar} data-stats-state="value">
       <h2 className={pageStyles.sectionHeading}>{copy.title}</h2>
@@ -54,14 +54,20 @@ export function StatsCalendar() {
       )}
       <div className={styles.months}>
         {months.map((month) => (
-          <MonthGrid key={month.month} month={month} />
+          <MonthGrid key={month.month} month={month} today={today} />
         ))}
       </div>
     </section>
   );
 }
 
-function MonthGrid({ month }: { readonly month: CalendarMonth }) {
+function MonthGrid({
+  month,
+  today,
+}: {
+  readonly month: CalendarMonth;
+  readonly today: string;
+}) {
   return (
     <div className={styles.month}>
       <h3 className={styles.monthTitle}>{formatMonth(month.month)}</h3>
@@ -77,7 +83,7 @@ function MonthGrid({ month }: { readonly month: CalendarMonth }) {
           cell === null ? (
             <span key={index} aria-hidden className={styles.dayPad} />
           ) : (
-            <DayCell key={cell.date} cell={cell} />
+            <DayCell key={cell.date} cell={cell} today={cell.date === today} />
           ),
         )}
       </div>
@@ -85,10 +91,16 @@ function MonthGrid({ month }: { readonly month: CalendarMonth }) {
   );
 }
 
-function DayCell({ cell }: { readonly cell: CalendarCell }) {
+function DayCell({
+  cell,
+  today,
+}: {
+  readonly cell: CalendarCell;
+  readonly today: boolean;
+}) {
   const numeral = (
     <span aria-hidden className={`${styles.dayNumeral} tabular-nums`}>
-      {Number(cell.date.slice(8))}
+      {formatDayNumber(cell.date)}
     </span>
   );
   if (cell.day === undefined) {
@@ -107,6 +119,7 @@ function DayCell({ cell }: { readonly cell: CalendarCell }) {
       className={styles.day}
       data-state={day.state}
       data-perfect={day.perfect ? "" : undefined}
+      data-today={today ? "" : undefined}
     >
       {numeral}
       {day.perfect && <span aria-hidden className={styles.perfectMark} />}

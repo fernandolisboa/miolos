@@ -121,9 +121,8 @@
   padding: var(--space-5);
 }
 
-/* Previous / month / next, the shape every calendar app uses, so stepping
-   through months never leaves the grid. An edge month keeps its slot as a
-   muted chevron, so the month name never shifts. */
+/* An edge month keeps its arrow slot as a muted chevron, so the month name
+   never shifts. */
 .calendarHead {
   display: grid;
   grid-template-columns: var(--touch-target-min) 1fr var(--touch-target-min);
@@ -282,7 +281,10 @@
   text-decoration: none;
 }
 
-.monthChip[aria-current="page"] {
+/* Anchored on .page so it outranks `.page a:hover`, which would paint the
+   label ink on ink. */
+.page .monthChip[aria-current="true"],
+.page .monthChip[aria-current="true"]:hover {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--paper-card);

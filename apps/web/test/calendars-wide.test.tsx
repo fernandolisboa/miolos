@@ -6,7 +6,12 @@ import { ArchiveIndexView } from "../app/arquivo/index-view";
 import { ArchiveMonthView } from "../app/arquivo/month-view";
 import StatsPage from "../app/estatisticas/page";
 import { adjacentMonths } from "../src/archive/calendar";
-import { formatLongDate, formatMonth, messages } from "../src/i18n";
+import {
+  formatLongDate,
+  formatMonth,
+  messages,
+  todaySaoPauloDate,
+} from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
 const clients = vi.hoisted(() => ({
@@ -82,6 +87,24 @@ describe("the stats calendar draws whole months (T-WEB-S790)", () => {
         [...(header as HTMLElement).children].map((cell) => cell.textContent),
       ).toEqual([...messages.stats.calendar.weekdays]);
     }
+  });
+
+  it("today, still playable, is marked so its missed state draws no ring", async () => {
+    const today = todaySaoPauloDate(new Date());
+    const months = await renderMonths({
+      days: [{ date: today, state: "missed", perfect: false }],
+    });
+    const cell = months[0]?.querySelector("[data-today]");
+    expect(cell).toHaveAttribute("data-state", "missed");
+    expect(months[0]?.querySelectorAll("[data-today]")).toHaveLength(1);
+
+    const sheet = stylesheet("app/estatisticas/stats-calendar.module.css");
+    expect(
+      decl(
+        bodyOf(sheet, '.day[data-state="missed"][data-today]'),
+        "box-shadow",
+      ),
+    ).toBe("none");
   });
 
   it("the neutral month on a settled null is a whole month of bare days", async () => {
@@ -185,12 +208,24 @@ describe("the archive steps between months on the calendar itself (T-WEB-S792)",
     const current = screen.getByRole("link", {
       name: formatMonth("2026-09-01"),
     });
-    expect(current).toHaveAttribute("aria-current", "page");
+    expect(current).toHaveAttribute("aria-current", "true");
     expect(
       screen
         .getAllByRole("link", { name: /^\w+ de 2026$/ })
         .filter((link) => link.hasAttribute("aria-current")),
     ).toEqual([current]);
+  });
+});
+
+describe("the current month chip keeps its label on hover (T-WEB-S792)", () => {
+  it("its paper label outranks `.page a:hover`", () => {
+    const sheet = stylesheet("app/arquivo/arquivo.module.css");
+    const chip = bodyOf(
+      sheet,
+      '.page .monthChip[aria-current="true"],\n.page .monthChip[aria-current="true"]:hover',
+    );
+    expect(decl(chip, "color")).toBe("var(--paper-card)");
+    expect(decl(chip, "background")).toBe("var(--ink)");
   });
 });
 

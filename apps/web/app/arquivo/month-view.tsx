@@ -1,7 +1,7 @@
 import { messages, routes } from "../../src/i18n";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./arquivo.module.css";
-import { ArchiveBody } from "./calendar-grid";
+import { ArchiveBody } from "./archive-body";
 
 export function ArchiveMonthView({
   month,

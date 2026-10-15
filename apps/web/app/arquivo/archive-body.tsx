@@ -52,7 +52,7 @@ export function ArchiveBody({
                 className={styles.monthChip}
                 href={archiveMonthRoute(each)}
                 prefetch={false}
-                aria-current={each === month ? "page" : undefined}
+                aria-current={each === month ? "true" : undefined}
               >
                 {formatMonth(`${each}-01`)}
               </Link>

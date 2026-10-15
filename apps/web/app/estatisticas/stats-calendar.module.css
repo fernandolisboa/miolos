@@ -1,9 +1,7 @@
-/* The Calendário section of /estatisticas. Per-date states ride geometry
-   first and colour second, so they survive greyscale: filled (on the day),
-   ringed in the app accent (later), ringed in a hairline (missed), bare
-   numeral (outside the tracked range). The perfect day is a SHAPE, never a
-   word (ADR-0041). Accent fills and rings clear WCAG 1.4.11 against
-   --paper-card; every numeral clears 4.5:1 on its own ground. */
+/* Per-date states ride geometry first and colour second, so they survive
+   greyscale: filled (on the day), accent ring (later), hairline ring
+   (missed), bare numeral (outside the tracked range, or today while it is
+   still playable). The perfect day is a shape, never a word (ADR-0041). */
 
 .calendar {
   margin-top: var(--space-12);
@@ -123,6 +121,10 @@
 .day[data-state="missed"],
 .legendSwatch[data-state="missed"] {
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.day[data-state="missed"][data-today] {
+  box-shadow: none;
 }
 
 .perfectMark {
