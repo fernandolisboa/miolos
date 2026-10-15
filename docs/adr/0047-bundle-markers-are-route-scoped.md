@@ -7,6 +7,7 @@
 **Amended by:** [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md) (#276) — the **forbidden-everywhere** list gains a Cruzadinha lexicon clue, `Calculadora de bolinhas`, checked by `apps/web/scripts/route-client-js.mjs` in every client chunk, because `@miolos/games/crossword` must never reach one (ADR-0085 decision 7).
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — forbidden-everywhere holds adjacent Termo answer pairs, not single canonicals, and the lexicon clue gets its own route scope: present in `/modo-livre/cruzadinha`'s exclusive chunks, absent from every other.
 **Amended by:** [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md) (#285) — the **forbidden-in-daily-scope** list gains `advancedSteps`, the Rainhas grade, which no daily chunk may carry.
+**Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — `zurro` is checked on every free-play route but `/modo-livre/termo`, which ships the dictionary; the free pool gets its own route-exclusive marker, `ábaco\nabade`.
 
 ## Context
 

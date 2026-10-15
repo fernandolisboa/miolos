@@ -5,6 +5,7 @@
 **Supersedes in part:** [ADR-0085](./0085-cruzadinha-is-a-seeded-fill-from-a-curated-lexicon.md) decision 7 and its consequence that free play needs a new decision; [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md) decision 6.
 **Amends:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md)'s consequence that generator code is "pure TS and small"; [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md)'s root-barrel substrate, which gains `normalizeWord`; [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md) decision 6's markers; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 1–3 and 7; [ADR-0047](./0047-bundle-markers-are-route-scoped.md)'s forbidden-everywhere list; [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) decision 1, whose `T-WEB-S375` also asserts the wall's verdict at the exempt importer.
 **Amended by:** [ADR-0108](./0108-the-cruzadinha-size-is-a-parameter-and-the-lexicon-reaches-seven-letters.md) (#330) — the context's size figure and the `/modo-livre/cruzadinha` budget: with 6- and 7-letter answers the route adds 657.8 KB raw / 158.2 KB gzip over `/`, under a 660 KB budget.
+**Superseded in part by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — the Rejected "carving the route out of the Termo markers", for `zurro` on `/modo-livre/termo` only; the answer pairs stay forbidden everywhere.
 
 ## Context
 

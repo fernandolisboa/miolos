@@ -5,6 +5,7 @@
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) consequence 2; [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — its Rejected entry on banning all of `packages/games/src`, and its consequences on the 27 unguarded modules and on `T-WEB-S368` measuring specifiers rather than erasure
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 1's `T-WEB-S375` also runs the specifiers at `apps/web/src/free-play/use-free-crossword.ts`, the one path exempt from the crossword ban: the graph is clean there, and `@miolos/games/crossword` stays banned at any other free-play path.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 1: `T-WEB-S374` allows `localStorage` in `apps/web/src/settings/settings.ts` and every other I/O pattern stays forbidden there and everywhere else on the graph.
+**Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — decision 1's walled source is `packages/games/src/termo-answers`, not `termo`; decision 2's directory ban becomes an allow-list of the reused `termo/` modules.
 
 ## Context
 

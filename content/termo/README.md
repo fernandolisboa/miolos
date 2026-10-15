@@ -13,6 +13,21 @@ which word is any given day's answer is a server-side seeded choice
 ([ADR-0010](../../docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md)),
 exactly as with the grid-game generators.
 
+## Generated modules and the free pool
+
+`pnpm --filter @miolos/games generate:termo` renders three modules:
+`validation.txt` into `packages/games/src/termo/words.generated.ts`,
+`answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`,
+and the **free pool** into `packages/games/src/termo-free/pool.generated.ts`.
+The free pool is what Termo free play draws from: the five-letter words of
+`content/crossword/lexicon.tsv` that are in `validation.txt` and are not an
+answer — 2,409 words
+([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
+**Run `generate:termo` after editing `answers.csv`, `validation.txt` or the
+crossword lexicon**, then `pnpm test --force`: a staleness test fails when a
+generated module and its sources disagree. Adding an answer removes it from
+the pool.
+
 ## Deliverables
 
 | File | Contents |
