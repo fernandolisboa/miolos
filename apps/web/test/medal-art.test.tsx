@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { artOf } from "../src/medals/art";
 import { medalCopy } from "../src/medals/copy";
-import { MedalsSection } from "../src/medals/medals-section";
+import { MedalsSection, tipShift } from "../src/medals/medals-section";
 import styles from "../src/medals/medals-section.module.css";
 import { ACCENTS } from "../src/play/accent";
 import { bodyOf, decl, stylesheet } from "./css-source";
@@ -44,7 +44,7 @@ describe("every catalog medal is drawn from its rule (T-WEB-S780)", () => {
     }
   });
 
-  it("takes the numeral, ribbon and stripes from the rule, never a second table", () => {
+  it("takes the numeral, ribbon and stripes from the rule", () => {
     for (const { rule } of MEDAL_DEFINITIONS) {
       const art = artOf(rule);
       switch (rule.kind) {
@@ -174,5 +174,32 @@ describe("a medal's tilt is fixed by its catalog place (T-WEB-S782)", () => {
     const joined = await renderEarned(["first-win", "wins-10", "streak-7"]);
     expect(tiltOf(joined.container)).toBe(before);
     expect(before).not.toBe("");
+  });
+});
+
+describe("a tip that would leave the viewport is pulled back inside it (T-WEB-S783)", () => {
+  it("shifts right past the left edge, left past the right edge, and not at all inside", () => {
+    expect(tipShift(-42, 178, 360)).toBe(50);
+    expect(tipShift(200, 400, 360)).toBe(-48);
+    expect(tipShift(8, 352, 360)).toBe(0);
+  });
+
+  it("writes the shift onto the open tip", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: -42, y: 0, width: 220, height: 40 }),
+    );
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(
+      360,
+    );
+    await renderEarned(["first-win"]);
+    const button = screen.getByRole("button", {
+      name: medalCopy["first-win"].name,
+    });
+
+    fireEvent.focus(button);
+
+    expect(
+      screen.getByRole("tooltip").style.getPropertyValue("--tip-shift"),
+    ).toBe("50px");
   });
 });

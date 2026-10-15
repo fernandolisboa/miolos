@@ -36,50 +36,43 @@ function Mark({ mark }: { readonly mark: MedalMark }) {
   }
 }
 
-function Stripes({ colors }: { readonly colors: readonly string[] }) {
+function Stripes({
+  colors,
+  side,
+}: {
+  readonly colors: readonly string[];
+  readonly side: -1 | 1;
+}) {
   const width = colors.length > 2 ? 2 : 2.4;
-  return colors.flatMap((color, index) => {
+  return colors.map((color, index) => {
     const t = (index + 1) / (colors.length + 1);
-    const stroke = { stroke: color, strokeWidth: width };
-    return [
+    return (
       <line
-        key={`l${String(index)}`}
-        x1={10 + 16 * t}
+        key={index}
+        x1={32 - side * (22 - 16 * t)}
         y1="0"
-        x2={26 + 14 * t}
+        x2={32 - side * (6 - 14 * t)}
         y2="42"
-        style={stroke}
-      />,
-      <line
-        key={`r${String(index)}`}
-        x1={54 - 16 * t}
-        y1="0"
-        x2={38 - 14 * t}
-        y2="42"
-        style={stroke}
-      />,
-    ];
+        style={{ stroke: color, strokeWidth: width }}
+      />
+    );
   });
 }
 
 export function MedalPicture({ art }: { readonly art: MedalArt }) {
-  const ribbon = { fill: art.ribbon };
   return (
-    <svg aria-hidden viewBox="0 0 64 84" className={styles.picture}>
-      <polygon
-        points="10,0 26,0 40,40 26,44"
-        style={{ fill: `color-mix(in srgb, ${art.ribbon} 80%, #000)` }}
-      />
-      <polygon points="54,0 38,0 24,40 38,44" style={ribbon} />
-      <Stripes colors={art.stripes} />
-      <circle cx="35" cy="59" r="22" style={ribbon} opacity="0.3" />
-      <circle
-        cx="32"
-        cy="56"
-        r="22"
-        className={styles.disc}
-        style={{ stroke: art.ribbon }}
-      />
+    <svg
+      aria-hidden
+      viewBox="0 0 64 84"
+      className={styles.picture}
+      style={{ "--ribbon": art.ribbon }}
+    >
+      <polygon points="10,0 26,0 40,40 26,44" className={styles.ribbonBack} />
+      <Stripes colors={art.stripes} side={1} />
+      <polygon points="54,0 38,0 24,40 38,44" className={styles.ribbon} />
+      <Stripes colors={art.stripes} side={-1} />
+      <circle cx="35" cy="59" r="22" className={styles.discShadow} />
+      <circle cx="32" cy="56" r="22" className={styles.disc} />
       <circle cx="32" cy="56" r="16.5" className={styles.discLine} />
       <Mark mark={art.mark} />
     </svg>

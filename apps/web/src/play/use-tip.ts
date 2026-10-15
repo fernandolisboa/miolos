@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, type PointerEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+} from "react";
 
 import { useDismiss } from "./use-dismiss";
 
@@ -33,7 +39,7 @@ export function useTip<Root extends HTMLElement>() {
     {
       "aria-expanded": open,
       "aria-describedby": tipId,
-      onMouseDown: (event: { preventDefault: () => void }) => {
+      onMouseDown: (event: MouseEvent) => {
         event.preventDefault();
       },
       onPointerDown: (event: PointerEvent) => {

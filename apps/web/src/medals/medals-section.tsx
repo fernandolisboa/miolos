@@ -6,13 +6,24 @@ import { MEDAL_DEFINITIONS } from "@miolos/core";
 
 import { messages } from "../i18n";
 import { useTip } from "../play/use-tip";
-import { artOf, medalRotation } from "./art";
+import { artOf } from "./art";
 import { medalCopy } from "./copy";
 import { MedalPicture } from "./medal-picture";
 import styles from "./medals-section.module.css";
 import { useMedals } from "./use-medals";
 
 const VIEWPORT_MARGIN_PX = 8;
+const ROTATIONS = [-2.5, 1.5, -1, 2, -1.5, 1] as const;
+
+export function tipShift(
+  left: number,
+  right: number,
+  viewportWidth: number,
+): number {
+  const edge = viewportWidth - VIEWPORT_MARGIN_PX;
+  if (left < VIEWPORT_MARGIN_PX) return VIEWPORT_MARGIN_PX - left;
+  return right > edge ? edge - right : 0;
+}
 
 type CatalogMedal = (typeof MEDAL_DEFINITIONS)[number];
 
@@ -61,13 +72,7 @@ function Medal({
     if (!open || tip === null) return;
     tip.style.setProperty("--tip-shift", "0px");
     const { left, right } = tip.getBoundingClientRect();
-    const edge = document.documentElement.clientWidth - VIEWPORT_MARGIN_PX;
-    const shift =
-      left < VIEWPORT_MARGIN_PX
-        ? VIEWPORT_MARGIN_PX - left
-        : right > edge
-          ? edge - right
-          : 0;
+    const shift = tipShift(left, right, document.documentElement.clientWidth);
     tip.style.setProperty("--tip-shift", `${String(shift)}px`);
   }, [open]);
 
@@ -76,7 +81,9 @@ function Medal({
       <button type="button" className={styles.button} {...buttonProps}>
         <span
           className={styles.tilt}
-          style={{ rotate: `${String(medalRotation(catalogIndex))}deg` }}
+          style={{
+            rotate: `${String(ROTATIONS[catalogIndex % ROTATIONS.length] ?? 0)}deg`,
+          }}
         >
           <MedalPicture art={artOf(definition.rule)} />
         </span>

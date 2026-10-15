@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md), [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md)
 **Amends:** ADR-0008 rule 4 (*"all four dailies"*). ADR-0051 decision 1: the derivations gain a second, read-only input. ADR-0052 decisions 1 and 2: the rules read the lineup too, and monotonicity now holds under a fixed lineup. ADR-0052 decision 3: breadth is the original four.
 **Amended by:** [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md) (#285) — decision 4's count: `queens-30` follows `crossword-30`, making 25 medals. `all-games` stays on `ORIGINAL_GAMES`.
+**Amended by:** [ADR-0122](./0122-earned-medals-are-drawn-as-medals-side-by-side.md) (#360) — decision 4's `ORIGINAL_GAMES` moved from `medals/derive.ts` to `medals/definitions.ts` and is exported from `@miolos/core`, so the medal art draws the same four games.
 
 ## Context
 

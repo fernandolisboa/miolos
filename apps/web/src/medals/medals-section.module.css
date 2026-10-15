@@ -54,8 +54,22 @@
   overflow: visible;
 }
 
+.ribbon {
+  fill: var(--ribbon);
+}
+
+.ribbonBack {
+  fill: color-mix(in srgb, var(--ribbon) 80%, black);
+}
+
+.discShadow {
+  fill: var(--ribbon);
+  opacity: 0.3;
+}
+
 .disc {
   fill: var(--paper-card);
+  stroke: var(--ribbon);
   stroke-width: 3;
 }
 

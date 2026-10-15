@@ -55,9 +55,3 @@ export function artOf(rule: MedalRule): MedalArt {
       return { ribbon: APP, stripes: [INK], mark: { kind: "star" } };
   }
 }
-
-const ROTATIONS = [-2.5, 1.5, -1, 2, -1.5, 1] as const;
-
-export function medalRotation(catalogIndex: number): number {
-  return ROTATIONS[catalogIndex % ROTATIONS.length] ?? 0;
-}
