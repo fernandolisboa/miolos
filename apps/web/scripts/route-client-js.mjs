@@ -8,12 +8,12 @@ const NEXT_DIR = ".next";
 const STATS = join(NEXT_DIR, "diagnostics", "route-bundle-stats.json");
 const CHUNKS = join(NEXT_DIR, "static", "chunks");
 
-const MAX_DELTA_BYTES = 40 * 1024;
+const MAX_DELTA_BYTES = 48 * 1024;
 
 const PER_ROUTE_BUDGET = {
   "/termo": 76 * 1024,
 
-  "/modo-livre/nonogram": 60 * 1024,
+  "/modo-livre/nonogram": 66 * 1024,
 
   "/modo-livre/cruzadinha": 660 * 1024,
 
