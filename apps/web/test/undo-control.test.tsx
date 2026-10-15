@@ -35,6 +35,7 @@ vi.mock("../src/play/sync", () => sync);
 
 const LABEL = messages.play.undo;
 const TIP_CSS = stylesheet("src/play/undo-control.module.css");
+const SCREEN_CSS = stylesheet("src/play/screen.module.css");
 const DATE = "2026-10-15";
 const SEED = 20_261_015;
 
@@ -106,6 +107,23 @@ describe("UndoControl is a quiet icon named Desfazer (T-WEB-S827)", () => {
     expect(button).toHaveAttribute("aria-disabled", "false");
     fireEvent.click(button);
     expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows its tooltip only on the live control, and fits a 320px row", () => {
+    expect(
+      decl(
+        bodyOf(TIP_CSS, '.control[aria-disabled="false"]:hover::after'),
+        "opacity",
+      ),
+    ).toBe("1");
+    expect(decl(bodyOf(TIP_CSS, ".control:not(button)"), "cursor")).toBe(
+      "default",
+    );
+    const narrow = bodyOf(SCREEN_CSS, "@media (max-width: 374px)");
+    expect(decl(bodyOf(narrow, ".reset"), "gap")).toBe("0");
+    expect(decl(bodyOf(narrow, ".hint"), "padding-inline")).toBe(
+      "var(--space-3)",
+    );
   });
 
   it("stays focusable and does nothing when there is nothing to undo", () => {
