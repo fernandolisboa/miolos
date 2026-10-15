@@ -9,6 +9,7 @@
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 4: free play reads the one device settings key, `miolos-settings`, and writes it only from an *Ajustes* switch; the session itself still stores nothing.
 **Amended by:** [ADR-0111](./0111-cruzadinha-free-play-offers-5x5-or-7x7.md) (#330) — for the Cruzadinha, decisions 2 and 3 gain a *Tamanho* picker (5×5 or 7×7) and its state is `{seed, size}`; the main-thread consequence: every free-play build now runs after a paint.
 **Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — decision 1 gains `/modo-livre/termo`; decisions 2 and 3 give Termo no level, so its state is `{seed}`; the Termo exclusion in its context no longer holds.
+**Amended by:** [ADR-0135](./0135-termo-free-play-offers-dueto-and-quarteto.md) (#374) — for Termo, decisions 2 and 3 gain a _Variante_ picker (Clássico, Dueto or Quarteto) and its state is `{seed, variant}`, in component state, never the URL.
 
 ## Context
 

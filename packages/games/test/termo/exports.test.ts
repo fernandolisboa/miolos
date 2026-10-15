@@ -8,6 +8,7 @@ describe("@miolos/games exports map", () => {
     expect(typeof mod.evaluateGuess).toBe("function");
 
     expect(typeof mod.isValidGuess).toBe("function");
+    expect(typeof mod.judgeBoards).toBe("function");
     expect("TERMO_ANSWERS" in mod).toBe(false);
   });
 
@@ -18,7 +19,7 @@ describe("@miolos/games exports map", () => {
 
   it("resolves the ./termo-free subpath", async () => {
     const mod = await import("@miolos/games/termo-free");
-    expect(typeof mod.drawFreeTermoWord(1)).toBe("string");
+    expect(mod.drawFreeTermoWords(1, 2)).toHaveLength(2);
   });
 
   it("resolves the root barrel (shared substrate only)", async () => {

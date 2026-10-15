@@ -14,10 +14,8 @@ import type { TermoJudgedRow } from "./types";
 
 const copy = messages.games.termo.play;
 
-const ROW_INDEXES: readonly number[] = Array.from(
-  { length: MAX_GUESSES },
-  (_unused, row) => row,
-);
+const rowIndexes = (rows: number): readonly number[] =>
+  Array.from({ length: rows }, (_unused, row) => row);
 
 const SLOT_INDEXES: readonly number[] = Array.from(
   { length: WORD_LENGTH },
@@ -41,6 +39,10 @@ export interface BoardProps {
   readonly pending: string | null;
   readonly onSelect: (slot: number) => void;
   readonly onKey: (key: string) => boolean;
+  readonly maxGuesses?: number;
+  readonly label?: string;
+  readonly draftEditable?: boolean;
+  readonly refocusRef?: RefObject<boolean>;
 }
 
 export const Board = memo(function Board({
@@ -52,23 +54,35 @@ export const Board = memo(function Board({
   pending,
   onSelect,
   onKey,
+  maxGuesses = MAX_GUESSES,
+  label = copy.boardAria,
+  draftEditable = true,
+  refocusRef,
 }: BoardProps) {
-  const refocusRef = useRef(false);
+  const ownRefocusRef = useRef(false);
   return (
-    <div className={styles.grid} role="group" aria-label={copy.boardAria}>
-      {ROW_INDEXES.map((row) => {
+    <div className={styles.grid} role="group" aria-label={label}>
+      {rowIndexes(maxGuesses).map((row) => {
         const judged = guesses[row];
         const held = row === heldRow && pending !== null ? pending : null;
         if (judged === undefined && held === null && row === activeRow) {
-          return (
+          return draftEditable ? (
             <ActiveRow
               key={row}
               row={row}
               draft={draft}
               cursor={cursor}
-              refocusRef={refocusRef}
+              maxGuesses={maxGuesses}
+              refocusRef={refocusRef ?? ownRefocusRef}
               onSelect={onSelect}
               onKey={onKey}
+            />
+          ) : (
+            <MirrorRow
+              key={row}
+              row={row}
+              draft={draft}
+              maxGuesses={maxGuesses}
             />
           );
         }
@@ -79,10 +93,10 @@ export const Board = memo(function Board({
             role="group"
             aria-label={
               judged !== undefined
-                ? copy.rowAria(row + 1, MAX_GUESSES, judged.guess, judged.tiles)
+                ? copy.rowAria(row + 1, maxGuesses, judged.guess, judged.tiles)
                 : held !== null
-                  ? copy.rowHeldAria(row + 1, MAX_GUESSES, held)
-                  : copy.rowEmptyAria(row + 1, MAX_GUESSES)
+                  ? copy.rowHeldAria(row + 1, maxGuesses, held)
+                  : copy.rowEmptyAria(row + 1, maxGuesses)
             }
           >
             {SLOT_INDEXES.map((slot) => (
@@ -110,6 +124,7 @@ function ActiveRow({
   row,
   draft,
   cursor,
+  maxGuesses,
   refocusRef,
   onSelect,
   onKey,
@@ -117,6 +132,7 @@ function ActiveRow({
   readonly row: number;
   readonly draft: readonly string[];
   readonly cursor: number;
+  readonly maxGuesses: number;
   readonly refocusRef: RefObject<boolean>;
   readonly onSelect: (slot: number) => void;
   readonly onKey: (key: string) => boolean;
@@ -160,7 +176,7 @@ function ActiveRow({
       ref={rowRef}
       className={styles.row}
       role="group"
-      aria-label={copy.rowActiveAria(row + 1, MAX_GUESSES)}
+      aria-label={copy.rowActiveAria(row + 1, maxGuesses)}
       onKeyDown={onKeyDown}
     >
       {SLOT_INDEXES.map((slot) => {
@@ -185,6 +201,39 @@ function ActiveRow({
   );
 }
 
+function MirrorRow({
+  row,
+  draft,
+  maxGuesses,
+}: {
+  readonly row: number;
+  readonly draft: readonly string[];
+  readonly maxGuesses: number;
+}) {
+  return (
+    <div
+      className={styles.row}
+      role="group"
+      aria-label={copy.rowActiveAria(row + 1, maxGuesses)}
+    >
+      {SLOT_INDEXES.map((slot) => {
+        const letter = draft[slot] ?? "";
+        return (
+          <div
+            key={slot}
+            aria-hidden
+            className={
+              letter === "" ? styles.tile : `${styles.tile} ${styles.tileTyped}`
+            }
+          >
+            {letter}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const NO_DRAFT: readonly string[] = [];
 
 const ignoreSelect = (): void => undefined;
@@ -193,12 +242,18 @@ const ignoreKey = (): boolean => false;
 
 export function FinishedBoard({
   guesses,
+  maxGuesses,
+  label,
 }: {
   readonly guesses: readonly TermoJudgedRow[];
+  readonly maxGuesses?: number;
+  readonly label?: string;
 }) {
   return (
     <Board
       guesses={guesses}
+      maxGuesses={maxGuesses}
+      label={label}
       activeRow={null}
       heldRow={null}
       draft={NO_DRAFT}
@@ -213,7 +268,7 @@ export function FinishedBoard({
 export function BoardSkeleton() {
   return (
     <div aria-hidden className={styles.grid}>
-      {ROW_INDEXES.map((row) => (
+      {rowIndexes(MAX_GUESSES).map((row) => (
         <div key={row} className={styles.row}>
           {SLOT_INDEXES.map((slot) => (
             <div

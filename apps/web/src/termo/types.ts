@@ -4,6 +4,8 @@ import type {
   TileStates,
 } from "@miolos/games/termo";
 
+import type { ReactNode } from "react";
+
 import type {
   ArchivePlayChrome,
   LifecycleAction,
@@ -77,4 +79,7 @@ export interface TermoPlay {
 export type TermoChrome = Omit<ArchivePlayChrome, "note"> & {
   readonly note?: ArchivePlayChrome["note"];
   readonly topTag?: string;
+  readonly picker?: ReactNode;
+  readonly rules?: string;
+  readonly pageClassName?: string;
 };
