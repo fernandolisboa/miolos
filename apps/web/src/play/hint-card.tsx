@@ -77,7 +77,7 @@ export function HintCard({
     return () => {
       window.removeEventListener("resize", replace);
     };
-  }, [cell, text]);
+  }, [open, cell, text]);
 
   return open ? (
     <p ref={cardRef} aria-hidden className={styles.card}>

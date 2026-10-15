@@ -2,6 +2,7 @@ import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
+import { hintReadout } from "../play/hint-readout";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { ClueBar, ClueBarSkeleton, ClueLists } from "./clues";
@@ -19,10 +20,11 @@ export function crosswordReadouts(board: CrosswordBoard): PlayChromeReadouts {
     progressShort: copy.progressShort(board.filled, board.total),
     progressLong: copy.progressLong(board.filled, board.total),
     hint: {
+      ...hintReadout(
+        board.state.hint,
+        crosswordHintExplanation(board.state.hint.reason),
+      ),
       ready: board.hintReady,
-      used: board.state.hint.used,
-      cell: board.state.hint.lastIndex,
-      explain: crosswordHintExplanation(board.state.hint.reason),
       onReveal: board.revealHint,
     },
     onReset: hasDecidedCell(board.state.entries) ? board.reset : null,

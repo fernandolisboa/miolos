@@ -11,6 +11,7 @@ import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { hintReadout } from "../play/hint-readout";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import { useReset } from "../play/use-reset";
@@ -120,10 +121,11 @@ function BinairoFreeBoard({
           progressShort: copy.progressShort(filled, TOTAL_CELLS),
           progressLong: copy.progressLong(filled, TOTAL_CELLS),
           hint: {
+            ...hintReadout(
+              state.hint,
+              binairoHintExplanation(state.hint.reason),
+            ),
             ready: hintReady,
-            used: state.hint.used,
-            cell: state.hint.lastIndex,
-            explain: binairoHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? reset : null,

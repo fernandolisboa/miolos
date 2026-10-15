@@ -9,6 +9,9 @@ import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
+import binairoStyles from "../src/binairo/binairo-screen.module.css";
+import crosswordStyles from "../src/crossword/crossword-board.module.css";
+import nonogramStyles from "../src/nonogram/nonogram-board.module.css";
 import { BoardCard } from "../src/play/board-card";
 import hintCardStyles from "../src/play/hint-card.module.css";
 import {
@@ -20,6 +23,8 @@ import {
 } from "../src/play/hint-card-place";
 import { PlayScreenChrome } from "../src/play/screen-chrome";
 import screenStyles from "../src/play/screen.module.css";
+import queensStyles from "../src/queens/queens-board.module.css";
+import sudokuStyles from "../src/sudoku/sudoku-board.module.css";
 import { hintCardLoaded } from "./hint-reason";
 
 const REASON = "O 7 só cabe aqui na linha.";
@@ -178,7 +183,7 @@ describe("the chrome shows the reason on the hinted cell until the next press (T
     expect(spoken()).toBe(REASON);
   });
 
-  it("survives the Enter that revealed it, Tab, modifiers and key repeat", async () => {
+  it("opens from the keyboard and stays open through Tab, modifiers and key repeat", async () => {
     render(<Harness />);
     const button = hintButton();
 
@@ -260,12 +265,36 @@ function stubLayout() {
   vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(5000);
 }
 
-const SCREENS: readonly (readonly [string, () => ReactElement])[] = [
-  ["Sudoku", () => <SudokuFreeScreen deps={{ pickSeed: () => 7 }} />],
-  ["Binairo", () => <BinairoFreeScreen deps={{ pickSeed: () => 7 }} />],
-  ["Nonogram", () => <NonogramFreeScreen deps={{ pickSeed: () => 7 }} />],
-  ["Rainhas", () => <QueensFreeScreen deps={{ pickSeed: () => 7 }} />],
-  ["Cruzadinha", () => <CrosswordFreeScreen deps={{ pickSeed: () => 7 }} />],
+const SCREENS: readonly (readonly [
+  string,
+  () => ReactElement,
+  string | undefined,
+])[] = [
+  [
+    "Sudoku",
+    () => <SudokuFreeScreen deps={{ pickSeed: () => 7 }} />,
+    sudokuStyles.cellHinted,
+  ],
+  [
+    "Binairo",
+    () => <BinairoFreeScreen deps={{ pickSeed: () => 7 }} />,
+    binairoStyles.cellHinted,
+  ],
+  [
+    "Nonogram",
+    () => <NonogramFreeScreen deps={{ pickSeed: () => 7 }} />,
+    nonogramStyles.cellHinted,
+  ],
+  [
+    "Rainhas",
+    () => <QueensFreeScreen deps={{ pickSeed: () => 7 }} />,
+    queensStyles.cellHinted,
+  ],
+  [
+    "Cruzadinha",
+    () => <CrosswordFreeScreen deps={{ pickSeed: () => 7 }} />,
+    crosswordStyles.cellHinted,
+  ],
 ];
 
 describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S692)", () => {
@@ -279,14 +308,8 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
     vi.restoreAllMocks();
   });
 
-  it.each(SCREENS)("%s", async (_, element) => {
+  it.each(SCREENS)("%s", async (_, element, hinted) => {
     const { container } = render(element());
-    const before = new Map(
-      [...container.querySelectorAll("[data-cell-index]")].map((cell) => [
-        cell.getAttribute("data-cell-index"),
-        cell.outerHTML,
-      ]),
-    );
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),
@@ -298,8 +321,8 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
       Number.parseFloat(placed?.style.left ?? "") + BOARD_ORIGIN.x + 16 - 10;
     const index = String(anchor - CELL_LEFT);
     const cell = container.querySelector(`[data-cell-index="${index}"]`);
-    expect(cell).not.toBeNull();
-    expect(cell?.outerHTML).not.toBe(before.get(index));
+    expect(hinted).toBeTruthy();
+    expect(cell?.className.split(" ")).toContain(hinted);
     expect(placed?.dataset.side).toBe("below");
     expect(placed?.style.top).toBe(`${String(528 - BOARD_ORIGIN.y)}px`);
     expect(placed?.style.maxWidth).toBe("180px");

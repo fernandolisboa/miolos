@@ -5,6 +5,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { hintReadout } from "../play/hint-readout";
 import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import { useReset } from "../play/use-reset";
@@ -143,10 +144,11 @@ function SudokuFreeBoard({
           ),
           progressLong: copy.progressLong(filled, TOTAL_CELLS),
           hint: {
+            ...hintReadout(
+              state.hint,
+              sudokuHintExplanation(state.hint.reason),
+            ),
             ready: hintReady,
-            used: state.hint.used,
-            cell: state.hint.lastIndex,
-            explain: sudokuHintExplanation(state.hint.reason),
             onReveal: revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? reset : null,

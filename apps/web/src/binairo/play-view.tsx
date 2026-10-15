@@ -1,6 +1,7 @@
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
+import { hintReadout } from "../play/hint-readout";
 import { hasDecidedCell } from "../play/reset-board";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
@@ -36,10 +37,11 @@ export function PlayView({
           progressShort: copy.progressShort(play.filled, TOTAL_CELLS),
           progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
           hint: {
+            ...hintReadout(
+              state.hint,
+              binairoHintExplanation(state.hint.reason),
+            ),
             ready: play.hintReady,
-            used: state.hint.used,
-            cell: state.hint.lastIndex,
-            explain: binairoHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,
