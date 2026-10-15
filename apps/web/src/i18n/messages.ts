@@ -228,6 +228,7 @@ export const messages = {
       cancel: "Cancelar",
     },
     wrongCell: (label: string) => `${label}, não bate com a solução`,
+    tipAria: "Como usar os controles",
   },
   conclusion: {
     back,
@@ -884,7 +885,7 @@ export const messages = {
             state: "correct" | "present" | "absent",
           ) => `letra ${letter}: ${TERMO_TILE[state]}`,
           affordance:
-            "ou use o teclado: letras escrevem, Enter envia, Backspace apaga",
+            "No teclado: as letras escrevem, as setas mudam de casa, Enter (↵) envia e a tecla de apagar (⌫) apaga.",
         },
 
         unavailable: {
@@ -952,7 +953,7 @@ export const messages = {
             `escrever ${digit} — colocado ${count} vezes, mais que 9`,
           eraseAria: "apagar a célula selecionada",
           affordance:
-            "ou use o teclado: 1–9 para escrever, Backspace para apagar",
+            "No teclado: os números de 1 a 9 escrevem e a tecla de apagar (⌫) apaga.",
         },
         hint: {
           correction: "Corrigimos um número que não fecha com as regras.",

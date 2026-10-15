@@ -1241,7 +1241,7 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
     expect(document.activeElement).toBe(document.body);
   });
 
-  it("is THREE stops at most, in document order: back → retry → the keyboard", () => {
+  it("is FOUR stops at most, in document order: back → retry → the keyboard → the (i) tip", () => {
     const held = playFixture({
       pending: VALID,
       held: true,
@@ -1255,10 +1255,13 @@ describe("the retry button's placement and the focus order (T-WEB-S103)", () => 
         'a[href], button:not([tabindex="-1"])',
       ),
     ];
-    expect(stops).toHaveLength(3);
+    expect(stops).toHaveLength(4);
     expect(stops[0]?.tagName).toBe("A");
     expect(stops[1]).toBe(screen.getByRole("button", { name: copy.retry }));
     expect(stops[2]).toBe(letterKey("q"));
+    expect(stops[3]).toBe(
+      screen.getByRole("button", { name: messages.play.tipAria }),
+    );
   });
 });
 

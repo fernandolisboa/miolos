@@ -104,11 +104,17 @@
 
 .controls {
   box-sizing: border-box;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: var(--space-3);
   width: var(--board-side);
   margin-top: var(--space-6);
+}
+
+.digits {
+  grid-column: 2;
+  display: flex;
+  gap: var(--space-3);
 }
 
 .control {
@@ -160,14 +166,13 @@
 
 .affordance {
   display: none;
-  margin-left: var(--space-3);
-  font-size: 13px;
-  color: var(--ink-2);
+  justify-self: start;
+  margin-left: var(--space-4);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .affordance {
-    display: inline;
+    display: flex;
   }
 }
 
@@ -205,8 +210,13 @@
   }
 
   .controls {
-    gap: 10px;
+    display: flex;
     margin-top: var(--space-4);
+  }
+
+  .digits {
+    flex: 1;
+    gap: 10px;
   }
 
   .controlDigit {

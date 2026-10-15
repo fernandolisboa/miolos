@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
+import tipStyles from "../src/play/info-tip.module.css";
 
 const SEED = 20_260_812;
 
@@ -52,7 +53,7 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
     expect(markup).toContain('data-play-state="generating"');
     expect(markup).toContain(messages.freePlay.generating);
 
-    expect(markup).toContain(messages.games.sudoku.play.keypad.affordance);
+    expect(markup).toContain(`class="${tipStyles.button ?? ""}"`);
   });
 
   it("retries with a fresh seed on SudokuGenerationError, up to three", () => {

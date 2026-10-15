@@ -1,4 +1,5 @@
 import { messages } from "../i18n";
+import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import { useSettings } from "../settings/settings";
 import styles from "./binairo-screen.module.css";
 import type { PaintMode } from "./state";
@@ -10,12 +11,14 @@ const DIGITS = [
   { value: 1, label: copy.one, aria: copy.oneAria },
 ] as const;
 
-const CYCLE: PaintMode = { kind: "cycle" };
-
 function Affordance({ paint }: { readonly paint: PaintMode }) {
   const first = useSettings().games.binairo.firstValue;
   const left = paint.kind === "paint" ? paint.value : first;
-  return <span className={styles.affordance}>{copy.affordance(left)}</span>;
+  return (
+    <span className={styles.affordance}>
+      <InfoTip text={copy.affordance(left)} align="center" />
+    </span>
+  );
 }
 
 export function Controls({
@@ -27,21 +30,23 @@ export function Controls({
 }) {
   return (
     <div className={styles.controls}>
-      {DIGITS.map(({ value, label, aria }) => {
-        const active = paint.kind === "paint" && paint.value === value;
-        return (
-          <button
-            key={value}
-            type="button"
-            className={`${styles.control} ${styles.controlDigit}${active ? ` ${styles.controlDigitActive}` : ""}`}
-            aria-label={aria}
-            aria-pressed={active}
-            onClick={() => onToggleMode(value)}
-          >
-            {label}
-          </button>
-        );
-      })}
+      <div className={styles.digits}>
+        {DIGITS.map(({ value, label, aria }) => {
+          const active = paint.kind === "paint" && paint.value === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              className={`${styles.control} ${styles.controlDigit}${active ? ` ${styles.controlDigitActive}` : ""}`}
+              aria-label={aria}
+              aria-pressed={active}
+              onClick={() => onToggleMode(value)}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
       <Affordance paint={paint} />
     </div>
   );
@@ -50,15 +55,19 @@ export function Controls({
 export function ControlsSkeleton() {
   return (
     <div aria-hidden className={styles.controls}>
-      {DIGITS.map(({ value, label }) => (
-        <div
-          key={value}
-          className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
-        >
-          {label}
-        </div>
-      ))}
-      <Affordance paint={CYCLE} />
+      <div className={styles.digits}>
+        {DIGITS.map(({ value, label }) => (
+          <div
+            key={value}
+            className={`${styles.control} ${styles.controlDigit} ${styles.placeholder}`}
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+      <span className={styles.affordance}>
+        <InfoTipSkeleton />
+      </span>
     </div>
   );
 }

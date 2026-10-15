@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
+import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { Board, BoardSkeleton } from "./board";
@@ -30,7 +31,13 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
 export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
   const { state } = board;
   return (
-    <BoardCard below={<p className={styles.affordance}>{copy.affordance}</p>}>
+    <BoardCard
+      below={
+        <div className={styles.affordance}>
+          <InfoTip text={copy.affordance} align="center" />
+        </div>
+      }
+    >
       <Board
         size={state.size}
         regions={state.regions}
@@ -65,9 +72,9 @@ export function BoardPanelSkeleton({
       placeholder
       overlay={overlay}
       below={
-        <p aria-hidden className={styles.affordance}>
-          {copy.affordance}
-        </p>
+        <div className={styles.affordance}>
+          <InfoTipSkeleton />
+        </div>
       }
     >
       <BoardSkeleton size={size} regions={regions} />
