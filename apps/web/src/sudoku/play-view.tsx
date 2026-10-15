@@ -3,6 +3,7 @@ import type { SudokuTier } from "@miolos/games/sudoku";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
+import { hintReadout } from "../play/hint-readout";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
@@ -44,9 +45,11 @@ export function PlayView({
           ),
           progressLong: copy.progressLong(play.filled, TOTAL_CELLS),
           hint: {
+            ...hintReadout(
+              state.hint,
+              sudokuHintExplanation(state.hint.reason),
+            ),
             ready: play.hintReady,
-            used: state.hint.used,
-            explain: sudokuHintExplanation(state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,

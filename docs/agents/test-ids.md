@@ -47,6 +47,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 #155 (the bundle check in CI) spent **`T-WEB-S710`** (`fanout-cap.test.ts`: exactly one gate step runs `pnpm --filter @miolos/web bundle-check`, after `pnpm build`, and a commented-out step does not count). `S680…S709` are other threads' live reservations, not free space (#330 part 2 spent or burned `S670…S679`, below).
 
+#332 (the hint's reason in a card on the hinted cell, ADR-0113) spent **`T-WEB-S690`** (`hint-card.test.tsx`: the placement function), **`T-WEB-S691`** (same file: the card opens on a reveal, survives Tab, modifiers and repeat, closes on the next press or key, and reopens per hint) and **`T-WEB-S692`** (same file: each grid game anchors the card on the cell its hint wrote). `T-WEB-S367`, `S517`, `S555` and `S602` were re-aimed in place.
+
 #331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
 #329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.

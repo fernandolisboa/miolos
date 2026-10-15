@@ -37,6 +37,7 @@ import {
   token,
 } from "./css-source";
 import { freeHintSteps, spendFreeHints } from "./free-hints";
+import { SPOKEN } from "./hint-reason";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -440,6 +441,7 @@ describe("the free hints (T-WEB-S28a)", () => {
     expect(
       screen.getByText(
         sudokuHintExplanation({ kind: "step", step: HINT_STEPS[2]! }) ?? "",
+        SPOKEN,
       ),
     ).toBeInTheDocument();
 

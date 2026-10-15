@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-10-15
 **Amends:** [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md) decision 7 (*"the shared `MAX_DELTA_BYTES` is not raised"*); [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md)'s *"Not raising `MAX_DELTA_BYTES` is right"* (the `/nonogram` slack paragraph); the 40 KB figure in [ADR-0027](./0027-the-hint-is-computed-on-the-client.md)'s instrument paragraph, [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) and [ADR-0076](./0076-the-shared-route-envelope-takes-a-render-callback-not-a-screen-registry.md).
-**Amended by:** [ADR-0111](./0111-cruzadinha-free-play-offers-5x5-or-7x7.md) (#330) — `/modo-livre/cruzadinha` re-measured at 659.6 KB with the 7×7 picker, still under its 660 KB budget.
+**Amended by:** [ADR-0111](./0111-cruzadinha-free-play-offers-5x5-or-7x7.md) (#330) — `/modo-livre/cruzadinha` re-measured at 659.6 KB with the 7×7 picker, still under its 660 KB budget; [ADR-0113](./0113-the-hint-reason-shows-in-a-card-on-the-hinted-cell.md) (#332) — decision 3: `/modo-livre/cruzadinha` re-sized to 664 KB.
 **Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — the last consequence: the check runs in CI, so no PR runs it by hand.
 
 ## Context
@@ -21,7 +21,7 @@ ADR-0045 and ADR-0054 kept the constant because raising it would un-arm the leak
 
 - One constant moves, not per-route entries for the play routes. The margin on the known leaks narrows to about 3 KB on the conclusion routes (~16–17 KB over `/`), and an unnamed leak of roughly 23–31 KB there, red at 40 KB, now passes.
 - The next relief, when 48 KB is reached, is named so the constant is not the first move: load the *Ajustes* panel through `next/dynamic` behind the existing chunk-boundary pattern (~2.4 KB per grid route). Splitting `playRecordSchema`'s six-game union (`apps/web/src/play/play-record.ts`, 4.5 KB on every play route) is a refactor behind `readPlayRecord`, not a cut.
-- `/modo-livre/cruzadinha` stands at 658.3 of 660 KB; #330 part 2 (the 7×7 picker) re-measures it.
+- `/modo-livre/cruzadinha` stood at 658.3 of 660 KB; ADR-0111 and ADR-0113 re-measured it.
 - Until #155 puts the check in CI, any PR that touches a play route runs it by hand.
 
 ## Rejected

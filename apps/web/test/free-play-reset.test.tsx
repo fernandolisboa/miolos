@@ -10,8 +10,10 @@ import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
+import hintCardStyles from "../src/play/hint-card.module.css";
 import screenStyles from "../src/play/screen.module.css";
 import { flushGeneration } from "./free-generation";
+import { hintCardLoaded } from "./hint-reason";
 
 const SEED = 20_261_013;
 const DEPS = { pickSeed: () => SEED };
@@ -51,7 +53,11 @@ function cells(container: HTMLElement): readonly string[] {
 }
 
 function explanation(container: HTMLElement): Element | null {
-  return container.querySelector(`.${screenStyles.hintExplain ?? ""}`);
+  return container.querySelector(`.${screenStyles.hintLive ?? ""} p`);
+}
+
+function hintCard(container: HTMLElement): Element | null {
+  return container.querySelector(`.${hintCardStyles.card ?? ""}`);
 }
 
 afterEach(() => {
@@ -61,7 +67,7 @@ afterEach(() => {
 
 describe("Recomeçar in free play clears the board and keeps the hint spent (T-WEB-S517)", () => {
   it.each(SCREENS)(
-    "$name: the board, the hinted cell and the explanation go; the spent hint stays; nothing is written",
+    "$name: the board, the hinted cell, the explanation and its card go; the spent hint stays; nothing is written",
     async ({ screen: element }) => {
       vi.stubGlobal(
         "fetch",
@@ -79,8 +85,10 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
       );
 
       fireEvent.click(screen.getByText(hint.available(FREE_HINTS_PER_PUZZLE)));
+      await hintCardLoaded();
       expect(cells(container)).not.toEqual(fresh);
       expect(explanation(container)).not.toBeNull();
+      expect(hintCard(container)).not.toBeNull();
 
       fireEvent.click(screen.getByRole("button", { name: reset.label }));
       fireEvent.click(
@@ -98,6 +106,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
         "true",
       );
       expect(explanation(container)).toBeNull();
+      expect(hintCard(container)).toBeNull();
       expect(
         screen.getByText(hint.available(FREE_HINTS_PER_PUZZLE - 1)),
       ).toBeInTheDocument();

@@ -15,7 +15,11 @@ export function BoardCard({
 }) {
   return (
     <div className={screen.boardWell}>
-      <div aria-hidden={placeholder || undefined} className={screen.gridCard}>
+      <div
+        aria-hidden={placeholder || undefined}
+        className={screen.gridCard}
+        data-board-card
+      >
         {children}
       </div>
       {below}

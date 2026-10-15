@@ -1,0 +1,55 @@
+/* Placed by hint-card.tsx in .board's coordinates; it never takes a press, so
+   a tap through it reaches the cell underneath and closes it (ADR-0113). */
+.card {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  width: max-content;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--ink);
+  font: var(--text-body);
+  font-size: 13px;
+  text-wrap: pretty;
+  pointer-events: none;
+  animation: arrive var(--duration-base) var(--ease-settle);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--tail) - 6px);
+  width: 10px;
+  height: 10px;
+  background: var(--paper-card);
+  border: solid var(--line);
+  transform: rotate(45deg);
+}
+
+.card[data-side="above"]::before {
+  bottom: -6px;
+  border-width: 0 1px 1px 0;
+}
+
+.card[data-side="below"]::before {
+  top: -6px;
+  border-width: 1px 0 0 1px;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

@@ -1,4 +1,10 @@
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
@@ -51,6 +57,7 @@ export interface PlayChromeReadouts {
     readonly ready: boolean;
     readonly used: number;
     readonly explain: string | null;
+    readonly cell: number | null;
     readonly onReveal: () => void;
   };
   readonly onReset: (() => void) | null;
@@ -103,6 +110,24 @@ function clockRow(clock: PlayChromeClock): ReactNode {
   );
 }
 
+// Outside every route's first load; a failed chunk leaves the live region alone (ADR-0113).
+let LoadedHintCard: typeof import("./hint-card").HintCard | null = null;
+
+function useHintCardLoaded(): boolean {
+  const [loaded, setLoaded] = useState(LoadedHintCard !== null);
+  useEffect(() => {
+    if (loaded) return;
+    import("./hint-card").then(
+      (module) => {
+        LoadedHintCard = module.HintCard;
+        setLoaded(true);
+      },
+      () => undefined,
+    );
+  }, [loaded]);
+  return loaded;
+}
+
 export function PlayScreenChrome({
   game,
   pageModifier,
@@ -128,6 +153,9 @@ export function PlayScreenChrome({
   const clock = useSettings().showClock ? clockSetting : "none";
   const skeleton = state.kind === "skeleton";
   const readouts = state.kind === "playing" ? state.readouts : null;
+  const hint = readouts?.hint;
+  const reason = hint?.explain ?? null;
+  const cardLoaded = useHintCardLoaded();
   const { kicker, play } = messages.games[game];
 
   return (
@@ -198,13 +226,15 @@ export function PlayScreenChrome({
 
       <section className={screen.board}>
         {children}
-        <div aria-live="polite" className={screen.hintSlot}>
-          {readouts === null || readouts.hint.explain === null ? null : (
-            <p key={readouts.hint.used} className={screen.hintExplain}>
-              {readouts.hint.explain}
-            </p>
-          )}
+        <div aria-live="polite" className={screen.hintLive}>
+          {reason === null ? null : <p key={hint?.used}>{reason}</p>}
         </div>
+        {reason === null ||
+        hint?.cell == null ||
+        !cardLoaded ||
+        LoadedHintCard === null ? null : (
+          <LoadedHintCard key={hint.used} text={reason} cell={hint.cell} />
+        )}
       </section>
 
       <div className={screen.reset}>

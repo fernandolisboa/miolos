@@ -4,6 +4,7 @@ import type { NonogramClues } from "@miolos/games/nonogram";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
+import { hintReadout } from "../play/hint-readout";
 import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
@@ -43,9 +44,11 @@ export function PlayView({
           ),
           progressLong: copy.progressLong(play.filled, play.target),
           hint: {
+            ...hintReadout(
+              state.hint,
+              nonogramHintExplanation(state.size, state.hint.reason),
+            ),
             ready: play.hintReady,
-            used: state.hint.used,
-            explain: nonogramHintExplanation(state.size, state.hint.reason),
             onReveal: play.revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? play.reset : null,

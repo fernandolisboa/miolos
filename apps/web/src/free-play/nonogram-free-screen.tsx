@@ -6,6 +6,7 @@ import { useEffect, useReducer, useState } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
+import { hintReadout } from "../play/hint-readout";
 import { hasDecidedCell } from "../play/reset-board";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
@@ -134,9 +135,11 @@ function NonogramFreeBoard({
           progressShort: copy.progressShort(state.size, filled, target),
           progressLong: copy.progressLong(filled, target),
           hint: {
+            ...hintReadout(
+              state.hint,
+              nonogramHintExplanation(state.size, state.hint.reason),
+            ),
             ready: hintReady,
-            used: state.hint.used,
-            explain: nonogramHintExplanation(state.size, state.hint.reason),
             onReveal: revealHint,
           },
           onReset: hasDecidedCell(state.entries) ? reset : null,

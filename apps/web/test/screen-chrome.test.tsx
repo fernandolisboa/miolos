@@ -289,11 +289,12 @@ function readouts(
   onReveal: () => void = noop,
   used = 0,
   onReset: (() => void) | null = noop,
+  cell: number | null = null,
 ): PlayChromeReadouts {
   return {
     progressShort: PROGRESS_SHORT,
     progressLong: PROGRESS_LONG,
-    hint: { ready, used, explain, onReveal },
+    hint: { ready, used, explain, cell, onReveal },
     onReset,
   };
 }
@@ -407,7 +408,7 @@ function shapeOf(page: Element): Record<string, unknown> {
     hint: hint === null ? "absent" : hint.tagName,
     hintClasses: hint === null ? "absent" : localNamesOf(hint),
     hintDisabled: hint?.getAttribute("aria-disabled") ?? null,
-    hintExplain: textOf(page, "hintExplain"),
+    hintLive: textOf(page, "hintLive"),
     reset: resetSlotOf(page),
     note: page.querySelector(".note-mark")?.textContent ?? "absent",
     extraStat: page.querySelector(".extra-mark")?.textContent ?? "absent",
@@ -472,7 +473,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hint: "BUTTON",
         hintClasses: ["hint"],
         hintDisabled: "false",
-        hintExplain: "absent",
+        hintLive: "",
         reset: RESET_BUTTON,
         note: NOTE.text,
         extraStat: EXTRA.value,
@@ -499,7 +500,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hint: "DIV",
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
-        hintExplain: "absent",
+        hintLive: "",
         reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: "absent",
@@ -526,7 +527,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hint: "BUTTON",
         hintClasses: ["hint", "hintUsed"],
         hintDisabled: "true",
-        hintExplain: "porque sim",
+        hintLive: "porque sim",
         reset: RESET_BUTTON,
         note: "absent",
         extraStat: EXTRA.value,
@@ -553,7 +554,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         hint: "DIV",
         hintClasses: ["hint", "hintUsed", "placeholder"],
         hintDisabled: null,
-        hintExplain: "absent",
+        hintLive: "",
         reset: RESET_PLACEHOLDER,
         note: "absent",
         extraStat: EXTRA.value,
@@ -571,8 +572,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "barKicker",
         "board",
         "hint",
-        "hintExplain",
-        "hintSlot",
+        "hintLive",
         "hintUsed",
         "page",
         "placeholder",
@@ -695,9 +695,7 @@ describe("the hint's reason is read out from one polite live region (T-WEB-S555)
     rerender(chrome(FREE_PLAYING));
 
     expect(liveRegions(container)).toEqual([region]);
-    expect(region?.querySelector(`.${cls("hintExplain")}`)?.textContent).toBe(
-      "porque sim",
-    );
+    expect(region?.textContent).toBe("porque sim");
   });
 
   it("mounts a new sentence for each hint, so the same words are read again", () => {
@@ -710,10 +708,10 @@ describe("the hint's reason is read out from one polite live region (T-WEB-S555)
         },
       });
     const { container, rerender } = render(afterHints(1));
-    const first = container.querySelector(`.${cls("hintExplain")}`);
+    const first = container.querySelector(`.${cls("hintLive")} p`);
 
     rerender(afterHints(2));
-    const second = container.querySelector(`.${cls("hintExplain")}`);
+    const second = container.querySelector(`.${cls("hintLive")} p`);
 
     expect(second?.textContent).toBe("porque sim");
     expect(second).not.toBe(first);
