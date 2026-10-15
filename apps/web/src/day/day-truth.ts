@@ -30,7 +30,8 @@ function sameGame(
     previous.status === next.status &&
     previous.elapsedMs === next.elapsedMs &&
     previous.hintsUsed === next.hintsUsed &&
-    previous.motifName === next.motifName
+    previous.motifName === next.motifName &&
+    previous.motifTones === next.motifTones
   );
 }
 

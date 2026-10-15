@@ -7,7 +7,6 @@ import { useEffect, useReducer, useState } from "react";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { hintReadout } from "../play/hint-readout";
-import { hasDecidedCell } from "../play/reset-board";
 import { Board, BoardSkeleton } from "../nonogram/board";
 import { Controls, ControlsSkeleton } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
@@ -16,10 +15,12 @@ import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { EndingStage } from "../play/ending-stage";
+import { PictureArt } from "../play/picture-art";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
+import styles from "./free-play.module.css";
 import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
@@ -95,7 +96,7 @@ function NonogramFreeBoard({
     enterValue,
     clearCell,
     revealHint,
-    reset,
+    edits,
     setBrush,
     markCell,
     strokeStart,
@@ -120,11 +121,17 @@ function NonogramFreeBoard({
           game="nonogram"
           choice={choice}
           onAgain={onNext}
-          picture={{
-            size: state.size,
-            cells: picture ?? [],
-            label: messages.freePlay.solved.pictureAria,
-          }}
+          picture={
+            <PictureArt
+              picture={{
+                size: state.size,
+                cells: picture ?? [],
+                label: messages.freePlay.solved.pictureAria,
+                tones: puzzle.tones,
+              }}
+              className={styles.picture}
+            />
+          }
         />
       )}
     >
@@ -145,7 +152,7 @@ function NonogramFreeBoard({
               ready: hintReady,
               onReveal: revealHint,
             },
-            onReset: hasDecidedCell(state.entries) ? reset : null,
+            ...edits,
           },
         }}
       >

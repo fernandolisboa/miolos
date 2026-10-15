@@ -34,7 +34,7 @@ import {
 } from "./day-state";
 import { DAY_GAMES } from "./day-games";
 import { EndingFlourish } from "./ending-flourish";
-import { picturePath } from "./picture-path";
+import { PictureArt } from "./picture-art";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
 import type {
@@ -194,15 +194,7 @@ export function ConclusionView({
         )}
         {picture !== undefined && (
           <div className={styles.pictureRow}>
-            <svg
-              className={styles.picture}
-              role="img"
-              aria-label={picture.label}
-              viewBox={`0 0 ${String(picture.size)} ${String(picture.size)}`}
-              shapeRendering="crispEdges"
-            >
-              <path d={picturePath(picture)} />
-            </svg>
+            <PictureArt picture={picture} className={styles.picture} />
             {picture.name !== undefined && (
               <div className={styles.pictureCaption}>
                 {picture.lead !== undefined && (

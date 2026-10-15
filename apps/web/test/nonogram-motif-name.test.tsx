@@ -4,6 +4,7 @@ import {
   type DayResponse,
 } from "@miolos/core";
 import { generateNonogram } from "@miolos/games/nonogram";
+import { motifTones } from "@miolos/games/nonogram-colors";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -25,7 +26,9 @@ const API_URL = "https://api.example.test";
 
 const MOTIF = "MOTIVO-MARCADOR-64";
 
-const SMALL = daily(generateNonogram(20_260_801, 1));
+const SMALL_PUZZLE = generateNonogram(20_260_801, 1);
+
+const SMALL = daily(SMALL_PUZZLE);
 
 function daily(puzzle: {
   readonly size: number;
@@ -179,6 +182,61 @@ describe("the named reveal on the daily conclusion (T-WEB-S323)", () => {
     for (const region of screen.queryAllByRole("status")) {
       expect(region).not.toHaveTextContent(MOTIF);
     }
+  });
+});
+
+describe("the daily conclusion paints the tones its completed claim carries (T-WEB-S903)", () => {
+  it("paints the picture in tones once the claim lands, and only the claimed tones", async () => {
+    const tones = motifTones(
+      SMALL_PUZZLE.reveal.motifId,
+      SMALL_PUZZLE.reveal.mirrored,
+    );
+    expect(tones).toMatch(/^[.a-z]+$/);
+    stubApi(() =>
+      jsonResponse(
+        200,
+        dayBody({ ...completedClaim(MOTIF), motifTones: tones }),
+      ),
+    );
+    window.localStorage.setItem(
+      playRecordKey("nonogram", DATE),
+      JSON.stringify(concludedRecord()),
+    );
+    const NonogramConclusion = await loadConclusion();
+
+    render(<NonogramConclusion date={DATE} />);
+    await flush();
+
+    const figure = await waitFor(() =>
+      screen.getByRole("img", {
+        name: messages.games.nonogram.reveal.namedAria(MOTIF),
+      }),
+    );
+    const painted = [
+      ...figure.querySelectorAll<SVGPathElement>("[data-toned] path[style]"),
+    ].map((path) => path.style.fill);
+    expect(painted.sort()).toEqual(
+      [...new Set((tones ?? "").replaceAll(".", ""))]
+        .map((tone) => `var(--tone-${tone})`)
+        .sort(),
+    );
+  });
+
+  it("stays in ink while the claim carries no tones", async () => {
+    stubApi(() => jsonResponse(200, dayBody(completedClaim(MOTIF))));
+    window.localStorage.setItem(
+      playRecordKey("nonogram", DATE),
+      JSON.stringify(concludedRecord()),
+    );
+    const NonogramConclusion = await loadConclusion();
+
+    render(<NonogramConclusion date={DATE} />);
+    await flush();
+
+    await waitFor(() => {
+      expect(caption()).toBeInTheDocument();
+    });
+    expect(document.querySelector("[data-toned]")).toBeNull();
   });
 });
 

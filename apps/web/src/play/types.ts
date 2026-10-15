@@ -80,4 +80,6 @@ export interface ConclusionPicture {
   readonly name?: string;
 
   readonly lead?: string;
+
+  readonly tones?: string;
 }

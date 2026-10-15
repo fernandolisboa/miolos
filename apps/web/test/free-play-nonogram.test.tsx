@@ -1,4 +1,5 @@
 import { generateNonogram } from "@miolos/games/nonogram";
+import { motifTones } from "@miolos/games/nonogram-colors";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -165,5 +166,47 @@ describe("free-play Nonogram right click (T-WEB-S500a)", () => {
     expect(cellAt(container, 0)?.className).toContain(boardStyles.cellCrossed);
     expect(cellAt(container, 1)?.className).toContain(boardStyles.cellFilled);
     expect(fireEvent.contextMenu(board)).toBe(false);
+  });
+});
+
+describe("the free-play picture is painted from the device (T-WEB-S904)", () => {
+  it("paints the solved picture in its motif's tones, still with zero fetches ", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(
+      <NonogramFreeScreen deps={stableDeps([SEED, SEED])} />,
+    );
+    await flushGeneration();
+    fireEvent.click(
+      screen.getByRole("radio", { name: messages.freePlay.level.aria("Leve") }),
+    );
+    await flushGeneration();
+
+    const size = LEVE_PUZZLE.size;
+    LEVE_PUZZLE.reveal.solution.forEach((row, y) => {
+      row.forEach((filled, x) => {
+        const cell = cellAt(container, y * size + x);
+        if (filled && cell !== null) {
+          fireEvent.click(cell);
+        }
+      });
+    });
+
+    const tones = motifTones(
+      LEVE_PUZZLE.reveal.motifId,
+      LEVE_PUZZLE.reveal.mirrored,
+    );
+    const painted = [
+      ...screen
+        .getByRole("img", { name: messages.freePlay.solved.pictureAria })
+        .querySelectorAll<SVGPathElement>("[data-toned] path[style]"),
+    ].map((path) => path.style.fill);
+    expect(painted.length).toBeGreaterThan(0);
+    expect(painted.sort()).toEqual(
+      [...new Set((tones ?? "").replaceAll(".", ""))]
+        .map((tone) => `var(--tone-${tone})`)
+        .sort(),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

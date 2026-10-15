@@ -10,9 +10,10 @@ import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
-import { isWeekday } from "@miolos/games";
+import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
+import { motifTones } from "@miolos/games/nonogram-colors";
 import { NextRequest } from "next/server";
 import {
   afterAll,
@@ -129,13 +130,35 @@ async function seedNonogram(date: string, name: string): Promise<void> {
   if (!isWeekday(weekday)) {
     throw new Error(`unreachable: bad weekday for ${date}`);
   }
-  const content = generateNonogram(7, weekday);
+  const seed = mirroredSeed(weekday);
+  const content = generateNonogram(seed, weekday);
   await insertDailyPuzzle(ctx.db, {
     game: "nonogram",
     date,
-    seed: 7,
+    seed,
     content: { ...content, reveal: { ...content.reveal, name } },
   });
+}
+
+function mirroredSeed(weekday: Weekday): number {
+  for (let seed = 1; ; seed++) {
+    const { reveal } = generateNonogram(seed, weekday);
+    if (
+      reveal.mirrored &&
+      motifTones(reveal.motifId, true) !== motifTones(reveal.motifId, false)
+    ) {
+      return seed;
+    }
+  }
+}
+
+function seededTones(date: string): string | undefined {
+  const weekday = isoWeekdayOf(date);
+  if (!isWeekday(weekday)) {
+    throw new Error(`unreachable: bad weekday for ${date}`);
+  }
+  const { reveal } = generateNonogram(mirroredSeed(weekday), weekday);
+  return motifTones(reveal.motifId, true);
 }
 
 async function readDay(token: string, search = ""): Promise<DayResponse> {
@@ -371,6 +394,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
 
   it("T-API-S176: a completed on-time Nonogram publishes the STORED motif name, and no other game carries one (#64, ADR-0070)", async () => {
     const today = await todaySaoPaulo(ctx.db);
+    expect(seededTones(today)).toMatch(/^[.a-z]+$/);
     await seedNonogram(today, MOTIF_MARKER);
     const { token, userId } = await createSession();
 
@@ -404,6 +428,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
           elapsedMs: 512_000,
           hintsUsed: 1,
           motifName: MOTIF_MARKER,
+          motifTones: seededTones(today),
         },
         binairo: { status: "pending" },
         crossword: { status: "pending" },
@@ -456,6 +481,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
       expect(keys.has("status"), label).toBe(true);
 
       expect(keys.has("motifName"), label).toBe(false);
+      expect(keys.has("motifTones"), label).toBe(false);
 
       for (const forbidden of FORBIDDEN_DAILY_KEYS) {
         expect(keys.has(forbidden), `${label} / ${forbidden}`).toBe(false);
@@ -523,7 +549,10 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     await seedNonogram(today, "   ");
     const response = await GET(dayRequest(token));
     expect(response.status).toBe(200);
-    expect((await readDay(token)).games.nonogram).toEqual(completedNoName);
+    expect((await readDay(token)).games.nonogram).toEqual({
+      ...completedNoName,
+      motifTones: seededTones(today),
+    });
   });
 
   it("T-API-S110: a cookieless GET is 401 no-session and costs ZERO queries; an unknown cookie costs only the session lookup", async () => {

@@ -240,6 +240,7 @@ export const messages = {
       used: "Dicas usadas",
       short: "Dica",
     },
+    undo: "Desfazer",
     reset: {
       label: "Recomeçar",
       question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",

@@ -16,6 +16,7 @@ import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { mergedGrid } from "./engine";
 import { nextSudokuHint, type SudokuHintReason } from "./hint";
 
@@ -39,7 +40,13 @@ export interface SudokuPlayState extends PlayCore {
 
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
+  readonly history: UndoHistory<SudokuSnapshot>;
 }
+
+type SudokuSnapshot = Pick<
+  SudokuPlayState,
+  "entries" | "violating" | "selected" | "hint"
+>;
 
 export interface DigitLockUndo {
   readonly index: number;
@@ -87,10 +94,21 @@ export function initSudokuPlayState(
     pendingSync: false,
     now: 0,
     hydrated: false,
+    history: NO_HISTORY,
   };
 }
 
-export function sudokuPlayReducer(
+export const sudokuPlayReducer = undoable(
+  playSudoku,
+  ({ entries, violating, selected, hint }): SudokuSnapshot => ({
+    entries,
+    violating,
+    selected,
+    hint,
+  }),
+);
+
+function playSudoku(
   state: SudokuPlayState,
   action: SudokuPlayAction,
 ): SudokuPlayState {

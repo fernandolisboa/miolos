@@ -7,8 +7,7 @@ import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
 import { countFilled } from "../play/progress";
-import { hasDecidedCell } from "../play/reset-board";
-import { useReset } from "../play/use-reset";
+import { useBoardEdits } from "../play/undo";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { mergedGrid, playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
@@ -125,7 +124,7 @@ function SudokuFreeBoard({
 
   const lock = useDigitLock(state, dispatch);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   const choice = levelChoice(level, onLevelChange);
   return (
@@ -157,7 +156,7 @@ function SudokuFreeBoard({
               ready: hintReady,
               onReveal: revealHint,
             },
-            onReset: hasDecidedCell(state.entries) ? reset : null,
+            ...edits,
           },
         }}
       >

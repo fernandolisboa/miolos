@@ -213,10 +213,10 @@
 /* ── reset ───────────────────────────────────────────────────────────── */
 
 /* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
-   reset node, so there the row stays an empty spacer. Recomeçar and Ajustes
-   share one line. While the confirm is open it covers the whole row and the
-   .hint under it (see reset-control.module.css), hidden so they leave the
-   tab order and the accessibility tree with it. */
+   reset node, so there the row stays an empty spacer. Undo, Recomeçar and
+   Ajustes share one line. While the confirm is open it covers the whole row
+   and the .hint under it (see reset-control.module.css), hidden so they
+   leave the tab order and the accessibility tree with it. */
 .reset {
   position: relative;
   grid-area: reset;
@@ -499,5 +499,15 @@
   .gridCard {
     padding: 10px;
     box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+}
+
+@media (max-width: 374px) {
+  .reset {
+    gap: 0;
+  }
+
+  .hint {
+    padding-inline: var(--space-3);
   }
 }
