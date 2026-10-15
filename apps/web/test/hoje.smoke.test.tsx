@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HubStreak } from "../app/hub-streak";
 import HojePage from "../app/page";
 import { formatElapsed, messages, playRoutes, routes } from "../src/i18n";
+import { ogCopy } from "../src/og/copy";
 import {
   writePlayRecord,
   type NonogramPlayRecord,
@@ -405,5 +406,23 @@ describe("the hub's first paint stays fetch-free (T-WEB-S127)", () => {
     expect(fetchMock).toHaveBeenCalledWith("https://api.example.test/streak", {
       credentials: "include",
     });
+  });
+});
+
+describe("the hub masthead names the product and says what it is (T-WEB-S751)", () => {
+  it("keeps the heading's name to the wordmark, then the tagline and the sign-off, built from the same strings as the metadata", () => {
+    render(<HojePage />);
+
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: messages.brand.wordmark,
+    });
+    expect(heading.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText(messages.brand.tagline)).toBeInTheDocument();
+    expect(screen.getByText(messages.brand.signOff)).toBeInTheDocument();
+
+    expect(messages.meta.title).toContain(messages.brand.tagline);
+    expect(messages.meta.description).toContain(messages.brand.signOff);
+    expect(ogCopy.siteTagline.toLowerCase()).toBe(`${messages.brand.tagline}.`);
   });
 });

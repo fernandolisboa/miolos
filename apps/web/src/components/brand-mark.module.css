@@ -1,0 +1,37 @@
+.paper {
+  fill: var(--paper-card);
+}
+
+.ink {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linejoin: round;
+}
+
+.termo {
+  fill: var(--accent-termo);
+}
+
+.sudoku {
+  fill: var(--accent-sudoku);
+}
+
+.nonogram {
+  fill: var(--accent-nonogram);
+}
+
+.binairo {
+  fill: var(--accent-binairo);
+}
+
+.crossword {
+  fill: var(--accent-crossword);
+}
+
+.queens {
+  fill: var(--accent-queens);
+}
+
+.app {
+  fill: var(--accent-app);
+}

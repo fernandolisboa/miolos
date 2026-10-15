@@ -4,7 +4,7 @@ export const ogCopy = {
   altGame: (name: string) => `Cartão do ${messages.brand.wordmark} — ${name}`,
   altSite: `Cartão do ${messages.brand.wordmark}`,
 
-  siteTagline: "Jogos de raciocínio por dia.",
+  siteTagline: messages.brand.taglineSentence,
 
   archiveTagline: "Todos os puzzles do dia desde o começo.",
 

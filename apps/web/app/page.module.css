@@ -18,6 +18,9 @@
 }
 
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
   margin: 0;
   font-family: var(--font-display);
   font-style: italic;
@@ -25,6 +28,18 @@
   font-size: 42px;
   line-height: 1.1;
   transform: rotate(-1deg);
+}
+
+.mark {
+  flex: none;
+  width: 1.12em;
+  height: 1em;
+}
+
+.tagline {
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
 }
 
 .date {
@@ -297,6 +312,26 @@
   cursor: pointer;
 }
 
+.signOff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-8) 0 var(--space-6);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.signOffMark {
+  flex: none;
+  width: 22px;
+  height: 20px;
+}
+
 .spacer {
   flex: 1;
 }
@@ -317,6 +352,15 @@
 
   .wordmark {
     font-size: 28px;
+  }
+
+  .tagline {
+    font-size: 12px;
+  }
+
+  .signOff {
+    margin-top: var(--space-6);
+    font-size: 13px;
   }
 
   .date {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { messages, routes } from "../i18n";
+import { BrandMark } from "./brand-mark";
 import styles from "./page-top-bar.module.css";
 
 const HOME_BACK = {
@@ -25,7 +26,10 @@ export function PageTopBar({
       >
         {back.label}
       </Link>
-      <span className={styles.wordmark}>{messages.brand.wordmark}</span>
+      <span className={styles.wordmark}>
+        <BrandMark className={styles.wordmarkMark} />
+        {messages.brand.wordmark}
+      </span>
       {kicker === undefined ? null : (
         <span className={styles.kicker}>{kicker}</span>
       )}

@@ -593,6 +593,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "topBar",
         "topDate",
         "wordmark",
+        "wordmarkMark",
       ],
     });
   });
@@ -830,5 +831,18 @@ describe("the reset slot keeps its height from the skeleton to the board (T-WEB-
     for (const child of slot.children) {
       expect(child).toHaveAttribute("aria-hidden", "true");
     }
+  });
+});
+
+describe("the play top bar carries the brand mark beside the wordmark (T-WEB-S752)", () => {
+  it("draws the decorative mark inside the wordmark and keeps its text", () => {
+    const page = staticPage(chrome(DAILY_SKELETON));
+    const wordmark = page.querySelector(`.${cls("wordmark")}`);
+
+    expect(wordmark?.textContent).toBe(messages.brand.wordmark);
+    expect(wordmark?.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });

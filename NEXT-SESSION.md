@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing required. The logo is in (#354, option B, a brain drawn from the games' grid); NOW §3 ⚡ only if you want A or C instead. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -17,6 +17,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
+
+**Brand mark** (#354, ADR-0119): `BrandMark` (`components/brand-mark.tsx`) sits in every top bar and on the hub, which also shows `messages.brand.tagline` and `signOff`. The conclusion top bar (`play/conclusion-view.tsx`) still lacks it; add it once the end-screen animation work has landed. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
 
 ## Traps
 

@@ -6,6 +6,9 @@ import {
 } from "@miolos/core";
 
 const wordmark = "Miolos";
+const tagline = "jogos de raciocínio por dia";
+const Tagline = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
+const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
 
 const freePlayDescriptions: Partial<Record<Game, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
@@ -179,12 +182,14 @@ const cellAriaQueens = (
 
 export const messages = {
   meta: {
-    title: "Miolos — jogos de raciocínio por dia",
-    description:
-      "Jogos de raciocínio por dia — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
+    title: `${wordmark} — ${tagline}`,
+    description: `${Tagline} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. ${signOff}`,
   },
   brand: {
     wordmark,
+    tagline,
+    taglineSentence: `${Tagline}.`,
+    signOff,
   },
   hoje: {
     completedOfTotal: (done: number, total: number) =>

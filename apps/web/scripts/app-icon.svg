@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#F7F2E9"/>
+  <g transform="rotate(2 256 256)">
+    <rect x="118" y="118" width="300" height="300" rx="26" fill="#9E3B2F" opacity="0.3"/>
+    <rect x="102" y="102" width="300" height="300" rx="26" fill="#FBF7EF" stroke="#D8D0C2" stroke-width="4"/>
+    <svg x="122" y="122" width="260" height="260" viewBox="3 4 58 52">
+      <defs><clipPath id="brain"><path d="M18 36C14 37 9 36 7 32C4 27 5 19 10 15C15 10 24 8 33 8C43 8 52 11 56 17C60 23 60 31 56 35C55 36 53 36.5 52 36.5C55 38 55 43 50 44C47 45 44.5 44.5 42.6 43.6L41.5 51.5C41 53.5 38.5 53.5 38 51.5L37.4 44.7C32 45.8 27 45.8 22 44C18 43 15 40 17 38C17.5 37 17.8 36.4 18 36Z"/></clipPath></defs>
+      <path fill="#FBF7EF" d="M18 36C14 37 9 36 7 32C4 27 5 19 10 15C15 10 24 8 33 8C43 8 52 11 56 17C60 23 60 31 56 35C55 36 53 36.5 52 36.5C55 38 55 43 50 44C47 45 44.5 44.5 42.6 43.6L41.5 51.5C41 53.5 38.5 53.5 38 51.5L37.4 44.7C32 45.8 27 45.8 22 44C18 43 15 40 17 38C17.5 37 17.8 36.4 18 36Z"/>
+      <g clip-path="url(#brain)">
+        <rect fill="#8D6212" x="9.28" y="17.28" width="5.44" height="5.44" rx="0.96"/>
+        <rect fill="#2E4E7E" x="25.28" y="9.28" width="5.44" height="5.44" rx="0.96"/>
+        <rect fill="#B5563C" x="41.28" y="17.28" width="5.44" height="5.44" rx="0.96"/>
+        <rect fill="#4E6B52" x="17.28" y="33.28" width="5.44" height="5.44" rx="0.96"/>
+        <rect fill="#6B4560" x="33.28" y="25.28" width="5.44" height="5.44" rx="0.96"/>
+        <rect fill="#7A569C" x="49.28" y="25.28" width="5.44" height="5.44" rx="0.96"/>
+        <path fill="none" stroke="#211D19" stroke-width="1" d="M8 0V64M16 0V64M24 0V64M32 0V64M40 0V64M48 0V64M56 0V64M0 8H64M0 16H64M0 24H64M0 32H64M0 40H64M0 48H64M0 56H64"/>
+      </g>
+      <path fill="none" stroke="#211D19" stroke-width="2.4" stroke-linejoin="round" d="M18 36C14 37 9 36 7 32C4 27 5 19 10 15C15 10 24 8 33 8C43 8 52 11 56 17C60 23 60 31 56 35C55 36 53 36.5 52 36.5C55 38 55 43 50 44C47 45 44.5 44.5 42.6 43.6L41.5 51.5C41 53.5 38.5 53.5 38 51.5L37.4 44.7C32 45.8 27 45.8 22 44C18 43 15 40 17 38C17.5 37 17.8 36.4 18 36Z"/>
+    </svg>
+  </g>
+</svg>

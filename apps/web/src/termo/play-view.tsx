@@ -2,6 +2,7 @@ import { MAX_GUESSES, WORD_LENGTH } from "@miolos/games/termo";
 import Link from "next/link";
 import { useCallback, useEffect, useRef } from "react";
 
+import { BrandMark } from "../components/brand-mark";
 import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { BoardCard } from "../play/board-card";
@@ -54,7 +55,10 @@ function TermoHeading({
         >
           {chrome.back.label}
         </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <span className={screen.wordmark}>
+          <BrandMark className={screen.wordmarkMark} />
+          {messages.brand.wordmark}
+        </span>
         <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
         <span className={screen.topDate}>
           {chrome.topTag ?? formatLongDate(date)}
