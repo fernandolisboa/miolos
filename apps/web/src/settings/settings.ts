@@ -5,8 +5,6 @@ const STORAGE_KEY = "miolos-settings";
 
 const flag = (fallback: boolean) => z.boolean().catch(fallback);
 
-const errorsOnly = z.object({ showErrors: flag(false) });
-
 export const BINAIRO_FIRST_VALUES = [1, 0] as const;
 
 const binairo = z.object({
@@ -18,6 +16,11 @@ const sudoku = z.object({
   showErrors: flag(false),
   lockDigit: flag(false),
   highlightSelection: flag(true),
+});
+
+const nonogram = z.object({
+  showErrors: flag(false),
+  strikePlacedRuns: flag(true),
 });
 
 const queens = z.object({
@@ -35,7 +38,7 @@ const crossword = z.object({
 const games = z.object({
   sudoku: sudoku.catch(sudoku.parse({})),
   binairo: binairo.catch(binairo.parse({})),
-  nonogram: errorsOnly.catch(errorsOnly.parse({})),
+  nonogram: nonogram.catch(nonogram.parse({})),
   queens: queens.catch(queens.parse({})),
   crossword: crossword.catch(crossword.parse({})),
 });

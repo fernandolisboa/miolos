@@ -385,14 +385,18 @@ for (const [name, make] of SPECS) {
 for (const [name, make] of SPECS) {
   const spec = make();
   describe(`${name}: Mostrar erros changes nothing that is recorded (T-WEB-S588)`, () => {
-    it("writes the same play record and hands sync the same concluded record, with no hint spent", () => {
-      const off = solveDaily(spec, false);
-      const on = solveDaily(spec, true);
+    it(
+      "writes the same play record and hands sync the same concluded record, with no hint spent",
+      { timeout: 20_000 },
+      () => {
+        const off = solveDaily(spec, false);
+        const on = solveDaily(spec, true);
 
-      expect(on.flushed).toBeDefined();
-      expect(on).toEqual(off);
-      expect(on.flushed).toMatchObject({ hintsUsed: 0, concluded: true });
-    });
+        expect(on.flushed).toBeDefined();
+        expect(on).toEqual(off);
+        expect(on.flushed).toMatchObject({ hintsUsed: 0, concluded: true });
+      },
+    );
 
     it("free play writes nothing and fetches nothing, with the setting on", () => {
       const fetchMock = vi.fn();

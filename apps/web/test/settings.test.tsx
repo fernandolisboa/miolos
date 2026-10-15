@@ -38,7 +38,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           highlightSelection: true,
         },
         binairo: { showErrors: false, firstValue: 1 },
-        nonogram: { showErrors: false },
+        nonogram: { showErrors: false, strikePlacedRuns: true },
         queens: {
           showErrors: false,
           highlightRegion: true,
@@ -63,6 +63,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           sudoku: { showErrors: true, lockDigit: 3, highlightSelection: false },
           binairo: "x",
           queens: { showErrors: true, nope: true, autoCross: "yes" },
+          nonogram: { showErrors: true, strikePlacedRuns: "no" },
         },
       }),
     );
@@ -82,6 +83,10 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       highlightRegion: true,
       fadeQueenLines: true,
       autoCross: false,
+    });
+    expect(settings.games.nonogram).toEqual({
+      showErrors: true,
+      strikePlacedRuns: true,
     });
     expect(settings).not.toHaveProperty("extra");
 

@@ -1,6 +1,6 @@
 import type { NonogramClues, NonogramSolution } from "./types";
 
-function runLengths(line: ReadonlyArray<boolean>): number[] {
+export function runLengths(line: ReadonlyArray<boolean>): number[] {
   const runs: number[] = [];
   let current = 0;
   for (const filled of line) {
