@@ -1,16 +1,23 @@
 import {
-  BOX_UNITS,
+  CLASSIC_GEOMETRY,
+  CLASSIC_LAYOUT,
   COLUMN_UNITS,
-  PEERS,
+  EXTRA_UNITS,
   POPCOUNT,
+  REGION_UNITS,
   ROW_UNITS,
-  UNITS,
   assertSudokuGrid,
-  boxOf,
   colOf,
+  geometryOf,
   rowOf,
 } from "./board";
-import type { SudokuGrade, SudokuGrid, SudokuTier } from "./types";
+import type { SudokuGeometry } from "./board";
+import type {
+  SudokuGrade,
+  SudokuGrid,
+  SudokuLayout,
+  SudokuTier,
+} from "./types";
 
 export type SudokuTechnique =
   | "nakedSingle"
@@ -50,7 +57,7 @@ export interface GradeResult {
 }
 
 export interface SudokuUnit {
-  readonly kind: "row" | "column" | "box";
+  readonly kind: "row" | "column" | "box" | "diagonal";
   readonly index: number;
 }
 
@@ -80,25 +87,30 @@ interface Ladder {
   step(): LadderStep | null;
 }
 
-function createLadder(givens: readonly number[]): Ladder {
+function createLadder(
+  givens: readonly number[],
+  geometry: SudokuGeometry,
+): Ladder {
+  const { units, peers, unitsOf, regionOf, extraBits } = geometry;
   const val = [...givens];
-  const rows = new Array<number>(9).fill(0);
-  const cols = new Array<number>(9).fill(0);
-  const boxes = new Array<number>(9).fill(0);
+  const used = new Array<number>(units.length).fill(0);
   for (let i = 0; i < 81; i += 1) {
     const v = val[i]!;
     if (v !== 0) {
-      const bit = 1 << (v - 1);
-      rows[rowOf(i)] = rows[rowOf(i)]! | bit;
-      cols[colOf(i)] = cols[colOf(i)]! | bit;
-      boxes[boxOf(i)] = boxes[boxOf(i)]! | bit;
+      for (const u of unitsOf[i]!) {
+        used[u] = used[u]! | (1 << (v - 1));
+      }
     }
   }
   const cand = new Array<number>(81).fill(0);
   let empties = 0;
   for (let i = 0; i < 81; i += 1) {
     if (val[i]! === 0) {
-      cand[i] = ~(rows[rowOf(i)]! | cols[colOf(i)]! | boxes[boxOf(i)]!) & 0x1ff;
+      let taken = 0;
+      for (const u of unitsOf[i]!) {
+        taken |= used[u]!;
+      }
+      cand[i] = ~taken & 0x1ff;
       empties += 1;
     }
   }
@@ -108,7 +120,7 @@ function createLadder(givens: readonly number[]): Ladder {
     val[i] = d;
     cand[i] = 0;
     empties -= 1;
-    for (const p of PEERS[i]!) {
+    for (const p of peers[i]!) {
       cand[p] = cand[p]! & ~bit;
     }
   };
@@ -128,8 +140,8 @@ function createLadder(givens: readonly number[]): Ladder {
   };
 
   const hiddenSingle = (): LadderStep | null => {
-    for (let u = 0; u < UNITS.length; u += 1) {
-      const unit = UNITS[u]!;
+    for (let u = 0; u < units.length; u += 1) {
+      const unit = units[u]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
         let count = 0;
@@ -199,15 +211,37 @@ function createLadder(givens: readonly number[]): Ladder {
     return removed;
   };
 
+  const claimRegion = (unit: readonly number[]): boolean => {
+    for (let d = 1; d <= 9; d += 1) {
+      const bit = 1 << (d - 1);
+      let count = 0;
+      let region = -1;
+      for (const i of unit) {
+        if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
+          region = count === 0 || regionOf[i] === region ? regionOf[i]! : -1;
+          count += 1;
+        }
+      }
+      if (
+        count >= 2 &&
+        region !== -1 &&
+        clearOutside(units[REGION_UNITS + region]!, bit, unit)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const lockedCandidates = (): LadderStep | null => {
     for (let b = 0; b < 9; b += 1) {
-      const box = UNITS[BOX_UNITS + b]!;
+      const region = units[REGION_UNITS + b]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
         let count = 0;
         let row = -1;
         let col = -1;
-        for (const i of box) {
+        for (const i of region) {
           if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
             row = count === 0 || rowOf(i) === row ? rowOf(i) : -1;
             col = count === 0 || colOf(i) === col ? colOf(i) : -1;
@@ -217,33 +251,48 @@ function createLadder(givens: readonly number[]): Ladder {
         if (count < 2) {
           continue;
         }
-        if (row !== -1 && clearOutside(UNITS[ROW_UNITS + row]!, bit, box)) {
+        if (row !== -1 && clearOutside(units[ROW_UNITS + row]!, bit, region)) {
           return { technique: "pointing", placed: null };
         }
-        if (col !== -1 && clearOutside(UNITS[COLUMN_UNITS + col]!, bit, box)) {
+        if (
+          col !== -1 &&
+          clearOutside(units[COLUMN_UNITS + col]!, bit, region)
+        ) {
           return { technique: "pointing", placed: null };
         }
       }
     }
-    for (let li = 0; li < BOX_UNITS; li += 1) {
-      const line = UNITS[li]!;
+    for (let li = 0; li < REGION_UNITS; li += 1) {
+      if (claimRegion(units[li]!)) {
+        return { technique: "claiming", placed: null };
+      }
+    }
+    if (units.length === EXTRA_UNITS) {
+      return null;
+    }
+    for (let b = 0; b < 9; b += 1) {
+      const region = units[REGION_UNITS + b]!;
       for (let d = 1; d <= 9; d += 1) {
         const bit = 1 << (d - 1);
         let count = 0;
-        let box = -1;
-        for (const i of line) {
+        let shared = -1;
+        for (const i of region) {
           if (val[i]! === 0 && (cand[i]! & bit) !== 0) {
-            box = count === 0 || boxOf(i) === box ? boxOf(i) : -1;
+            shared &= extraBits[i]!;
             count += 1;
           }
         }
-        if (
-          count >= 2 &&
-          box !== -1 &&
-          clearOutside(UNITS[BOX_UNITS + box]!, bit, line)
-        ) {
-          return { technique: "claiming", placed: null };
+        for (let m = count < 2 ? 0 : shared; m !== 0; m &= m - 1) {
+          const extra = units[EXTRA_UNITS + 31 - Math.clz32(m & -m)]!;
+          if (clearOutside(extra, bit, region)) {
+            return { technique: "pointing", placed: null };
+          }
         }
+      }
+    }
+    for (let e = EXTRA_UNITS; e < units.length; e += 1) {
+      if (claimRegion(units[e]!)) {
+        return { technique: "claiming", placed: null };
       }
     }
     return null;
@@ -256,7 +305,7 @@ function createLadder(givens: readonly number[]): Ladder {
     val[i]! === 0 && POPCOUNT[cand[i]!]! >= 2 && POPCOUNT[cand[i]!]! <= 3;
 
   const pairs = (): LadderStep | null => {
-    for (const unit of UNITS) {
+    for (const unit of units) {
       for (let a = 0; a < 9; a += 1) {
         const cellA = unit[a]!;
         if (!isPairCell(cellA)) {
@@ -302,7 +351,7 @@ function createLadder(givens: readonly number[]): Ladder {
   };
 
   const triples = (): LadderStep | null => {
-    for (const unit of UNITS) {
+    for (const unit of units) {
       for (let a = 0; a < 9; a += 1) {
         if (!isTripleCell(unit[a]!)) {
           continue;
@@ -360,7 +409,7 @@ function createLadder(givens: readonly number[]): Ladder {
     for (let d = 0; d < 9; d += 1) {
       const bit = 1 << d;
       for (let a = 0; a < 9; a += 1) {
-        const line = UNITS[lines + a]!;
+        const line = units[lines + a]!;
         let at = 0;
         for (let k = 0; k < 9; k += 1) {
           const i = line[k]!;
@@ -384,7 +433,7 @@ function createLadder(givens: readonly number[]): Ladder {
             if (
               a !== x &&
               a !== y &&
-              clearUnit(UNITS[lines + a]!, bit, ~at & 0x1ff)
+              clearUnit(units[lines + a]!, bit, ~at & 0x1ff)
             ) {
               removed = true;
             }
@@ -415,8 +464,11 @@ function createLadder(givens: readonly number[]): Ladder {
   };
 }
 
-export function gradeInternal(givens: readonly number[]): GradeResult {
-  const ladder = createLadder(givens);
+export function gradeInternal(
+  givens: readonly number[],
+  geometry: SudokuGeometry = CLASSIC_GEOMETRY,
+): GradeResult {
+  const ladder = createLadder(givens, geometry);
   const techniques = new Set<SudokuTechnique>();
   let grade: SudokuTier = 1;
   while (ladder.remaining() > 0) {
@@ -431,9 +483,14 @@ export function gradeInternal(givens: readonly number[]): GradeResult {
   return { grade, solved: ladder.grid, techniques };
 }
 
-export function nextSudokuStep(grid: SudokuGrid): SudokuStep | null {
+export function nextSudokuStep(
+  grid: SudokuGrid,
+  layout: SudokuLayout = CLASSIC_LAYOUT,
+): SudokuStep | null {
   assertSudokuGrid(grid);
-  const ladder = createLadder(grid);
+  const geometry =
+    layout === CLASSIC_LAYOUT ? CLASSIC_GEOMETRY : geometryOf(layout);
+  const ladder = createLadder(grid, geometry);
   let after: SudokuElimination | null = null;
   while (ladder.remaining() > 0) {
     const step = ladder.step();
@@ -447,7 +504,7 @@ export function nextSudokuStep(grid: SudokuGrid): SudokuStep | null {
         digit,
         technique: step.technique,
         unit: unit === null ? null : unitOf(unit),
-        cells: unit === null ? PEERS[index]! : UNITS[unit]!,
+        cells: unit === null ? geometry.peers[index]! : geometry.units[unit]!,
         after,
       };
     }
@@ -465,9 +522,12 @@ function unitOf(unit: number): SudokuUnit {
   if (unit < COLUMN_UNITS) {
     return { kind: "row", index: unit - ROW_UNITS };
   }
-  return unit < BOX_UNITS
-    ? { kind: "column", index: unit - COLUMN_UNITS }
-    : { kind: "box", index: unit - BOX_UNITS };
+  if (unit < REGION_UNITS) {
+    return { kind: "column", index: unit - COLUMN_UNITS };
+  }
+  return unit < EXTRA_UNITS
+    ? { kind: "box", index: unit - REGION_UNITS }
+    : { kind: "diagonal", index: unit - EXTRA_UNITS };
 }
 
 export function gradeSudoku(givens: SudokuGrid): SudokuGrade {

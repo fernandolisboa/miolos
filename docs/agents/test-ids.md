@@ -43,6 +43,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-WEB`  | `S820`    | `S810`         | `T-WEB-23`            |
 | `T-LINT` | `S72`     | `S71`          | `T-LINT-10`           |
 
+#371 part 1 (the Sudoku variant engine, ADR-0130) spent **`T-WEB-S860`** in `sudoku-logical-hint.test.ts` (the hint names a diagonal, with and without an elimination). `S861…S869` stay reserved for #371 part 2.
+
 The Recomeçar-and-Ajustes thread spent **`T-WEB-S810`** in `board-sizing.test.tsx` (the chrome's `.reset` row is a positioned flex row and `.control` is not positioned, so the confirm spans Recomeçar and Ajustes). `S811…S819` are **burned**.
 
 The calendars thread (Estatísticas months side by side, Arquivo month arrows) spent **`T-WEB-S790…S793`** in `calendars-wide.test.tsx`: `S790` (every day of a stats month shows its numeral, untracked days are bare and silent, weekday initials, the neutral month), `S791` (the stats months fill an auto-fill grid; the missed ring), `S792` (the archive card's previous / month / next header on the month page and the index; the current month chip), `S793` (`adjacentMonths`). `S794…S799` are **burned**; `S750…S789` are left to sibling threads. `T-WEB-S167`, `S169`, `S182` and `S311` were re-aimed in place (one archive layout, month steps on a larger card).

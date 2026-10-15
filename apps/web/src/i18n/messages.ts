@@ -31,22 +31,30 @@ interface SudokuCellCopy {
   readonly column: number;
 }
 
-type SudokuUnitKind = "row" | "column" | "box";
+type SudokuUnitKind = "row" | "column" | "box" | "diagonal";
 
 const sudokuCell = ({ row, column }: SudokuCellCopy) =>
   `linha ${row}, coluna ${column}`;
 
-const sudokuLine = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+const sudokuLine = (kind: "row" | "column", cell: SudokuCellCopy) =>
   kind === "row" ? `linha ${cell.row}` : `coluna ${cell.column}`;
 
 const inSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box" ? "Neste bloco" : `Na ${sudokuLine(kind, cell)}`;
+  kind === "box"
+    ? "Neste bloco"
+    : kind === "diagonal"
+      ? "Nesta diagonal"
+      : `Na ${sudokuLine(kind, cell)}`;
 
 const ofSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box" ? "deste bloco" : `da ${sudokuLine(kind, cell)}`;
+  kind === "box"
+    ? "deste bloco"
+    : kind === "diagonal"
+      ? "desta diagonal"
+      : `da ${sudokuLine(kind, cell)}`;
 
 const sudokuSpot = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box"
+  kind === "box" || kind === "diagonal"
     ? sudokuCell(cell)
     : sudokuLine(kind === "row" ? "column" : "row", cell);
 

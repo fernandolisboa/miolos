@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { PEERS, UNITS } from "../../src/sudoku/board";
+import { CLASSIC_GEOMETRY } from "../../src/sudoku/board";
+
+const { units: UNITS, peers: PEERS } = CLASSIC_GEOMETRY;
 import { generateDailySudoku, type Weekday } from "../../src/sudoku/index";
 
 const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
