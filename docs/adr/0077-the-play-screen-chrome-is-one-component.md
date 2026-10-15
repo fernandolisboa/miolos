@@ -8,6 +8,7 @@
 **Amended by:** [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) (#255, #257) — the games-wide ban this ADR rejected as out of scope now ships; the 27 unguarded modules are covered by the runtime-graph proof; `T-WEB-S368` is retired, and the check measures runtime edges, not written specifiers.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — the reset area gains a second stateful child, `GameSettingsButton`, and the chrome hides its clock when *Mostrar cronômetro* is off (`useSettings`).
 **Amended by:** [ADR-0113](./0113-the-hint-reason-shows-in-a-card-on-the-hinted-cell.md) (#332) — the board area gains a third stateful child, the lazily loaded `HintCard`, which finds the hinted cell in `children` by `data-cell-index`; the reason's live region is visually hidden.
+**Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — the attribution check is in CI now, so it no longer has to be run by hand around edits to this module.
 
 ## Context
 

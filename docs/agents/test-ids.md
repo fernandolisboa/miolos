@@ -40,10 +40,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S693` | `S692` | `T-WEB-23` |
+| `T-WEB` | `S711` | `S710` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
-#332 (the hint's reason in a card on the hinted cell, ADR-0113) spent **`T-WEB-S690`** (`hint-card.test.tsx`: the placement function), **`T-WEB-S691`** (same file: the card opens on a reveal, survives Tab, modifiers and repeat, closes on the next press or key, and reopens per hint) and **`T-WEB-S692`** (same file: each grid game anchors the card on the cell its hint wrote). `T-WEB-S367`, `S517`, `S555` and `S602` were re-aimed in place. The gap `S662…S689` is not burned: it holds the parallel reservations of #330 part 2 (`S670+`) and the bundle thread (`S680+`).
+#155 (the bundle check in CI) spent **`T-WEB-S710`** (`fanout-cap.test.ts`: exactly one gate step runs `pnpm --filter @miolos/web bundle-check`, after `pnpm build`, and a commented-out step does not count). `S670…S709` are other threads' live reservations, not free space.
+
+#332 (the hint's reason in a card on the hinted cell, ADR-0113) spent **`T-WEB-S690`** (`hint-card.test.tsx`: the placement function), **`T-WEB-S691`** (same file: the card opens on a reveal, survives Tab, modifiers and repeat, closes on the next press or key, and reopens per hint) and **`T-WEB-S692`** (same file: each grid game anchors the card on the cell its hint wrote). `T-WEB-S367`, `S517`, `S555` and `S602` were re-aimed in place.
 
 #331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
