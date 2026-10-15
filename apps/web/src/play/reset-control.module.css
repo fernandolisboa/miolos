@@ -1,7 +1,5 @@
 .control {
-  position: relative;
   box-sizing: border-box;
-  width: 100%;
   min-height: var(--touch-target-min);
   display: flex;
   flex-direction: column;
@@ -24,8 +22,9 @@
   composes: confirmButton from "../components/confirm-action.module.css";
 }
 
-/* Opens downward over the hint, which is hidden while it is open, so the page
-   never grows. See ADR-0103. */
+/* Spans the chrome's whole reset row, Ajustes included, and opens downward
+   over the hint, which is hidden while it is open, so the page never grows.
+   See ADR-0103. */
 .ask {
   position: absolute;
   inset: 0 0 auto;

@@ -180,13 +180,17 @@
 /* ── reset ───────────────────────────────────────────────────────────── */
 
 /* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
-   reset node, so there the row stays an empty spacer. While the confirm is
-   open it covers what sits under it (Ajustes, then .hint; see
-   reset-control.module.css), hidden so it leaves the tab order and the
-   accessibility tree with it. */
+   reset node, so there the row stays an empty spacer. Recomeçar and Ajustes
+   share one line. While the confirm is open it covers the whole row and the
+   .hint under it (see reset-control.module.css), hidden so they leave the
+   tab order and the accessibility tree with it. */
 .reset {
+  position: relative;
   grid-area: reset;
   align-self: end;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
   padding-bottom: 14px;
 }
 

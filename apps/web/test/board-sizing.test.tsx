@@ -313,6 +313,24 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
     expect(decl(covered, "visibility")).toBe("hidden");
   });
 
+  it("lays Recomeçar and Ajustes on one line, the confirm spanning both (T-WEB-S810)", () => {
+    const slot = bodyOf(SHARED_CSS, ".reset");
+    expect(decl(slot, "display")).toBe("flex");
+    expect(decl(slot, "flex-direction") ?? "row").toBe("row");
+    expect(decl(slot, "position")).toBe("relative");
+    const phone = bodyOf(
+      bodyOf(SHARED_CSS, "@media (max-width: 1023px)"),
+      ".reset",
+    );
+    expect(decl(phone, "display")).toBeUndefined();
+    expect(decl(phone, "flex-direction")).toBeUndefined();
+
+    const control = bodyOf(RESET_CSS, ".control");
+    expect(decl(control, "position")).toBeUndefined();
+    expect(decl(control, "width")).toBeUndefined();
+    expect(decl(bodyOf(RESET_CSS, ".ask"), "position")).toBe("absolute");
+  });
+
   it("renders the confirm inside the control, where the trigger was", () => {
     const { container } = render(<ResetControl onReset={() => undefined} />);
     const control = container.querySelector(`.${resetStyles.control ?? ""}`);
