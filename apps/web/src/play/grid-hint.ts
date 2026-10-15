@@ -73,17 +73,17 @@ export function nextHint<T>(
   return firstEmpty;
 }
 
-export function nextBinaryHint(
-  solution: readonly (0 | 1)[],
-  entries: readonly (0 | 1 | null)[],
-): Hint<0 | 1> | null {
+export function nextBinaryHint<M extends number>(
+  solution: readonly M[],
+  entries: readonly (M | null)[],
+): Hint<M> | null {
   const noGivens = solution.map(() => null);
-  const first = nextHint<0 | 1>(solution, noGivens, entries);
-  if (first === null || first.kind === "correction" || first.value === 1) {
+  const first = nextHint(solution, noGivens, entries);
+  if (first === null || first.kind === "correction" || first.value !== 0) {
     return first;
   }
-  const onesOnly = solution.map((mark) => (mark === 1 ? null : 0));
-  return nextHint<0 | 1>(solution, onesOnly, entries) ?? first;
+  const paintedOnly = solution.map((mark) => (mark === 0 ? mark : null));
+  return nextHint(solution, paintedOnly, entries) ?? first;
 }
 
 export function nextLogicalHint<T, S>(

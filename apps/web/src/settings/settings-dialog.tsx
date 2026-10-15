@@ -28,7 +28,7 @@ export function GameSettingsButton({
   const [asks, setAsks] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const ready = useGameSettingsLoaded(asks) && open;
+  const ready = useGameSettingsLoaded(asks) === "ready" && open;
   useEffect(() => {
     if (ready) {
       dialogRef.current?.showModal();

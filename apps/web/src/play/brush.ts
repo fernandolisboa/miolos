@@ -2,8 +2,8 @@ import type { BinaryCellValue, BinaryMark } from "./binary-grid";
 
 export type Press = "tap" | "left" | "right";
 
-export interface StrokeEffect {
-  readonly value: BinaryMark;
+export interface StrokeEffect<M extends number = BinaryMark> {
+  readonly value: M;
   readonly clears: boolean;
 }
 
@@ -15,10 +15,10 @@ function otherMark(mark: BinaryMark): BinaryMark {
   return mark === 1 ? 0 : 1;
 }
 
-export function toggled(
-  current: BinaryCellValue,
-  value: BinaryMark,
-): BinaryCellValue {
+export function toggled<M extends number>(
+  current: M | null,
+  value: M,
+): M | null {
   return current === value ? null : value;
 }
 
@@ -32,28 +32,27 @@ export function cycled(
   return current === first ? otherMark(first) : null;
 }
 
-export function strokeEffect(
-  start: BinaryCellValue,
-  value: BinaryMark,
-): StrokeEffect {
+export function strokeEffect<M extends number>(
+  start: M | null,
+  value: M,
+): StrokeEffect<M> {
   return { value, clears: start === value };
 }
 
-export function painted(
-  effect: StrokeEffect,
-  current: BinaryCellValue,
-): BinaryCellValue {
+export function painted<M extends number>(
+  effect: StrokeEffect<M>,
+  current: M | null,
+): M | null {
   if (!effect.clears) {
     return effect.value;
   }
   return current === effect.value ? null : current;
 }
 
-export function startStroke(
-  start: BinaryCellValue,
-  brush: BinaryMark,
-  press: Press,
-): { readonly stroke: StrokeEffect; readonly first: BinaryCellValue } {
-  const stroke = strokeEffect(start, pressedMark(brush, press));
+export function startStroke<M extends number>(
+  start: M | null,
+  value: M,
+): { readonly stroke: StrokeEffect<M>; readonly first: M | null } {
+  const stroke = strokeEffect(start, value);
   return { stroke, first: painted(stroke, start) };
 }

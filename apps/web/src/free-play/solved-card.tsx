@@ -8,19 +8,22 @@ import { accentVars } from "../play/accent";
 import { EndingFlourish } from "../play/ending-flourish";
 import { JustEnded } from "../play/just-ended";
 import type { FreePlayGame } from "./catalog";
-import type { FreePlayChoice } from "./choice-picker";
+import { choiceLabel, type FreePlayChoices } from "./choice-picker";
 import styles from "./free-play.module.css";
 
-export function FreePlaySolvedCard<T extends string | number>({
+export function FreePlaySolvedCard<
+  A extends string | number,
+  B extends string | number = never,
+>({
   game,
-  choice,
+  choices,
   picture,
   word,
   onAgain,
   children,
 }: {
   readonly game: FreePlayGame;
-  readonly choice?: FreePlayChoice<T>;
+  readonly choices?: FreePlayChoices<A, B>;
   readonly picture?: ReactNode;
   readonly word?: { readonly canonical: string; readonly won: boolean };
   readonly onAgain: () => void;
@@ -28,6 +31,7 @@ export function FreePlaySolvedCard<T extends string | number>({
 }) {
   const lost = word?.won === false;
   const copy = messages.freePlay.solved;
+  const [first, second] = choices ?? [];
 
   return (
     <main
@@ -49,7 +53,8 @@ export function FreePlaySolvedCard<T extends string | number>({
             {copy.modeLine(
               messages.freePlay.modeTag,
               messages.games[game].name,
-              choice?.optionLabel(choice.value),
+              ...(first === undefined ? [] : [choiceLabel(first)]),
+              ...(second === undefined ? [] : [choiceLabel(second)]),
             )}
           </p>
           {children !== undefined && (

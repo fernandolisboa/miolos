@@ -48,12 +48,10 @@ export function filledTarget(clues: NonogramClues): number {
   return target;
 }
 
-export function countFilledCells(
-  entries: readonly NonogramCellValue[],
-): number {
+export function countFilledCells(entries: readonly (number | null)[]): number {
   let filled = 0;
   for (const entry of entries) {
-    if (entry === 1) {
+    if (entry !== null && entry > 0) {
       filled += 1;
     }
   }
@@ -61,12 +59,10 @@ export function countFilledCells(
 }
 
 export function isPictureComplete(
-  solution: readonly NonogramMark[],
-  entries: readonly NonogramCellValue[],
+  solution: readonly number[],
+  entries: readonly (number | null)[],
 ): boolean {
-  return solution.every(
-    (mark, index) => (entries[index] === 1) === (mark === 1),
-  );
+  return solution.every((mark, index) => (entries[index] ?? 0) === mark);
 }
 
 export function submittedCells(

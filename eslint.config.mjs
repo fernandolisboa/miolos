@@ -66,6 +66,13 @@ const webDynamicNonogramColorsImport = {
     "apps/web never imports the Nonogram tones table dynamically: it ships on /modo-livre/nonogram alone (ADR-0121).",
 };
 
+const webDynamicColoredNonogramImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/colored-nonogram(\\/|$)/i]",
+  message:
+    "apps/web never imports the coloured Nonogram engine dynamically: it is imported statically inside the Cores chunk, which /modo-livre/nonogram alone loads (ADR-0132).",
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -105,6 +112,12 @@ const nonogramColorsGroup = {
   group: ["@miolos/games/nonogram-colors", "@miolos/games/nonogram-colors/*"],
   message:
     "@miolos/games/nonogram-colors carries every motif's tones: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its tones from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
+};
+
+const coloredNonogramGroup = {
+  group: ["@miolos/games/colored-nonogram", "@miolos/games/colored-nonogram/*"],
+  message:
+    "@miolos/games/colored-nonogram reaches every motif's tones: only apps/web/src/colored-nonogram/** and apps/web/src/free-play/use-free-colored-nonogram.ts import it, inside the Cores chunk /modo-livre/nonogram alone loads (ADR-0132, ADR-0121). Tests may import it.",
 };
 
 const webWallImportPatterns = [
@@ -165,6 +178,7 @@ const webClientImportPatterns = [
   ...webWallImportPatterns,
   termoAnswersGroup,
   nonogramColorsGroup,
+  coloredNonogramGroup,
 ];
 
 const webWallImportPaths = [
@@ -496,6 +510,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -520,6 +535,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -549,6 +565,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -594,6 +611,37 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/web/src/free-play/use-free-colored-nonogram.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns.filter(
+              (pattern) => pattern !== coloredNonogramGroup,
+            ),
+            ...freePlayBannedModuleGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
+    files: [`apps/web/src/colored-nonogram/**/*.${webWallExtensions}`],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: webClientImportPatterns.filter(
+            (pattern) => pattern !== coloredNonogramGroup,
+          ),
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
     files: [
       `apps/web/src/og/**/*.${webWallExtensions}`,
 
@@ -618,6 +666,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -652,6 +701,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,

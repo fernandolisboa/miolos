@@ -57,7 +57,7 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      choice={levelChoice(level, setLevel)}
+      choices={[levelChoice(level, setLevel)]}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -126,19 +126,19 @@ function SudokuFreeBoard({
 
   const edits = useBoardEdits(state, dispatch);
 
-  const choice = levelChoice(level, onLevelChange);
+  const choices = [levelChoice(level, onLevelChange)] as const;
   return (
     <EndingStage
       over={state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="sudoku" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard game="sudoku" choices={choices} onAgain={onNext} />
       )}
     >
       <FreePlayChrome
         game="sudoku"
         pageModifier={boardStyles.pageSudoku ?? ""}
-        choice={choice}
+        choices={choices}
         state={{
           kind: "playing",
           readouts: {

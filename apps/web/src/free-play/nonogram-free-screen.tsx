@@ -1,27 +1,29 @@
 "use client";
 
-import type { NonogramSize } from "@miolos/core";
-import type { NonogramClues } from "@miolos/games/nonogram";
 import { useEffect, useReducer, useState } from "react";
 
+import { lazyChunk } from "../components/lazy-chunk";
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
-import { hintReadout } from "../play/hint-readout";
-import { Board, BoardSkeleton } from "../nonogram/board";
-import { Controls, ControlsSkeleton } from "../nonogram/controls";
+import { Board } from "../nonogram/board";
+import { Controls } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
 import { nonogramHintExplanation } from "../nonogram/hint";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { EndingStage } from "../play/ending-stage";
-import { PictureArt } from "../play/picture-art";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
-import { levelChoice } from "./choice-picker";
+import { levelChoice, type FreePlayChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
-import { FreePlayErrorCard } from "./error-card";
-import styles from "./free-play.module.css";
-import { GeneratingNote } from "./generating-note";
+import { FreePlayPicture } from "./free-play-picture";
+import {
+  NONOGRAM_VARIANTS,
+  NonogramFreeShell,
+  pictureReadouts,
+  type NonogramChoices,
+  type NonogramVariant,
+} from "./nonogram-free-shell";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeNonogram,
@@ -29,13 +31,29 @@ import {
   type FreeNonogramPuzzle,
 } from "./use-free-nonogram";
 
-const copy = messages.games.nonogram.play;
+let ColoredScreen:
+  | typeof import("./colored-nonogram-free-screen").ColoredNonogramFreeScreen
+  | null = null;
+const useColoredChunk = lazyChunk(() =>
+  import("./colored-nonogram-free-screen").then((module) => {
+    ColoredScreen = module.ColoredNonogramFreeScreen;
+  }),
+);
 
-const LEVEL_SIZES: Readonly<Record<FreePlayLevel, NonogramSize>> = {
-  leve: 5,
-  medio: 10,
-  dificil: 15,
-};
+function variantChoice(
+  variant: NonogramVariant,
+  onChange: (variant: NonogramVariant) => void,
+): FreePlayChoice<NonogramVariant> {
+  const copy = messages.freePlay.variant;
+  return {
+    label: copy.label,
+    options: NONOGRAM_VARIANTS,
+    value: variant,
+    optionLabel: (option) => copy[option],
+    optionAria: (option) => copy.aria(copy[option]),
+    onChange,
+  };
+}
 
 export function NonogramFreeScreen({
   deps,
@@ -43,44 +61,87 @@ export function NonogramFreeScreen({
   readonly deps?: FreeNonogramDeps;
 }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
-  const { phase, regenerate } = useFreeNonogram(level, deps);
+  const [variant, setVariant] = useState<NonogramVariant>("classico");
+  const choices: NonogramChoices = [
+    levelChoice(level, setLevel),
+    variantChoice(variant, setVariant),
+  ];
 
-  if (phase.kind === "ready") {
-    return (
-      <NonogramFreeBoard
-        key={`${String(phase.puzzle.seed)}:${level}:${String(phase.run)}`}
-        level={level}
-        onLevelChange={setLevel}
-        puzzle={phase.puzzle}
-        onNext={regenerate}
-      />
-    );
-  }
-
-  return (
-    <FreePlayChrome
-      game="nonogram"
-      choice={levelChoice(level, setLevel)}
-      state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
-      pageModifier={nonogramPageModifier(LEVEL_SIZES[level])}
-    >
-      {phase.kind === "failed" ? (
-        <FreePlayErrorCard onRetry={regenerate} />
-      ) : (
-        <GeneratingBoard size={LEVEL_SIZES[level]} />
-      )}
-    </FreePlayChrome>
+  return variant === "classico" ? (
+    <ClassicFreeNonogram level={level} choices={choices} deps={deps} />
+  ) : (
+    <ColoredFreeNonogram
+      level={level}
+      choices={choices}
+      pickSeed={deps?.pickSeed}
+    />
   );
 }
 
-function NonogramFreeBoard({
+function ColoredFreeNonogram({
   level,
-  onLevelChange,
+  choices,
+  pickSeed,
+}: {
+  readonly level: FreePlayLevel;
+  readonly choices: NonogramChoices;
+  readonly pickSeed: (() => number) | undefined;
+}) {
+  const [asks, setAsks] = useState(0);
+  const chunk = useColoredChunk(asks);
+
+  if (chunk === "ready" && ColoredScreen !== null) {
+    return (
+      <ColoredScreen level={level} choices={choices} pickSeed={pickSeed} />
+    );
+  }
+  return (
+    <NonogramFreeShell
+      level={level}
+      choices={choices}
+      {...(chunk === "failed"
+        ? { onRetry: () => setAsks((count) => count + 1) }
+        : {})}
+    />
+  );
+}
+
+function ClassicFreeNonogram({
+  level,
+  choices,
+  deps,
+}: {
+  readonly level: FreePlayLevel;
+  readonly choices: NonogramChoices;
+  readonly deps: FreeNonogramDeps | undefined;
+}) {
+  const { phase, regenerate } = useFreeNonogram(level, deps);
+
+  if (phase.kind !== "ready") {
+    return (
+      <NonogramFreeShell
+        level={level}
+        choices={choices}
+        {...(phase.kind === "failed" ? { onRetry: regenerate } : {})}
+      />
+    );
+  }
+  return (
+    <ClassicFreeBoard
+      key={`${String(phase.puzzle.seed)}:${level}:${String(phase.run)}`}
+      choices={choices}
+      puzzle={phase.puzzle}
+      onNext={regenerate}
+    />
+  );
+}
+
+function ClassicFreeBoard({
+  choices,
   puzzle,
   onNext,
 }: {
-  readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
+  readonly choices: NonogramChoices;
   readonly puzzle: FreeNonogramPuzzle;
   readonly onNext: () => void;
 }) {
@@ -89,28 +150,12 @@ function NonogramFreeBoard({
     puzzle.daily,
     initNonogramPlayState,
   );
-  const {
-    hintReady,
-    selectCell,
-    moveSelection,
-    enterValue,
-    clearCell,
-    revealHint,
-    edits,
-    setBrush,
-    markCell,
-    strokeStart,
-    paintOver,
-  } = useNonogramControls(state, dispatch);
+  const controls = useNonogramControls(state, dispatch);
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
 
-  const target = filledTarget(state.clues);
-  const filled = countFilledCells(state.entries);
-
-  const choice = levelChoice(level, onLevelChange);
   const picture = state.status === "solved" ? state.solution : null;
   return (
     <EndingStage
@@ -119,17 +164,16 @@ function NonogramFreeBoard({
       ending={() => (
         <FreePlaySolvedCard
           game="nonogram"
-          choice={choice}
+          choices={choices}
           onAgain={onNext}
           picture={
-            <PictureArt
+            <FreePlayPicture
               picture={{
                 size: state.size,
                 cells: picture ?? [],
                 label: messages.freePlay.solved.pictureAria,
                 tones: puzzle.tones,
               }}
-              className={styles.picture}
             />
           }
         />
@@ -137,27 +181,26 @@ function NonogramFreeBoard({
     >
       <FreePlayChrome
         game="nonogram"
-        choice={choice}
+        choices={choices}
         pageModifier={nonogramPageModifier(state.size)}
         state={{
           kind: "playing",
-          readouts: {
-            progressShort: copy.progressShort(state.size, filled, target),
-            progressLong: copy.progressLong(filled, target),
-            hint: {
-              ...hintReadout(
-                state.hint,
-                nonogramHintExplanation(state.size, state.hint.reason),
-              ),
-              ready: hintReady,
-              onReveal: revealHint,
+          readouts: pictureReadouts(
+            state.size,
+            countFilledCells(state.entries),
+            filledTarget(state.clues),
+            {
+              state: state.hint,
+              explain: nonogramHintExplanation(state.size, state.hint.reason),
             },
-            ...edits,
-          },
+            controls,
+          ),
         }}
       >
         <BoardCard
-          below={<Controls brush={state.brush} onSetBrush={setBrush} />}
+          below={
+            <Controls brush={state.brush} onSetBrush={controls.setBrush} />
+          }
         >
           <Board
             size={state.size}
@@ -167,35 +210,16 @@ function NonogramFreeBoard({
             selected={state.selected}
             hintIndex={state.hint.lastIndex}
             spotlight={state.hint.spotlight}
-            onSelect={selectCell}
-            onMove={moveSelection}
-            onMarkCell={markCell}
-            onStrokeStart={strokeStart}
-            onEnterValue={enterValue}
-            onClear={clearCell}
-            onPaintOver={paintOver}
+            onSelect={controls.selectCell}
+            onMove={controls.moveSelection}
+            onMarkCell={controls.markCell}
+            onStrokeStart={controls.strokeStart}
+            onEnterValue={controls.enterValue}
+            onClear={controls.clearCell}
+            onPaintOver={controls.paintOver}
           />
         </BoardCard>
       </FreePlayChrome>
     </EndingStage>
-  );
-}
-
-function GeneratingBoard({ size }: { readonly size: NonogramSize }) {
-  const emptyClues: NonogramClues = {
-    size,
-    rows: Array.from({ length: size }, () => []),
-    cols: Array.from({ length: size }, () => []),
-  };
-  return (
-    <>
-      <BoardCard
-        placeholder
-        below={<ControlsSkeleton />}
-        overlay={<GeneratingNote />}
-      >
-        <BoardSkeleton size={size} clues={emptyClues} />
-      </BoardCard>
-    </>
   );
 }

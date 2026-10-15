@@ -61,7 +61,7 @@ export function CrosswordFreeScreen({
     <FreePlayChrome
       game="crossword"
       pageModifier={pageClassName(size)}
-      choice={sizeChoice(size, setSize)}
+      choices={[sizeChoice(size, setSize)]}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -90,20 +90,24 @@ function CrosswordFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, [dispatch]);
 
-  const choice = sizeChoice(size, onSizeChange);
+  const choices = [sizeChoice(size, onSizeChange)] as const;
 
   return (
     <EndingStage
       over={board.state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="crossword"
+          choices={choices}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome
         game="crossword"
         pageModifier={pageClassName(size)}
-        choice={choice}
+        choices={choices}
         state={{ kind: "playing", readouts: crosswordReadouts(board) }}
       >
         <CrosswordBoardView board={board} />

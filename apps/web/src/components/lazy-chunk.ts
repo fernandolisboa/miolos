@@ -2,24 +2,34 @@
 
 import { useEffect, useState } from "react";
 
+export type ChunkState = "loading" | "ready" | "failed";
+
 export function lazyChunk(load: () => Promise<void>) {
   let done = false;
-  return function useChunkLoaded(retryKey?: unknown): boolean {
-    const [loaded, setLoaded] = useState(done);
+  return function useChunk(retryKey?: unknown): ChunkState {
+    const [ready, setReady] = useState(done);
+    const [failed, setFailed] = useState<{ readonly key: unknown } | null>(
+      null,
+    );
     useEffect(() => {
-      if (loaded) return;
+      if (ready) return;
       let live = true;
       load().then(
         () => {
           done = true;
-          if (live) setLoaded(true);
+          if (live) setReady(true);
         },
-        () => undefined,
+        () => {
+          if (live) setFailed({ key: retryKey });
+        },
       );
       return () => {
         live = false;
       };
-    }, [loaded, retryKey]);
-    return loaded;
+    }, [ready, retryKey]);
+    if (ready) return "ready";
+    return failed !== null && Object.is(failed.key, retryKey)
+      ? "failed"
+      : "loading";
   };
 }

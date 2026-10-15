@@ -20,16 +20,19 @@ export type BinaryCellValue = BinaryMark | null;
 
 type BinaryRecord = NonogramPlayRecord | QueensPlayRecord;
 
-export interface BinaryGridState<R = unknown> extends PlayCore {
+export interface BinaryGridState<
+  R = unknown,
+  M extends number = BinaryMark,
+> extends PlayCore {
   readonly size: number;
-  readonly solution: readonly BinaryMark[] | null;
-  readonly entries: readonly BinaryCellValue[];
+  readonly solution: readonly M[] | null;
+  readonly entries: readonly (M | null)[];
   readonly selected: number | null;
   readonly hint: HintState<R>;
   readonly status: "playing" | "solved";
 }
 
-export type BinaryGridAction =
+export type BinaryGridAction<M extends number = BinaryMark> =
   | LifecycleAction
   | ResetAction
   | { readonly type: "select"; readonly index: number }
@@ -38,26 +41,29 @@ export type BinaryGridAction =
       readonly rows: number;
       readonly columns: number;
     }
-  | { readonly type: "enter-value"; readonly value: BinaryMark }
+  | { readonly type: "enter-value"; readonly value: M }
   | { readonly type: "clear-cell" }
   | { readonly type: "use-hint" };
 
-export interface BinaryGridRules<S extends BinaryGridState<R>, R> {
-  readonly game: BinaryRecord["game"];
-  readonly derive: (state: S, entries: readonly BinaryCellValue[]) => S;
-  readonly hint: (state: Solved<S>) => Revealed<BinaryMark, R> | null;
+export interface BinaryGridRules<
+  S extends BinaryGridState<R, M>,
+  R,
+  M extends number = BinaryMark,
+> {
+  readonly derive: (state: S, entries: S["entries"]) => S;
+  readonly hint: (state: Solved<S, M>) => Revealed<M, R> | null;
 }
 
-type Solved<S> = S & { readonly solution: readonly BinaryMark[] };
+type Solved<S, M> = S & { readonly solution: readonly M[] };
 
-export function binaryGridReducer<S extends BinaryGridState<R>, R>(
-  state: S,
-  action: BinaryGridAction,
-  rules: BinaryGridRules<S, R>,
-): S {
+export function binaryGridReducer<
+  S extends BinaryGridState<R, M>,
+  R,
+  M extends number = BinaryMark,
+>(state: S, action: BinaryGridAction<M>, rules: BinaryGridRules<S, R, M>): S {
   switch (action.type) {
     case "restore":
-      return restore(state, action.record, action.now, rules);
+      return { ...state, now: action.now, hydrated: true };
 
     case "select":
       if (binaryCellValue(state, action.index) === undefined) {
@@ -118,10 +124,10 @@ export function binaryGridReducer<S extends BinaryGridState<R>, R>(
   }
 }
 
-export function canHint(
-  state: BinaryGridState,
+export function canHint<M extends number>(
+  state: BinaryGridState<unknown, M>,
   limit: number | null,
-): state is BinaryGridState & { readonly solution: readonly BinaryMark[] } {
+): state is BinaryGridState<unknown, M> & { readonly solution: readonly M[] } {
   return (
     state.solution !== null &&
     hasHintLeft(state.hint.used, limit) &&
@@ -129,10 +135,10 @@ export function canHint(
   );
 }
 
-export function binaryCellValue(
-  state: BinaryGridState,
+export function binaryCellValue<M extends number>(
+  state: BinaryGridState<unknown, M>,
   index: number | null,
-): BinaryCellValue | undefined {
+): M | null | undefined {
   if (
     index === null ||
     !Number.isInteger(index) ||
@@ -144,11 +150,15 @@ export function binaryCellValue(
   return state.entries[index] ?? null;
 }
 
-export function withBinaryEntry<S extends BinaryGridState<R>, R>(
+export function withBinaryEntry<
+  S extends BinaryGridState<R, M>,
+  R,
+  M extends number = BinaryMark,
+>(
   state: S,
   index: number,
-  value: BinaryCellValue,
-  rules: BinaryGridRules<S, R>,
+  value: M | null,
+  rules: BinaryGridRules<S, R, M>,
 ): S {
   if (state.status !== "playing") {
     return state;
@@ -167,9 +177,9 @@ export function withBinaryEntry<S extends BinaryGridState<R>, R>(
   );
 }
 
-export function settled<S extends BinaryGridState>(
+export function settled<S extends BinaryGridState<unknown, number>>(
   state: S,
-  entries: readonly BinaryCellValue[],
+  entries: S["entries"],
   solved: boolean,
 ): S {
   return {
@@ -180,15 +190,18 @@ export function settled<S extends BinaryGridState>(
   };
 }
 
-function restore<S extends BinaryGridState<R>, R>(
+export function restoreBinaryRecord<S extends BinaryGridState<R>, R>(
   state: S,
-  record: PlayRecord | undefined,
-  now: number,
+  {
+    record,
+    now,
+  }: { readonly record: PlayRecord | undefined; readonly now: number },
+  game: BinaryRecord["game"],
   rules: BinaryGridRules<S, R>,
 ): S {
   if (
     !isBinaryRecord(record) ||
-    record.game !== rules.game ||
+    record.game !== game ||
     record.size !== state.size ||
     record.entries.length !== state.entries.length
   ) {

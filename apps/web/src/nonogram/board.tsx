@@ -14,22 +14,18 @@ import { useBinaryBoard } from "../play/use-binary-board";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
+import {
+  SIZE_CLASS,
+  columnRailId,
+  numbersOf,
+  rowRailId,
+  ruleClasses,
+} from "./board-grid";
 import { cellStateOf } from "./engine";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
-const GROUP = 5;
-
-const EMPTY_LINE: readonly number[] = [0];
-
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
-
-const SIZE_CLASS = {
-  5: styles.size5,
-  8: styles.size8,
-  10: styles.size10,
-  15: styles.size15,
-} satisfies Record<NonogramSize, string | undefined>;
 
 export const Board = memo(function Board({
   size,
@@ -305,29 +301,6 @@ export function BoardSkeleton({
       ))}
     </div>
   );
-}
-
-function rowRailId(row: number): string {
-  return `nonogram-clue-row-${row}`;
-}
-
-function columnRailId(column: number): string {
-  return `nonogram-clue-col-${column}`;
-}
-
-function numbersOf(runs: readonly number[]): readonly number[] {
-  return runs.length === 0 ? EMPTY_LINE : runs;
-}
-
-function ruleClasses(row: number, column: number, size: number): string {
-  return [
-    row % GROUP === 0 ? styles.cellRuleTop : "",
-    column % GROUP === 0 ? styles.cellRuleLeft : "",
-    column === size - 1 ? styles.cellEdgeRight : "",
-    row === size - 1 ? styles.cellEdgeBottom : "",
-  ]
-    .filter((rule) => rule !== "")
-    .join(" ");
 }
 
 function cellClassName(state: {

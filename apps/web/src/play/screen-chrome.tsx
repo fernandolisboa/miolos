@@ -138,7 +138,7 @@ export function PlayScreenChrome({
   const readouts = state.kind === "playing" ? state.readouts : null;
   const hint = readouts?.hint;
   const reason = hint?.explain ?? null;
-  const cardLoaded = useHintCardLoaded();
+  const cardLoaded = useHintCardLoaded() === "ready";
   const left = Math.max(allowance - (hint?.used ?? 0), 0);
   const label = hintLabel(left);
   const { kicker, play } = messages.games[game];

@@ -15,6 +15,17 @@ export interface FreePlayChoice<T extends string | number> {
   readonly onChange: (option: T) => void;
 }
 
+export type FreePlayChoices<
+  A extends string | number,
+  B extends string | number = never,
+> = readonly [FreePlayChoice<A>, FreePlayChoice<B>?];
+
+export function choiceLabel<T extends string | number>(
+  choice: FreePlayChoice<T>,
+): string {
+  return choice.optionLabel(choice.value);
+}
+
 export function levelChoice(
   level: FreePlayLevel,
   onChange: (level: FreePlayLevel) => void,

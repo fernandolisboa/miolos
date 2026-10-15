@@ -55,7 +55,7 @@ export function BinairoFreeScreen({
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      choice={levelChoice(level, setLevel)}
+      choices={[levelChoice(level, setLevel)]}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -107,19 +107,19 @@ function BinairoFreeBoard({
 
   const edits = useBoardEdits(state, dispatch);
 
-  const choice = levelChoice(level, onLevelChange);
+  const choices = [levelChoice(level, onLevelChange)] as const;
   return (
     <EndingStage
       over={state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard game="binairo" choices={choices} onAgain={onNext} />
       )}
     >
       <FreePlayChrome
         game="binairo"
         pageModifier={boardStyles.pageBinairo ?? ""}
-        choice={choice}
+        choices={choices}
         state={{
           kind: "playing",
           readouts: {
