@@ -13,7 +13,7 @@ import spotlightStyles from "../src/play/spotlight.module.css";
 import styles from "../src/queens/queens-board.module.css";
 import { queensHintExplanation } from "../src/queens/hint";
 import { QueensScreen } from "../src/queens/queens-screen";
-import { contrast } from "./contrast";
+import { contrast, deltaE76 } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 import { spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
@@ -326,6 +326,18 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
     { length: 9 },
     (_unused, index) => `--queens-region-${String(index + 1)}`,
   );
+  const channel = (color: string, at: number): number =>
+    parseInt(color.slice(at, at + 2), 16);
+  const mixed = (top: string, under: string, share: number): string =>
+    `#${[1, 3, 5]
+      .map((at) =>
+        Math.round(channel(top, at) * share + channel(under, at) * (1 - share))
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+  const strength = (name: string): number =>
+    Number(/^(\d+)%$/.exec(decl(bodyOf(css, ".grid"), name) ?? "")?.[1]) / 100;
 
   it.each(["light", "dark"] as const)(
     "keeps --ink >= 7:1 and both rings >= 3:1 on every region tint (%s)",
@@ -373,25 +385,9 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
       ).toBe(
         "color-mix( in srgb, var(--accent) var(--spotlight-strength), transparent )",
       );
-      const share =
-        Number(
-          /^(\d+)%$/.exec(
-            decl(bodyOf(css, ".grid"), "--spotlight-strength") ?? "",
-          )?.[1],
-        ) / 100;
-      const channel = (color: string, at: number): number =>
-        parseInt(color.slice(at, at + 2), 16);
+      const share = strength("--spotlight-strength");
       const tinted = (fill: string): string =>
-        `#${[1, 3, 5]
-          .map((at) =>
-            Math.round(
-              channel(hex("--accent-queens"), at) * share +
-                channel(fill, at) * (1 - share),
-            )
-              .toString(16)
-              .padStart(2, "0"),
-          )
-          .join("")}`;
+        mixed(hex("--accent-queens"), fill, share);
 
       expect(share).toBeGreaterThan(0);
       for (const region of REGIONS) {
@@ -401,6 +397,68 @@ describe("the region palette, the glyphs and the rings are measured (T-WEB-S457)
           contrast(hex("--accent-queens"), fill),
           `${region} hint ring`,
         ).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
+  it.each(["light", "dark"] as const)(
+    "keeps --ink >= 7:1 and the hint ring >= 3:1 under the reach and the wash, and keeps both visible (%s)",
+    (theme) => {
+      const tokens = colorTokens(theme);
+      const hex = (name: string): string => {
+        const value = tokens.get(name);
+        if (value === undefined) {
+          throw new Error(`${name} missing from the ${theme} block`);
+        }
+        return value;
+      };
+      const flat = (selector: string, name: string) =>
+        decl(bodyOf(css, selector), name)?.replace(/\s+/g, " ");
+      expect(flat(".cellReach", "--reach")).toBe(
+        "color-mix(in srgb, var(--accent) var(--reach-strength), transparent)",
+      );
+      expect(flat(".cellFaded", "--wash")).toBe(
+        "color-mix( in srgb, var(--paper-card) var(--wash-strength), transparent )",
+      );
+      const reach = strength("--reach-strength");
+      const wash = strength("--wash-strength");
+      expect(reach).toBeGreaterThan(0);
+      expect(wash).toBeGreaterThan(0);
+
+      const accent = hex("--accent-queens");
+      const washed = REGIONS.map((region) =>
+        mixed(hex("--paper-card"), hex(region), wash),
+      );
+      for (const [at, region] of REGIONS.entries()) {
+        const fill = hex(region);
+        const faded = washed[at] ?? "";
+        const reached = mixed(accent, fill, reach);
+        for (const [layer, color] of [
+          ["wash", faded],
+          ["reach", reached],
+          ["both", mixed(accent, faded, reach)],
+        ] as const) {
+          expect(
+            contrast(hex("--ink"), color),
+            `${region} ${layer}`,
+          ).toBeGreaterThanOrEqual(7);
+          expect(
+            contrast(accent, color),
+            `${region} ${layer} hint ring`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+        expect(deltaE76(fill, faded), `${region} wash`).toBeGreaterThanOrEqual(
+          5,
+        );
+        expect(
+          deltaE76(fill, reached),
+          `${region} reach`,
+        ).toBeGreaterThanOrEqual(4);
+      }
+      for (const [at, a] of washed.entries()) {
+        for (const b of washed.slice(at + 1)) {
+          expect(deltaE76(a, b), `${a} vs ${b}`).toBeGreaterThanOrEqual(4.5);
+        }
       }
     },
   );

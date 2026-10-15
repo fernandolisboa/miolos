@@ -6,7 +6,7 @@ Nothing new from #327. Open, low urgency: NOW §1 (#200), and NOW §2, the Googl
 
 Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
-**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317.
+**Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`apps/web/src/settings/settings.ts`); shown in Ajustes' *Jogos* card and each grid game's *Ajustes* dialog (`settings/settings-dialog.tsx`, in `PlayScreenChrome`). *Mostrar erros* is `wrongCells` in `play/grid-hint.ts` (the hint's correction uses the same predicate) drawn as `WrongMark`; the Sudoku *Número fixo* lives in the reducer (`locked`) with its 300 ms gesture in `sudoku/use-digit-lock.ts`, on a keypad digit or on a board cell showing a digit (#323). The Nonogram's struck clue numbers are `placedClues` (`packages/games/src/nonogram/placed.ts`, ADR-0104) behind `strikePlacedRuns`; *Arrastar só em linha reta* (`straightDrag`, off, #329) is `usePointerStroke`'s `straight` option, which fixes the axis on the first cell entered and fills along it (`play/straight-stroke.ts`). Rainhas could pass it too; nothing does yet. A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Account sync is #317. Rainhas has three more (#326, ADR-0105): the reach, the fade and an opt-in auto-✕ whose ✕ belong to the queens that made them (`autoCrossed`, kept in the play record).
 
 **`/admin`** (#304, #314, ADR-0097, ADR-0100): an admin edits each `remote_config` key within its bounds, no deploy. Admins and superusers are verified attached emails in `admin_users` (migration 0016, `packages/db/src/admin-users.ts`); a superuser manages them on the page, and one locking statement keeps the last superuser. `ADMIN_USER_IDS` is gone.
 
@@ -14,11 +14,13 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
 
-**Termo's current row is editable** (#327, ADR-0108): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
+**Termo's current row is editable** (#327, ADR-0106): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
 
 **The Sudoku keypad tallies each digit** (#328): `placedCount` and `digitTally` (`sudoku/engine.ts`) count givens and entries on the public rules, never the solution; at nine the key fades with a ✓, above nine it takes the conflict red with the count. It stays pressable, so the *Número fixo* lock still works.
 
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
+
+**Cruzadinha 7×7 engine** (#330 part 1, ADR-0108): `generateCrossword(seed, 7)` works and the lexicon has 6- and 7-letter answers; players see nothing yet. `golden.test.ts` pins 5×5 output.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).
 
@@ -39,8 +41,10 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 **The crossword lexicon is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` and `pnpm test --force`.
 
+**A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Rolling `apps/web` back past #326 drops a pending Rainhas completion saved with *Marcar ✕ automático* on; sync it first.
+
 ## Next
 
-**Next:** file per-game time buckets as an issue; then #317 (sync settings with the account, needs a migration).
+**Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it, Zod-parse the size, and paint `generating` before the synchronous 7×7 generation (up to ~650 ms). Alongside, the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

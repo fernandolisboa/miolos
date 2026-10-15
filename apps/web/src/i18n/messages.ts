@@ -52,8 +52,12 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
   }`;
 
-const runsText = (runs: readonly number[]) =>
-  runs.length === 0 ? "0" : runs.join(", ");
+const runsText = (runs: readonly number[], placed: readonly boolean[]) =>
+  runs.length === 0
+    ? "0"
+    : runs
+        .map((run, i) => (placed[i] === true ? `${run} feito` : run))
+        .join(", ");
 
 type LineKind = "row" | "column";
 
@@ -675,6 +679,26 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        strikePlacedRuns: {
+          label: "Riscar números resolvidos",
+          hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
+        },
+        straightDrag: {
+          label: "Arrastar só em linha reta",
+          hint: "Ao arrastar, a marcação fica na linha ou na coluna do primeiro movimento, nunca na diagonal.",
+        },
+        highlightRegion: {
+          label: "Destacar linha, coluna e região",
+          hint: "Pinta a linha, a coluna e a região da célula selecionada.",
+        },
+        fadeQueenLines: {
+          label: "Esmaecer o que já tem rainha",
+          hint: "Apaga um pouco as células das linhas, colunas e regiões que já têm uma rainha.",
+        },
+        autoCross: {
+          label: "Marcar ✕ automático",
+          hint: "Ao pôr uma rainha, marca ✕ nas células vazias da linha, da coluna, da região e em volta dela. Tirar a rainha apaga só esses ✕.",
+        },
         firstValue: {
           label: "Primeiro valor",
           hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
@@ -999,10 +1023,16 @@ export const messages = {
         boardAria: (size: number) => `grade do Nonogram, ${size} por ${size}`,
         cellAria: cellAriaNonogram,
 
-        rowCluesAria: (row: number, runs: readonly number[]) =>
-          `números da linha ${row}: ${runsText(runs)}`,
-        columnCluesAria: (column: number, runs: readonly number[]) =>
-          `números da coluna ${column}: ${runsText(runs)}`,
+        rowCluesAria: (
+          row: number,
+          runs: readonly number[],
+          placed: readonly boolean[],
+        ) => `números da linha ${row}: ${runsText(runs, placed)}`,
+        columnCluesAria: (
+          column: number,
+          runs: readonly number[],
+          placed: readonly boolean[],
+        ) => `números da coluna ${column}: ${runsText(runs, placed)}`,
         controls: {
           fillAria: "preencher células",
           crossAria: "marcar células fora da figura",

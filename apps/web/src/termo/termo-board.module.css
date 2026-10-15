@@ -190,7 +190,7 @@
 }
 
 /* A state class, so the caret shows whether or not the row holds focus; focus
-   only ever sits on the caret cell (ADR-0108), so the focus ring is the same
+   only ever sits on the caret cell (ADR-0106), so the focus ring is the same
    mark. */
 .tileCaret {
   outline: 2px solid var(--ink);

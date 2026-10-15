@@ -1,4 +1,4 @@
-# ADR-0108 — The Termo current row is editable: any cell, gaps allowed
+# ADR-0106 — The Termo current row is editable: any cell, gaps allowed
 
 **Status:** Accepted — 2026-10-14 (issue #327)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)

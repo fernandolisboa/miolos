@@ -1,6 +1,6 @@
 import { CROSSWORD_LEXICON } from "./lexicon.generated";
 import { deriveSlots, slotCells } from "./slots";
-import { CROSSWORD_SIZE } from "./templates";
+import { CROSSWORD_TEMPLATES } from "./templates";
 import type {
   CrosswordEntry,
   CrosswordGrid,
@@ -14,10 +14,10 @@ const MIN_ENTRY_LENGTH = 3;
 
 function isWellShaped(grid: CrosswordGrid): boolean {
   return (
-    grid.length === CROSSWORD_SIZE &&
+    Object.hasOwn(CROSSWORD_TEMPLATES, grid.length) &&
     grid.every(
       (row) =>
-        row.length === CROSSWORD_SIZE &&
+        row.length === grid.length &&
         row.every((cell) => cell === null || /^[a-z]$/.test(cell)),
     )
   );

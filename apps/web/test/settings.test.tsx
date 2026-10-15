@@ -38,8 +38,17 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           highlightSelection: true,
         },
         binairo: { showErrors: false, firstValue: 1 },
-        nonogram: { showErrors: false },
-        queens: { showErrors: false },
+        nonogram: {
+          showErrors: false,
+          strikePlacedRuns: true,
+          straightDrag: false,
+        },
+        queens: {
+          showErrors: false,
+          highlightRegion: true,
+          fadeQueenLines: true,
+          autoCross: false,
+        },
         crossword: { showErrors: false, skipFilled: true },
       },
     });
@@ -57,7 +66,8 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         games: {
           sudoku: { showErrors: true, lockDigit: 3, highlightSelection: false },
           binairo: "x",
-          queens: { showErrors: true, nope: true },
+          queens: { showErrors: true, nope: true, autoCross: "yes" },
+          nonogram: { showErrors: true, strikePlacedRuns: "no" },
         },
       }),
     );
@@ -72,7 +82,17 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       showErrors: false,
       firstValue: 1,
     });
-    expect(settings.games.queens).toEqual({ showErrors: true });
+    expect(settings.games.queens).toEqual({
+      showErrors: true,
+      highlightRegion: true,
+      fadeQueenLines: true,
+      autoCross: false,
+    });
+    expect(settings.games.nonogram).toEqual({
+      showErrors: true,
+      strikePlacedRuns: true,
+      straightDrag: false,
+    });
     expect(settings).not.toHaveProperty("extra");
 
     for (const [stored, read] of [

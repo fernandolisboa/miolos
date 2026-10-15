@@ -285,7 +285,7 @@
    all at size 15 — hold adjacent runs whose concatenation is itself a legal
    run length for that board, e.g. `[1, 1]` reading as "11" or `[5, 1, 5]` as
    "515". Those rails are genuinely ambiguous to a sighted player at 1×–2× DPR.
-   Screen readers are unaffected: `rowCluesAria` composes `runs.join(", ")`, so
+   Screen readers are unaffected: `rowCluesAria` separates the runs with commas, so
    the accessible name is unambiguous whatever the gap is. Accepted because
    3px costs 0.27px of the 0.85px slack the 320px size-15 board has left; the
    day that board gets more room, this goes back to 3px. */
@@ -322,6 +322,11 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+}
+
+.clueNumberPlaced {
+  color: var(--ink-2);
+  text-decoration-line: line-through;
 }
 
 /* ── the caret ───────────────────────────────────────────────────────── */

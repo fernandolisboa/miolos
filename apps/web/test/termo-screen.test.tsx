@@ -222,7 +222,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0108)", () => {
+describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0106)", () => {
   it("is a labelled group of six labelled row groups, every tile outside the active row hidden", () => {
     const { play } = playFixture({
       guesses: [{ guess: VALID, tiles: TILES }],
