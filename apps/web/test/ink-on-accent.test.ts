@@ -10,6 +10,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
     "app/page.module.css",
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",
+    "app/estatisticas/stats-calendar.module.css",
 
     "app/arquivo/arquivo.module.css",
 
@@ -106,6 +107,7 @@ describe("accents colour shapes, never words (T-WEB-S73)", () => {
     "src/play/conclusion-view.module.css",
     "app/page.module.css",
     "app/estatisticas/page.module.css",
+    "app/estatisticas/stats-calendar.module.css",
 
     "app/arquivo/arquivo.module.css",
 

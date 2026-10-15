@@ -70,14 +70,11 @@ export default async function ArchiveMonthPage({ params }: MonthPageProps) {
     notFound();
   }
 
-  const index = months.indexOf(month);
   return (
     <ArchiveMonthView
       month={month}
-
       dates={archivedDates(days)}
-      previous={index === -1 ? undefined : months[index + 1]}
-      next={index <= 0 ? undefined : months[index - 1]}
+      months={months}
     />
   );
 }

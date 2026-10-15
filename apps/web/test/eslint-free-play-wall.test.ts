@@ -702,7 +702,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../archive",
       "../../app/arquivo/page",
 
-      "../../app/arquivo/calendar-grid",
+      "../../app/arquivo/archive-body",
     ];
     for (const door of doors) {
       const source = [
