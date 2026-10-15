@@ -8,6 +8,7 @@ import { GamesSection } from "../app/ajustes/games-section";
 import { BinairoScreen } from "../src/binairo/binairo-screen";
 import styles from "../src/binairo/binairo-screen.module.css";
 import { binairoHintExplanation } from "../src/binairo/hint";
+import tipStyles from "../src/play/info-tip.module.css";
 import sharedStyles from "../src/play/screen.module.css";
 import spotlightStyles from "../src/play/spotlight.module.css";
 import {
@@ -948,9 +949,9 @@ describe("the board and controls track the board side (layout tripwires)", () =>
   });
 
   it("leaves every control clear of the 44px touch target at the board floor", () => {
-    const controls = bodyOf(MOBILE, ".controls");
+    const digits = bodyOf(MOBILE, ".digits");
     const minimum = token("--touch-target-min");
-    const digit = (boardFloor() - pixels(decl(controls, "gap"))) / 2;
+    const digit = (boardFloor() - pixels(decl(digits, "gap"))) / 2;
 
     expect(digit).toBeGreaterThanOrEqual(minimum);
     expect(
@@ -977,10 +978,10 @@ describe("the mouse affordance (T-WEB-S499a)", () => {
     expect(decl(bodyOf(fine, ".affordance"), "display")).not.toBe("none");
   });
 
-  it("is reserved by the skeleton as well", () => {
+  it("is reserved by the skeleton as well, as the (i) ring", () => {
     const html = renderToStaticMarkup(<BinairoScreen daily={DAILY} />);
 
-    expect(html).toContain(messages.games.binairo.play.controls.affordance(1));
+    expect(html).toContain(`class="${tipStyles.button ?? ""}"`);
   });
 });
 

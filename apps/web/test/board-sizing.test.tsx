@@ -28,6 +28,7 @@ const SRC = path.join(import.meta.dirname, "..", "src");
 
 const SHARED_CSS = stylesheet("src/play/screen.module.css");
 const RESET_CSS = stylesheet("src/play/reset-control.module.css");
+const INFO_TIP_CSS = stylesheet("src/play/info-tip.module.css");
 
 const PAGE_PADDING = 2 * token("--space-5");
 const NARROWEST_VIEWPORT = 320;
@@ -142,15 +143,15 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
     }
   });
 
-  it("counts the Rainhas affordance, margin and line, in --board-below", () => {
+  it("counts the Rainhas (i) row, margin and ring, in --board-below", () => {
     const below = /^calc\((.+) \+ (\d+px)\)$/.exec(
       decl(bodyOf(GAME_SHEETS.queens, ".pageQueens"), "--board-below") ?? "",
     );
     const affordance = bodyOf(GAME_SHEETS.queens, ".affordance");
 
     expect(decl(affordance, "margin")).toBe(`${below?.[1] ?? ""} 0 0`);
-    expect(pixels(below?.[2])).toBeGreaterThanOrEqual(
-      1.5 * pixels(decl(affordance, "font-size")),
+    expect(pixels(below?.[2])).toBe(
+      pixels(decl(bodyOf(INFO_TIP_CSS, ".button"), "height")),
     );
   });
 });

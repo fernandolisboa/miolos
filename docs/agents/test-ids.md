@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S657` | `S656` | `T-WEB-23` |
+| `T-WEB` | `S662` | `S661` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
 #329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.
 

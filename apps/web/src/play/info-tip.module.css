@@ -1,0 +1,86 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The visible ring is 24px so the row under a board keeps its height; the
+   pseudo-element widens the hit area to the touch minimum without layout. */
+.button {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 50%;
+  color: var(--ink-2);
+  font: italic 600 14px/1 var(--font-display);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-settle),
+    border-color var(--duration-fast) var(--ease-settle);
+}
+
+.button::before {
+  content: "";
+  position: absolute;
+  inset: calc((24px - var(--touch-target-min)) / 2);
+}
+
+.button[aria-expanded="true"],
+.button:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  z-index: 2;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+  font: var(--text-body);
+  font-size: 13px;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+/* Bridges the gap to the button, so the pointer can travel onto the tip
+   without leaving it (WCAG 1.4.13). */
+.tip::after {
+  content: "";
+  position: absolute;
+  inset: 100% 0 auto;
+  height: var(--space-2);
+}
+
+.alignStart .tip {
+  left: 0;
+}
+
+.alignCenter .tip {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

@@ -6,6 +6,7 @@ import { formatLongDate, messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { BoardCard } from "../play/board-card";
 import { isShortcut } from "../play/grid-selection";
+import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
 import type { ArchivePlayChrome } from "../play/types";
@@ -165,7 +166,9 @@ export function PlayView({
           activeKeyRef={activeKeyRef}
         />
 
-        <span className={styles.affordance}>{copy.keyboard.affordance}</span>
+        <span className={styles.affordance}>
+          <InfoTip text={copy.keyboard.affordance} align="center" />
+        </span>
 
         <p role="status" className={styles.announcer}>
           {state.announcement}
@@ -270,8 +273,8 @@ export function PlaySkeleton({
 
         <KeyboardSkeleton />
 
-        <span aria-hidden className={styles.affordance}>
-          {copy.keyboard.affordance}
+        <span className={styles.affordance}>
+          <InfoTipSkeleton />
         </span>
       </section>
     </main>

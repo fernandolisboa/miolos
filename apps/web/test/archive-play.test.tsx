@@ -144,8 +144,9 @@ describe("the archive's play chrome (T-WEB-S185)", () => {
   ])(
     "WITHOUT the prop the %s render is byte-identical to the shipped daily's",
     (_game, archiveScreen, dailyScreen) => {
-      const archived = render(archiveScreen).container.innerHTML;
-      const shipped = render(dailyScreen).container.innerHTML;
+      const withoutIds = (html: string) => html.replace(/_r_\w+?_/g, "_r_");
+      const archived = withoutIds(render(archiveScreen).container.innerHTML);
+      const shipped = withoutIds(render(dailyScreen).container.innerHTML);
 
       const noteBlock = new RegExp(
         `<p class="[^"]*">${messages.archive.play.note}</p>`,
