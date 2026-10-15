@@ -3,7 +3,7 @@ import type { SeededRandom } from "../random";
 import { assertWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { gradeQueens } from "./grade";
-import { floodRegion, neighbours } from "./internal";
+import { floodRegion, neighbours, relabel } from "../regions";
 import { searchQueens } from "./solve";
 import { QueensGenerationError } from "./types";
 import type { QueensPuzzle } from "./types";
@@ -140,11 +140,6 @@ export function repairRegions(
       }
     });
   }
-}
-
-function relabel(regions: readonly number[]): number[] {
-  const order = [...new Set(regions)];
-  return regions.map((id) => order.indexOf(id));
 }
 
 export function generateQueens(options: {
