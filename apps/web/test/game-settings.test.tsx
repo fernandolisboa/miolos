@@ -252,12 +252,15 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
       ).toBeInTheDocument();
     }
     const nonogram = screen.getByRole("group", { name: "Nonogram" });
-    expect(within(nonogram).getAllByRole("switch")).toHaveLength(2);
-    expect(
-      within(nonogram).getByRole("switch", {
-        name: copy.flags.strikePlacedRuns.label,
-      }),
-    ).toBeInTheDocument();
+    expect(within(nonogram).getAllByRole("switch")).toHaveLength(3);
+    for (const label of [
+      copy.flags.strikePlacedRuns.label,
+      copy.flags.straightDrag.label,
+    ]) {
+      expect(
+        within(nonogram).getByRole("switch", { name: label }),
+      ).toBeInTheDocument();
+    }
   });
 
   it("describes each switch and can turn every one off and on again", () => {

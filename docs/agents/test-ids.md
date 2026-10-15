@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S323` | `S322` | `T-API-16` |
-| `T-WEB` | `S655` | `S654` | `T-WEB-23` |
+| `T-WEB` | `S657` | `S656` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
+
+#329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.
 
 #324 (struck Nonogram clue numbers, ADR-0104) spent **`T-WEB-S613…S614`** in `apps/web/test/nonogram-placed-clues.test.tsx`.
 
