@@ -90,6 +90,12 @@ export const Board = memo(function Board({
                 key={slot}
                 aria-hidden
                 className={tileClassName(judged, held, slot)}
+                data-cell-index={row * WORD_LENGTH + slot}
+                data-wave-origin={
+                  row === guesses.length - 1 && slot === WORD_LENGTH - 1
+                    ? true
+                    : undefined
+                }
               >
                 {letterAt(judged, held, slot)}
               </div>

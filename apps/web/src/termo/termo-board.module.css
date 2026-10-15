@@ -130,6 +130,7 @@
    glyphs that are 24px on a phone, the one element a low-vision player wants
    to enlarge. A tap on a cell only moves the cursor, so no tap delay is paid. */
 .grid {
+  --wave-lead: calc(var(--duration-fast) + 240ms);
   display: flex;
   flex-direction: column;
   gap: 4px;

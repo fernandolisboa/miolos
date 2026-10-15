@@ -21,6 +21,7 @@ import {
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
 import { useDigitLock } from "../sudoku/use-digit-lock";
+import { EndingStage } from "../play/ending-stage";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
@@ -127,59 +128,64 @@ function SudokuFreeBoard({
   const reset = useReset(dispatch);
 
   const choice = levelChoice(level, onLevelChange);
-  if (state.status === "solved") {
-    return (
-      <FreePlaySolvedCard game="sudoku" choice={choice} onAgain={onNext} />
-    );
-  }
-
   return (
-    <FreePlayChrome
-      game="sudoku"
-      pageModifier={boardStyles.pageSudoku ?? ""}
-      choice={choice}
-      state={{
-        kind: "playing",
-        readouts: {
-          progressShort: copy.progressShort(
-            messages.freePlay.level[level],
-            filled,
-            TOTAL_CELLS,
-          ),
-          progressLong: copy.progressLong(filled, TOTAL_CELLS),
-          hint: {
-            ...hintReadout(
-              state.hint,
-              sudokuHintExplanation(state.hint.reason),
-            ),
-            ready: hintReady,
-            onReveal: revealHint,
-          },
-          onReset: hasDecidedCell(state.entries) ? reset : null,
-        },
-      }}
+    <EndingStage
+      over={state.status === "solved"}
+      won
+      ending={() => (
+        <FreePlaySolvedCard game="sudoku" choice={choice} onAgain={onNext} />
+      )}
     >
-      <BoardCard
-        below={
-          <Keypad lock={lock} grid={mergedGrid(state.givens, state.entries)} />
-        }
+      <FreePlayChrome
+        game="sudoku"
+        pageModifier={boardStyles.pageSudoku ?? ""}
+        choice={choice}
+        state={{
+          kind: "playing",
+          readouts: {
+            progressShort: copy.progressShort(
+              messages.freePlay.level[level],
+              filled,
+              TOTAL_CELLS,
+            ),
+            progressLong: copy.progressLong(filled, TOTAL_CELLS),
+            hint: {
+              ...hintReadout(
+                state.hint,
+                sudokuHintExplanation(state.hint.reason),
+              ),
+              ready: hintReady,
+              onReveal: revealHint,
+            },
+            onReset: hasDecidedCell(state.entries) ? reset : null,
+          },
+        }}
       >
-        <Board
-          givens={state.givens}
-          solution={puzzle.solution}
-          entries={state.entries}
-          selected={state.selected}
-          violating={state.violating}
-          hintIndex={state.hint.lastIndex}
-          spotlight={state.hint.spotlight}
-          onSelect={selectCell}
-          onMove={moveSelection}
-          onDigit={enterDigit}
-          onClear={clearCell}
-          onTapCell={lock.tapCell}
-        />
-      </BoardCard>
-    </FreePlayChrome>
+        <BoardCard
+          below={
+            <Keypad
+              lock={lock}
+              grid={mergedGrid(state.givens, state.entries)}
+            />
+          }
+        >
+          <Board
+            givens={state.givens}
+            solution={puzzle.solution}
+            entries={state.entries}
+            selected={state.selected}
+            violating={state.violating}
+            hintIndex={state.hint.lastIndex}
+            spotlight={state.hint.spotlight}
+            onSelect={selectCell}
+            onMove={moveSelection}
+            onDigit={enterDigit}
+            onClear={clearCell}
+            onTapCell={lock.tapCell}
+          />
+        </BoardCard>
+      </FreePlayChrome>
+    </EndingStage>
   );
 }
 

@@ -10,7 +10,7 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`settings/settings.ts`). A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Per-game options: ADR-0104 (struck clues), ADR-0105 (Rainhas), #322, #323, #325, #329. Account sync is #317.
 
-**End flourish** (#353, ADR-0118): a game that ended in front of the player presses its stamp (win) or lets grey ink run (Termo loss). `useSawPlay`/`JustEnded` (`play/just-ended.ts`) decide "just ended" in `DailyScreen`/`ArchiveScreen`; `EndingFlourish` (`play/ending-flourish.tsx`) wraps the stamp. Setting `endAnimation`, on; reduced motion stands it down.
+**End flourish** (#353 ADR-0118, #357 ADR-0120): a win that ended in front of the player first glows across the board from the last touched cell (`EndingStage`, `play/ending-stage.tsx`, wraps every daily, archive and free-play view), then presses its stamp; a Termo loss drops a heavy grey stamp. `useSawPlay`/`JustEnded` (`play/just-ended.ts`) decide "just ended"; `EndingFlourish` wraps the stamp. Setting `endAnimation`, on; reduced motion stands both down.
 
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 

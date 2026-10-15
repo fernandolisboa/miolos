@@ -5,6 +5,7 @@ import { accentVars } from "../play/accent";
 import { FinishedBoard } from "../termo/board";
 import { PlaySkeleton, PlayView } from "../termo/play-view";
 import type { TermoChrome } from "../termo/types";
+import { EndingStage } from "../play/ending-stage";
 import { FREE_PLAY_BACK } from "./back";
 import { FREE_PLAY_DATE } from "./catalog";
 import { FreePlayErrorCard } from "./error-card";
@@ -59,17 +60,21 @@ function TermoFreeBoard({
   const play = useFreeTermoBoard(puzzle.canonical);
   const { status } = play.state;
 
-  if (status !== "playing") {
-    return (
-      <FreePlaySolvedCard
-        game="termo"
-        word={{ canonical: puzzle.canonical, won: status === "solved" }}
-        onAgain={onNext}
-      >
-        <FinishedBoard guesses={play.state.guesses} />
-      </FreePlaySolvedCard>
-    );
-  }
-
-  return <PlayView play={play} chrome={CHROME} />;
+  return (
+    <EndingStage
+      over={status !== "playing"}
+      won={status === "solved"}
+      ending={() => (
+        <FreePlaySolvedCard
+          game="termo"
+          word={{ canonical: puzzle.canonical, won: status === "solved" }}
+          onAgain={onNext}
+        >
+          <FinishedBoard guesses={play.state.guesses} />
+        </FreePlaySolvedCard>
+      )}
+    >
+      <PlayView play={play} chrome={CHROME} />
+    </EndingStage>
+  );
 }

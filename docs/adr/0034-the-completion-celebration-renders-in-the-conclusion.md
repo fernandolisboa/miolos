@@ -1,6 +1,7 @@
 # ADR-0034 — The completion celebration's authoritative placement is the conclusion, never the play board
 
 **Status:** Accepted — 2026-08-01
+**Superseded in part by:** [ADR-0120](./0120-a-win-glows-across-the-board-before-the-result.md) (#357) — decision 1's *"never as an animation on the play board"* and the Rejected *"Holding the play view open on a timer"*: a win that just ended keeps its board for one glow, which starts after the clock freeze inside the shared `EndingStage`. The payoff still lives in the conclusion.
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md)
 
 ## Context
