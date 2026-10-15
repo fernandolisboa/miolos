@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
-  completedCount,
+  completedGames,
   readDayState,
   useDayState,
 } from "../src/play/day-state";
@@ -168,16 +168,16 @@ describe("readDayState (T-WEB-S14)", () => {
   });
 
   it("counts what is completed, and only what is completed", () => {
-    expect(completedCount(readDayState(DATE))).toBe(0);
+    expect(completedGames(readDayState(DATE)).size).toBe(0);
 
     writePlayRecord(sudokuRecord());
-    expect(completedCount(readDayState(DATE))).toBe(1);
+    expect(completedGames(readDayState(DATE)).size).toBe(1);
 
     writePlayRecord(binairoRecord());
-    expect(completedCount(readDayState(DATE))).toBe(2);
+    expect(completedGames(readDayState(DATE)).size).toBe(2);
 
     writePlayRecord(binairoRecord({ concluded: false }));
-    expect(completedCount(readDayState(DATE))).toBe(1);
+    expect(completedGames(readDayState(DATE)).size).toBe(1);
   });
 });
 
@@ -221,10 +221,10 @@ describe("the three verbs (T-WEB-S79)", () => {
     writePlayRecord(lostTermoRecord());
     writePlayRecord(sudokuRecord());
 
-    expect(completedCount(readDayState(DATE))).toBe(1);
+    expect(completedGames(readDayState(DATE)).size).toBe(1);
 
     writePlayRecord(wonTermoRecord());
-    expect(completedCount(readDayState(DATE))).toBe(2);
+    expect(completedGames(readDayState(DATE)).size).toBe(2);
   });
 
   it("is DERIVED, never persisted: an unparseable record fails toward pending", () => {
@@ -297,7 +297,7 @@ describe("monotone safety (T-WEB-S15)", () => {
 
       expect(entry.status).toBe("pending");
       expect(entry.elapsedMs).toBeUndefined();
-      expect(completedCount(readDayState(DATE))).toBe(0);
+      expect(completedGames(readDayState(DATE)).size).toBe(0);
     });
   }
 
@@ -338,7 +338,7 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
 
     expect(state.sudoku.status).toBe("completed");
     expect(state.sudoku.elapsedMs).toBeUndefined();
-    expect(completedCount(state)).toBe(1);
+    expect(completedGames(state).size).toBe(1);
   });
 
   it("keeps the DEVICE's claim, and its duration, where the server is silent", () => {
@@ -360,7 +360,7 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
 
     expect(state.termo.status).toBe("played");
     expect(state.termo.elapsedMs).toBeUndefined();
-    expect(completedCount(state)).toBe(0);
+    expect(completedGames(state).size).toBe(0);
   });
 
   it("PROMOTES a locally-lost Termo the server holds as won — the mirror of the same one-line rule", () => {
@@ -373,7 +373,7 @@ describe("the merge with the server's day truth (T-WEB-S237)", () => {
 
     expect(state.termo.status).toBe("completed");
     expect(state.termo.elapsedMs).toBeUndefined();
-    expect(completedCount(state)).toBe(1);
+    expect(completedGames(state).size).toBe(1);
   });
 
   it("is the shipped local projection, unchanged, when there is no server truth", () => {
@@ -394,7 +394,7 @@ describe("the merged entry's duration follows the winning claim (T-WEB-S258)", (
     );
 
     expect(state.sudoku).toEqual({ status: "completed", elapsedMs: SERVER_MS });
-    expect(completedCount(state)).toBe(1);
+    expect(completedGames(state).size).toBe(1);
   });
 
   it("where the server claims, its duration is the entry's — the local one is not blended in", () => {
@@ -470,7 +470,7 @@ describe("the date precondition (T-WEB-S238)", () => {
       DATE,
       dayPayload({ binairo: { status: "completed" } }, OTHER_DATE),
     );
-    expect(completedCount(state)).toBe(0);
+    expect(completedGames(state).size).toBe(0);
   });
 });
 
@@ -495,7 +495,7 @@ describe("the merge never invents a pending (T-WEB-S243)", () => {
 
   it("answers `pending` for a game only when both sides are silent", () => {
     const state = readDayState(DATE, dayPayload());
-    expect(completedCount(state)).toBe(0);
+    expect(completedGames(state).size).toBe(0);
     for (const game of [
       "termo",
       "sudoku",
@@ -519,7 +519,7 @@ describe("the Cruzadinha reads and merges the same way the three grid games do (
       status: "completed",
       elapsedMs: CROSSWORD_MS,
     });
-    expect(completedCount(state)).toBe(1);
+    expect(completedGames(state).size).toBe(1);
   });
 
   it("takes the server's duration on a cross-device completion", () => {
@@ -544,7 +544,7 @@ describe("Rainhas reads and merges the same way the other grid games do (T-WEB-S
     const state = readDayState(DATE);
 
     expect(state.queens).toEqual({ status: "completed", elapsedMs: QUEENS_MS });
-    expect(completedCount(state)).toBe(1);
+    expect(completedGames(state).size).toBe(1);
   });
 
   it("takes the server's duration on a cross-device completion", () => {

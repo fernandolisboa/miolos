@@ -73,11 +73,10 @@ function entryFromMerge(
     : { status, elapsedMs };
 }
 
-export function completedCount(
+export function completedGames(
   state: Readonly<Record<Game, DayEntry>>,
-): number {
-  return Object.values(state).filter((entry) => entry.status === "completed")
-    .length;
+): ReadonlySet<Game> {
+  return new Set(GAMES.filter((game) => state[game].status === "completed"));
 }
 
 export function useDayState(date: string): Readonly<Record<Game, DayEntry>> {

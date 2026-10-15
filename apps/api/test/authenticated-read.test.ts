@@ -15,6 +15,7 @@ const AUTHENTICATED_GETS: Record<string, () => Promise<object>> = {
     import("../app/notifications/state/route"),
   "onboarding/state/route.ts": () => import("../app/onboarding/state/route"),
   "stats/calendar/route.ts": () => import("../app/stats/calendar/route"),
+  "stats/full-days/route.ts": () => import("../app/stats/full-days/route"),
   "stats/route.ts": () => import("../app/stats/route"),
   "streak/route.ts": () => import("../app/streak/route"),
 };
@@ -43,7 +44,7 @@ async function scanAuthenticatedGets(): Promise<Map<string, string>> {
 const authenticatedGets = await scanAuthenticatedGets();
 
 describe("every authenticated GET goes through one envelope (T-API-S183)", () => {
-  it("the authenticated GETs under app/ are exactly the known eleven", () => {
+  it("the authenticated GETs under app/ are exactly the known twelve", () => {
     expect([...authenticatedGets.keys()]).toEqual(
       Object.keys(AUTHENTICATED_GETS).sort(),
     );

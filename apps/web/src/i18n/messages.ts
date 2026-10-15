@@ -199,6 +199,7 @@ export const messages = {
     taglineSentence: `${taglineCapitalised}.`,
     signOff,
   },
+  dayMark: { full: "Dia Cheio", perfect: "Dia Perfeito" },
   hoje: {
     completedOfTotal: (done: number, total: number) =>
       `${done} de ${total} concluídos`,
@@ -324,6 +325,10 @@ export const messages = {
   },
   stats: {
     title: "Estatísticas",
+    fullDays: {
+      label: "Dias Cheios",
+      aria: (n: number) => `${n} ${n === 1 ? "dia cheio" : "dias cheios"}`,
+    },
     perfectDays: {
       label: "Dias Perfeitos",
       aria: (n: number) =>
@@ -362,8 +367,8 @@ export const messages = {
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
       dayAria: {
         onTime: (date: string) => `${date}: concluído no dia`,
-        onTimePerfect: (date: string) =>
-          `${date}: concluído no dia — Dia Perfeito`,
+        onTimeMarked: (date: string, mark: string) =>
+          `${date}: concluído no dia — ${mark}`,
         late: (date: string) => `${date}: concluído mais tarde`,
         missed: (date: string) => `${date}: sem conclusão`,
       },

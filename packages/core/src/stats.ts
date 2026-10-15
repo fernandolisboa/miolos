@@ -110,19 +110,56 @@ function gamesByDate(
   return byDate;
 }
 
+// see ADR-0129
+const FULL_DAY_GAMES = 3;
+
+export const DAY_MARKS = ["full", "perfect"] as const;
+export type DayMark = (typeof DAY_MARKS)[number];
+
+export function dayMarkOf(
+  won: ReadonlySet<Game>,
+  lineup: ReadonlySet<Game>,
+): DayMark | undefined {
+  if (lineup.size > 0 && [...lineup].every((game) => won.has(game))) {
+    return "perfect";
+  }
+  const needed =
+    lineup.size === 0 ? FULL_DAY_GAMES : Math.min(FULL_DAY_GAMES, lineup.size);
+  return won.size >= needed ? "full" : undefined;
+}
+
+const NO_GAMES: ReadonlySet<Game> = new Set();
+
+export function dayMarks(
+  rows: readonly StatsRow[],
+  published: readonly PublishedDaily[],
+): ReadonlyMap<string, DayMark> {
+  const lineupByDate = gamesByDate(published);
+  const marks = new Map<string, DayMark>();
+  for (const [date, won] of gamesByDate(rows.filter(countsOnTimeWon))) {
+    const mark = dayMarkOf(won, lineupByDate.get(date) ?? NO_GAMES);
+    if (mark !== undefined) {
+      marks.set(date, mark);
+    }
+  }
+  return marks;
+}
+
 export function perfectDays(
   rows: readonly StatsRow[],
   published: readonly PublishedDaily[],
 ): readonly string[] {
-  const requiredByDate = gamesByDate(published);
-  const dates: string[] = [];
-  for (const [date, won] of gamesByDate(rows.filter(countsOnTimeWon))) {
-    const required = [...(requiredByDate.get(date) ?? [])];
-    if (required.length > 0 && required.every((game) => won.has(game))) {
-      dates.push(date);
-    }
-  }
-  return dates.sort();
+  return [...dayMarks(rows, published)]
+    .filter(([, mark]) => mark === "perfect")
+    .map(([date]) => date)
+    .sort();
+}
+
+export function fullDays(
+  rows: readonly StatsRow[],
+  published: readonly PublishedDaily[],
+): readonly string[] {
+  return [...dayMarks(rows, published).keys()].sort();
 }
 
 export type CalendarDayState = "onTime" | "late" | "missed";

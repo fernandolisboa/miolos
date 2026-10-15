@@ -3,7 +3,7 @@ import { epochDay } from "../date";
 import {
   countsLateWon,
   countsOnTimeWon,
-  perfectDays,
+  dayMarks,
   termoGuessOf,
   type PublishedDaily,
   type StatsRow,
@@ -48,7 +48,9 @@ export function earnedMedals(
     }
   }
 
-  const perfectDayCount = perfectDays(scoped, published).length;
+  const marks = [...dayMarks(scoped, published).values()];
+  const perfectDayCount = marks.filter((mark) => mark === "perfect").length;
+  const fullDayCount = marks.length;
   const grantSet = new Set(grants);
 
   function earnedByRule(rule: ComputableRule): boolean {
@@ -65,6 +67,8 @@ export function earnedMedals(
         return maxStreakReached >= rule.days;
       case "perfectDaysReached":
         return perfectDayCount >= rule.count;
+      case "fullDaysReached":
+        return fullDayCount >= rule.count;
       case "termoGuessWins":
         return (
           scoped.filter(
