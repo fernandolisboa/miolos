@@ -1,6 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { geometryOf } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import { gradeInternal } from "../../src/sudoku/grade";
 import {
   generateDailySudoku,
@@ -9,6 +11,7 @@ import {
   type Weekday,
 } from "../../src/sudoku/index";
 import { FULL_GRID, TECHNIQUE_FIXTURES, TWO_SOLUTION_GRID } from "./fixtures";
+import { PINNED_VARIANTS } from "./variant-fixtures";
 
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
@@ -71,4 +74,25 @@ describe("gradeSudoku", () => {
   it("rejects malformed grids", () => {
     expect(() => gradeSudoku(new Array<number>(80).fill(0))).toThrow(TypeError);
   });
+});
+
+describe("locked candidates under a variant layout (ADR-0130)", () => {
+  it.each([
+    ["diagonal", DIAGONAL_LAYOUT],
+    [
+      "irregular",
+      { regions: PINNED_VARIANTS.irregular.regions, extraUnits: [] },
+    ],
+  ] as const)(
+    "solves the pinned %s puzzle only by locking candidates across its units",
+    (variant, layout) => {
+      const { givens, solution } = PINNED_VARIANTS[variant];
+      const result = gradeInternal(givens, geometryOf(layout));
+      expect(result.grade).toBe(3);
+      expect(result.techniques).toEqual(
+        new Set(["nakedSingle", "hiddenSingle", "pointing", "claiming"]),
+      );
+      expect(result.solved).toEqual(solution);
+    },
+  );
 });

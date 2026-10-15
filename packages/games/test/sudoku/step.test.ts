@@ -2,12 +2,14 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
-  BOX_UNITS,
+  CLASSIC_GEOMETRY,
   COLUMN_UNITS,
-  PEERS,
+  EXTRA_UNITS,
+  REGION_UNITS,
   ROW_UNITS,
-  UNITS,
+  geometryOf,
 } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import {
   generateDailySudoku,
   nextSudokuStep,
@@ -23,7 +25,9 @@ import {
   TECHNIQUE_FIXTURES,
   TWO_SOLUTION_GRID,
 } from "./fixtures";
+import { PINNED_VARIANTS } from "./variant-fixtures";
 
+const { units: UNITS, peers: PEERS } = CLASSIC_GEOMETRY;
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 const weekdayArb = fc.constantFrom<Weekday>(1, 2, 3, 4, 5, 6, 7);
@@ -71,9 +75,12 @@ function hiddenSinglesIn(grid: SudokuGrid, unit: readonly number[]): number[] {
 }
 
 function unitCells(unit: SudokuUnit): readonly number[] {
-  const offset = { row: ROW_UNITS, column: COLUMN_UNITS, box: BOX_UNITS }[
-    unit.kind
-  ];
+  const offset = {
+    row: ROW_UNITS,
+    column: COLUMN_UNITS,
+    box: REGION_UNITS,
+    diagonal: EXTRA_UNITS,
+  }[unit.kind];
   return UNITS[offset + unit.index]!;
 }
 
@@ -220,4 +227,42 @@ describe("nextSudokuStep", () => {
       { seed: FC_SEED, numRuns: propertyRuns(100) },
     );
   }, 285_000);
+});
+
+describe("nextSudokuStep under a variant layout (ADR-0130)", () => {
+  it.each([
+    ["diagonal", DIAGONAL_LAYOUT, "diagonal"],
+    [
+      "irregular",
+      { regions: PINNED_VARIANTS.irregular.regions, extraUnits: [] },
+      "box",
+    ],
+  ] as const)(
+    "walks the pinned %s puzzle to its solution, naming the layout's units",
+    (variant, layout, kind) => {
+      const { givens, solution } = PINNED_VARIANTS[variant];
+      const geometry = geometryOf(layout);
+      const offset = {
+        row: ROW_UNITS,
+        column: COLUMN_UNITS,
+        box: REGION_UNITS,
+        diagonal: EXTRA_UNITS,
+      };
+      const grid = [...givens];
+      const kinds = new Set<string>();
+      for (let step = nextSudokuStep(grid, layout); step !== null;) {
+        expect(step.digit).toBe(solution[step.index]);
+        expect(step.cells).toEqual(
+          step.unit === null
+            ? geometry.peers[step.index]
+            : geometry.units[offset[step.unit.kind] + step.unit.index],
+        );
+        kinds.add(step.unit?.kind ?? "naked");
+        grid[step.index] = step.digit;
+        step = nextSudokuStep(grid, layout);
+      }
+      expect(grid).toEqual(solution);
+      expect(kinds).toContain(kind);
+    },
+  );
 });

@@ -1,17 +1,37 @@
 import { createSeededRandom, shuffleInPlace } from "../random";
+import type { SeededRandom } from "../random";
 import type { Weekday } from "../weekday";
+import { CLASSIC_GEOMETRY, CLASSIC_LAYOUT, geometryFor } from "./board";
+import type { SudokuGeometry } from "./board";
 import { gradeInternal } from "./grade";
-import { countSolutionsInternal, fillGrid } from "./solve";
+import { drawIrregularLayout } from "./irregular";
+import { countSolutionsInternal, fillGrid, fillVariant } from "./solve";
 import type {
   SudokuApprovalCriteria,
   SudokuGrid,
+  SudokuLayout,
   SudokuPuzzle,
   SudokuTier,
+  SudokuVariant,
+  SudokuVariantPuzzle,
 } from "./types";
+import { SUDOKU_VARIANTS } from "./types";
 import { sudokuCriteriaForWeekday } from "./criteria";
 import { validateCriteria } from "./validate";
 
 export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
+
+const FILL_BUDGET = 1000;
+
+const FAILURES_PER_MAP = 8;
+
+export const DIAGONAL_LAYOUT: SudokuLayout = Object.freeze({
+  regions: CLASSIC_LAYOUT.regions,
+  extraUnits: Object.freeze([
+    Object.freeze(Array.from({ length: 9 }, (_, k) => k * 10)),
+    Object.freeze(Array.from({ length: 9 }, (_, k) => (k + 1) * 8)),
+  ]),
+});
 
 export class SudokuGenerationError extends Error {
   readonly seed: number;
@@ -44,12 +64,12 @@ interface GenerationCandidate {
   readonly clueCount: number;
 }
 
-function tryGenerate(
-  attemptSeed: number,
+function carve(
+  solution: readonly number[],
+  rng: SeededRandom,
   criteria: SudokuApprovalCriteria,
+  geometry: SudokuGeometry,
 ): GenerationCandidate | null {
-  const rng = createSeededRandom(attemptSeed);
-  const solution = fillGrid(rng);
   const order = Array.from({ length: 81 }, (_, i) => i);
   shuffleInPlace(order, rng);
   const grid = [...solution];
@@ -60,18 +80,18 @@ function tryGenerate(
     }
     const removed = grid[idx]!;
     grid[idx] = 0;
-    if (countSolutionsInternal(grid, 2) > 1) {
+    if (countSolutionsInternal(grid, 2, geometry) > 1) {
       grid[idx] = removed;
       continue;
     }
-    const grade = gradeInternal(grid).grade;
+    const grade = gradeInternal(grid, geometry).grade;
     if (grade === "beyond" || grade > criteria.tier) {
       grid[idx] = removed;
       continue;
     }
     clues -= 1;
   }
-  const finalGrade = gradeInternal(grid).grade;
+  const finalGrade = gradeInternal(grid, geometry).grade;
   if (finalGrade !== criteria.tier) {
     return null;
   }
@@ -86,6 +106,16 @@ function tryGenerate(
   };
 }
 
+function attemptsOf(maxAttempts: number | undefined): number {
+  const attempts = maxAttempts ?? SUDOKU_MAX_GENERATION_ATTEMPTS;
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new RangeError(
+      `maxAttempts must be a positive integer, got ${String(attempts)}`,
+    );
+  }
+  return attempts;
+}
+
 export function generateSudoku(options: {
   readonly seed: number;
   readonly criteria: SudokuApprovalCriteria;
@@ -93,17 +123,12 @@ export function generateSudoku(options: {
 }): SudokuPuzzle {
   const { criteria } = options;
   validateCriteria(criteria);
-  const maxAttempts = options.maxAttempts ?? SUDOKU_MAX_GENERATION_ATTEMPTS;
-  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
-    throw new RangeError(
-      `maxAttempts must be a positive integer, got ${String(maxAttempts)}`,
-    );
-  }
+  const maxAttempts = attemptsOf(options.maxAttempts);
   const normalizedSeed = options.seed >>> 0;
   const master = createSeededRandom(normalizedSeed);
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const attemptSeed = master.nextInt(0x1_0000_0000);
-    const candidate = tryGenerate(attemptSeed, criteria);
+    const rng = createSeededRandom(master.nextInt(0x1_0000_0000));
+    const candidate = carve(fillGrid(rng), rng, criteria, CLASSIC_GEOMETRY);
     if (candidate !== null) {
       return Object.freeze({ ...candidate, seed: normalizedSeed });
     }
@@ -123,4 +148,51 @@ export function generateDailySudoku(options: {
       ? { maxAttempts: options.maxAttempts }
       : {}),
   });
+}
+
+export function generateSudokuVariant(options: {
+  readonly seed: number;
+  readonly weekday: Weekday;
+  readonly variant: SudokuVariant;
+  readonly maxAttempts?: number;
+}): SudokuVariantPuzzle {
+  const { variant } = options;
+  if (!(SUDOKU_VARIANTS as readonly string[]).includes(variant)) {
+    throw new RangeError(
+      `variant must be one of ${SUDOKU_VARIANTS.join(", ")}, got ${String(variant)}`,
+    );
+  }
+  if (variant === "classic") {
+    return Object.freeze({
+      ...generateDailySudoku(options),
+      layout: CLASSIC_LAYOUT,
+    });
+  }
+  const criteria = sudokuCriteriaForWeekday(options.weekday);
+  const maxAttempts = attemptsOf(options.maxAttempts);
+  const normalizedSeed = options.seed >>> 0;
+  const master = createSeededRandom(normalizedSeed);
+  let layout =
+    variant === "diagonal" ? DIAGONAL_LAYOUT : drawIrregularLayout(master);
+  let geometry = geometryFor(layout);
+  let failures = 0;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const rng = createSeededRandom(master.nextInt(0x1_0000_0000));
+    const solution = fillVariant(geometry, rng, FILL_BUDGET);
+    const candidate =
+      solution === null ? null : carve(solution, rng, criteria, geometry);
+    if (candidate !== null) {
+      return Object.freeze({ ...candidate, seed: normalizedSeed, layout });
+    }
+    failures += 1;
+    if (
+      variant === "irregular" &&
+      (solution === null || failures === FAILURES_PER_MAP)
+    ) {
+      layout = drawIrregularLayout(master);
+      geometry = geometryFor(layout);
+      failures = 0;
+    }
+  }
+  throw new SudokuGenerationError(normalizedSeed, criteria, maxAttempts);
 }
