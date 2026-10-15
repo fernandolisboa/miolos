@@ -52,7 +52,7 @@ export function EndingStage({
       cell?.closest(CELLS) ??
       frameRef.current?.querySelector(`${CELLS}[tabindex="0"]`)
     )?.getAttribute("data-cell-index");
-    if (index !== undefined) {
+    if (typeof index === "string") {
       lastCell.current = index;
     }
   };
@@ -65,8 +65,8 @@ export function EndingStage({
       onPointerDownCapture={(event) => {
         remember(event.target as Element);
       }}
-      onPointerUpCapture={(event) => {
-        if ("elementFromPoint" in document) {
+      onPointerMoveCapture={(event) => {
+        if (event.buttons !== 0 && "elementFromPoint" in document) {
           remember(document.elementFromPoint(event.clientX, event.clientY));
         }
       }}

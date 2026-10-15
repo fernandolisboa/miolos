@@ -237,6 +237,9 @@ function withEntry(
   index: number,
   value: SudokuCellValue,
 ): SudokuPlayState {
+  if (state.status !== "playing") {
+    return state;
+  }
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
@@ -244,10 +247,7 @@ function withEntry(
   return {
     ...state,
     ...derived,
-    pendingSync:
-      derived.status === "solved" && state.status !== "solved"
-        ? true
-        : state.pendingSync,
+    pendingSync: derived.status === "solved" ? true : state.pendingSync,
   };
 }
 

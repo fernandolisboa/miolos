@@ -361,6 +361,15 @@ describe("the flourish is ink on paper, and calm under reduced motion (T-WEB-S74
     expect([y1, y2]).toEqual([0, expect.any(Number)]);
     expect(Math.max(y1 ?? 2, y2 ?? 2)).toBeLessThanOrEqual(1);
     expect(decl(bodyOf(drop, "100%"), "transform")).toBe("none");
+    expect(decl(bodyOf(CSS, ".drop"), "animation")).not.toMatch(
+      /forwards|both/,
+    );
+    const swings = [...drop.matchAll(/rotate\((-?[\d.]+)deg\)/g)].map((match) =>
+      Math.abs(Number(match[1])),
+    );
+    expect(swings.length).toBeGreaterThan(0);
+    expect(Math.max(...swings)).toBeLessThanOrEqual(4);
+    expect(swings).toEqual([...swings].sort((a, b) => b - a));
     expect(drop).not.toMatch(/accent/);
   });
 

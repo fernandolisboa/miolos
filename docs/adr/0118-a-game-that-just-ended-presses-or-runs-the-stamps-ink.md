@@ -4,7 +4,7 @@
 **Superseded in part by:** [ADR-0120](./0120-a-win-glows-across-the-board-before-the-result.md) (#357) — decision 1's loss half and decision 4 (a loss now drops heavily and rocks to rest), the Rejected *"Animating the solved board"*, and the consequence that the screens import only `just-ended.ts`.
 **Depends on:** [ADR-0034](./0034-the-completion-celebration-renders-in-the-conclusion.md), [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md)
 **Supersedes in part:** [ADR-0043](./0043-the-conclusion-has-a-fourth-state-and-it-is-a-loss.md) decision 3's sentence *"The loss equivalent of the celebration is the celebration's absence"*, and its Rejected bullet's *"a different animation"*, for a loss that just ended.
-**Amends:** ADR-0102 decision 2 (a new setting, and the general group in every dialog); `PRODUCT.md` §3 and `DESIGN.md` § Motion (the end flourish is the one animation past 250 ms).
+**Amends:** ADR-0102 decision 2 (a new setting, and the general group in every dialog); `PRODUCT.md` §3 and `DESIGN.md` § Motion (the end flourish is the one motion past 250 ms).
 
 ## Context
 
@@ -20,7 +20,7 @@ Fernando asked for an animation at the end of every game: a happier one on a win
 ## Consequences
 
 - `EndingFlourish` reads `JustEnded` and the setting, and wraps a stamp in an `inline-block` anchor; it does not change the stamp's layout. The free-play stamp lost its UA paragraph margin (30px), and `.stampSlot` carries `--space-8` (32px) instead.
-- `DailyScreen` and `ArchiveScreen` import only `just-ended.ts`. The flourish and its sheet load with the conclusion's lazy chunk, the archive's late result and the free-play card.
+- The screens import only `just-ended.ts`. The flourish and its sheet load with the conclusion's lazy chunk, the archive's late result and the free-play card.
 
 ## Rejected
 

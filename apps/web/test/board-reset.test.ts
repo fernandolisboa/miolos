@@ -383,3 +383,39 @@ describe("Recomeçar clears the board and refunds nothing (T-WEB-S514)", () => {
   registerCase(queensCase());
   registerCase(crosswordCase());
 });
+
+describe("a solved board ignores entries while the win glows (T-WEB-S765)", () => {
+  it("keeps Sudoku, Binairo and Cruzadinha solved when a cell is typed again", () => {
+    const sudoku = sudokuCase();
+    const [cell = 0] = SUDOKU_PLAYABLE;
+    const typed = [
+      { type: "select", index: cell },
+      {
+        type: "enter-digit",
+        digit: sudokuDigitSchema.parse(SUDOKU_SOLUTION[cell]),
+      },
+    ] satisfies SudokuPlayAction[];
+    const after = run(sudokuPlayReducer, sudoku.solved, typed);
+    expect(after.status).toBe("solved");
+    expect(after.entries).toEqual(sudoku.solved.entries);
+
+    const binairo = binairoCase();
+    const [tile = 0] = BINAIRO_PLAYABLE;
+    const tapped = playReducer(binairo.solved, {
+      type: "tap",
+      index: tile,
+      press: "tap",
+      first: 1,
+    });
+    expect(tapped.status).toBe("solved");
+    expect(tapped.entries).toEqual(binairo.solved.entries);
+
+    const crossword = crosswordCase();
+    const lettered = run(crosswordPlayReducer, crossword.solved, [
+      { type: "select", index: 0 },
+      { type: "type-letter", letter: "x", skipFilled: false },
+    ]);
+    expect(lettered.status).toBe("solved");
+    expect(lettered.entries).toEqual(crossword.solved.entries);
+  });
+});

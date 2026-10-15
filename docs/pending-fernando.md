@@ -13,7 +13,7 @@
 
 ---
 
-## NOW — one ⚡ decision and one setup step
+## NOW — two ⚡ decisions and one setup step
 
 *(Section numbers were positional and moved three times before the section emptied on 2026-08-21. Several Done rows carry that old numbering in their "Was pending in" column; each row is about its own subject, not about whatever held that number. **Cite Done rows by subject, never by section number.** As promised there, the next item filed starts at §1 again — this is it.)*
 
@@ -34,6 +34,14 @@
 - **Verify:** on miolos.app/ajustes the *Conta Google* card appears; *Entrar com o Google* comes back to Ajustes with "Pronto"; *Desconectar o Google* then works.
 - **Blocks:** Sign in with Google only. Until then the feature is dormant: no sign-in in Ajustes, and both `/auth/google/*` routes answer 503.
 - **Source:** #280, ADR-0089 decision 6. The same steps with copy buttons: https://claude.ai/artifact/3cN7aBhzQxyzyg5xuWGwKe (private to Fernando).
+
+### §3 ⚡ Free-play bundle budgets for the board glow — PR #358
+
+- **Do:** answer the card in the thread "Animação de vitória e derrota" with one word. **Aumentar:** the three budgets below rise 2 KB, recorded in ADR-0120. **Carregar depois:** the free-play result card loads only at the end of the game, so the budgets stay; more work and a small offline risk.
+- **Verify:** `pnpm --filter @miolos/web bundle-check` is green on PR #358.
+- **Blocks:** PR #358 (the win glow and the new loss) only. Measured on 5385f84: `/modo-livre/nonogram` 67.6 of 66 KB, `/modo-livre/termo` 63.1 of 62 KB, `/modo-livre/cruzadinha` 665.0 of 664 KB.
+- **Why it is yours:** the session's safety rules do not let an agent raise a CI budget without your word.
+- **Source:** #357, PR #358.
 
 ---
 

@@ -75,7 +75,7 @@
 
 .drop {
   transform-origin: 50% 100%;
-  animation: ending-drop calc(var(--duration-slow) * 6) both;
+  animation: ending-drop calc(var(--duration-slow) * 6);
 }
 
 @keyframes ending-drop {

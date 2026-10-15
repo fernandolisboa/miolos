@@ -180,9 +180,11 @@ describe("a win that just ended glows across the same board first (T-WEB-S761)",
 
   it("does the same on an archive day", () => {
     allowMotion();
-    solveFromOpen(archive);
+    const view = render(archive(OPEN));
+    const board = screen.getByTestId("board");
+    view.rerender(archive(SOLVED));
 
-    expect(screen.getByTestId("board")).toBeInTheDocument();
+    expect(screen.getByTestId("board")).toBe(board);
     fireEvent.animationEnd(cell(3));
     expect(screen.queryByTestId("board")).toBeNull();
   });
@@ -221,6 +223,65 @@ describe("the glow starts from the cell the player touched last (T-WEB-S762)", (
     expect(delayOf(1)).toBe("0ms");
   });
 
+  it("follows a drag to the last cell painted", () => {
+    allowMotion();
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: () => cell(0),
+    });
+    const view = render(daily(OPEN));
+    fireEvent.pointerDown(cell(3));
+    fireEvent.pointerMove(cell(3), { buttons: 1 });
+    view.rerender(daily(SOLVED));
+    Reflect.deleteProperty(document, "elementFromPoint");
+
+    expect(delayOf(0)).toBe("0ms");
+    expect(delayOf(3)).toBe("700ms");
+  });
+
+  it("ignores a hover with no button down", () => {
+    allowMotion();
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: () => cell(0),
+    });
+    const view = render(daily(OPEN));
+    fireEvent.pointerDown(cell(3));
+    fireEvent.pointerMove(cell(3), { buttons: 0 });
+    view.rerender(daily(SOLVED));
+    Reflect.deleteProperty(document, "elementFromPoint");
+
+    expect(delayOf(3)).toBe("0ms");
+  });
+
+  it("never waits on a Cruzadinha black square", () => {
+    allowMotion();
+    const blocked = (state: PlayCore) => (
+      <DailyScreen
+        game="crossword"
+        claim={undefined}
+        state={state}
+        skeleton={<div data-testid="skeleton" />}
+        view={
+          <div data-testid="board">
+            <button type="button" data-cell-index={0} data-x={0} />
+            <button type="button" data-cell-index={1} data-x={40} />
+            <button type="button" data-cell-index={2} data-x={400} data-block />
+          </div>
+        }
+        result={{ elapsedMs: 6_000, hintsUsed: 0 }}
+      />
+    );
+    const view = render(blocked(OPEN));
+    fireEvent.pointerDown(cell(0));
+    view.rerender(blocked(SOLVED));
+
+    expect(delayOf(2)).toBe("");
+    expect(delayOf(1)).toBe("700ms");
+    fireEvent.animationEnd(cell(1));
+    expect(screen.getByTestId("result")).toBeInTheDocument();
+  });
+
   it("starts from the middle when nothing was touched", () => {
     allowMotion();
     solveFromOpen(daily);
@@ -231,6 +292,10 @@ describe("the glow starts from the cell the player touched last (T-WEB-S762)", (
 
 const SEED = 20_261_015;
 const WORD = drawFreeTermoWord(SEED);
+const MISSES = TERMO_VALIDATION_WORDS.filter(
+  (word) => word !== normalizeWord(WORD),
+).slice(0, MAX_GUESSES);
+const [MISS = ""] = MISSES;
 
 async function guess(word: string): Promise<void> {
   for (const letter of normalizeWord(word)) {
@@ -247,12 +312,19 @@ describe("free play glows on a win and goes straight to the card on a loss (T-WE
     allowMotion();
     render(<TermoFreeScreen deps={{ pickSeed: () => SEED }} />);
     await flushGeneration();
+    await guess(MISS);
+    const board = screen.getByRole("group", {
+      name: messages.games.termo.play.boardAria,
+    });
     await guess(WORD);
 
     expect(screen.queryByText(messages.freePlay.solved.stamp)).toBeNull();
+    expect(
+      screen.getByRole("group", { name: messages.games.termo.play.boardAria }),
+    ).toBe(board);
     const origins = document.querySelectorAll("[data-wave-origin]");
     expect(origins).toHaveLength(1);
-    expect(origins[0]).toBe(cell(4));
+    expect(origins[0]).toBe(cell(9));
     expect(document.querySelectorAll("[data-cell-index]")).toHaveLength(
       MAX_GUESSES * 5,
     );
@@ -265,10 +337,7 @@ describe("free play glows on a win and goes straight to the card on a loss (T-WE
     allowMotion();
     render(<TermoFreeScreen deps={{ pickSeed: () => SEED }} />);
     await flushGeneration();
-    const misses = TERMO_VALIDATION_WORDS.filter(
-      (word) => word !== normalizeWord(WORD),
-    ).slice(0, MAX_GUESSES);
-    for (const word of misses) {
+    for (const word of MISSES) {
       await guess(word);
     }
 
@@ -289,7 +358,7 @@ describe("the glow is paint on the cells, calm under reduced motion (T-WEB-S764)
         bodyOf(stylesheet("src/termo/termo-board.module.css"), ".grid"),
         "--wave-lead",
       ),
-    ).toBe("calc(var(--duration-fast) + 240ms)");
+    ).toBe("calc(var(--duration-fast) + var(--reveal-stagger) * 4)");
   });
 
   it("paints the accent and moves nothing, so gapless boards keep their edges", () => {
