@@ -106,6 +106,7 @@ function search(
       if (grid[i]! !== 0) {
         continue;
       }
+      // takenAt/toggle inlined on the generator's hot path, see ADR-0130 decision 2
       let taken = rows[rowOf(i)]! | cols[colOf(i)]! | regions[regionOf[i]!]!;
       if (hasExtras) {
         taken |= masks.extrasTaken(i);
@@ -201,7 +202,7 @@ export function fillVariant(
   const places = new Array<number>(9).fill(0);
   let nodes = budget;
 
-  const movesAt = (): (readonly [number, number])[] | null => {
+  const movesAt = (): (readonly [number, number])[] | "solved" | "dead" => {
     let best = -1;
     let fewest = 10;
     for (let i = 0; i < 81; i += 1) {
@@ -212,8 +213,11 @@ export function fillVariant(
         best = i;
       }
     }
-    if (best === -1 || fewest === 0) {
-      return best === -1 ? [] : null;
+    if (best === -1) {
+      return "solved";
+    }
+    if (fewest === 0) {
+      return "dead";
     }
     let scarceUnit = -1;
     let scarceBit = 0;
@@ -230,7 +234,7 @@ export function fillVariant(
       for (let m = ~placed & 0x1ff; m !== 0; m &= m - 1) {
         const d = 31 - Math.clz32(m & -m);
         if (places[d]! === 0) {
-          return null;
+          return "dead";
         }
         if (places[d]! < fewest) {
           fewest = places[d]!;
@@ -260,10 +264,10 @@ export function fillVariant(
       return false;
     }
     const moves = movesAt();
-    if (moves === null) {
+    if (moves === "dead") {
       return false;
     }
-    if (moves.length === 0) {
+    if (moves === "solved") {
       return true;
     }
     for (const [cell, bit] of moves) {

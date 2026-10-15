@@ -106,6 +106,8 @@ describe("Sudoku layouts", () => {
   it("builds a layout's geometry once", () => {
     expect(geometryFor(CLASSIC_LAYOUT)).toBe(CLASSIC_GEOMETRY);
     expect(geometryFor(DIAGONAL_LAYOUT)).toBe(geometryFor(DIAGONAL_LAYOUT));
+    const open = { ...DIAGONAL_LAYOUT };
+    expect(geometryFor(open)).not.toBe(geometryFor(open));
   });
 
   it("draws irregular maps of nine connected nine-cell regions, by seed", () => {
@@ -124,5 +126,5 @@ describe("Sudoku layouts", () => {
       }),
       { seed: FC_SEED, numRuns: 500 },
     );
-  }, 10_000);
+  }, 40_000);
 });

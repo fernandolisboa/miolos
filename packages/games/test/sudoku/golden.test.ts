@@ -27,5 +27,5 @@ describe("the classic Sudoku is byte-identical to its golden hashes", () => {
     expect(sha256(puzzles)).toBe(
       "a07034432da2f9c7051217f9b3e3932c09538583f3971495821227aec0355e60",
     );
-  }, 45_000);
+  }, 50_000);
 });

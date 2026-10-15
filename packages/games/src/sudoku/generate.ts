@@ -1,7 +1,7 @@
 import { createSeededRandom, shuffleInPlace } from "../random";
 import type { SeededRandom } from "../random";
 import type { Weekday } from "../weekday";
-import { CLASSIC_GEOMETRY, CLASSIC_LAYOUT, geometryOf } from "./board";
+import { CLASSIC_GEOMETRY, CLASSIC_LAYOUT, geometryFor } from "./board";
 import type { SudokuGeometry } from "./board";
 import { gradeInternal } from "./grade";
 import { drawIrregularLayout } from "./irregular";
@@ -15,6 +15,7 @@ import type {
   SudokuVariant,
   SudokuVariantPuzzle,
 } from "./types";
+import { SUDOKU_VARIANTS } from "./types";
 import { sudokuCriteriaForWeekday } from "./criteria";
 import { validateCriteria } from "./validate";
 
@@ -23,8 +24,6 @@ export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
 const FILL_BUDGET = 1000;
 
 const FAILURES_PER_MAP = 8;
-
-export const SUDOKU_VARIANTS = ["classic", "diagonal", "irregular"] as const;
 
 export const DIAGONAL_LAYOUT: SudokuLayout = Object.freeze({
   regions: CLASSIC_LAYOUT.regions,
@@ -175,7 +174,7 @@ export function generateSudokuVariant(options: {
   const master = createSeededRandom(normalizedSeed);
   let layout =
     variant === "diagonal" ? DIAGONAL_LAYOUT : drawIrregularLayout(master);
-  let geometry = geometryOf(layout);
+  let geometry = geometryFor(layout);
   let failures = 0;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const rng = createSeededRandom(master.nextInt(0x1_0000_0000));
@@ -191,7 +190,7 @@ export function generateSudokuVariant(options: {
       (solution === null || failures === FAILURES_PER_MAP)
     ) {
       layout = drawIrregularLayout(master);
-      geometry = geometryOf(layout);
+      geometry = geometryFor(layout);
       failures = 0;
     }
   }

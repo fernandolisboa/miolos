@@ -21,7 +21,7 @@ import { PINNED_VARIANT_SEED, PINNED_VARIANTS } from "./variant-fixtures";
 
 const PINNED_WEEKDAY: Weekday = 4;
 
-const PROPERTY_TIMEOUT = { diagonal: 375_000, irregular: 645_000 };
+const PROPERTY_TIMEOUT = { diagonal: 130_000, irregular: 165_000 };
 
 function unitsOf(layout: SudokuLayout): number[][] {
   const lines = Array.from({ length: 9 }, (_, k) => [

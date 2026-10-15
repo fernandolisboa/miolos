@@ -119,6 +119,9 @@ const GEOMETRIES = new WeakMap<SudokuLayout, SudokuGeometry>([
 ]);
 
 export function geometryFor(layout: SudokuLayout): SudokuGeometry {
+  if (!Object.isFrozen(layout)) {
+    return geometryOf(layout);
+  }
   let geometry = GEOMETRIES.get(layout);
   if (geometry === undefined) {
     geometry = geometryOf(layout);

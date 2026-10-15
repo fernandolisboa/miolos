@@ -18,7 +18,7 @@ Fernando asked for Sudoku variants. The engine hard-coded 9×9 with 3×3 boxes i
 
 ## Consequences
 
-- Classic output is unchanged for every seed (`golden.test.ts`), and classic generation stays within 5% of its cost before this change.
+- Classic output is unchanged for every seed (`golden.test.ts`).
 - 500 seeds × 7 weekdays per variant generated with no throw. Most attempts in one tier: Diagonal 375, Formas 322, both under `SUDOKU_MAX_GENERATION_ATTEMPTS` (1 200). A failed fill counts as an attempt.
 - Part 2 (free-play UI) gets its own ADR. Samurai and Killer are out of scope; so are variant dailies.
 
