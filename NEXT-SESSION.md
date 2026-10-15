@@ -31,8 +31,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Traps
 
-**`bundle-check` is not in CI (#155).** Run `pnpm --filter @miolos/web build && pnpm --filter @miolos/web bundle-check` by hand on any PR that touches a play route. The default is 48 KB over `/` (ADR-0112), and `/nonogram` sat at 43.8 KB with #344; ADR-0112 names the next trims. `/modo-livre/cruzadinha` sits at 658.3 of 660 KB.
-
 **Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change.
 
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
@@ -49,4 +47,4 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 **Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it, Zod-parse the size, and paint `generating` before the synchronous 7×7 generation (up to ~650 ms). Alongside, the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI; until then run it by hand on any play-route PR: the default is 48 KB over `/`, ADR-0112, and `/modo-livre/cruzadinha` sits at 658.3 of 660 KB); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
