@@ -12,10 +12,10 @@
 
 @keyframes tone-wipe {
   from {
-    clip-path: polygon(0 0, 0 0, 0 0);
+    clip-path: polygon(-10% -10%, -10% -10%, -10% -10%);
   }
   to {
-    clip-path: polygon(0 0, 200% 0, 0 200%);
+    clip-path: polygon(-10% -10%, 230% -10%, -10% 230%);
   }
 }
 

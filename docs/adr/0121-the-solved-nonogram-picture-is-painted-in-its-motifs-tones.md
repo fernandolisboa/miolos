@@ -25,6 +25,6 @@ Fernando asked for the Nonogram picture to turn into color when the board is sol
 ## Rejected
 
 - **Colors derived from the bitmap** (a hue gradient): a green cat is not the picture colored.
-- **A stateless colors endpoint keyed by the solved bitmap**: a second post-completion route where ADR-0070's claim seam exists, and a free-play request.
+- **A stateless colors endpoint keyed by the solved bitmap**: a second post-completion route where ADR-0070's claim seam already serves the daily, and a free-play request. The archive's late result draws no picture today; painting one there is new surface, and it would need such a route or a per-date claim.
 - **Tones in the daily payload**: they would hint at the picture before it is solved.
 - **Shipping the authored rows as they are**: about 26 KB on free play, against 6.8 KB run-length.

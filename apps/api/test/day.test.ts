@@ -10,7 +10,7 @@ import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
-import { isWeekday } from "@miolos/games";
+import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { motifTones } from "@miolos/games/nonogram-colors";
@@ -130,13 +130,26 @@ async function seedNonogram(date: string, name: string): Promise<void> {
   if (!isWeekday(weekday)) {
     throw new Error(`unreachable: bad weekday for ${date}`);
   }
-  const content = generateNonogram(7, weekday);
+  const seed = mirroredSeed(weekday);
+  const content = generateNonogram(seed, weekday);
   await insertDailyPuzzle(ctx.db, {
     game: "nonogram",
     date,
-    seed: 7,
+    seed,
     content: { ...content, reveal: { ...content.reveal, name } },
   });
+}
+
+function mirroredSeed(weekday: Weekday): number {
+  for (let seed = 1; ; seed++) {
+    const { reveal } = generateNonogram(seed, weekday);
+    if (
+      reveal.mirrored &&
+      motifTones(reveal.motifId, true) !== motifTones(reveal.motifId, false)
+    ) {
+      return seed;
+    }
+  }
 }
 
 function seededTones(date: string): string | undefined {
@@ -144,8 +157,8 @@ function seededTones(date: string): string | undefined {
   if (!isWeekday(weekday)) {
     throw new Error(`unreachable: bad weekday for ${date}`);
   }
-  const { reveal } = generateNonogram(7, weekday);
-  return motifTones(reveal.motifId, reveal.mirrored);
+  const { reveal } = generateNonogram(mirroredSeed(weekday), weekday);
+  return motifTones(reveal.motifId, true);
 }
 
 async function readDay(token: string, search = ""): Promise<DayResponse> {
