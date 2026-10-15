@@ -1,0 +1,26 @@
+.outline {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  stroke-linecap: square;
+}
+
+.wipe {
+  animation: tone-wipe calc(var(--duration-slow) * 3.6) ease-in-out both;
+  animation-delay: var(--duration-slow);
+}
+
+@keyframes tone-wipe {
+  from {
+    clip-path: polygon(-10% -10%, -10% -10%, -10% -10%);
+  }
+  to {
+    clip-path: polygon(-10% -10%, 230% -10%, -10% 230%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wipe {
+    animation: none;
+  }
+}

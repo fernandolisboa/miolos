@@ -221,6 +221,39 @@ describe("the day-truth store's refresh discipline (T-WEB-S235)", () => {
   });
 });
 
+describe("a refetch that changes ONLY the motif tones is a change (T-WEB-S905)", () => {
+  it("re-renders when the tones land on an already-named claim", async () => {
+    let motifTones: string | undefined = undefined;
+    stubFetch(() =>
+      jsonResponse(
+        200,
+        payload({
+          nonogram: {
+            status: "completed",
+            elapsedMs: 512_000,
+            hintsUsed: 0,
+            motifName: "Âncora",
+            ...(motifTones === undefined ? {} : { motifTones }),
+          },
+        }),
+      ),
+    );
+    const { useDayTruth } = await loadStore();
+
+    const rendered = renderHook(() => useDayTruth());
+    await flush();
+    const first = rendered.result.current;
+    expect(first?.games.nonogram.motifTones).toBeUndefined();
+
+    motifTones = ".kr.";
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+    expect(rendered.result.current).not.toBe(first);
+    expect(rendered.result.current?.games.nonogram.motifTones).toBe(".kr.");
+    rendered.unmount();
+  });
+});
+
 describe("the day-truth store's triggers (T-WEB-S236)", () => {
   it("refetches on visibilitychange -> visible, on focus and on online", async () => {
     const fetchMock = stubFetch(() => jsonResponse(200, payload()));
