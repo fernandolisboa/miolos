@@ -8,11 +8,7 @@ import {
   type PointerEvent,
 } from "react";
 
-import { useDismiss } from "./use-dismiss";
-
-function isEscape(event: KeyboardEvent): boolean {
-  return event.key === "Escape";
-}
+import { closesOnEscape, useDismiss } from "./use-dismiss";
 
 export function useTip<Root extends HTMLElement>() {
   const [open, setOpen] = useState(false);
@@ -20,7 +16,7 @@ export function useTip<Root extends HTMLElement>() {
   const rootRef = useRef<Root>(null);
   const pressedBy = useRef<string | null>(null);
 
-  useDismiss(open, rootRef, setOpen, isEscape);
+  useDismiss(open, rootRef, setOpen, closesOnEscape);
 
   const hover = (next: boolean) => (event: PointerEvent) => {
     if (event.pointerType !== "mouse") return;
