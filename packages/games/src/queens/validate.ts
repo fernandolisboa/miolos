@@ -1,7 +1,7 @@
 import { assertWeekday } from "../weekday";
 import type { Weekday } from "../weekday";
 import { gradeQueens } from "./grade";
-import { floodRegion } from "./internal";
+import { floodRegion } from "../regions";
 import { isValidQueensSolution } from "./rules";
 import { countQueensSolutions } from "./solve";
 import type {

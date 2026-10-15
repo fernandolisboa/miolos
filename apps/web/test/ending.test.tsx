@@ -260,7 +260,8 @@ describe("free play always ends in front of the player (T-WEB-S743)", () => {
     render(
       <FreePlaySolvedCard
         game="termo"
-        word={{ canonical: "ÁBACO", won: false }}
+        words={["ÁBACO"]}
+        lost
         onAgain={() => undefined}
       />,
     );

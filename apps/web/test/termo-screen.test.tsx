@@ -805,7 +805,7 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     expect(decl(tile, "aspect-ratio")).toBe("1");
     expect(decl(tile, "width")).toBeUndefined();
     expect(decl(tile, "height")).toBeUndefined();
-    expect(decl(tile, "font-size")).toMatch(/^clamp\(14px,/);
+    expect(decl(tile, "font-size")).toMatch(/^clamp\(\s*14px,/);
     expect(pixels(decl(bodyOf(css, ".grid"), "gap"))).toBe(4);
     expect(pixels(decl(bodyOf(css, ".row"), "gap"))).toBe(4);
 
@@ -879,7 +879,9 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     expect(decl(keyboard, "max-width")).toBe("100%");
 
     expect(decl(keyboard, "gap")).toBe("var(--space-2)");
-    expect(decl(keyboard, "margin-top")).toBe("var(--space-5)");
+    expect(decl(keyboard, "margin-top")).toBe(
+      "var(--keyboard-gap, var(--space-5))",
+    );
 
     const chrome = mobileChrome(css);
     const mobile = bodyOf(chrome, ".keyboard");

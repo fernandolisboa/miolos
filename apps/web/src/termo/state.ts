@@ -13,7 +13,7 @@ import type { TermoJudgedRow, TermoPlayAction, TermoPlayState } from "./types";
 
 const copy = messages.games.termo.play;
 
-const EMPTY_DRAFT: readonly string[] = Array.from(
+export const EMPTY_DRAFT: readonly string[] = Array.from(
   { length: WORD_LENGTH },
   () => "",
 );
@@ -56,59 +56,14 @@ export function termoPlayReducer(
         now: action.now,
       };
 
-    case "type": {
-      const letter = typedLetter(action.letter);
-      if (!accepting(state) || letter === null) {
-        return state;
-      }
-      const draft = withSlot(state.draft, state.cursor, letter);
-      return {
-        ...state,
-        draft,
-        cursor: nextCursor(draft, state.cursor),
-        announcement: copy.letterTypedAria(
-          letter,
-          state.cursor + 1,
-          WORD_LENGTH,
-        ),
-      };
-    }
-
-    case "erase": {
-      if (!accepting(state)) {
-        return state;
-      }
-      const slot =
-        state.draft[state.cursor] === "" ? state.cursor - 1 : state.cursor;
-      const erased = state.draft[slot];
-      if (erased === undefined) {
-        return state;
-      }
-      if (erased === "") {
-        return { ...state, cursor: slot };
-      }
-      return {
-        ...state,
-        draft: withSlot(state.draft, slot, ""),
-        cursor: slot,
-        announcement: copy.letterErasedAria(erased, slot + 1, WORD_LENGTH),
-      };
-    }
-
-    case "select": {
-      if (
-        !accepting(state) ||
-        action.slot === state.cursor ||
-        state.draft[action.slot] === undefined
-      ) {
-        return state;
-      }
-      return { ...state, cursor: action.slot };
-    }
+    case "type":
+    case "erase":
+    case "select":
+      return accepting(state) ? editDraft(state, action) : state;
 
     case "submit": {
-      const word = state.draft.join("");
-      if (!accepting(state) || word.length !== WORD_LENGTH) {
+      const word = submittedWord(state.draft);
+      if (!accepting(state) || word === null) {
         return state;
       }
       if (!isValidGuess(word)) {
@@ -209,6 +164,71 @@ function accepting(state: TermoPlayState): boolean {
   return state.status === "playing" && state.pending === null;
 }
 
+export interface TermoDraft {
+  readonly draft: readonly string[];
+  readonly cursor: number;
+  readonly announcement: string;
+}
+
+export type TermoDraftAction = Extract<
+  TermoPlayAction,
+  { readonly type: "type" | "erase" | "select" }
+>;
+
+export function editDraft<S extends TermoDraft>(
+  state: S,
+  action: TermoDraftAction,
+): S {
+  switch (action.type) {
+    case "type": {
+      const letter = typedLetter(action.letter);
+      if (letter === null) {
+        return state;
+      }
+      const draft = withSlot(state.draft, state.cursor, letter);
+      return {
+        ...state,
+        draft,
+        cursor: nextCursor(draft, state.cursor),
+        announcement: copy.letterTypedAria(
+          letter,
+          state.cursor + 1,
+          WORD_LENGTH,
+        ),
+      };
+    }
+
+    case "erase": {
+      const slot =
+        state.draft[state.cursor] === "" ? state.cursor - 1 : state.cursor;
+      const erased = state.draft[slot];
+      if (erased === undefined) {
+        return state;
+      }
+      if (erased === "") {
+        return { ...state, cursor: slot };
+      }
+      return {
+        ...state,
+        draft: withSlot(state.draft, slot, ""),
+        cursor: slot,
+        announcement: copy.letterErasedAria(erased, slot + 1, WORD_LENGTH),
+      };
+    }
+
+    case "select":
+      return action.slot === state.cursor ||
+        state.draft[action.slot] === undefined
+        ? state
+        : { ...state, cursor: action.slot };
+  }
+}
+
+export function submittedWord(draft: readonly string[]): string | null {
+  const word = draft.join("");
+  return word.length === WORD_LENGTH ? word : null;
+}
+
 function withSlot(
   draft: readonly string[],
   slot: number,
@@ -227,7 +247,9 @@ function nextCursor(draft: readonly string[], from: number): number {
   return Math.min(from + 1, WORD_LENGTH - 1);
 }
 
-function noticed(state: TermoPlayState, notice: string): TermoPlayState {
+export function noticed<
+  S extends { readonly notice: string | null; readonly noticeNonce: number },
+>(state: S, notice: string): S {
   return { ...state, notice, noticeNonce: state.noticeNonce + 1 };
 }
 
