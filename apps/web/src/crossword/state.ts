@@ -226,7 +226,10 @@ function restore(
   record: PlayRecord | undefined,
   now: number,
 ): CrosswordPlayState {
-  if (!isCrosswordRecord(record)) {
+  if (
+    !isCrosswordRecord(record) ||
+    record.entries.length !== state.entries.length
+  ) {
     return { ...state, now, hydrated: true };
   }
   return {

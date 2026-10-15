@@ -28,5 +28,4 @@ export const SEVEN_DAILY: DailyCrosswordResponse = projectCrossword(
       clue: `pista ${word.normalized}`,
     })),
   },
-  7,
 );

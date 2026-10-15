@@ -19,7 +19,13 @@ export function ArchiveCrosswordScreen({
     <ArchiveScreen
       game="crossword"
       state={play.state}
-      skeleton={<PlaySkeleton date={daily.date} archive={archive} />}
+      skeleton={
+        <PlaySkeleton
+          date={daily.date}
+          size={play.state.size}
+          archive={archive}
+        />
+      }
       view={<PlayView play={play} archive={archive} />}
     />
   );

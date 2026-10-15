@@ -638,7 +638,7 @@ describe("crosswordCompletionRequestSchema", () => {
     ]);
   });
 
-  it("T-CORE-S124: every cell is one a-z letter or null, and the grid is exactly 25 long", () => {
+  it("T-CORE-S124: every cell is one a-z letter or null, and a 24- or 26-cell grid fails", () => {
     const withCell = (cell: unknown) => ({
       ...validCrossword,
       grid: [cell, ...crosswordGrid.slice(1)],
@@ -662,6 +662,25 @@ describe("crosswordCompletionRequestSchema", () => {
       ).toBe(false);
     }
     expect(completionRequestSchema.safeParse(withCell("z")).success).toBe(true);
+  });
+
+  it("T-CORE-S190: the grid holds 25 or 49 cells, a 5x5 or a 7x7, and nothing between or past", () => {
+    for (const length of [25, 49]) {
+      const body = {
+        ...validCrossword,
+        grid: Array.from({ length }, () => "a"),
+      };
+      expect(completionRequestSchema.parse(body)).toEqual(body);
+    }
+    for (const length of [0, 24, 36, 48, 50, 64]) {
+      const body = {
+        ...validCrossword,
+        grid: Array.from({ length }, () => "a"),
+      };
+      expect(completionRequestSchema.safeParse(body).success, `${length}`).toBe(
+        false,
+      );
+    }
   });
 });
 

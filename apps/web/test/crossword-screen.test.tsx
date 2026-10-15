@@ -14,7 +14,10 @@ import { CrosswordScreen } from "../src/crossword/crossword-screen";
 import keyStyles from "../src/crossword/crossword-keyboard.module.css";
 import { Keyboard, KeyboardSkeleton } from "../src/crossword/keyboard";
 import { PlaySkeleton } from "../src/crossword/play-view";
+import { ArchiveCrosswordScreen } from "../src/archive/crossword-screen";
+import { archiveChrome } from "../src/archive/chrome";
 import { bodyOf, decl, stylesheet } from "./css-source";
+import { SEVEN_DAILY } from "./crossword-seven";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -513,15 +516,58 @@ describe("the clue bar keeps one height for every clue (T-WEB-S605)", () => {
   });
 });
 
+describe("a 7x7 daily lays its skeleton and board on seven tracks, at the 7x7 floor (T-WEB-S732)", () => {
+  function sizing(container: HTMLElement) {
+    return {
+      tracks: container
+        .querySelector<HTMLElement>(`.${boardStyles.grid ?? ""}`)
+        ?.style.getPropertyValue("--crossword-size"),
+      seven:
+        container.querySelector(`.${boardStyles.pageSize7 ?? ""}`) !== null,
+    };
+  }
+
+  it("sizes the daily and the archive skeleton from the side it is given", () => {
+    const archive = archiveChrome(DATE);
+    for (const skeleton of [
+      <PlaySkeleton key="daily" date={DATE} size={7} />,
+      <PlaySkeleton key="archive" date={DATE} size={7} archive={archive} />,
+    ]) {
+      expect(sizing(render(skeleton).container)).toEqual({
+        tracks: "7",
+        seven: true,
+      });
+    }
+    expect(
+      sizing(render(<PlaySkeleton date={DATE} size={5} />).container),
+    ).toEqual({ tracks: "5", seven: false });
+  });
+
+  it("sizes the daily and the archive play view from the daily's grid", () => {
+    for (const screenOf of [
+      <CrosswordScreen key="daily" daily={SEVEN_DAILY} />,
+      <ArchiveCrosswordScreen key="archive" daily={SEVEN_DAILY} />,
+    ]) {
+      expect(sizing(render(screenOf).container)).toEqual({
+        tracks: "7",
+        seven: true,
+      });
+    }
+    expect(sizing(render(<CrosswordScreen daily={DAILY} />).container)).toEqual(
+      { tracks: "5", seven: false },
+    );
+  });
+});
+
 describe("daily rendering (T-WEB-S439)", () => {
   it("lays the loading and the live grid on five tracks", () => {
     const fiveTracks = (container: HTMLElement) =>
       container
         .querySelector<HTMLElement>(`.${boardStyles.grid ?? ""}`)
         ?.style.getPropertyValue("--crossword-size");
-    expect(fiveTracks(render(<PlaySkeleton date={DATE} />).container)).toBe(
-      "5",
-    );
+    expect(
+      fiveTracks(render(<PlaySkeleton date={DATE} size={5} />).container),
+    ).toBe("5");
     expect(
       fiveTracks(render(<CrosswordScreen daily={DAILY} />).container),
     ).toBe("5");

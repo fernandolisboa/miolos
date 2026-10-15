@@ -69,6 +69,26 @@ describe("GET /daily/crossword", () => {
     expect(Object.keys(body).sort()).toEqual(["clues", "date", "game", "grid"]);
   }, 30_000);
 
+  it.each([5, 7] as const)(
+    "T-API-S332: serves a stored day of side %i, sized by its grid",
+    async (size) => {
+      const today = await todaySaoPaulo(ctx.db);
+      const stored = generateCrossword(7, size);
+      await insertDailyPuzzle(ctx.db, {
+        game: "crossword",
+        date: today,
+        seed: stored.seed,
+        content: stored,
+      });
+      const response = await GET();
+      expect(response.status).toBe(200);
+      const body = dailyCrosswordResponseSchema.parse(await response.json());
+      expect(body.grid).toEqual(stored.grid);
+      expect(body.clues).toHaveLength(stored.entries.length);
+    },
+    30_000,
+  );
+
   it("T-API-S220: carries no seed/canonical/normalized key at any depth (leak scan, not just parse success)", async () => {
     const today = await todaySaoPaulo(ctx.db);
     await seedDate(today);

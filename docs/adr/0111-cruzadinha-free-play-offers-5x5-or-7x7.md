@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #330)
 **Depends on:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md), [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md), [ADR-0108](./0108-the-cruzadinha-size-is-a-parameter-and-the-lexicon-reaches-seven-letters.md)
 **Amends:** ADR-0046 decisions 2 and 3 for the Cruzadinha, and its main-thread consequence; ADR-0088 decisions 1 and 2; ADR-0103 decision 8; ADR-0108 decision 2 and its last consequence.
+**Superseded in part by:** [ADR-0117](./0117-the-daily-cruzadinha-is-7x7.md) (#330) — decision 2 and the last consequence: the projection and every crossword schema are sized by the grid, not the caller, and the daily is 7×7.
 
 ## Context
 

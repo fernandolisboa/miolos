@@ -228,14 +228,14 @@ vi.mock("@miolos/games/crossword", async (importOriginal) => {
   return {
     ...actual,
     generateCrossword: (
-      seed: Parameters<typeof actual.generateCrossword>[0],
+      ...[seed, size]: Parameters<typeof actual.generateCrossword>
     ) => {
       crossword.calls += 1;
       if (crossword.failCount > 0) {
         crossword.failCount -= 1;
         throw new actual.CrosswordGenerationError(seed, 1);
       }
-      const puzzle = actual.generateCrossword(seed);
+      const puzzle = actual.generateCrossword(seed, size);
       return crossword.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
     },
     validateCrossword: (
@@ -903,7 +903,7 @@ describe("topUpTermoBuffer", () => {
 });
 
 describe("topUpCrosswordBuffer", () => {
-  it("T-API-S221: covers a full week with content the strict contract and the validator both accept", async () => {
+  it("T-API-S221: covers a full week of 7×7 content the strict contract and the validator both accept", async () => {
     const result = await topUpCrosswordBuffer(ctx.db, 7);
 
     expect(result).toEqual({ generated: 7, depth: 7, failures: [] });
@@ -911,22 +911,61 @@ describe("topUpCrosswordBuffer", () => {
     expect(rows).toHaveLength(7);
     for (const row of rows) {
       const content = crosswordDailyContentSchema.parse(row.content);
+      expect(content.grid).toHaveLength(7);
       expect(validateCrossword(content).ok).toBe(true);
     }
   }, 30_000);
 
-  it("T-API-S330: the stored daily contract refuses a 7×7 puzzle", async () => {
+  it("T-API-S330: the stored daily contract accepts 5×5 and 7×7 and refuses any other shape", async () => {
     const { generateCrossword } = await vi.importActual<
       typeof import("@miolos/games/crossword")
     >("@miolos/games/crossword");
+    const seven = generateCrossword(1, 7);
+    const white = (widths: readonly number[]): string[][] =>
+      widths.map((width) => Array.from({ length: width }, () => "a"));
 
     expect(
       crosswordDailyContentSchema.safeParse(generateCrossword(1)).success,
     ).toBe(true);
-    expect(
-      crosswordDailyContentSchema.safeParse(generateCrossword(1, 7)).success,
-    ).toBe(false);
+    expect(crosswordDailyContentSchema.safeParse(seven).success).toBe(true);
+    for (const grid of [
+      white([6, 6, 6, 6, 6, 6]),
+      white([5, 5, 5, 5, 5, 5, 5]),
+      white([7, 7, 7, 7, 7]),
+      white([5, 7, 5, 5, 5]),
+      seven.grid.map((row, index) => (index === 3 ? row.slice(2) : row)),
+    ]) {
+      expect(
+        crosswordDailyContentSchema.safeParse({ ...seven, grid }).success,
+        JSON.stringify(grid.map((row) => row.length)),
+      ).toBe(false);
+    }
   });
+
+  it("T-API-S331: a buffered 5×5 day is left exactly as stored, and the next missing date is 7×7", async () => {
+    const { generateCrossword } = await vi.importActual<
+      typeof import("@miolos/games/crossword")
+    >("@miolos/games/crossword");
+    const today = await todaySaoPaulo(ctx.db);
+    await ctx.db.insert(dailyPuzzles).values({
+      game: "crossword",
+      date: today,
+      seed: 11,
+      content: generateCrossword(11),
+      publishedAt: sql`now() - interval '1 hour'`,
+    });
+    const before = await ctx.db.select().from(dailyPuzzles);
+
+    const result = await topUpCrosswordBuffer(ctx.db, 2);
+
+    expect(result).toEqual({ generated: 1, depth: 2, failures: [] });
+    const after = await ctx.db.select().from(dailyPuzzles);
+    expect(after.find((row) => row.date === today)).toEqual(before[0]);
+    const next = after.find((row) => row.date === addDays(today, 1));
+    expect(crosswordDailyContentSchema.parse(next?.content).grid).toHaveLength(
+      7,
+    );
+  }, 30_000);
 
   it("T-API-S222: a seed whose generation fails once retries and still fills the date", async () => {
     crossword.failCount = 1;

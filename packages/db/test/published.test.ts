@@ -20,6 +20,7 @@ import { dailyPuzzles } from "../src/schema";
 import { createTestDb } from "../src/testing";
 import {
   binairoContentFixture,
+  crosswordContentFixture,
   nonogramContentFixture,
   sudokuContentFixture,
   termoContentFixture,
@@ -41,11 +42,12 @@ afterAll(async () => {
 
 const CONTENT_FIXTURES: Readonly<
   Record<
-    "binairo" | "nonogram" | "sudoku" | "termo",
+    "binairo" | "crossword" | "nonogram" | "sudoku" | "termo",
     () => Record<string, unknown>
   >
 > = {
   binairo: binairoContentFixture,
+  crossword: crosswordContentFixture,
   nonogram: nonogramContentFixture,
   sudoku: sudokuContentFixture,
   termo: termoContentFixture,
@@ -658,6 +660,26 @@ describe("the ARCHIVE wall (#31, ADR-0053 decision 4)", () => {
     expect(archived?.date).toBe(date);
 
     expect(archived).toEqual(await getPublishedDaily(ctx.db, "binairo", date));
+  });
+
+  it("T-DB-S142: a stored 7×7 crossword is served by the today, published and archive readers", async () => {
+    const today = await spDate(0);
+    const past = await spDate(-3);
+    for (const date of [today, past]) {
+      await insertRow({
+        game: "crossword",
+        date,
+        publishedAt: sql`now() - interval '3 days'`,
+      });
+    }
+
+    for (const daily of [
+      await getTodayDaily(ctx.db, "crossword"),
+      await getPublishedDaily(ctx.db, "crossword", past),
+      await getArchivedDaily(ctx.db, "crossword", past),
+    ]) {
+      expect(daily?.grid).toEqual(crosswordContentFixture()["grid"]);
+    }
   });
 
   it("T-DB-S45: getArchivedDaily returns undefined for TODAY's published row — the past-only conjunct, asserted positively", async () => {

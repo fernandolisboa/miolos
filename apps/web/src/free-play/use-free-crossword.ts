@@ -33,7 +33,7 @@ const FREE_CROSSWORD: FreeGame<
 
     return {
       seed: puzzle.seed,
-      daily: projectCrossword(FREE_PLAY_DATE, puzzle, size),
+      daily: projectCrossword(FREE_PLAY_DATE, puzzle),
     };
   },
 };

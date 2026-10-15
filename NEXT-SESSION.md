@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new. Termo free play (#333) is settled: you chose the separate pool, now in Done. Open, low urgency: NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is in Done. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -16,7 +16,7 @@ Nothing new. Termo free play (#333) is settled: you chose the separate pool, now
 
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
-**Cruzadinha 7×7 in free play** (#330, ADR-0108, ADR-0111): a *Tamanho* choice through `ChoicePicker` (`free-play/choice-picker.tsx`); the daily stays 5×5. Every free-play build waits a paint (`useFreeGeneration`); tests await `flushGeneration()` (`test/free-generation.ts`).
+**Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
 
 ## Traps
 
@@ -30,10 +30,10 @@ Nothing new. Termo free play (#333) is settled: you chose the separate pool, now
 
 **Content is not a Turbo test input.** After editing `content/crossword/lexicon.tsv`, `content/termo/answers.csv` or `content/termo/reserve.txt`, run `generate:crossword`, `generate:termo` and `pnpm test --force`. Re-curation moves a published answer to `reserve.txt`, never deletes it (ADR-0114).
 
-**A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Sync pending completions before rolling `apps/web` back past #326.
+**Never roll either app back past #330 part 3 once a 7×7 day exists** (ADR-0117): the old API answers a 49-cell completion 400 and sync drops it for good. Stop 7×7 with a forward PR that generates at 5. Before about 2026-10-22, check both production deployments are on the merge commit. Likewise a Rainhas record with `autoCrossed` fails the pre-#326 schema: sync pending completions before rolling `apps/web` back past #326.
 
 ## Next
 
-**Next:** the #321–#333 waves are done. File per-game time buckets as an issue, then #317 (settings sync, needs a migration).
+**Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.2 of 664 KB (ADR-0113).
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.8 of 664 KB (ADR-0113).

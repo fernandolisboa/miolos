@@ -663,6 +663,48 @@ function crosswordDaily(seed = CROSSWORD_SEEDS[0] ?? 0): CrosswordPuzzle {
   return generateCrossword(seed);
 }
 
+const SEVEN = generateCrossword(CROSSWORD_SEEDS[0] ?? 0, 7);
+
+function whiteGrid(rowWidths: readonly number[]): string[][] {
+  return rowWidths.map((width) => Array.from({ length: width }, () => "a"));
+}
+
+const square = (side: number): number[] =>
+  Array.from({ length: side }, () => side);
+
+const MALFORMED_GRIDS = [
+  [],
+  square(4),
+  square(6),
+  square(8),
+  [5, 5, 5, 5, 5, 5, 5],
+  [7, 7, 7, 7, 7],
+  [5, 7, 5, 5, 5],
+  [7, 7, 7, 5, 7, 7, 7],
+].map(whiteGrid);
+
+function whiteCrossword(
+  grid: readonly (readonly string[])[],
+  clue: Record<string, unknown> = {},
+): unknown {
+  return {
+    game: "crossword",
+    date: "2026-10-22",
+    grid,
+    clues: [
+      {
+        number: 1,
+        direction: "across",
+        row: 0,
+        col: 0,
+        length: 1,
+        clue: "Letra",
+        ...clue,
+      },
+    ],
+  };
+}
+
 function mutableCrossword(): CrosswordDailyContent {
   return crosswordDailyContentSchema.parse(
     JSON.parse(JSON.stringify(crosswordDaily())),
@@ -808,7 +850,7 @@ describe("dailyCrosswordResponseSchema", () => {
     expect(Date.now() - started).toBeLessThan(1000);
   });
 
-  it("T-CORE-S123: the grid is exactly 5x5 of a-z or null", () => {
+  it("T-CORE-S123: the grid is a square of a side in CROSSWORD_SIZES, of a-z or null", () => {
     for (const grid of [
       valid.grid.slice(1),
       valid.grid.map((row) => row.slice(1)),
@@ -823,14 +865,55 @@ describe("dailyCrosswordResponseSchema", () => {
         dailyCrosswordResponseSchema.safeParse({ ...valid, grid }).success,
       ).toBe(false);
     }
+
+    for (const side of CROSSWORD_SIZES) {
+      const body = whiteCrossword(whiteGrid(square(side)));
+      expect(dailyPuzzleResponseSchema.parse(body)).toEqual(body);
+    }
+    for (const grid of MALFORMED_GRIDS) {
+      const label = JSON.stringify(grid.map((row) => row.length));
+      expect(
+        dailyPuzzleResponseSchema.safeParse(whiteCrossword(grid)).success,
+        label,
+      ).toBe(false);
+      expect(
+        crosswordDailyContentSchema.safeParse({ ...SEVEN, grid }).success,
+        label,
+      ).toBe(false);
+    }
+  });
+
+  it("T-CORE-S191: a clue reaching row or column 6 fits a 7x7 grid and nothing narrower", () => {
+    const edge = [
+      { row: 6, col: 0, direction: "across", length: 7 },
+      { row: 0, col: 6, direction: "down", length: 7 },
+    ];
+    for (const clue of edge) {
+      const seven = whiteCrossword(whiteGrid(square(7)), clue);
+      expect(dailyCrosswordResponseSchema.parse(seven)).toEqual(seven);
+      for (const grid of [
+        whiteGrid(square(5)),
+        whiteGrid([7, 7, 7, 7, 7]),
+        whiteGrid([5, 5, 5, 5, 5, 5, 5]),
+      ]) {
+        expect(
+          dailyCrosswordResponseSchema.safeParse(whiteCrossword(grid, clue))
+            .success,
+          JSON.stringify(clue),
+        ).toBe(false);
+      }
+    }
+    expect(
+      dailyCrosswordResponseSchema.safeParse(
+        whiteCrossword(whiteGrid(square(7)), { row: 7 }),
+      ).success,
+    ).toBe(false);
   });
 });
 
-describe("projectCrossword (sized)", () => {
-  const SEVEN = generateCrossword(CROSSWORD_SEEDS[0] ?? 0, 7);
-
-  it("T-CORE-S187: projects a 7x7 puzzle by allowlist at size 7, and refuses it at any other size", () => {
-    const projected = projectCrossword("1970-01-01", SEVEN, 7);
+describe("projectCrossword", () => {
+  it("T-CORE-S187: projects a 7x7 puzzle by allowlist", () => {
+    const projected = projectCrossword("1970-01-01", SEVEN);
 
     expect(Object.keys(projected).sort()).toEqual([
       "clues",
@@ -854,31 +937,30 @@ describe("projectCrossword (sized)", () => {
     for (const forbidden of FORBIDDEN_DAILY_KEYS) {
       expect(keys.has(forbidden), forbidden).toBe(false);
     }
-
-    expect(() => projectCrossword("1970-01-01", SEVEN, 5)).toThrow();
-    expect(() => projectCrossword("1970-01-01", crosswordDaily(), 7)).toThrow();
   });
 
-  it("T-CORE-S187: size 5 projects exactly what the daily strip does, and 5 and 7 are the sizes", () => {
+  it("T-CORE-S187: projects exactly what the daily strip does at 5 and 7, and 5 and 7 are the sizes", () => {
     for (const seed of CROSSWORD_SEEDS) {
-      const puzzle = crosswordDaily(seed);
-      expect(projectCrossword("2026-09-28", puzzle, 5)).toEqual(
-        stripDailyContent("crossword", "2026-09-28", puzzle),
-      );
+      for (const size of CROSSWORD_SIZES) {
+        const puzzle = generateCrossword(seed, size);
+        expect(projectCrossword("2026-09-28", puzzle)).toEqual(
+          stripDailyContent("crossword", "2026-09-28", puzzle),
+        );
+      }
     }
     expect(CROSSWORD_SIZES).toEqual([5, 7]);
     expectTypeOf<CrosswordSize>().toEqualTypeOf<GamesCrosswordSize>();
   });
 
-  it("T-CORE-S188: the daily response and content schemas still refuse a 7x7 puzzle", () => {
-    const projected = projectCrossword("1970-01-01", SEVEN, 7);
+  it("T-CORE-S188: every daily shape and the strip accept the engine's 7x7 and 5x5 output", () => {
+    for (const puzzle of [SEVEN, crosswordDaily()]) {
+      const stripped = stripDailyContent("crossword", "2026-10-22", puzzle);
 
-    expect(dailyCrosswordResponseSchema.safeParse(projected).success).toBe(
-      false,
-    );
-    expect(dailyPuzzleResponseSchema.safeParse(projected).success).toBe(false);
-    expect(crosswordDailyContentSchema.safeParse(SEVEN).success).toBe(false);
-    expect(() => stripDailyContent("crossword", "2026-09-28", SEVEN)).toThrow();
+      expect(stripped).toEqual(projectCrossword("2026-10-22", puzzle));
+      expect(dailyCrosswordResponseSchema.parse(stripped)).toEqual(stripped);
+      expect(dailyPuzzleResponseSchema.parse(stripped)).toEqual(stripped);
+      expect(crosswordDailyContentSchema.parse(puzzle)).toEqual(puzzle);
+    }
   });
 });
 
