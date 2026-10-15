@@ -1,0 +1,107 @@
+.control {
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  margin-left: -5px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* The outer <svg> is the paper tile: the icon draws inside its padding. */
+.control svg {
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  padding: 7px;
+  overflow: visible;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 22%, transparent);
+  transform: rotate(-3deg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    transform var(--duration-fast) var(--ease-settle),
+    box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.control:hover svg {
+  transform: rotate(-3deg) translate(-1px, -1px);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+.control:active svg {
+  transform: rotate(-3deg) translate(2px, 2px);
+  box-shadow: none;
+}
+
+.control[aria-disabled="true"] {
+  color: color-mix(in srgb, var(--ink-2) 55%, transparent);
+  cursor: default;
+}
+
+.control[aria-disabled="true"] svg {
+  transform: rotate(-3deg);
+  background: transparent;
+  box-shadow: none;
+}
+
+.control:focus-visible {
+  outline: none;
+}
+
+.control:focus-visible svg {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.control::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  padding: var(--space-1) var(--space-2);
+  background: var(--ink);
+  color: var(--paper-card);
+  font: var(--text-body);
+  font-size: 13px;
+  white-space: nowrap;
+  border-radius: var(--radius);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 2px);
+  transition:
+    opacity var(--duration-fast) var(--ease-settle),
+    transform var(--duration-fast) var(--ease-settle);
+}
+
+.control:focus-visible::after,
+.control:hover:not([aria-disabled="true"])::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (hover: none) {
+  .control::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control svg,
+  .control::after {
+    transition: none;
+  }
+}

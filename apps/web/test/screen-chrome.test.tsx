@@ -116,7 +116,7 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
-  reset: noop,
+  edits: { onReset: null, onUndo: null },
 };
 
 const SUDOKU_PLAY = {
@@ -137,7 +137,7 @@ const SUDOKU_PLAY = {
     tapCell: noop,
   },
   revealHint: noop,
-  reset: noop,
+  edits: { onReset: null, onUndo: null },
 };
 
 const NONOGRAM_PLAY = {
@@ -155,7 +155,7 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
-  reset: noop,
+  edits: { onReset: null, onUndo: null },
 };
 
 function pageIn(root: ParentNode): Element {
@@ -297,6 +297,7 @@ function readouts(
     progressLong: PROGRESS_LONG,
     hint: { ready, used, explain, cell, onReveal },
     onReset,
+    onUndo: null,
   };
 }
 
@@ -387,12 +388,14 @@ function resetSlotOf(page: Element): unknown {
         buttons: slot.querySelectorAll("button").length,
         hidden: slot.firstElementChild?.getAttribute("aria-hidden") ?? null,
         disabled:
-          slot.querySelector("button")?.getAttribute("aria-disabled") ?? null,
+          [...slot.querySelectorAll("button")]
+            .find((button) => button.textContent === messages.play.reset.label)
+            ?.getAttribute("aria-disabled") ?? null,
       };
 }
 
-const RESET_BUTTON = { buttons: 3, hidden: null, disabled: "false" };
-const RESET_IDLE = { buttons: 3, hidden: null, disabled: "true" };
+const RESET_BUTTON = { buttons: 4, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 4, hidden: null, disabled: "true" };
 const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
 
 function shapeOf(page: Element): Record<string, unknown> {

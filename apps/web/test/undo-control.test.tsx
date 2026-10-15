@@ -1,0 +1,247 @@
+import { dailySudokuResponseSchema } from "@miolos/core";
+import { generateDailySudoku } from "@miolos/games/sudoku";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { BinairoFreeScreen } from "../src/free-play/binairo-free-screen";
+import { CrosswordFreeScreen } from "../src/free-play/crossword-free-screen";
+import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
+import { QueensFreeScreen } from "../src/free-play/queens-free-screen";
+import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
+import { messages } from "../src/i18n";
+import {
+  playRecordKey,
+  playRecordSchema,
+  type PlayRecord,
+} from "../src/play/play-record";
+import { NO_HISTORY, useBoardEdits, type Undoable } from "../src/play/undo";
+import { UndoControl } from "../src/play/undo-control";
+import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
+import { bodyOf, decl, stylesheet } from "./css-source";
+import { flushGeneration } from "./free-generation";
+
+const sync = vi.hoisted(() => ({
+  startCompletionSync: vi.fn(() => () => undefined),
+  flushPendingCompletions: vi.fn(() => Promise.resolve()),
+}));
+vi.mock("../src/play/sync", () => sync);
+
+const LABEL = messages.play.undo;
+const TIP_CSS = stylesheet("src/play/undo-control.module.css");
+const DATE = "2026-10-15";
+const SEED = 20_261_015;
+
+function board(overrides: Partial<Undoable<unknown>> = {}): Undoable<unknown> {
+  return {
+    date: DATE,
+    timer: { accumulatedMs: 0, runningSince: null },
+    status: "playing",
+    pendingSync: false,
+    now: 0,
+    hydrated: true,
+    entries: [null, null],
+    hint: { used: 0, lastIndex: null, reason: null, spotlight: [] },
+    history: NO_HISTORY,
+    ...overrides,
+  };
+}
+
+function undoButton(): HTMLElement {
+  return screen.getByRole("button", { name: LABEL });
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("useBoardEdits offers Recomeçar and undo only when they can act (T-WEB-S826)", () => {
+  it("offers neither on an untouched board", () => {
+    const { result } = renderHook(() => useBoardEdits(board(), vi.fn()));
+    expect(result.current).toEqual({ onReset: null, onUndo: null });
+  });
+
+  it("dispatches each once there is a decided cell and a step", () => {
+    const dispatch = vi.fn();
+    const touched = board({
+      entries: [1, null],
+      history: { steps: [{ entries: [null, null] }], open: true },
+    });
+    const { result } = renderHook(() => useBoardEdits(touched, dispatch));
+    result.current.onUndo?.();
+    result.current.onReset?.();
+    expect(dispatch.mock.calls).toEqual([
+      [{ type: "undo" }],
+      [{ type: "reset" }],
+    ]);
+  });
+
+  it("offers no undo on a solved board", () => {
+    const solved = board({
+      status: "solved",
+      entries: [1, 1],
+      history: { steps: [{ entries: [1, null] }], open: true },
+    });
+    const { result } = renderHook(() => useBoardEdits(solved, vi.fn()));
+    expect(result.current.onUndo).toBeNull();
+  });
+});
+
+describe("UndoControl is a quiet icon named Desfazer (T-WEB-S827)", () => {
+  it("shows no word, names itself and its tooltip Desfazer, and undoes on click", () => {
+    const onUndo = vi.fn();
+    render(<UndoControl onUndo={onUndo} />);
+    const button = undoButton();
+
+    expect(button.textContent).toBe("");
+    expect(decl(bodyOf(TIP_CSS, ".control::after"), "content")).toBe(
+      "attr(aria-label)",
+    );
+    expect(button).toHaveAttribute("aria-disabled", "false");
+    fireEvent.click(button);
+    expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays focusable and does nothing when there is nothing to undo", () => {
+    render(<UndoControl onUndo={null} />);
+    const button = undoButton();
+    button.focus();
+    fireEvent.click(button);
+
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveFocus();
+  });
+});
+
+describe("Ctrl+Z and ⌘+Z undo, unless something else owns the keyboard (T-WEB-S828)", () => {
+  function chord(target: Element, init: KeyboardEventInit): boolean {
+    return fireEvent.keyDown(target, { key: "z", ...init });
+  }
+
+  it("undoes on Ctrl+Z and ⌘+Z, and takes the browser's default", () => {
+    const onUndo = vi.fn();
+    render(<UndoControl onUndo={onUndo} />);
+
+    expect(chord(document.body, { ctrlKey: true })).toBe(false);
+    expect(chord(document.body, { metaKey: true, key: "Z" })).toBe(false);
+    expect(onUndo).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores Shift, a bare z and a board with nothing to undo", () => {
+    const onUndo = vi.fn();
+    const { rerender } = render(<UndoControl onUndo={onUndo} />);
+    chord(document.body, { ctrlKey: true, shiftKey: true });
+    chord(document.body, {});
+    rerender(<UndoControl onUndo={null} />);
+    expect(chord(document.body, { ctrlKey: true })).toBe(true);
+    expect(onUndo).not.toHaveBeenCalled();
+  });
+
+  it("leaves a text field, the Ajustes dialog and the Recomeçar question alone", () => {
+    const onUndo = vi.fn();
+    const { rerender } = render(
+      <div>
+        <UndoControl onUndo={onUndo} />
+        <input aria-label="campo" />
+      </div>,
+    );
+    chord(screen.getByLabelText("campo"), { ctrlKey: true });
+
+    rerender(
+      <div>
+        <UndoControl onUndo={onUndo} />
+        <dialog open aria-label="Ajustes">
+          <button type="button">Fechar</button>
+        </dialog>
+      </div>,
+    );
+    chord(screen.getByRole("button", { name: "Fechar" }), { ctrlKey: true });
+
+    rerender(
+      <div>
+        <UndoControl onUndo={onUndo} />
+        <div role="group" aria-label="Recomeçar o puzzle?" />
+      </div>,
+    );
+    chord(document.body, { ctrlKey: true });
+
+    expect(onUndo).not.toHaveBeenCalled();
+  });
+});
+
+describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)", () => {
+  const deps = { pickSeed: () => SEED };
+  const screens: readonly (readonly [string, ReactElement])[] = [
+    ["Sudoku", <SudokuFreeScreen key="s" deps={deps} />],
+    ["Nonogram", <NonogramFreeScreen key="n" deps={deps} />],
+    ["Binairo", <BinairoFreeScreen key="b" deps={deps} />],
+    ["Rainhas", <QueensFreeScreen key="q" deps={deps} />],
+    ["Cruzadinha", <CrosswordFreeScreen key="c" deps={deps} />],
+  ];
+
+  it.each(screens)(
+    "%s free play starts with undo idle",
+    async (_name, element) => {
+      vi.stubGlobal("fetch", vi.fn());
+      render(element);
+      await flushGeneration();
+      expect(undoButton()).toHaveAttribute("aria-disabled", "true");
+      vi.unstubAllGlobals();
+    },
+  );
+
+  describe("daily Sudoku", () => {
+    const puzzle = generateDailySudoku({ seed: SEED, weekday: 1 });
+    const daily = dailySudokuResponseSchema.parse({
+      game: "sudoku",
+      date: DATE,
+      givens: puzzle.givens,
+      tier: puzzle.tier,
+    });
+    const open = puzzle.givens.indexOf(0);
+
+    function stored(): PlayRecord {
+      const raw = window.localStorage.getItem(playRecordKey("sudoku", DATE));
+      if (raw === null) {
+        throw new Error("no record was written");
+      }
+      return playRecordSchema.parse(JSON.parse(raw));
+    }
+
+    beforeEach(() => {
+      window.localStorage.clear();
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("rewrites the record without the undone digit", () => {
+      const { result } = renderHook(() => useSudokuPlay(daily));
+      act(() => {
+        vi.advanceTimersByTime(0);
+      });
+      act(() => {
+        result.current.selectCell(open);
+        result.current.enterDigit(9);
+      });
+      const entered = stored();
+      expect("entries" in entered && entered.entries[open]).toBe(9);
+
+      act(() => {
+        result.current.edits.onUndo?.();
+      });
+      const undone = stored();
+      expect("entries" in undone && undone.entries[open]).toBeNull();
+      expect(result.current.edits.onUndo).toBeNull();
+    });
+  });
+});

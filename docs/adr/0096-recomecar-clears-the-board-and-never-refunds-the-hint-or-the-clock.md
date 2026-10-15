@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md), [ADR-0095](./0095-three-free-hints-per-puzzle.md)
 **Amends:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — the chrome's grid gains a sixth area and one stateful child.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 2's "free play still writes nothing" now excepts the settings key, written only from an *Ajustes* switch.
+**Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — Recomeçar also clears the undo history, and a hint is a point undo never steps past.
 
 ## Context
 

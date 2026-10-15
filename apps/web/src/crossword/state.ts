@@ -10,6 +10,7 @@ import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import {
   entryAt,
   flattenGrid,
@@ -38,7 +39,13 @@ export interface CrosswordPlayState extends PlayCore {
   readonly hint: HintState<CrosswordHintReason>;
 
   readonly status: "playing" | "solved";
+  readonly history: UndoHistory<CrosswordSnapshot>;
 }
+
+type CrosswordSnapshot = Pick<
+  CrosswordPlayState,
+  "entries" | "selected" | "direction" | "hint"
+>;
 
 export type CrosswordPlayAction =
   | LifecycleAction
@@ -83,10 +90,21 @@ export function initCrosswordPlayState(
     pendingSync: false,
     now: 0,
     hydrated: false,
+    history: NO_HISTORY,
   };
 }
 
-export function crosswordPlayReducer(
+export const crosswordPlayReducer = undoable(
+  playCrossword,
+  ({ entries, selected, direction, hint }): CrosswordSnapshot => ({
+    entries,
+    selected,
+    direction,
+    hint,
+  }),
+);
+
+function playCrossword(
   state: CrosswordPlayState,
   action: CrosswordPlayAction,
 ): CrosswordPlayState {

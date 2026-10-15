@@ -7,7 +7,7 @@ import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { useReset } from "../play/use-reset";
+import { useBoardEdits, type BoardEdits } from "../play/undo";
 import {
   canHint,
   initPlayState,
@@ -31,7 +31,7 @@ export interface BinairoPlay extends BinairoControls {
 
   readonly hintReady: boolean;
   readonly revealHint: () => void;
-  readonly reset: () => void;
+  readonly edits: BoardEdits;
 }
 
 export function useBinairoPlay(
@@ -71,7 +71,7 @@ export function useBinairoPlay(
     }
   }, [solution, allowance]);
 
-  const reset = useReset(dispatch);
+  const edits = useBoardEdits(state, dispatch);
 
   return {
     ...controls,
@@ -81,7 +81,7 @@ export function useBinairoPlay(
     filled,
     hintReady: solution !== null && canHint(state, allowance),
     revealHint,
-    reset,
+    edits,
   };
 }
 

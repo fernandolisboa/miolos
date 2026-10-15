@@ -220,7 +220,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S573)", () => {
 
   it.each<[string, QueensPlayAction]>([
     ["tapping a cell", { type: "tap", index: 0, press: "tap" }],
-    ["crossing a cell over", { type: "cross-over", index: 0 }],
+    ["crossing a cell over", { type: "paint-over", index: 0 }],
     ["selecting another cell", { type: "select", index: 0 }],
     ["moving the selection", { type: "move-selection", rows: 0, columns: -1 }],
   ])("puts the spotlight out on %s, and keeps the reason", (_name, action) => {
