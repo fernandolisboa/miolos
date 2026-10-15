@@ -177,8 +177,9 @@ describe("the calendar renders the three states honestly (T-WEB-S155)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText(
-        messages.stats.calendar.dayAria.onTimePerfect(
+        messages.stats.calendar.dayAria.onTimeMarked(
           formatLongDate("2026-07-31"),
+          messages.dayMark.perfect,
         ),
       ),
     ).toBeInTheDocument();
@@ -242,7 +243,7 @@ describe("the calendar renders the three states honestly (T-WEB-S155)", () => {
 });
 
 describe("the Dias Cheios numeral (T-WEB-S850)", () => {
-  it("is a blank skeleton while loading, then counts the dates, first of the two summaries", async () => {
+  it("is a blank skeleton while loading, the calendar waits for it, then it counts the dates, first of the two summaries", async () => {
     clients.fetchStats.mockResolvedValue(STATS);
     clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
     let resolveFull: (value: { dates: string[] }) => void = () => undefined;
@@ -257,10 +258,16 @@ describe("the Dias Cheios numeral (T-WEB-S850)", () => {
     expect(
       screen.getByText(messages.stats.fullDays.label).closest("section"),
     ).toHaveAttribute("aria-hidden", "true");
+    expect(
+      screen.queryByText(messages.stats.calendar.legend.onTime),
+    ).not.toBeInTheDocument();
 
     resolveFull({ dates: ["2026-07-31", "2026-08-01", "2026-08-02"] });
     const full = await screen.findByLabelText(messages.stats.fullDays.aria(3));
     expect(full).toHaveTextContent("3");
+    expect(
+      screen.getByText(messages.stats.calendar.legend.onTime),
+    ).toBeInTheDocument();
 
     const labels = [
       ...document.querySelectorAll('section[data-stats-state="value"]'),
@@ -300,15 +307,17 @@ describe("the calendar rings a Dia Cheio apart from the Dia Perfeito diamond (T-
 
     expect(
       await screen.findByLabelText(
-        messages.stats.calendar.dayAria.onTimeFull(
+        messages.stats.calendar.dayAria.onTimeMarked(
           formatLongDate("2026-08-01"),
+          messages.dayMark.full,
         ),
       ),
     ).toHaveAttribute("data-mark", "full");
     expect(
       screen.getByLabelText(
-        messages.stats.calendar.dayAria.onTimePerfect(
+        messages.stats.calendar.dayAria.onTimeMarked(
           formatLongDate("2026-07-31"),
+          messages.dayMark.perfect,
         ),
       ),
     ).toHaveAttribute("data-mark", "perfect");
@@ -316,12 +325,8 @@ describe("the calendar rings a Dia Cheio apart from the Dia Perfeito diamond (T-
       2,
     );
 
-    expect(
-      screen.getByText(messages.stats.calendar.markLegend.full),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(messages.stats.calendar.markLegend.perfect),
-    ).toBeInTheDocument();
+    expect(screen.getByText(messages.dayMark.full)).toBeInTheDocument();
+    expect(screen.getByText(messages.dayMark.perfect)).toBeInTheDocument();
 
     const css = stylesheet("app/estatisticas/stats-calendar.module.css");
     expect(decl(bodyOf(css, '.mark[data-mark="full"]'), "border-radius")).toBe(
@@ -342,11 +347,9 @@ describe("the calendar rings a Dia Cheio apart from the Dia Perfeito diamond (T-
     const { container } = render(<StatsPage />);
     await screen.findByText(messages.stats.calendar.legend.onTime);
     expect(container.querySelectorAll("[data-mark]")).toHaveLength(0);
+    expect(screen.queryByText(messages.dayMark.full)).not.toBeInTheDocument();
     expect(
-      screen.queryByText(messages.stats.calendar.markLegend.full),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(messages.stats.calendar.markLegend.perfect),
+      screen.queryByText(messages.dayMark.perfect),
     ).not.toBeInTheDocument();
   });
 });

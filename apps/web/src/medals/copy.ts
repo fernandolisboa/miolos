@@ -105,7 +105,7 @@ export const medalCopy = {
   "full-1": {
     name: "Página cheia",
     description:
-      "Concluiu um Dia Cheio: três ou mais jogos daquele dia, no próprio dia.",
+      "Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia.",
   },
   "full-10": {
     name: "Caderno cheio",

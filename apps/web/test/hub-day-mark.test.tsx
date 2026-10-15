@@ -51,7 +51,7 @@ describe("the hub stamps a Dia Cheio and a Dia Perfeito, nothing before (T-WEB-S
       const { container, unmount } = renderWith(DAY_GAMES.slice(0, n));
       const stamp = container.querySelector("[data-mark]");
       expect(stamp).toHaveAttribute("data-mark", "full");
-      expect(stamp).toHaveTextContent(messages.hoje.dayMark.full);
+      expect(stamp).toHaveTextContent(messages.dayMark.full);
       unmount();
     }
 
@@ -63,7 +63,7 @@ describe("the hub stamps a Dia Cheio and a Dia Perfeito, nothing before (T-WEB-S
     const { container } = renderWith(DAY_GAMES);
     const stamp = container.querySelector("[data-mark]");
     expect(stamp).toHaveAttribute("data-mark", "perfect");
-    expect(stamp).toHaveTextContent(messages.hoje.dayMark.perfect);
+    expect(stamp).toHaveTextContent(messages.dayMark.perfect);
     expect(container.textContent).toContain(
       messages.hoje.completedOfTotal(DAY_GAMES.length, DAY_GAMES.length),
     );

@@ -191,10 +191,10 @@ export const messages = {
     taglineSentence: `${taglineCapitalised}.`,
     signOff,
   },
+  dayMark: { full: "Dia Cheio", perfect: "Dia Perfeito" },
   hoje: {
     completedOfTotal: (done: number, total: number) =>
       `${done} de ${total} concluídos`,
-    dayMark: { full: "Dia Cheio", perfect: "Dia Perfeito" },
     streak: {
       label: "sequência",
       aria: (count: number) =>
@@ -354,12 +354,10 @@ export const messages = {
       weekdays: ["D", "S", "T", "Q", "Q", "S", "S"],
 
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
-      markLegend: { full: "Dia Cheio", perfect: "Dia Perfeito" },
       dayAria: {
         onTime: (date: string) => `${date}: concluído no dia`,
-        onTimeFull: (date: string) => `${date}: concluído no dia — Dia Cheio`,
-        onTimePerfect: (date: string) =>
-          `${date}: concluído no dia — Dia Perfeito`,
+        onTimeMarked: (date: string, mark: string) =>
+          `${date}: concluído no dia — ${mark}`,
         late: (date: string) => `${date}: concluído mais tarde`,
         missed: (date: string) => `${date}: sem conclusão`,
       },

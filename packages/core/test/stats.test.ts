@@ -241,30 +241,46 @@ describe("Dia Cheio (ADR-0129)", () => {
     ];
     expect(fullDays(rows, fourGames)).toEqual([day]);
     expect(perfectDays(rows, fourGames)).toEqual([]);
+
+    const shortLineup = lineup([day], ["sudoku", "binairo"]);
+    const oneInOneOut = [
+      row({ game: "sudoku", date: day }),
+      row({ game: "crossword", date: day }),
+    ];
+    expect(fullDays(oneInOneOut, shortLineup)).toEqual([day]);
+    expect(perfectDays(oneInOneOut, shortLineup)).toEqual([]);
   });
 
-  it("T-CORE-S195: dayMarkOf against lineups of every size from 0 to 6", () => {
-    const set = (games: readonly Game[]): ReadonlySet<Game> => new Set(games);
-    for (let size = 0; size <= ALL_SIX.length; size += 1) {
-      const lineupGames = set(ALL_SIX.slice(0, size));
-      for (let won = 0; won <= size; won += 1) {
-        const mark = dayMarkOf(set(ALL_SIX.slice(0, won)), lineupGames);
-        const expected =
-          size > 0 && won === size
-            ? "perfect"
-            : won >= Math.min(3, size === 0 ? 3 : size)
-              ? "full"
-              : undefined;
-        expect(mark, `${won} of ${size}`).toBe(expected);
-      }
+  it("T-CORE-S195: dayMarkOf against lineups of every size, with wins inside and outside the lineup", () => {
+    const CASES: readonly [
+      readonly Game[],
+      readonly Game[],
+      "full" | "perfect" | undefined,
+    ][] = [
+      [[], [], undefined],
+      [["sudoku", "binairo"], [], undefined],
+      [["sudoku", "binairo", "queens"], [], "full"],
+      [["crossword"], ["sudoku"], "full"],
+      [["sudoku"], ["sudoku"], "perfect"],
+      [[], ["sudoku", "binairo"], undefined],
+      [["sudoku"], ["sudoku", "binairo"], undefined],
+      [["sudoku", "crossword"], ["sudoku", "binairo"], "full"],
+      [["sudoku", "binairo"], ["sudoku", "binairo"], "perfect"],
+      [["sudoku", "binairo"], ALL_SIX.slice(0, 3), undefined],
+      [["sudoku", "binairo", "crossword"], ALL_SIX.slice(0, 3), "full"],
+      [ALL_SIX.slice(0, 3), ALL_SIX.slice(0, 3), "perfect"],
+      [ALL_SIX.slice(0, 2), ALL_SIX, undefined],
+      [ALL_SIX.slice(0, 3), ALL_SIX, "full"],
+      [ALL_SIX.slice(0, 5), ALL_SIX, "full"],
+      [ALL_SIX, ALL_SIX, "perfect"],
+      [[...ALL_SIX.slice(0, 4), "queens"], ALL_SIX.slice(0, 5), "full"],
+    ];
+    for (const [won, lineupGames, expected] of CASES) {
+      expect(
+        dayMarkOf(new Set(won), new Set(lineupGames)),
+        `${won.join("+")} of ${lineupGames.join("+")}`,
+      ).toBe(expected);
     }
-    expect(dayMarkOf(set(ALL_SIX.slice(0, 3)), set([]))).toBe("full");
-    expect(
-      dayMarkOf(
-        set([...ALL_SIX.slice(0, 4), "queens"]),
-        set(ALL_SIX.slice(0, 5)),
-      ),
-    ).toBe("full");
   });
 });
 

@@ -157,7 +157,7 @@ they ship (an id is a wire value and a grant key).
 | 23 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
 | 24 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
 | 25 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
-| 26 | `full-1` | Página cheia | Concluiu um Dia Cheio: três ou mais jogos daquele dia, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. Count-free in the copy for the same reason as `perfect-1`. |
+| 26 | `full-1` | Página cheia | Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. "Ou todos" covers a lineup shorter than three. |
 | 27 | `full-10` | Caderno cheio | Concluiu 10 Dias Cheios. | fullDaysReached, 10 | Ten full days; ≥ 2× spacing from 1. A Dia Perfeito counts as a Dia Cheio. |
 | 28 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, appended last so no earlier medal's tilt moves (ADR-0122). |
 

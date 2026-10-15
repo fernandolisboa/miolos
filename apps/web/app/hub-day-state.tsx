@@ -21,7 +21,7 @@ export function HubProgress({ date }: { readonly date: string }) {
       {messages.hoje.completedOfTotal(won.size, DAY_GAMES.length)}
       {mark !== undefined && (
         <span className={styles.dayMark} data-mark={mark}>
-          {messages.hoje.dayMark[mark]}
+          {messages.dayMark[mark]}
         </span>
       )}
     </p>

@@ -113,7 +113,8 @@ function gamesByDate(
 // see ADR-0129
 const FULL_DAY_GAMES = 3;
 
-export type DayMark = "full" | "perfect";
+export const DAY_MARKS = ["full", "perfect"] as const;
+export type DayMark = (typeof DAY_MARKS)[number];
 
 export function dayMarkOf(
   won: ReadonlySet<Game>,
@@ -129,33 +130,36 @@ export function dayMarkOf(
 
 const NO_GAMES: ReadonlySet<Game> = new Set();
 
-function markedDays(
+export function dayMarks(
   rows: readonly StatsRow[],
   published: readonly PublishedDaily[],
-  counts: (mark: DayMark | undefined) => boolean,
-): readonly string[] {
+): ReadonlyMap<string, DayMark> {
   const lineupByDate = gamesByDate(published);
-  const dates: string[] = [];
+  const marks = new Map<string, DayMark>();
   for (const [date, won] of gamesByDate(rows.filter(countsOnTimeWon))) {
-    if (counts(dayMarkOf(won, lineupByDate.get(date) ?? NO_GAMES))) {
-      dates.push(date);
+    const mark = dayMarkOf(won, lineupByDate.get(date) ?? NO_GAMES);
+    if (mark !== undefined) {
+      marks.set(date, mark);
     }
   }
-  return dates.sort();
+  return marks;
 }
 
 export function perfectDays(
   rows: readonly StatsRow[],
   published: readonly PublishedDaily[],
 ): readonly string[] {
-  return markedDays(rows, published, (mark) => mark === "perfect");
+  return [...dayMarks(rows, published)]
+    .filter(([, mark]) => mark === "perfect")
+    .map(([date]) => date)
+    .sort();
 }
 
 export function fullDays(
   rows: readonly StatsRow[],
   published: readonly PublishedDaily[],
 ): readonly string[] {
-  return markedDays(rows, published, (mark) => mark !== undefined);
+  return [...dayMarks(rows, published).keys()].sort();
 }
 
 export type CalendarDayState = "onTime" | "late" | "missed";

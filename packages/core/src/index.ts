@@ -40,6 +40,7 @@ export { mergeCompletions, type MergeableCompletion } from "./merge";
 export {
   computeCalendar,
   computeStats,
+  DAY_MARKS,
   dayMarkOf,
   fullDays,
   perfectDays,

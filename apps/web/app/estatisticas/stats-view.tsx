@@ -33,15 +33,15 @@ const TERMO_ZERO: TermoStats = {
 
 export function StatsView() {
   const stats = useStats();
-  const fullDays = useFullDays();
+  const fullDaysRead = useFullDays();
 
   return (
     <>
       <div className={styles.summaries}>
-        {fullDays !== null && (
+        {fullDaysRead !== null && (
           <SummaryCount
             copy={messages.stats.fullDays}
-            count={fullDays?.dates.length}
+            count={fullDaysRead?.dates.length}
           />
         )}
         <SummaryCount
@@ -56,7 +56,11 @@ export function StatsView() {
           <GameBlock key={game} game={game} stats={stats} />
         ))}
       </section>
-      <StatsCalendar fullDays={fullDays} />
+      <StatsCalendar
+        fullDates={
+          fullDaysRead === undefined ? undefined : (fullDaysRead?.dates ?? [])
+        }
+      />
     </>
   );
 }

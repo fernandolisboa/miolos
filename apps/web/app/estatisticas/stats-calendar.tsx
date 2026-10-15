@@ -1,6 +1,6 @@
 "use client";
 
-import type { CalendarDay, DayMark, FullDaysResponse } from "@miolos/core";
+import { DAY_MARKS, type CalendarDay, type DayMark } from "@miolos/core";
 
 import {
   formatDayNumber,
@@ -20,13 +20,13 @@ import pageStyles from "./page.module.css";
 import styles from "./stats-calendar.module.css";
 
 export function StatsCalendar({
-  fullDays,
+  fullDates,
 }: {
-  readonly fullDays: FullDaysResponse | null | undefined;
+  readonly fullDates: readonly string[] | undefined;
 }) {
   const calendar = useStatsCalendar();
   const copy = messages.stats.calendar;
-  if (calendar === undefined) {
+  if (calendar === undefined || fullDates === undefined) {
     return (
       <section className={styles.calendar} data-stats-state="skeleton">
         <h2 className={pageStyles.sectionHeading}>{copy.title}</h2>
@@ -38,10 +38,9 @@ export function StatsCalendar({
   const today = todaySaoPauloDate(new Date());
   const months =
     calendar === null ? [neutralMonth(today)] : calendarMonths(calendar.days);
-  const markOf = dayMarks(calendar?.days ?? [], fullDays?.dates ?? []);
-  const shownMarks = MARKS.filter((mark) =>
-    [...markOf.values()].includes(mark),
-  );
+  const markOf = dayMarks(calendar?.days ?? [], fullDates);
+  const present = new Set(markOf.values());
+  const shownMarks = DAY_MARKS.filter((mark) => present.has(mark));
   return (
     <section className={styles.calendar} data-stats-state="value">
       <h2 className={pageStyles.sectionHeading}>{copy.title}</h2>
@@ -67,7 +66,7 @@ export function StatsCalendar({
               >
                 <span className={styles.mark} data-mark={mark} />
               </span>
-              {copy.markLegend[mark]}
+              {messages.dayMark[mark]}
             </span>
           ))}
         </div>
@@ -163,8 +162,6 @@ function DayCell({
   );
 }
 
-const MARKS = ["full", "perfect"] as const satisfies readonly DayMark[];
-
 function dayMarks(
   days: readonly CalendarDay[],
   fullDates: readonly string[],
@@ -174,7 +171,7 @@ function dayMarks(
   for (const day of days) {
     if (day.perfect) {
       marks.set(day.date, "perfect");
-    } else if (day.state === "onTime" && full.has(day.date)) {
+    } else if (full.has(day.date)) {
       marks.set(day.date, "full");
     }
   }
@@ -185,11 +182,9 @@ function dayAria(day: CalendarDay, mark: DayMark | undefined): string {
   const date = formatLongDate(day.date);
   const aria = messages.stats.calendar.dayAria;
   if (day.state === "onTime") {
-    return mark === "perfect"
-      ? aria.onTimePerfect(date)
-      : mark === "full"
-        ? aria.onTimeFull(date)
-        : aria.onTime(date);
+    return mark === undefined
+      ? aria.onTime(date)
+      : aria.onTimeMarked(date, messages.dayMark[mark]);
   }
   return day.state === "late" ? aria.late(date) : aria.missed(date);
 }
