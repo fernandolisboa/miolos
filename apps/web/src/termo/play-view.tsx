@@ -8,6 +8,7 @@ import { accentVars } from "../play/accent";
 import { BoardCard } from "../play/board-card";
 import { isShortcut } from "../play/grid-selection";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
+import { PlayTitle } from "../play/play-title";
 import screen from "../play/screen.module.css";
 import { typedLetter } from "../play/typed-letter";
 import { Board, BoardSkeleton } from "./board";
@@ -69,17 +70,13 @@ function TermoHeading({
         )}
       </header>
 
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-        {chrome.note === undefined ? null : (
-          <p className={chrome.note.className}>{chrome.note.text}</p>
-        )}
-      </div>
+      <PlayTitle
+        kicker={messages.games.termo.kicker}
+        title={copy.title}
+        rules={copy.rules}
+        note={chrome.note}
+        inert={progress === null}
+      />
     </>
   );
 }

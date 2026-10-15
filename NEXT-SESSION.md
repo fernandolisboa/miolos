@@ -16,6 +16,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330) and picked logo E 
 
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 
+**Phone layout** (#375, ADR-0123): up to 1023px the rules sit behind an (i) beside the title (`PlayTitle`, `play/play-title.tsx`, shared with Termo; a native `popover`, so no JS opens it), and Recomeçar, Ajustes and the hint share the last grid row; the hint shows "Dica" and a count badge from `data-short`/`data-left`, its name stays the full label. Phones have a 12px side margin. `/nonogram` sits at about 48.4 KB of its budget.
+
 **Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Recomeçar and Ajustes share one row; `.reset` is the positioned box the confirm spans (T-WEB-S810). Control tips sit behind `InfoTip` (#331), whose open/close logic is `useTip` (`play/use-tip.ts`), shared with the earned medals that `artOf` (`medals/art.ts`) draws from their rule (ADR-0122); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
 
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.

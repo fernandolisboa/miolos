@@ -114,7 +114,21 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* In one column the (i) beside the title opens the rules as a popover
+   (ADR-0123); here the popover's UA box is undone so they read inline. */
+.rulesToggle {
+  display: none;
+}
+
 .rules {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  background: none;
   margin: 18px 0 0;
   font-size: 15px;
   line-height: 1.6;
@@ -336,15 +350,14 @@
 
 @media (max-width: 1023px) {
   .page {
-    grid-template-columns: 1fr;
-    column-gap: 0;
-    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
+    grid-template-rows: auto auto 1fr auto;
     grid-template-areas:
-      "bar"
-      "title"
-      "board"
-      "reset"
-      "hint";
+      "bar   bar"
+      "title title"
+      "board board"
+      "reset hint";
   }
 
   .topBar {
@@ -372,25 +385,88 @@
     padding-top: 10px;
   }
 
+  .rulesToggle {
+    display: inline-flex;
+    align-self: center;
+    margin-right: auto;
+  }
+
+  .rules {
+    display: none;
+  }
+
+  .rules:popover-open {
+    display: block;
+    position: fixed;
+    inset: var(--space-3) var(--space-3) auto;
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: var(--space-4);
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md)
+      color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--ink);
+  }
+
+  @supports not selector(:popover-open) {
+    .rules {
+      display: block;
+    }
+
+    .rulesToggle {
+      display: none;
+    }
+  }
+
   .board {
     padding-top: var(--space-4);
   }
 
+  /* The confirm covers both tracks, so the reset box spans them; the hint
+     paints over its empty end. */
   .reset {
+    grid-column: 1 / -1;
+    align-self: center;
+    margin-top: var(--space-3);
     padding-bottom: 0;
   }
 
   .hint {
-    margin-top: 14px;
-    padding: var(--space-4) var(--space-5);
-    min-height: 50px;
-    height: auto;
+    width: auto;
+    align-self: center;
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    min-height: var(--touch-target-min);
+  }
+
+  .hintLong {
+    display: none;
+  }
+
+  .hint::before {
+    content: attr(data-short);
+  }
+
+  .hint::after {
+    content: attr(data-left);
+    box-sizing: border-box;
+    min-width: 22px;
+    height: 22px;
+    margin-left: var(--space-2);
+    padding: 0 6px;
+    border-radius: 11px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    font-variant-numeric: tabular-nums;
+    line-height: 22px;
+    text-align: center;
   }
 }
 
 @media (max-width: 768px) {
   .page {
-    padding: var(--space-3) var(--space-5) var(--space-5);
+    padding: var(--space-3) var(--space-3) var(--space-5);
   }
 
   .title {
@@ -409,10 +485,6 @@
 
   .board {
     padding-top: var(--space-2);
-  }
-
-  .hint {
-    margin-top: var(--space-3);
   }
 
   .gridCard {

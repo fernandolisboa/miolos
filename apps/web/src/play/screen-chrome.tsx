@@ -18,6 +18,7 @@ import {
 } from "../settings/settings-dialog";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
+import { PlayTitle, type PlayTitleNote } from "./play-title";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
@@ -40,10 +41,7 @@ export interface PlayChromeBack {
   readonly ariaLabel: string;
 }
 
-export interface PlayChromeNote {
-  readonly text: string;
-  readonly className: string;
-}
+export type PlayChromeNote = PlayTitleNote;
 
 export interface PlayChromeStat {
   readonly label: string;
@@ -161,6 +159,7 @@ export function PlayScreenChrome({
   const hint = readouts?.hint;
   const reason = hint?.explain ?? null;
   const cardLoaded = useHintCardLoaded();
+  const label = hint === undefined ? "" : hintLabel(hint.used, allowance);
   const { kicker, play } = messages.games[game];
 
   return (
@@ -183,21 +182,20 @@ export function PlayScreenChrome({
         {clockBar(clock)}
       </header>
 
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{play.title}</h1>
-          <span
-            aria-hidden={readouts === null ? true : undefined}
-            className={screen.progressBar}
-          >
-            {readouts === null ? BLANK_READOUT : readouts.progressShort}
-          </span>
-        </div>
-        <p className={screen.rules}>{play.rules}</p>
-        {note === null ? null : <p className={note.className}>{note.text}</p>}
-      </div>
+      <PlayTitle
+        kicker={kicker}
+        title={play.title}
+        rules={play.rules}
+        note={note}
+        inert={skeleton}
+      >
+        <span
+          aria-hidden={readouts === null ? true : undefined}
+          className={screen.progressBar}
+        >
+          {readouts === null ? BLANK_READOUT : readouts.progressShort}
+        </span>
+      </PlayTitle>
 
       {/* The daily skeleton hides the whole stats card; free play leaves it
           exposed and hides each blank readout instead — see ADR-0077. */}
@@ -260,17 +258,22 @@ export function PlayScreenChrome({
         <div
           aria-hidden
           className={`${screen.hint} ${screen.hintUsed} ${screen.placeholder}`}
+          data-short={messages.play.hint.short}
+          data-left={BLANK_READOUT}
         >
-          {BLANK_READOUT}
+          <span className={screen.hintLong}>{BLANK_READOUT}</span>
         </div>
       ) : (
         <button
           type="button"
           className={`${screen.hint}${readouts.hint.ready ? "" : ` ${screen.hintUsed}`}`}
           aria-disabled={!readouts.hint.ready}
+          aria-label={label}
+          data-short={messages.play.hint.short}
+          data-left={Math.max(allowance - readouts.hint.used, 0)}
           onClick={readouts.hint.onReveal}
         >
-          {hintLabel(readouts.hint.used, allowance)}
+          <span className={screen.hintLong}>{label}</span>
         </button>
       )}
     </main>

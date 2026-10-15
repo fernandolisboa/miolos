@@ -351,7 +351,7 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
       resolve(decl(bodyOf(RESET_CSS, ".control"), "min-height")),
     ).toBeGreaterThanOrEqual(minimum);
     expect(
-      pixels(
+      resolve(
         decl(
           bodyOf(bodyOf(SHARED_CSS, "@media (max-width: 1023px)"), ".hint"),
           "min-height",
@@ -411,13 +411,18 @@ describe("one fold at 1023px, one two-column band above it (T-WEB-S601)", () => 
     expect(column).toBeGreaterThanOrEqual(boardFloor());
   });
 
-  it("collapses to one column at 1023px", () => {
+  it("collapses to one column at 1023px, every row but the last spanning both tracks", () => {
     const column = bodyOf(
       bodyOf(SHARED_CSS, "@media (max-width: 1023px)"),
       ".page",
     );
+    const rows = (decl(column, "grid-template-areas") ?? "")
+      .split('"')
+      .filter((row) => row.trim() !== "")
+      .map((row) => row.trim().split(/\s+/));
 
-    expect(decl(column, "grid-template-columns")).toBe("1fr");
+    expect(decl(column, "grid-template-columns")).toBe("minmax(0, 1fr) auto");
+    expect(rows.slice(0, -1).every(([a, b]) => a === b)).toBe(true);
   });
 });
 

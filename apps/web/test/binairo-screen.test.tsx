@@ -686,7 +686,9 @@ describe("the free hints (T-WEB-9)", () => {
         ),
       ),
     ).toBeInTheDocument();
-    const exhausted = screen.getByText(messages.play.hint.used);
+    const exhausted = screen.getByRole("button", {
+      name: messages.play.hint.used,
+    });
     expect(exhausted).toHaveAttribute("aria-disabled", "true");
 
     expect(

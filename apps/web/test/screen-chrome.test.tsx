@@ -58,6 +58,7 @@ import { flushGeneration } from "./free-generation";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const CHROME = "apps/web/src/play/screen-chrome.tsx";
+const TITLE = "apps/web/src/play/play-title.tsx";
 
 function sourceOf(module: string): string {
   return withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
@@ -361,7 +362,9 @@ function hiddenOn(page: Element, local: string): string | null {
 const CHROME_CLASSES = [
   ...new Set(
     [
-      ...sourceOf(CHROME)
+      ...[CHROME, TITLE]
+        .map(sourceOf)
+        .join("\n")
         .replace(/^import .*$/gm, "")
         .matchAll(/\bscreen\.([A-Za-z0-9_]+)/g),
     ].map((match) => match[1] ?? ""),
@@ -573,6 +576,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "board",
         "hint",
         "hintLive",
+        "hintLong",
         "hintUsed",
         "page",
         "placeholder",
@@ -580,6 +584,7 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "progressCard",
         "reset",
         "rules",
+        "rulesToggle",
         "statLabel",
         "statRow",
         "statsCard",
@@ -635,7 +640,9 @@ function hintOf(
 describe("the hint button counts the free hints down from `used` (T-WEB-S512)", () => {
   it("reads the hints left, then that they are spent", () => {
     expect(
-      [0, 1, 2, 3].map((used) => hintOf(used < 3, used).textContent),
+      [0, 1, 2, 3].map((used) =>
+        hintOf(used < 3, used).getAttribute("aria-label"),
+      ),
     ).toEqual([
       "Usar dica — 3 disponíveis",
       "Usar dica — 2 disponíveis",
@@ -647,14 +654,14 @@ describe("the hint button counts the free hints down from `used` (T-WEB-S512)", 
   it("keeps the count on a board closed before any hint, disabled", () => {
     const hint = hintOf(false, 0);
 
-    expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
+    expect(hint.getAttribute("aria-label")).toBe("Usar dica — 3 disponíveis");
     expect(hint.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("counts from the default while the allowance loads, and is not ready", () => {
     const hint = hintOf(false, 0, null);
 
-    expect(hint.textContent).toBe("Usar dica — 3 disponíveis");
+    expect(hint.getAttribute("aria-label")).toBe("Usar dica — 3 disponíveis");
     expect(hint.getAttribute("aria-disabled")).toBe("true");
   });
 });
@@ -662,7 +669,9 @@ describe("the hint button counts the free hints down from `used` (T-WEB-S512)", 
 describe("the hint button counts down from the served allowance (T-WEB-S538)", () => {
   it("reads five hints left down to spent under an allowance of five", () => {
     expect(
-      [0, 1, 2, 3, 4, 5].map((used) => hintOf(used < 5, used, 5).textContent),
+      [0, 1, 2, 3, 4, 5].map((used) =>
+        hintOf(used < 5, used, 5).getAttribute("aria-label"),
+      ),
     ).toEqual([
       "Usar dica — 5 disponíveis",
       "Usar dica — 4 disponíveis",
@@ -674,7 +683,7 @@ describe("the hint button counts down from the served allowance (T-WEB-S538)", (
   });
 
   it("reads spent when a restored count is past a lowered allowance", () => {
-    expect(hintOf(false, 3, 2).textContent).toBe("Dicas usadas");
+    expect(hintOf(false, 3, 2).getAttribute("aria-label")).toBe("Dicas usadas");
   });
 });
 
