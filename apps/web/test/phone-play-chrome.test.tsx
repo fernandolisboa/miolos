@@ -98,14 +98,27 @@ describe("in two columns the rules read inline; in one they open as a card (T-WE
   });
 
   it("hides the paragraph in one column and opens it as a fixed card", () => {
-    const open = bodyOf(ONE_COLUMN, ".rules:popover-open");
-
     expect(decl(bodyOf(ONE_COLUMN, ".rules"), "display")).toBe("none");
     expect(decl(bodyOf(ONE_COLUMN, ".rulesToggle"), "display")).toBe(
       "inline-flex",
     );
-    expect(decl(open, "display")).toBe("block");
+    expect(decl(bodyOf(ONE_COLUMN, ".rules:popover-open"), "display")).toBe(
+      "block",
+    );
+  });
+
+  it("keeps the open card's box at every width, so one left open across the fold never covers the page", () => {
+    const open = bodyOf(SHARED_CSS, ".rules:popover-open");
+
+    expect(SHARED_CSS.indexOf(".rules:popover-open")).toBeLessThan(
+      SHARED_CSS.indexOf("@media (max-width: 1023px)"),
+    );
     expect(decl(open, "position")).toBe("fixed");
+    expect(decl(open, "inset")).toBe("var(--space-3) var(--space-3) auto");
+    expect(decl(open, "background")).toBe("var(--paper-card)");
+    expect(decl(bodyOf(ONE_COLUMN, ".rules:popover-open"), "position")).toBe(
+      undefined,
+    );
   });
 
   it("falls back to the inline paragraph where popovers do not exist", () => {
@@ -160,6 +173,13 @@ describe("the hint keeps its full name and shows a short face in one column (T-W
       "attr(data-left)",
     );
   });
+
+  it("rings the count instead of filling it, so the digit keeps the pill's measured ink", () => {
+    const badge = bodyOf(ONE_COLUMN, ".hint::after");
+
+    expect(decl(badge, "background")).toBeUndefined();
+    expect(decl(badge, "box-shadow")).toBe("inset 0 0 0 1.5px currentColor");
+  });
 });
 
 describe("in one column Recomeçar, Ajustes and the hint share one row (T-WEB-S913)", () => {
@@ -171,6 +191,11 @@ describe("in one column Recomeçar, Ajustes and the hint share one row (T-WEB-S9
     expect(decl(bodyOf(ONE_COLUMN, ".hint"), "width")).toBe("auto");
   });
 
+  it("positions the hint, so it paints and takes taps above the reset box it overlaps", () => {
+    expect(decl(bodyOf(SHARED_CSS, ".reset"), "position")).toBe("relative");
+    expect(decl(bodyOf(ONE_COLUMN, ".hint"), "position")).toBe("relative");
+  });
+
   it("opens the confirm upward as a card, so it never runs off the page", () => {
     const ask = bodyOf(bodyOf(RESET_CSS, "@media (max-width: 1023px)"), ".ask");
 
@@ -179,10 +204,10 @@ describe("in one column Recomeçar, Ajustes and the hint share one row (T-WEB-S9
   });
 });
 
-describe("a phone page keeps a 12px side margin (T-WEB-S914)", () => {
-  it("pads the page by --space-3 on both sides", () => {
+describe("a phone page keeps a 16px side margin (T-WEB-S914)", () => {
+  it("pads the page by --space-4 on both sides", () => {
     expect(decl(bodyOf(PHONE, ".page"), "padding")).toBe(
-      "var(--space-3) var(--space-3) var(--space-5)",
+      "var(--space-3) var(--space-4) var(--space-5)",
     );
   });
 });

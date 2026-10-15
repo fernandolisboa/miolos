@@ -47,8 +47,7 @@
   gap: var(--space-4);
 }
 
-/* One column: the hint shares the row, so the confirm rises over the
-   controls above it as a card (ADR-0123). */
+/* see ADR-0123 */
 @media (max-width: 1023px) {
   .ask {
     inset: auto 0 0;

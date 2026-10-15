@@ -22,12 +22,11 @@ export function PlayTitle({
   readonly kicker: string;
   readonly title: string;
   readonly rules: string;
-  readonly note?: PlayTitleNote | null;
+  readonly note: PlayTitleNote | null;
   readonly inert?: boolean;
   readonly children?: ReactNode;
 }) {
   const rulesId = useId();
-  const Ring = inert ? "span" : "button";
 
   return (
     <div className={screen.titleBlock}>
@@ -36,25 +35,27 @@ export function PlayTitle({
       <div className={screen.titleRow}>
         <h1 className={screen.title}>{title}</h1>
         <span className={screen.rulesToggle}>
-          <Ring
-            className={tip.button}
-            {...(inert
-              ? { "aria-hidden": true }
-              : {
-                  type: "button",
-                  "aria-label": messages.play.rulesAria,
-                  popoverTarget: rulesId,
-                })}
-          >
-            i
-          </Ring>
+          {inert ? (
+            <span aria-hidden className={tip.button}>
+              i
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={tip.button}
+              aria-label={messages.play.rulesAria}
+              popoverTarget={rulesId}
+            >
+              i
+            </button>
+          )}
         </span>
         {children}
       </div>
       <p id={rulesId} popover="auto" className={screen.rules}>
         {rules}
       </p>
-      {note == null ? null : <p className={note.className}>{note.text}</p>}
+      {note === null ? null : <p className={note.className}>{note.text}</p>}
     </div>
   );
 }

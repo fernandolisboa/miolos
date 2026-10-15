@@ -34,12 +34,12 @@ import { initNonogramPlayState } from "../src/nonogram/state";
 import { accentVars } from "../src/play/accent";
 import { DailyPlayChrome } from "../src/play/daily-chrome";
 import { FreeHintsContext } from "../src/play/free-hints";
+import type { PlayTitleNote } from "../src/play/play-title";
 import {
   PlayScreenChrome,
   type ChromeGame,
   type PlayChromeBack,
   type PlayChromeClock,
-  type PlayChromeNote,
   type PlayChromeReadouts,
   type PlayChromeStat,
   type PlayChromeState,
@@ -266,7 +266,7 @@ describe("`.page` places the same six children, in DOM order, everywhere (T-WEB-
   });
 });
 
-const NOTE: PlayChromeNote = {
+const NOTE: PlayTitleNote = {
   text: "nota do arquivo",
   className: "note-mark",
 };
@@ -304,7 +304,7 @@ function chrome(variant: {
   readonly state: PlayChromeState;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
-  readonly note: PlayChromeNote | null;
+  readonly note: PlayTitleNote | null;
 }): ReactElement {
   return (
     <PlayScreenChrome

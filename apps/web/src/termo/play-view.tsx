@@ -74,7 +74,7 @@ function TermoHeading({
         kicker={messages.games.termo.kicker}
         title={copy.title}
         rules={copy.rules}
-        note={chrome.note}
+        note={chrome.note ?? null}
         inert={progress === null}
       />
     </>
