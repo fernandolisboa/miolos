@@ -689,7 +689,7 @@ export const messages = {
         },
         endAnimation: {
           label: "Animação no fim do jogo",
-          hint: "Ao vencer, o carimbo bate e espirra tinta; ao perder, a tinta escorre. Dura um instante.",
+          hint: "Ao vencer, o tabuleiro brilha a partir da última casa e o carimbo bate; ao perder, o carimbo cai pesado. Dura um instante.",
         },
         showErrors: {
           label: "Mostrar erros",

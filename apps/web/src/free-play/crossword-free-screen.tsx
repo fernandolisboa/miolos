@@ -11,6 +11,7 @@ import {
 import { pageClassName } from "../crossword/size-classes";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
 import { messages } from "../i18n";
+import { EndingStage } from "../play/ending-stage";
 import type { FreePlayChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
@@ -91,21 +92,23 @@ function CrosswordFreeBoard({
 
   const choice = sizeChoice(size, onSizeChange);
 
-  if (board.state.status === "solved") {
-    return (
-      <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
-    );
-  }
-
   return (
-    <FreePlayChrome
-      game="crossword"
-      pageModifier={pageClassName(size)}
-      choice={choice}
-      state={{ kind: "playing", readouts: crosswordReadouts(board) }}
+    <EndingStage
+      over={board.state.status === "solved"}
+      won
+      ending={() => (
+        <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
+      )}
     >
-      <CrosswordBoardView board={board} />
-    </FreePlayChrome>
+      <FreePlayChrome
+        game="crossword"
+        pageModifier={pageClassName(size)}
+        choice={choice}
+        state={{ kind: "playing", readouts: crosswordReadouts(board) }}
+      >
+        <CrosswordBoardView board={board} />
+      </FreePlayChrome>
+    </EndingStage>
   );
 }
 

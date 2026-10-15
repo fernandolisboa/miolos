@@ -1,0 +1,21 @@
+.frame {
+  display: contents;
+}
+
+.glow [data-cell-index]:not([data-block]) {
+  animation: board-glow calc(var(--duration-slow) * 2) ease-in-out
+    calc(var(--wave-lead, 0ms) + var(--wave-delay, 0ms));
+}
+
+@keyframes board-glow {
+  40% {
+    background-color: var(--accent);
+    color: var(--ink-on-accent, var(--paper-desk));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow [data-cell-index]:not([data-block]) {
+    animation: none;
+  }
+}

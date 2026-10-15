@@ -16,11 +16,9 @@ const FLICKS = Array.from({ length: 8 }, (_, index) => {
   } satisfies CSSProperties;
 });
 
-const DRIPS = [
-  { left: "38%", "--drip-delay": "0ms" },
-  { left: "52%", "--drip-delay": "180ms" },
-  { left: "63%", "--drip-delay": "90ms" },
-] satisfies readonly CSSProperties[];
+const DUST = [165, 185, 355, 15].map(
+  (degrees) => ({ "--angle": `${String(degrees)}deg` }) satisfies CSSProperties,
+);
 
 export function EndingFlourish({
   outcome,
@@ -33,7 +31,7 @@ export function EndingFlourish({
   const { endAnimation } = useSettings();
   const on = justEnded && endAnimation;
   const won = outcome === "won";
-  const motion = won ? styles.press : styles.sag;
+  const motion = won ? styles.press : styles.drop;
   return (
     <div className={on ? `${styles.anchor} ${motion}` : styles.anchor}>
       {children}
@@ -47,8 +45,8 @@ export function EndingFlourish({
               ))}
             </>
           ) : (
-            DRIPS.map((style, index) => (
-              <span key={index} className={styles.drip} style={style} />
+            DUST.map((style, index) => (
+              <span key={index} className={styles.dust} style={style} />
             ))
           )}
         </div>

@@ -376,14 +376,15 @@ describe("completion detection (D12, T-WEB-13)", () => {
   });
 
   it("stays playing on a full but wrong grid", () => {
-    const solved = fillFromSolution(allIndices);
-
     const flipped = allIndices.find(
       (index) =>
         REAL_PUZZLE.givens[index] === null && REAL_PUZZLE.solution[index] === 1,
     );
     expect(flipped).toBeDefined();
-    const wrong = tap(solved, flipped ?? 0);
+    const others = fillFromSolution(
+      allIndices.filter((index) => index !== flipped),
+    );
+    const wrong = press(others, "right", flipped ?? 0);
 
     expect(isSolvedGrid(mergedGrid(wrong))).toBe(true);
     expect(wrong.violating.size).toBeGreaterThan(0);

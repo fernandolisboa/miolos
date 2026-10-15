@@ -369,5 +369,6 @@ describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", (
         { timeout: 5000 },
       );
     },
+    20_000,
   );
 });

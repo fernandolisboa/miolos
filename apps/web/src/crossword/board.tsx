@@ -150,6 +150,7 @@ export function Board({
               hinted: hintIndex === index,
             })}
             data-cell-index={index}
+            data-block={blocked || undefined}
             tabIndex={tabbable === index ? 0 : -1}
             aria-disabled={blocked}
             aria-label={

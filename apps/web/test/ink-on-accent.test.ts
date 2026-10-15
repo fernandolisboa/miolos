@@ -7,6 +7,7 @@ describe("the ink on an accent fill (T-WEB-S72)", () => {
   const SHEETS = [
     "src/play/screen.module.css",
     "src/play/conclusion-view.module.css",
+    "src/play/ending-stage.module.css",
     "app/page.module.css",
     "src/nonogram/nonogram-board.module.css",
     "app/estatisticas/page.module.css",

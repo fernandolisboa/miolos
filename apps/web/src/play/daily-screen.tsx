@@ -11,6 +11,7 @@ import {
   RemoteConclusionView,
 } from "./conclusion-lazy";
 import type { ConclusionResult } from "./conclusion-view";
+import { EndingStage } from "./ending-stage";
 import { JustEnded, useSawPlay } from "./just-ended";
 import type { PlayCore } from "./types";
 import { isClosedAndFrozen } from "./use-play-lifecycle";
@@ -56,24 +57,7 @@ export function DailyScreen(props: DailyScreenProps) {
     return skeleton;
   }
 
-  if (closed) {
-    return (
-      <JustEnded value={ended}>
-        {props.conclusion === undefined ? (
-          <ConclusionView
-            game={game}
-            date={state.date}
-            copy={copy.conclusion}
-            result={props.result}
-          />
-        ) : (
-          props.conclusion.render()
-        )}
-      </JustEnded>
-    );
-  }
-
-  if (claim !== undefined) {
+  if (!closed && claim !== undefined) {
     return (
       <RemoteConclusionView
         game={game}
@@ -84,5 +68,26 @@ export function DailyScreen(props: DailyScreenProps) {
     );
   }
 
-  return view;
+  return (
+    <EndingStage
+      over={closed}
+      won={ended && state.status === "solved"}
+      ending={() => (
+        <JustEnded value={ended}>
+          {props.conclusion === undefined ? (
+            <ConclusionView
+              game={game}
+              date={state.date}
+              copy={copy.conclusion}
+              result={props.result}
+            />
+          ) : (
+            props.conclusion.render()
+          )}
+        </JustEnded>
+      )}
+    >
+      {view}
+    </EndingStage>
+  );
 }

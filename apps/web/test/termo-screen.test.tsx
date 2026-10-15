@@ -939,13 +939,17 @@ describe("motion (T-WEB-S92)", () => {
   });
 
   it("staggers the reveal 60ms per column, on the judged class only", () => {
-    for (let column = 1; column <= WORD_LENGTH; column += 1) {
+    expect(decl(bodyOf(css, ".grid"), "--reveal-stagger")).toBe("60ms");
+    expect(
+      decl(bodyOf(css, ".tileJudged:nth-child(1)"), "transition-delay"),
+    ).toBe("0ms");
+    for (let column = 2; column <= WORD_LENGTH; column += 1) {
       expect(
         decl(
           bodyOf(css, `.tileJudged:nth-child(${String(column)})`),
           "transition-delay",
         ),
-      ).toBe(`${String((column - 1) * 60)}ms`);
+      ).toBe(`calc(var(--reveal-stagger) * ${String(column - 1)})`);
     }
   });
 });

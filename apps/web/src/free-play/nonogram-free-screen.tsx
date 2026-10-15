@@ -15,6 +15,7 @@ import { nonogramHintExplanation } from "../nonogram/hint";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
+import { EndingStage } from "../play/ending-stage";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
@@ -109,62 +110,67 @@ function NonogramFreeBoard({
   const filled = countFilledCells(state.entries);
 
   const choice = levelChoice(level, onLevelChange);
-  if (state.status === "solved" && state.solution !== null) {
-    return (
-      <FreePlaySolvedCard
+  const picture = state.status === "solved" ? state.solution : null;
+  return (
+    <EndingStage
+      over={picture !== null}
+      won
+      ending={() => (
+        <FreePlaySolvedCard
+          game="nonogram"
+          choice={choice}
+          onAgain={onNext}
+          picture={{
+            size: state.size,
+            cells: picture ?? [],
+            label: messages.freePlay.solved.pictureAria,
+          }}
+        />
+      )}
+    >
+      <FreePlayChrome
         game="nonogram"
         choice={choice}
-        onAgain={onNext}
-        picture={{
-          size: state.size,
-          cells: state.solution,
-          label: messages.freePlay.solved.pictureAria,
-        }}
-      />
-    );
-  }
-
-  return (
-    <FreePlayChrome
-      game="nonogram"
-      choice={choice}
-      pageModifier={nonogramPageModifier(state.size)}
-      state={{
-        kind: "playing",
-        readouts: {
-          progressShort: copy.progressShort(state.size, filled, target),
-          progressLong: copy.progressLong(filled, target),
-          hint: {
-            ...hintReadout(
-              state.hint,
-              nonogramHintExplanation(state.size, state.hint.reason),
-            ),
-            ready: hintReady,
-            onReveal: revealHint,
+        pageModifier={nonogramPageModifier(state.size)}
+        state={{
+          kind: "playing",
+          readouts: {
+            progressShort: copy.progressShort(state.size, filled, target),
+            progressLong: copy.progressLong(filled, target),
+            hint: {
+              ...hintReadout(
+                state.hint,
+                nonogramHintExplanation(state.size, state.hint.reason),
+              ),
+              ready: hintReady,
+              onReveal: revealHint,
+            },
+            onReset: hasDecidedCell(state.entries) ? reset : null,
           },
-          onReset: hasDecidedCell(state.entries) ? reset : null,
-        },
-      }}
-    >
-      <BoardCard below={<Controls brush={state.brush} onSetBrush={setBrush} />}>
-        <Board
-          size={state.size}
-          clues={state.clues}
-          solution={state.solution}
-          entries={state.entries}
-          selected={state.selected}
-          hintIndex={state.hint.lastIndex}
-          spotlight={state.hint.spotlight}
-          onSelect={selectCell}
-          onMove={moveSelection}
-          onMarkCell={markCell}
-          onStrokeStart={strokeStart}
-          onEnterValue={enterValue}
-          onClear={clearCell}
-          onPaintOver={paintOver}
-        />
-      </BoardCard>
-    </FreePlayChrome>
+        }}
+      >
+        <BoardCard
+          below={<Controls brush={state.brush} onSetBrush={setBrush} />}
+        >
+          <Board
+            size={state.size}
+            clues={state.clues}
+            solution={state.solution}
+            entries={state.entries}
+            selected={state.selected}
+            hintIndex={state.hint.lastIndex}
+            spotlight={state.hint.spotlight}
+            onSelect={selectCell}
+            onMove={moveSelection}
+            onMarkCell={markCell}
+            onStrokeStart={strokeStart}
+            onEnterValue={enterValue}
+            onClear={clearCell}
+            onPaintOver={paintOver}
+          />
+        </BoardCard>
+      </FreePlayChrome>
+    </EndingStage>
   );
 }
 
