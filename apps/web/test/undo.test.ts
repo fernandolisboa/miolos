@@ -89,7 +89,7 @@ const blankSudoku = () => sudokuBoard(Array.from({ length: 81 }, () => 0));
 
 const write = (index: number, digit: SudokuDigit): SudokuPlayAction[] => [
   { type: "select", index },
-  { type: "enter-digit", digit },
+  { type: "enter-digit", digit, cleanNotes: true },
 ];
 
 const NONOGRAM = generateNonogram(20_261_015, 1);
@@ -173,7 +173,7 @@ describe("undoable keeps one step per board change (T-WEB-S820)", () => {
     const hinted = sudoku(
       sudokuBoard(SUDOKU.givens),
       ...write(open, solution[open] === 1 ? 2 : 1),
-      { type: "use-hint", solution },
+      { type: "use-hint", solution, cleanNotes: true },
     );
     expect(hinted.hint.used).toBe(1);
     expect(hinted.history.steps).toHaveLength(0);
@@ -238,11 +238,12 @@ describe("a gesture undoes as one step (T-WEB-S821)", () => {
   });
 
   it("drops a Número fixo double tap that put the cell back", () => {
-    const tapped = sudoku(blankSudoku(), ...write(0, 3), ...write(1, 5));
+    const before = sudoku(blankSudoku(), ...write(0, 3));
+    const tapped = sudoku(before, ...write(1, 5));
     const locked = sudoku(tapped, {
       type: "lock-digit",
       digit: 5,
-      undo: { index: 1, value: null },
+      undo: { index: 1, value: null, notes: before.notes },
     });
     expect(locked.locked).toBe(5);
     expect(locked.history.steps).toHaveLength(1);

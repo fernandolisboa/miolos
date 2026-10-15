@@ -711,6 +711,10 @@ export const messages = {
           label: "Destacar linha, coluna e bloco",
           hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
         },
+        cleanNotes: {
+          label: "Limpar rascunho ao preencher",
+          hint: "Ao escrever um número, tira esse número do rascunho da linha, da coluna e do bloco dele.",
+        },
         strikePlacedRuns: {
           label: "Riscar números resolvidos",
           hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
@@ -976,15 +980,19 @@ export const messages = {
           `linha ${row}, coluna ${column}: ${value}, célula fixa`,
         cellInvalidAria: (row: number, column: number, value: number | null) =>
           `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
+        cellNotesAria: (label: string, digits: readonly number[]) =>
+          `${label}, rascunho ${digits.join(", ")}`,
         keypad: {
           digitAria: (digit: number) => `escrever ${digit}`,
+          noteDigitAria: (digit: number) => `anotar ${digit}`,
+          notingAria: "Rascunho",
           digitCompleteAria: (digit: number) =>
             `escrever ${digit} — os 9 já estão no tabuleiro`,
           digitOverAria: (digit: number, count: number) =>
             `escrever ${digit} — colocado ${count} vezes, mais que 9`,
           eraseAria: "apagar a célula selecionada",
           affordance:
-            "No teclado: os números de 1 a 9 escrevem e a tecla de apagar (⌫) apaga.",
+            "No teclado: os números de 1 a 9 escrevem, Shift com um número anota, N liga o rascunho e a tecla de apagar (⌫) apaga.",
         },
         hint: {
           correction: "Corrigimos um número que não fecha com as regras.",

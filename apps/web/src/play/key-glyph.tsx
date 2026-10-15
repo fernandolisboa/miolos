@@ -4,6 +4,7 @@ const PATHS = {
   backspace:
     "M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7ZM12 9.5l5 5M17 9.5l-5 5",
   enter: "M20 5v7a2 2 0 0 1-2 2H5M9 10l-4 4 4 4",
+  pencil: "M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5ZM15 5l4 4",
 } as const;
 
 export type KeyGlyphName = keyof typeof PATHS;

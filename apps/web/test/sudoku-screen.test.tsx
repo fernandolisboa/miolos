@@ -908,6 +908,7 @@ describe("the first paint (T-WEB-S30, T-WEB-S31)", () => {
     for (const [local, count] of [
       ["cell", TOTAL_CELLS],
       ["keypadDigit", 9],
+      ["keypadPencil", 1],
       ["keypadErase", 1],
       ["rule", 4],
     ] as const) {
@@ -994,19 +995,21 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
     const slots = Number(
       /repeat\((\d+),/.exec(decl(keypad, "grid-template-columns") ?? "")?.[1],
     );
-    const gap = token("--space-2");
+    const gap = pixels(decl(keypad, "column-gap"));
 
-    expect(decl(keypad, "gap")).toBe("var(--space-2)");
+    expect(slots).toBe(6);
     expect(decl(keypad, "width")).toBe("var(--board-side)");
-    expect(Number(rows?.[1]) * slots).toBe(10);
+    expect(Number(rows?.[1])).toBe(2);
     expect(pixels(rows?.[2])).toBeGreaterThanOrEqual(minimum);
     expect((boardFloor() - (slots - 1) * gap) / slots).toBeGreaterThanOrEqual(
       minimum,
     );
 
+    const pencil = bodyOf(MOBILE, ".keypadPencil");
+    expect(decl(pencil, "grid-row")).toBe("1");
+    expect(decl(pencil, "grid-column")).toBe(String(slots));
     const erase = bodyOf(MOBILE, ".keypadErase");
-    expect(decl(erase, "grid-row")).toBe("2");
-    expect(decl(erase, "grid-column")).toBe(String(slots));
+    expect(decl(erase, "grid-column")).toBe(`${String(slots - 1)} / -1`);
   });
 
   it("gives the desktop keypad the board's tracks, and never a digit under the 44px target", () => {
@@ -1055,7 +1058,7 @@ describe("the board and keypad arithmetic (T-WEB-S34)", () => {
     expect(decl(desktop, "margin-top")).toBe("var(--space-6)");
     expect(decl(phone, "margin-top")).toBe("var(--space-4)");
     expect(decl(desktop, "row-gap")).toBe("8px");
-    expect(decl(phone, "gap")).toBe("var(--space-2)");
+    expect(decl(phone, "row-gap")).toBe("var(--space-2)");
   });
 
   it("places each digit on the column `track()` computes for that cell", () => {

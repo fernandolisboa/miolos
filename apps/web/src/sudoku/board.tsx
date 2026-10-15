@@ -7,6 +7,7 @@ import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
 import {
+  DIGITS,
   mergedGrid,
   playableGivens,
   selectionHighlights,
@@ -14,6 +15,7 @@ import {
   track,
   type CellHighlight,
 } from "./engine";
+import { noteDigits } from "./notes";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 
@@ -27,6 +29,7 @@ export function Board({
   givens,
   solution,
   entries,
+  notes,
   selected,
   violating,
   hintIndex,
@@ -34,12 +37,15 @@ export function Board({
   onSelect,
   onMove,
   onDigit,
+  onNote,
+  onToggleNoting,
   onClear,
   onTapCell,
 }: {
   readonly givens: SudokuGrid;
   readonly solution: readonly SudokuDigit[] | null;
   readonly entries: readonly SudokuCellValue[];
+  readonly notes: readonly number[];
 
   readonly selected: number | null;
   readonly violating: ReadonlySet<number>;
@@ -48,6 +54,8 @@ export function Board({
   readonly onSelect: (index: number) => void;
   readonly onMove: (rows: number, columns: number) => void;
   readonly onDigit: (digit: SudokuDigit) => void;
+  readonly onNote: (digit: SudokuDigit) => void;
+  readonly onToggleNoting: () => void;
   readonly onClear: () => void;
   readonly onTapCell: (index: number) => void;
 }) {
@@ -88,6 +96,17 @@ export function Board({
       onMove(move.rows, move.columns);
       return;
     }
+    if (event.key === "n" || event.key === "N") {
+      event.preventDefault();
+      onToggleNoting();
+      return;
+    }
+    const noted = event.shiftKey ? asDigit(codeDigit(event.code)) : null;
+    if (noted !== null) {
+      event.preventDefault();
+      onNote(noted);
+      return;
+    }
     const digit = asDigit(event.key);
     if (digit !== null) {
       event.preventDefault();
@@ -126,6 +145,7 @@ export function Board({
         const value = given !== EMPTY ? given : (entries[index] ?? null);
         const invalid = violating.has(index);
         const isWrong = wrong.has(index);
+        const cellNotes = noteDigits(notes[index] ?? 0);
         return (
           <button
             key={index}
@@ -151,6 +171,7 @@ export function Board({
               value,
               invalid,
               isWrong,
+              cellNotes,
             )}
 
             onFocus={() => onSelect(index)}
@@ -163,6 +184,15 @@ export function Board({
             }}
           >
             {value}
+            {value === null && cellNotes.length > 0 ? (
+              <span aria-hidden className={styles.notes}>
+                {DIGITS.map((digit) => (
+                  <span key={digit}>
+                    {cellNotes.includes(digit) ? digit : null}
+                  </span>
+                ))}
+              </span>
+            ) : null}
             {isWrong ? <WrongMark /> : null}
           </button>
         );
@@ -245,6 +275,7 @@ function cellAria(
   value: number | null,
   invalid: boolean,
   wrong: boolean,
+  notes: readonly SudokuDigit[],
 ): string {
   const copy = messages.games.sudoku.play;
   const label = invalid
@@ -252,7 +283,12 @@ function cellAria(
     : given !== undefined && given !== EMPTY
       ? copy.cellGivenAria(row, column, given)
       : copy.cellAria(row, column, value);
-  return wrong ? messages.play.wrongCell(label) : label;
+  const named = notes.length > 0 ? copy.cellNotesAria(label, notes) : label;
+  return wrong ? messages.play.wrongCell(named) : named;
+}
+
+function codeDigit(code: string): string {
+  return /^(?:Digit|Numpad)(\d)$/.exec(code)?.[1] ?? "";
 }
 
 function asDigit(key: string): SudokuDigit | null {

@@ -5,6 +5,7 @@
 **Amends:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) — the chrome's grid gains a sixth area and one stateful child.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 2's "free play still writes nothing" now excepts the settings key, written only from an *Ajustes* switch.
 **Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — Recomeçar also clears the undo history, and a hint is a point undo never steps past.
+**Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — a Sudoku board that holds only notes is resettable: decision 1 clears the notes, and `onReset` stays on while any exist.
 
 ## Context
 

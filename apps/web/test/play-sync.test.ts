@@ -230,6 +230,29 @@ describe("flushPendingCompletions", () => {
     });
   });
 
+  it("never sends a Sudoku record's notes: the body is the five completion fields (T-WEB-S836)", async () => {
+    writePlayRecord({
+      ...pendingSudokuRecord(),
+      notes: Array.from({ length: 81 }, () => 511),
+    });
+    const fetchMock = stubFetch(() =>
+      jsonResponse(200, okBody({ game: "sudoku", elapsedMs: 411_000 })),
+    );
+
+    const { flushPendingCompletions } = await freshSync();
+    await flushPendingCompletions();
+
+    const [call] = completionCalls(fetchMock);
+    const body: unknown = JSON.parse(requestInitSchema.parse(call?.[1]).body);
+    expect(body).toEqual({
+      game: "sudoku",
+      date: DATE,
+      grid: SOLVED_DIGITS,
+      elapsedMs: 411_000,
+      hintsUsed: 0,
+    });
+  });
+
   it("mints the session before the first POST, so a fast solve never races it", async () => {
     writePlayRecord(pendingRecord());
     const fetchMock = stubFetch(() => jsonResponse(200, okBody()));

@@ -439,6 +439,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
         "game",
         "date",
         "entries",
+        "notes",
         "grid",
         "elapsedMs",
         "hintsUsed",

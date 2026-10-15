@@ -60,6 +60,8 @@ export function PlayView({
           <Keypad
             lock={play.lock}
             grid={mergedGrid(state.givens, state.entries)}
+            noting={state.noting}
+            onToggleNoting={play.toggleNoting}
           />
         }
       >
@@ -67,6 +69,7 @@ export function PlayView({
           givens={state.givens}
           solution={play.solution}
           entries={state.entries}
+          notes={state.notes}
           selected={state.selected}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
@@ -74,6 +77,8 @@ export function PlayView({
           onSelect={play.selectCell}
           onMove={play.moveSelection}
           onDigit={play.enterDigit}
+          onNote={play.toggleNote}
+          onToggleNoting={play.toggleNoting}
           onClear={play.clearCell}
           onTapCell={play.lock.tapCell}
         />

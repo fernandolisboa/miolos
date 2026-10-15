@@ -16,6 +16,7 @@ const sudoku = z.object({
   showErrors: flag(false),
   lockDigit: flag(false),
   highlightSelection: flag(true),
+  cleanNotes: flag(true),
 });
 
 const nonogram = z.object({

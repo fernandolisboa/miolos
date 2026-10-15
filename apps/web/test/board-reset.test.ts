@@ -100,9 +100,13 @@ function sudokuCase(): BoardCase<SudokuPlayState> {
     { type: "resume", now: 1000 },
     { type: "tick", now: 5000 },
     { type: "select", index: first },
-    { type: "use-hint", solution: SUDOKU_SOLUTION },
+    { type: "use-hint", solution: SUDOKU_SOLUTION, cleanNotes: true },
     { type: "select", index: second },
-    { type: "enter-digit", digit: sudokuDigitSchema.parse(clash ?? 1) },
+    {
+      type: "enter-digit",
+      digit: sudokuDigitSchema.parse(clash ?? 1),
+      cleanNotes: true,
+    },
   ];
   return {
     name: "sudoku",
@@ -121,7 +125,11 @@ function sudokuCase(): BoardCase<SudokuPlayState> {
     }),
     reduce,
     useHint: (state) =>
-      reduce(state, { type: "use-hint", solution: SUDOKU_SOLUTION }),
+      reduce(state, {
+        type: "use-hint",
+        solution: SUDOKU_SOLUTION,
+        cleanNotes: true,
+      }),
     flagged: (state) => state.violating.size,
     kept: (state) => [state.givens, state.selected, state.tier],
   };
@@ -393,6 +401,7 @@ describe("a solved board ignores entries while the win glows (T-WEB-S765)", () =
       {
         type: "enter-digit",
         digit: sudokuDigitSchema.parse(SUDOKU_SOLUTION[cell]),
+        cleanNotes: true,
       },
     ] satisfies SudokuPlayAction[];
     const after = run(sudokuPlayReducer, sudoku.solved, typed);

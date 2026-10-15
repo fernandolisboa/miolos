@@ -58,7 +58,11 @@ function write(
   index: number,
   digit: SudokuDigit,
 ): SudokuPlayState {
-  return play(state, { type: "select", index }, { type: "enter-digit", digit });
+  return play(
+    state,
+    { type: "select", index },
+    { type: "enter-digit", digit, cleanNotes: true },
+  );
 }
 
 function solutionOf(givens: readonly number[]): readonly SudokuDigit[] {
@@ -156,6 +160,7 @@ describe("enter-digit and clear-cell", () => {
     const cleared = sudokuPlayReducer(written, {
       type: "enter-digit",
       digit: 4,
+      cleanNotes: true,
     });
 
     expect(cleared.entries[index]).toBeNull();
@@ -164,7 +169,7 @@ describe("enter-digit and clear-cell", () => {
   it("replaces when a different digit is entered", () => {
     const state = sudokuPlayReducer(
       write(initSudokuPlayState(daily()), index, 4),
-      { type: "enter-digit", digit: 9 },
+      { type: "enter-digit", digit: 9, cleanNotes: true },
     );
 
     expect(state.entries[index]).toBe(9);
@@ -194,15 +199,23 @@ describe("enter-digit and clear-cell", () => {
   it("is a no-op with no selection, and out of range", () => {
     const initial = initSudokuPlayState(daily());
 
-    expect(sudokuPlayReducer(initial, { type: "enter-digit", digit: 7 })).toBe(
-      initial,
-    );
+    expect(
+      sudokuPlayReducer(initial, {
+        type: "enter-digit",
+        digit: 7,
+        cleanNotes: true,
+      }),
+    ).toBe(initial);
     expect(sudokuPlayReducer(initial, { type: "clear-cell" })).toBe(initial);
 
     const strayed = sudokuPlayReducer(initial, { type: "select", index: 999 });
-    expect(sudokuPlayReducer(strayed, { type: "enter-digit", digit: 7 })).toBe(
-      strayed,
-    );
+    expect(
+      sudokuPlayReducer(strayed, {
+        type: "enter-digit",
+        digit: 7,
+        cleanNotes: true,
+      }),
+    ).toBe(strayed);
     expect(sudokuPlayReducer(strayed, { type: "clear-cell" })).toBe(strayed);
   });
 });
@@ -225,7 +238,7 @@ describe("the merged grid the engine sees", () => {
       play(
         initial,
         { type: "select", index: 999 },
-        { type: "enter-digit", digit: 5 },
+        { type: "enter-digit", digit: 5, cleanNotes: true },
       ),
     ],
     ["a duplicate in a row", write(write(blankState(), 0, 5), 3, 5)],
@@ -265,6 +278,7 @@ describe("violating", () => {
       const fixed = sudokuPlayReducer(clashing, {
         type: "enter-digit",
         digit: 5,
+        cleanNotes: true,
       });
 
       expect(fixed.entries[second]).toBeNull();
@@ -431,6 +445,7 @@ describe("use-hint", () => {
     const hinted = sudokuPlayReducer(at, {
       type: "use-hint",
       solution: SOLUTION,
+      cleanNotes: true,
     });
 
     expect(hinted.selected).toBe(80);
@@ -441,6 +456,7 @@ describe("use-hint", () => {
     const hinted = sudokuPlayReducer(solved, {
       type: "use-hint",
       solution: SOLUTION,
+      cleanNotes: true,
     });
 
     expect(hinted).toBe(solved);
@@ -451,6 +467,7 @@ describe("use-hint", () => {
     const hinted = sudokuPlayReducer(initial, {
       type: "use-hint",
       solution: [],
+      cleanNotes: true,
     });
 
     expect(hinted).toBe(initial);
@@ -462,6 +479,7 @@ describe("use-hint", () => {
     const hinted = sudokuPlayReducer(wrongAt, {
       type: "use-hint",
       solution: SOLUTION,
+      cleanNotes: true,
     });
 
     expect(hinted.hint.lastIndex).toBe(LAST_PLAYABLE);
@@ -480,6 +498,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S550)", () => {
     const hinted = sudokuPlayReducer(initial, {
       type: "use-hint",
       solution: SOLUTION,
+      cleanNotes: true,
     });
 
     expect(hinted.entries[step.index]).toBe(step.digit);
@@ -497,6 +516,7 @@ describe("use-hint records the reason and the spotlight (T-WEB-S550)", () => {
     const hinted = sudokuPlayReducer(wrongAt, {
       type: "use-hint",
       solution: SOLUTION,
+      cleanNotes: true,
     });
 
     expect(hinted.hint.reason).toEqual({ kind: "correction" });
@@ -515,7 +535,7 @@ describe("the spotlight lasts until the next board action, the reason until the 
     return play(
       initSudokuPlayState(daily()),
       { type: "select", index: selected },
-      { type: "use-hint", solution: SOLUTION },
+      { type: "use-hint", solution: SOLUTION, cleanNotes: true },
     );
   }
 
@@ -526,8 +546,16 @@ describe("the spotlight lasts until the next board action, the reason until the 
       FIRST_GIVEN,
       { type: "move-selection", rows: 0, columns: 1 },
     ],
-    ["writing a digit", STILL_EMPTY, { type: "enter-digit", digit: 1 }],
-    ["writing on a given", FIRST_GIVEN, { type: "enter-digit", digit: 1 }],
+    [
+      "writing a digit",
+      STILL_EMPTY,
+      { type: "enter-digit", digit: 1, cleanNotes: true },
+    ],
+    [
+      "writing on a given",
+      FIRST_GIVEN,
+      { type: "enter-digit", digit: 1, cleanNotes: true },
+    ],
     ["clearing an empty cell", STILL_EMPTY, { type: "clear-cell" }],
     ["clearing a given", FIRST_GIVEN, { type: "clear-cell" }],
   ])("%s clears the spotlight and keeps the reason", (_, at, action) => {
@@ -565,7 +593,7 @@ describe("the spotlight lasts until the next board action, the reason until the 
     });
     const written = sudokuPlayReducer(
       { ...before, hint: { ...before.hint, spotlight: [0] } },
-      { type: "enter-digit", digit: 1 },
+      { type: "enter-digit", digit: 1, cleanNotes: true },
     );
 
     const reset = sudokuPlayReducer(
@@ -597,7 +625,11 @@ describe("the reducer's hints stop at the ceiling (T-WEB-S511a)", () => {
   const initial = initSudokuPlayState(daily());
 
   function hint(state: SudokuPlayState): SudokuPlayState {
-    return sudokuPlayReducer(state, { type: "use-hint", solution: SOLUTION });
+    return sudokuPlayReducer(state, {
+      type: "use-hint",
+      solution: SOLUTION,
+      cleanNotes: true,
+    });
   }
 
   it("reveals a solution digit on each free press", () => {
