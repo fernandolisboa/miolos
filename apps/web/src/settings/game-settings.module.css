@@ -1,6 +1,11 @@
+.frame {
+  container-type: inline-size;
+}
+
 .groups {
   display: flex;
   flex-direction: column;
+  max-width: 40rem;
 }
 
 .group {
@@ -20,4 +25,21 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-2);
+}
+
+@container (min-width: 50rem) {
+  .groups {
+    display: block;
+    max-width: none;
+    margin-top: var(--space-5);
+    columns: 2;
+    column-gap: var(--space-8);
+  }
+
+  .group,
+  .group + .group {
+    break-inside: avoid;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
 }

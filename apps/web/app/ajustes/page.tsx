@@ -26,11 +26,17 @@ export default function SettingsPage() {
         <p className={styles.lead}>{copy.lead}</p>
       </div>
 
-      <ThemeSection />
-      <GamesSection />
-      <ReminderSection />
-      <AccountSection />
-      <GoogleSection />
+      <div className={styles.sections}>
+        <div className={styles.row}>
+          <ThemeSection />
+          <ReminderSection />
+        </div>
+        <GamesSection />
+        <div className={styles.row}>
+          <AccountSection />
+          <GoogleSection />
+        </div>
+      </div>
 
       <section
         className={styles.deletion}

@@ -131,56 +131,60 @@ export function GameSettings({
 }) {
   const settings = useSettings();
   return (
-    <div className={styles.groups}>
-      <fieldset className={styles.group}>
-        <legend className={styles.legend}>{copy.general}</legend>
-        {clock ? (
+    <div className={styles.frame}>
+      <div className={styles.groups}>
+        <fieldset className={styles.group}>
+          <legend className={styles.legend}>{copy.general}</legend>
+          {clock ? (
+            <SettingSwitch
+              flag="showClock"
+              checked={settings.showClock}
+              onChange={(value) => {
+                writeSettings({ ...readSettings(), showClock: value });
+              }}
+            />
+          ) : null}
           <SettingSwitch
-            flag="showClock"
-            checked={settings.showClock}
+            flag="endAnimation"
+            checked={settings.endAnimation}
             onChange={(value) => {
-              writeSettings({ ...readSettings(), showClock: value });
+              writeSettings({ ...readSettings(), endAnimation: value });
             }}
           />
-        ) : null}
-        <SettingSwitch
-          flag="endAnimation"
-          checked={settings.endAnimation}
-          onChange={(value) => {
-            writeSettings({ ...readSettings(), endAnimation: value });
-          }}
-        />
-      </fieldset>
-      {games.map((game) => (
-        <fieldset key={game} className={styles.group}>
-          <legend className={styles.legend}>{messages.games[game].name}</legend>
-          {(
-            Object.entries(settings.games[game]) as [
-              GameSetting,
-              boolean | FirstValue,
-            ][]
-          ).map(([setting, current]) =>
-            typeof current === "boolean" ? (
-              <SettingSwitch
-                key={setting}
-                flag={setting}
-                checked={current}
-                onChange={(value) => {
-                  setGameSetting(game, setting, value);
-                }}
-              />
-            ) : (
-              <FirstValueChoice
-                key={setting}
-                value={current}
-                onChange={(value) => {
-                  setGameSetting(game, setting, value);
-                }}
-              />
-            ),
-          )}
         </fieldset>
-      ))}
+        {games.map((game) => (
+          <fieldset key={game} className={styles.group}>
+            <legend className={styles.legend}>
+              {messages.games[game].name}
+            </legend>
+            {(
+              Object.entries(settings.games[game]) as [
+                GameSetting,
+                boolean | FirstValue,
+              ][]
+            ).map(([setting, current]) =>
+              typeof current === "boolean" ? (
+                <SettingSwitch
+                  key={setting}
+                  flag={setting}
+                  checked={current}
+                  onChange={(value) => {
+                    setGameSetting(game, setting, value);
+                  }}
+                />
+              ) : (
+                <FirstValueChoice
+                  key={setting}
+                  value={current}
+                  onChange={(value) => {
+                    setGameSetting(game, setting, value);
+                  }}
+                />
+              ),
+            )}
+          </fieldset>
+        ))}
+      </div>
     </div>
   );
 }
