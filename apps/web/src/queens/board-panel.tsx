@@ -5,7 +5,6 @@ import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { hintReadout } from "../play/hint-readout";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
-import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeReadouts } from "../play/screen-chrome";
 import { Board, BoardSkeleton } from "./board";
 import { queensHintExplanation } from "./hint";
@@ -27,7 +26,7 @@ export function queensReadouts(board: QueensBoardState): PlayChromeReadouts {
       ready: board.hintReady,
       onReveal: board.revealHint,
     },
-    onReset: hasDecidedCell(state.entries) ? board.reset : null,
+    ...board.edits,
   };
 }
 
@@ -53,7 +52,8 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
         onSelect={board.selectCell}
         onMove={board.moveSelection}
         onTap={board.tapCell}
-        onCrossOver={board.crossOver}
+        onStrokeStart={board.strokeStart}
+        onPaintOver={board.paintOver}
         onEnterValue={board.enterValue}
         onClear={board.clearCell}
       />

@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
+import type { UndoAction } from "../play/undo";
 import {
   useStrokeControls,
   type StrokeControls,
@@ -22,7 +23,7 @@ export interface NonogramControls extends BinaryGridControls, StrokeControls {
 
 export function useNonogramControls(
   state: NonogramPlayState,
-  dispatch: Dispatch<NonogramPlayAction>,
+  dispatch: Dispatch<NonogramPlayAction | UndoAction>,
 ): NonogramControls {
   const controls = useBinaryGridControls(state, dispatch);
   const strokes = useStrokeControls(dispatch);

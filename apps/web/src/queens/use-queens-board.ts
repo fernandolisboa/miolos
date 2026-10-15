@@ -6,6 +6,10 @@ import {
   useBinaryGridControls,
   type BinaryGridControls,
 } from "../play/use-binary-grid-controls";
+import {
+  useStrokeControls,
+  type StrokeControls,
+} from "../play/use-stroke-controls";
 import { useSettings } from "../settings/settings";
 import {
   countQueens,
@@ -16,12 +20,11 @@ import {
   type QueensPlayState,
 } from "./state";
 
-export interface QueensBoardState extends BinaryGridControls {
+export interface QueensBoardState extends BinaryGridControls, StrokeControls {
   readonly state: QueensPlayState;
   readonly dispatch: Dispatch<QueensPlayAction>;
   readonly placed: number;
   readonly tapCell: (index: number, press: Press) => void;
-  readonly crossOver: (index: number) => void;
 }
 
 export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
@@ -32,21 +35,18 @@ export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
     initQueensPlayState,
   );
   const controls = useBinaryGridControls(state, dispatch);
+  const strokes = useStrokeControls(dispatch);
 
   const tapCell = useCallback((index: number, press: Press) => {
     dispatch({ type: "tap", index, press });
   }, []);
 
-  const crossOver = useCallback((index: number) => {
-    dispatch({ type: "cross-over", index });
-  }, []);
-
   return {
     ...controls,
+    ...strokes,
     state,
     dispatch,
     placed: countQueens(state.entries),
     tapCell,
-    crossOver,
   };
 }

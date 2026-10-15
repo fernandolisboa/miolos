@@ -134,6 +134,7 @@ function Harness({ cell = 4 }: { readonly cell?: number | null }) {
             },
           },
           onReset: null,
+          onUndo: null,
         },
       }}
       back={{ href: "/", label: "Voltar", ariaLabel: "Voltar" }}

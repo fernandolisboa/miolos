@@ -17,6 +17,8 @@ import { PlayTitle, type PlayTitleNote } from "./play-title";
 import { ResetControl, ResetPlaceholder } from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
+import { UndoControl, UndoPlaceholder } from "./undo-control";
+import type { BoardEdits } from "./undo";
 
 export type ChromeGame = Exclude<Game, "termo">;
 
@@ -42,7 +44,7 @@ export interface PlayChromeStat {
   readonly className: string;
 }
 
-export interface PlayChromeReadouts {
+export interface PlayChromeReadouts extends BoardEdits {
   readonly progressShort: string;
   readonly progressLong: string;
   readonly hint: {
@@ -52,7 +54,6 @@ export interface PlayChromeReadouts {
     readonly cell: number | null;
     readonly onReveal: () => void;
   };
-  readonly onReset: (() => void) | null;
 }
 
 export type PlayChromeState =
@@ -223,11 +224,13 @@ export function PlayScreenChrome({
       <div className={screen.reset}>
         {readouts === null ? (
           <>
+            <UndoPlaceholder />
             <ResetPlaceholder />
             <GameSettingsPlaceholder />
           </>
         ) : (
           <>
+            <UndoControl onUndo={readouts.onUndo} />
             <ResetControl onReset={readouts.onReset} />
             <GameSettingsButton game={game} clock={clockSetting !== "none"} />
           </>

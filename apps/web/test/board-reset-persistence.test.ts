@@ -9,6 +9,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useNonogramPlay } from "../src/nonogram/use-nonogram-play";
+import type { BoardEdits } from "../src/play/undo";
 import {
   playRecordKey,
   playRecordSchema,
@@ -30,7 +31,7 @@ interface Play {
   readonly state: { readonly entries: readonly unknown[] };
   readonly elapsed: number;
   readonly hintReady: boolean;
-  readonly reset: () => void;
+  readonly edits: BoardEdits;
   readonly revealHint: () => void;
 }
 
@@ -105,7 +106,7 @@ function registerDaily<P extends Play>({
       expect(hintNoted(result.current)).toBe(true);
 
       act(() => {
-        result.current.reset();
+        result.current.edits.onReset?.();
       });
 
       const record = storedRecord(name);
@@ -124,8 +125,9 @@ function registerDaily<P extends Play>({
       const { result } = started();
       const setItem = vi.spyOn(Storage.prototype, "setItem");
 
+      expect(result.current.edits.onReset).toBeNull();
       act(() => {
-        result.current.reset();
+        result.current.edits.onReset?.();
       });
 
       expect(setItem).not.toHaveBeenCalled();

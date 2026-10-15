@@ -4,7 +4,6 @@ import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { DailyPlayChrome } from "../play/daily-chrome";
 import { hintReadout } from "../play/hint-readout";
-import { hasDecidedCell } from "../play/reset-board";
 import type { PlayChromeStat } from "../play/screen-chrome";
 import type { ArchivePlayChrome } from "../play/types";
 import { Board, BoardSkeleton } from "./board";
@@ -52,7 +51,7 @@ export function PlayView({
             ready: play.hintReady,
             onReveal: play.revealHint,
           },
-          onReset: hasDecidedCell(state.entries) ? play.reset : null,
+          ...play.edits,
         },
       }}
     >
