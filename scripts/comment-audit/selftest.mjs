@@ -218,6 +218,8 @@ check(
     "apps/api/next-env.d.ts",
     "apps/web/next-env.d.ts",
     "packages/games/src/crossword/lexicon.generated.ts",
+    "packages/games/src/termo-answers/answers.generated.ts",
+    "packages/games/src/termo-free/pool.generated.ts",
     "packages/games/src/termo/words.generated.ts",
   ]);
 }

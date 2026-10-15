@@ -44,8 +44,7 @@ import {
   sudokuCriteriaForWeekday,
   validateSudoku,
 } from "@miolos/games/sudoku";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
-import type { TermoAnswer } from "@miolos/games/termo";
+import { TERMO_ANSWERS, type TermoAnswer } from "@miolos/games/termo-answers";
 
 import { addDays, isoWeekdayOf } from "./dates";
 

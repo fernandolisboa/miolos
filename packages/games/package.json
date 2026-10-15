@@ -11,7 +11,9 @@
     "./nonogram": "./src/nonogram/index.ts",
     "./queens": "./src/queens/index.ts",
     "./sudoku": "./src/sudoku/index.ts",
-    "./termo": "./src/termo/index.ts"
+    "./termo": "./src/termo/index.ts",
+    "./termo-answers": "./src/termo-answers/index.ts",
+    "./termo-free": "./src/termo-free/index.ts"
   },
   "scripts": {
     "generate:crossword": "node scripts/generate-crossword-lexicon.ts",

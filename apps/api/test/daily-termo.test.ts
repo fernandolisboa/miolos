@@ -9,7 +9,7 @@ import {
 import { createTestDb } from "@miolos/db/testing";
 import { isWeekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import {
   afterAll,
   beforeAll,

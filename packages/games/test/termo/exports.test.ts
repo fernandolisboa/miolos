@@ -8,7 +8,17 @@ describe("@miolos/games exports map", () => {
     expect(typeof mod.evaluateGuess).toBe("function");
 
     expect(typeof mod.isValidGuess).toBe("function");
+    expect("TERMO_ANSWERS" in mod).toBe(false);
+  });
+
+  it("resolves the ./termo-answers subpath", async () => {
+    const mod = await import("@miolos/games/termo-answers");
     expect(mod.TERMO_ANSWERS).toHaveLength(400);
+  });
+
+  it("resolves the ./termo-free subpath", async () => {
+    const mod = await import("@miolos/games/termo-free");
+    expect(typeof mod.drawFreeTermoWord(1)).toBe("string");
   });
 
   it("resolves the root barrel (shared substrate only)", async () => {

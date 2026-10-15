@@ -18,7 +18,7 @@ import { generateBinairo } from "@miolos/games/binairo";
 import { generateCrossword } from "@miolos/games/crossword";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateQueens } from "@miolos/games/queens";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import {
   afterAll,
   beforeAll,

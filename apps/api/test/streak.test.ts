@@ -3,7 +3,7 @@ import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
-import { TERMO_ANSWERS } from "@miolos/games/termo";
+import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { NextRequest } from "next/server";
 import {
   afterAll,

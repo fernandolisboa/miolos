@@ -7,11 +7,8 @@ import {
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { completions } from "@miolos/db/user";
-import {
-  isValidGuess,
-  TERMO_ANSWERS,
-  type TermoAnswer,
-} from "@miolos/games/termo";
+import { isValidGuess } from "@miolos/games/termo";
+import { TERMO_ANSWERS, type TermoAnswer } from "@miolos/games/termo-answers";
 import { NextRequest } from "next/server";
 import {
   afterAll,

@@ -6,9 +6,10 @@ import { describe, expect, it } from "vitest";
 import { normalizeWord } from "../../src/normalize";
 import {
   isValidGuess,
-  TERMO_ANSWERS,
   TERMO_VALIDATION_WORDS,
 } from "../../src/termo/word-list";
+import { TERMO_ANSWERS } from "../../src/termo-answers";
+import { FREE_POOL_CANONICALS } from "../../src/termo-free/pool.generated";
 
 const FORBIDDEN_PAIRS: readonly (readonly [string, string])[] = [
   ["então", "agora"],
@@ -20,17 +21,25 @@ const CONTROL_PAIR = ["zurre", "zurro"] as const;
 
 const EXPECTED_MARKERS: readonly string[] = ["zurro", "abaco"];
 
+const FREE_POOL_MARKER = ["ábaco", "abade"] as const;
+
 const SRC = join(import.meta.dirname, "..", "..", "src");
 const WORDS = readFileSync(join(SRC, "termo", "words.generated.ts"), "utf8");
+const ANSWERS = readFileSync(
+  join(SRC, "termo-answers", "answers.generated.ts"),
+  "utf8",
+);
+const POOL = readFileSync(join(SRC, "termo-free", "pool.generated.ts"), "utf8");
 const LEXICON = readFileSync(
   join(SRC, "crossword", "lexicon.generated.ts"),
   "utf8",
 );
 
-function initialiser(name: string): string {
-  const from = WORDS.indexOf(`export const ${name}`);
-  const to = WORDS.indexOf("export const", from + 1);
-  return WORDS.slice(from, to === -1 ? undefined : to);
+function initialiser(source: string, name: string): string {
+  const from = source.indexOf(`export const ${name}`);
+  expect(from, name).not.toBe(-1);
+  const to = source.indexOf("export const", from + 1);
+  return source.slice(from, to === -1 ? undefined : to);
 }
 
 const escaped = ([first, second]: readonly [string, string]) =>
@@ -54,22 +63,43 @@ describe("the client-bundle tripwire's word-list markers", () => {
         adjacent(CANONICALS, pair),
         `\`${escaped(pair)}\` no longer spells two adjacent answers: update this file AND \`FORBIDDEN_EVERYWHERE\` in apps/web/scripts/route-client-js.mjs`,
       ).toBe(true);
-      expect(initialiser("ANSWER_CANONICALS")).toContain(escaped(pair));
+      expect(initialiser(ANSWERS, "ANSWER_CANONICALS")).toContain(
+        escaped(pair),
+      );
     }
   });
 
-  it("appear in no form the validation list or the crossword lexicon would ship", () => {
+  it("appear in no form the validation list, the crossword lexicon or the free pool would ship", () => {
     for (const pair of FORBIDDEN_PAIRS) {
       expect(adjacent(TERMO_VALIDATION_WORDS, pair)).toBe(false);
-      expect(initialiser("VALIDATION_WORDS")).not.toContain(escaped(pair));
+      expect(initialiser(WORDS, "VALIDATION_WORDS")).not.toContain(
+        escaped(pair),
+      );
       expect(LEXICON).not.toContain(escaped(pair));
       expect(LEXICON).not.toContain(pair.join("\n"));
+      expect(POOL).not.toContain(escaped(pair));
+    }
+  });
+
+  it("the free pool's own marker is spelled only by the free pool", () => {
+    expect(
+      adjacent(FREE_POOL_CANONICALS.split("\n"), FREE_POOL_MARKER),
+      `\`${escaped(FREE_POOL_MARKER)}\` no longer spells two adjacent pool words: update this file AND \`ROUTE_EXCLUSIVE_MARKERS\` in apps/web/scripts/route-client-js.mjs`,
+    ).toBe(true);
+    expect(initialiser(POOL, "FREE_POOL_CANONICALS")).toContain(
+      escaped(FREE_POOL_MARKER),
+    );
+    for (const other of [WORDS, ANSWERS, LEXICON]) {
+      expect(other).not.toContain(escaped(FREE_POOL_MARKER));
+      expect(other).not.toContain(FREE_POOL_MARKER.join("\n"));
     }
   });
 
   it("keep a positive control spelled the same way in the list that must ship", () => {
     expect(adjacent(TERMO_VALIDATION_WORDS, CONTROL_PAIR)).toBe(true);
-    expect(initialiser("VALIDATION_WORDS")).toContain(escaped(CONTROL_PAIR));
+    expect(initialiser(WORDS, "VALIDATION_WORDS")).toContain(
+      escaped(CONTROL_PAIR),
+    );
   });
 
   it("keep their positive controls in the list that must ship", () => {
@@ -87,19 +117,23 @@ describe("the client-bundle tripwire's word-list markers", () => {
 });
 
 describe("the tree-shaking annotations that keep bundles honest", () => {
-  it("survive in word-list.ts: four /*#__PURE__*/, one per top-level initialiser", () => {
-    const source = readFileSync(
-      join(import.meta.dirname, "..", "..", "src", "termo", "word-list.ts"),
-      "utf8",
-    );
-    expect(source.match(/\/\*#__PURE__\*\//g)).toHaveLength(4);
-    for (const initialiser of [
-      "Object.freeze(\n",
-      "ANSWER_CANONICALS.split",
-      "Object.freeze(VALIDATION_WORDS.split",
-      "new Set(",
-    ]) {
-      expect(source).toContain(`/*#__PURE__*/ ${initialiser}`);
+  it("survive in word-list.ts and termo-answers/index.ts: two /*#__PURE__*/ each, one per initialiser", () => {
+    const pins: readonly (readonly [string, readonly string[]])[] = [
+      [
+        join("termo", "word-list.ts"),
+        ["Object.freeze(VALIDATION_WORDS.split", "new Set("],
+      ],
+      [
+        join("termo-answers", "index.ts"),
+        ["Object.freeze(\n", "ANSWER_CANONICALS.split"],
+      ],
+    ];
+    for (const [file, initialisers] of pins) {
+      const source = readFileSync(join(SRC, file), "utf8");
+      expect(source.match(/\/\*#__PURE__\*\//g), file).toHaveLength(2);
+      for (const initialiser of initialisers) {
+        expect(source).toContain(`/*#__PURE__*/ ${initialiser}`);
+      }
     }
   });
 
