@@ -5,8 +5,7 @@
 
    Accent arrives via var(--accent)/var(--ink-on-accent), set inline on each
    screen root from play/accent.ts. The accent colours shapes — fills, rings,
-   shadows, tape — never words (ADR-0041). Rotations are static transforms;
-   the only motion is the shared end flourish around the stamp (ADR-0118). */
+   shadows, tape — never words (ADR-0041). */
 
 /* ── choice picker ───────────────────────────────────────────────────── */
 

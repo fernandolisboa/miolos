@@ -1,9 +1,10 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useContext, type CSSProperties, type ReactNode } from "react";
 
 import { useSettings } from "../settings/settings";
 import styles from "./ending-flourish.module.css";
+import { JustEnded } from "./just-ended";
 
 const FLICKS = Array.from({ length: 8 }, (_, index) => {
   const degrees = index * 45 + 22.5;
@@ -15,23 +16,22 @@ const FLICKS = Array.from({ length: 8 }, (_, index) => {
   } satisfies CSSProperties;
 });
 
-const DRIPS: readonly CSSProperties[] = [
+const DRIPS = [
   { left: "38%", "--drip-delay": "0ms" },
   { left: "52%", "--drip-delay": "180ms" },
   { left: "63%", "--drip-delay": "90ms" },
-];
+] satisfies readonly CSSProperties[];
 
 export function EndingFlourish({
   outcome,
-  play,
   children,
 }: {
   readonly outcome: "won" | "lost";
-  readonly play: boolean;
   readonly children: ReactNode;
 }) {
+  const justEnded = useContext(JustEnded);
   const { endAnimation } = useSettings();
-  const on = play && endAnimation;
+  const on = justEnded && endAnimation;
   const won = outcome === "won";
   const motion = won ? styles.press : styles.sag;
   return (

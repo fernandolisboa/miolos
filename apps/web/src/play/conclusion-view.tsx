@@ -8,7 +8,7 @@ import {
 } from "@miolos/core";
 import nextDynamic from "next/dynamic";
 import Link from "next/link";
-import { useContext, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import {
   formatElapsed,
@@ -33,7 +33,6 @@ import {
 } from "./day-state";
 import { DAY_GAMES } from "./day-games";
 import { EndingFlourish } from "./ending-flourish";
-import { JustEnded } from "./just-ended";
 import { picturePath } from "./picture-path";
 import { BLANK_VALUE, ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
@@ -77,7 +76,6 @@ export function ConclusionView({
   const record = snapshot.hydrated ? snapshot.record : undefined;
   const dayState = useDayState(date);
   const claim = useServerDayClaim(date, game);
-  const justEnded = useContext(JustEnded);
 
   useEffect(() => {
     return startCompletionSync();
@@ -171,17 +169,15 @@ export function ConclusionView({
       <article className={styles.resultCard}>
         <ConclusionCardHead copy={copy} />
         <div className={styles.stampRow}>
-          {outcome === undefined ? (
-            stamp === undefined ? null : (
-              <EndingFlourish outcome="won" play={justEnded}>
+          <EndingFlourish outcome={lost ? "lost" : "won"}>
+            {outcome === undefined ? (
+              stamp === undefined ? null : (
                 <ShippedStamp title={copy.title} stamp={stamp} />
-              </EndingFlourish>
-            )
-          ) : (
-            <EndingFlourish outcome={lost ? "lost" : "won"} play={justEnded}>
+              )
+            ) : (
               <OutcomeStamp outcome={outcome} />
-            </EndingFlourish>
-          )}
+            )}
+          </EndingFlourish>
         </div>
         {outcome !== undefined && (
           <p role="status" className={styles.announcer}>

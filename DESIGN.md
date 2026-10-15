@@ -41,7 +41,7 @@ Accents carry identity, not meaning alone — every state they mark is also carr
 
 ## Motion
 
-"Ink that settles" (*tinta que assenta*): 150–250ms, ease-out with a slight settle (`--ease-settle`), no exaggerated bounce. Pressed = the element slides 1px toward its shadow and the shadow shrinks by the same amount. Celebration = the stamp settling; never confetti. The one motion past 250ms is the end flourish around the stamp of a game that just ended — pressed with an accent splash on a win, grey ink running on a loss — which returns to the resting pose and is switchable off ([ADR-0118](./docs/adr/0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md)). Haptics (Vibration API) are reinforcement only, never state-bearing (absent on desktop and iOS Safari). Every animation has a `prefers-reduced-motion` alternative.
+"Ink that settles" (*tinta que assenta*): 150–250ms, ease-out with a slight settle (`--ease-settle`), no exaggerated bounce. Pressed = the element slides 1px toward its shadow and the shadow shrinks by the same amount. Celebration = the stamp settling; never confetti. The one animation past 250ms is the end flourish around the stamp of a game that just ended — pressed with an accent splash on a win, grey ink running on a loss — which returns to the resting pose and is switchable off ([ADR-0118](./docs/adr/0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md)). Haptics (Vibration API) are reinforcement only, never state-bearing (absent on desktop and iOS Safari). Every animation has a `prefers-reduced-motion` alternative.
 
 ## Components (from the winning references)
 

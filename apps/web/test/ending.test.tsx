@@ -108,6 +108,42 @@ describe("a daily ends in front of the player only after the board was shown (T-
     expect(ended()).toBe("true");
   });
 
+  it("reaches a game's own conclusion render too, as Termo and Nonogram use", () => {
+    const own = (state: PlayCore) => (
+      <DailyScreen
+        game="termo"
+        claim={undefined}
+        state={state}
+        skeleton={<div data-testid="skeleton" />}
+        view={<div data-testid="view" />}
+        conclusion={{ render: () => <Witness />, preload: vi.fn() }}
+      />
+    );
+    const { rerender } = render(own(UNREAD));
+    rerender(own(OPEN));
+    rerender(own({ ...SOLVED, status: "lost" }));
+
+    expect(ended()).toBe("true");
+  });
+
+  it("is not just ended when another device's result replaced the board", () => {
+    const claimed = (state: PlayCore) => (
+      <DailyScreen
+        game="sudoku"
+        claim={{ status: "completed", elapsedMs: 1, hintsUsed: 0 }}
+        state={state}
+        skeleton={<div data-testid="skeleton" />}
+        view={<div data-testid="view" />}
+        result={{ elapsedMs: 6_000, hintsUsed: 0 }}
+      />
+    );
+    const { rerender } = render(claimed(OPEN));
+    expect(screen.getByTestId("remote")).toBeInTheDocument();
+    rerender(claimed(SOLVED));
+
+    expect(ended()).toBe("false");
+  });
+
   it("is not just ended when the record was already concluded on load", () => {
     const { rerender } = render(daily(UNREAD));
     rerender(daily(SOLVED));
@@ -306,7 +342,7 @@ describe("the flourish is ink on paper, and calm under reduced motion (T-WEB-S74
     expect(CSS).not.toMatch(/\binfinite\b|\balternate\b/);
   });
 
-  it("presses without undershoot, and the sag comes back to rest", () => {
+  it("presses down from above, and the sag comes back to rest", () => {
     const press = bodyOf(CSS, "@keyframes ending-press");
     const scales = [...press.matchAll(/scale\(([\d.]+)\)/g)].map((match) =>
       Number(match[1]),
@@ -314,6 +350,9 @@ describe("the flourish is ink on paper, and calm under reduced motion (T-WEB-S74
     expect(scales.length).toBeGreaterThan(0);
     expect(Math.min(...scales)).toBeGreaterThanOrEqual(1);
     expect(decl(bodyOf(press, "to"), "transform")).toBe("none");
+    expect(decl(bodyOf(CSS, ".press"), "animation")).toContain(
+      "var(--ease-settle)",
+    );
 
     expect(decl(bodyOf(CSS, ".sag"), "animation")).not.toMatch(/forwards|both/);
     expect(

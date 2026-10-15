@@ -1,7 +1,3 @@
-/* The end of a game (ADR-0118): a just-ended win presses the stamp and
-   splashes accent ink around it; a just-ended loss sags and lets grey ink
-   run. Both come back to the stamp's resting pose. */
-
 .anchor {
   position: relative;
   display: inline-block;
