@@ -38,7 +38,11 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           highlightSelection: true,
         },
         binairo: { showErrors: false, firstValue: 1 },
-        nonogram: { showErrors: false, strikePlacedRuns: true },
+        nonogram: {
+          showErrors: false,
+          strikePlacedRuns: true,
+          straightDrag: false,
+        },
         queens: {
           showErrors: false,
           highlightRegion: true,
@@ -87,6 +91,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
     expect(settings.games.nonogram).toEqual({
       showErrors: true,
       strikePlacedRuns: true,
+      straightDrag: false,
     });
     expect(settings).not.toHaveProperty("extra");
 

@@ -6,6 +6,12 @@ import {
 } from "react";
 
 import type { Press } from "./brush";
+import {
+  cellsAfter,
+  projectOnLine,
+  strokeAxis,
+  type StrokeAxis,
+} from "./straight-stroke";
 
 interface PointerStrokeHandlers {
   readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -29,8 +35,10 @@ export function usePointerStroke(input: {
   readonly onPaintOver: (index: number) => void;
 
   readonly onStrokeEnd?: (index: number) => void;
+  readonly straight?: { readonly size: number };
 }): PointerStroke {
-  const { painting, onTap, onStrokeStart, onPaintOver, onStrokeEnd } = input;
+  const { painting, onTap, onStrokeStart, onPaintOver, onStrokeEnd, straight } =
+    input;
 
   const dragging = useRef(false);
   const dragged = useRef(false);
@@ -39,6 +47,9 @@ export function usePointerStroke(input: {
   const press = useRef<Press>("tap");
   const startIndex = useRef<number | null>(null);
   const lastIndex = useRef<number | null>(null);
+  const anchorAt = useRef({ x: 0, y: 0 });
+  const axis = useRef<StrokeAxis | null>(null);
+  const line = useRef(straight);
 
   const strokePointer = useRef<number | null>(null);
 
@@ -105,6 +116,9 @@ export function usePointerStroke(input: {
     const index = cellIndexAt(event.clientX, event.clientY);
     startIndex.current = index;
     lastIndex.current = index;
+    anchorAt.current = { x: event.clientX, y: event.clientY };
+    axis.current = null;
+    line.current = straight;
     let captured = false;
     if (painting) {
       try {
@@ -130,14 +144,38 @@ export function usePointerStroke(input: {
       return;
     }
     const from = startIndex.current;
-    const first = !dragged.current;
-    dragged.current = true;
-    lastIndex.current = index;
-    if (first) {
-      onStrokeStart(from ?? index, press.current);
+    if (from === null) {
+      startIndex.current = index;
+      lastIndex.current = index;
+      anchorAt.current = { x: event.clientX, y: event.clientY };
+      dragged.current = true;
+      onStrokeStart(index, press.current);
+      return;
     }
-    if (!first || from !== null) {
+    if (!dragged.current) {
+      dragged.current = true;
+      onStrokeStart(from, press.current);
+    }
+    const size = line.current?.size;
+    if (size === undefined) {
+      lastIndex.current = index;
       onPaintOver(index);
+      return;
+    }
+    axis.current ??= strokeAxis(size, from, index, {
+      x: event.clientX - anchorAt.current.x,
+      y: event.clientY - anchorAt.current.y,
+    });
+    const target = projectOnLine(size, from, axis.current, index);
+    const cells = cellsAfter(
+      size,
+      axis.current,
+      lastIndex.current ?? from,
+      target,
+    );
+    lastIndex.current = target;
+    for (const cell of cells) {
+      onPaintOver(cell);
     }
   };
 
@@ -168,8 +206,10 @@ export function usePointerStroke(input: {
       onTap(start, press.current);
     }
     endDrag();
-    if (end !== null) {
-      onStrokeEnd?.(end);
+    const settled =
+      line.current !== undefined && dragged.current ? lastIndex.current : end;
+    if (settled !== null) {
+      onStrokeEnd?.(settled);
     }
   };
 

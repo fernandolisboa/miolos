@@ -30,6 +30,7 @@ export function useBinaryBoard(input: {
   readonly onMove: (rows: number, columns: number) => void;
   readonly onEnterValue: (value: 0 | 1) => void;
   readonly onClear: () => void;
+  readonly straight?: boolean;
 }): BinaryBoard {
   const {
     size,
@@ -40,6 +41,7 @@ export function useBinaryBoard(input: {
     onMove,
     onEnterValue,
     onClear,
+    straight = false,
   } = input;
   const boardRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +68,7 @@ export function useBinaryBoard(input: {
         focusCell(board, index);
       }
     },
+    ...(straight ? { straight: { size } } : {}),
   });
 
   const clickPressRef = useRef(stroke.clickPress);

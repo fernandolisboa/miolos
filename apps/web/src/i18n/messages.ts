@@ -683,6 +683,10 @@ export const messages = {
           label: "Riscar números resolvidos",
           hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
         },
+        straightDrag: {
+          label: "Arrastar só em linha reta",
+          hint: "Ao arrastar, a marcação fica na linha ou na coluna do primeiro movimento, nunca na diagonal.",
+        },
         highlightRegion: {
           label: "Destacar linha, coluna e região",
           hint: "Pinta a linha, a coluna e a região da célula selecionada.",
