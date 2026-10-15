@@ -45,11 +45,14 @@ describe("the hint card's lazy chunk (T-WEB-S720)", () => {
     unmount();
 
     vi.stubGlobal("window", undefined);
-    chunk.release();
-    await import("../src/play/hint-card");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    vi.unstubAllGlobals();
-    process.off("unhandledRejection", record);
+    try {
+      chunk.release();
+      await import("../src/play/hint-card");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } finally {
+      vi.unstubAllGlobals();
+      process.off("unhandledRejection", record);
+    }
 
     expect(rejections).toEqual([]);
   });
