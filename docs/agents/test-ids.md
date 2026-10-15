@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S190` | `S188` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S711` | `S710` | `T-WEB-23` |
+| `T-WEB` | `S721` | `S720` | `T-WEB-23` |
 | `T-LINT` | `S72` | `S71` | `T-LINT-10` |
+
+The hint card's unmount fix spent **`T-WEB-S720`** (`hint-card-unmount.test.tsx`: the lazy `hint-card` chunk resolving after the chrome unmounts, with `window` gone, sets no state). `S711…S719` are left to sibling branches.
 
 #333 (Termo in free play, ADR-0114) spent **`T-WEB-S700…S704`** — `S700` (`judgeFreeGuess`), `S701` (the free board judges with zero fetch), `S702` (`TermoFreeScreen`: the tag, the back link, the won and lost cards with the finished board, *Mais uma*), `S703` (the Termo view's `chrome`), `S704` (only `/modo-livre/termo` reaches the pool and, among free-play pages, the dictionary; no page reaches `termo-answers`) — and **`T-LINT-S70`** (`@miolos/games/termo-answers` red in all `apps/web` source, static and dynamic) and **`S71`** (the reused `termo/` modules clean in free play). `S705`, `S706` are **burned**. `S662…S699` are left to sibling branches; whatever none of them spends is burned. `T-WEB-S109`, `S111…S113`, `S174`, `S374`, `S482` and `T-LINT-S12`, `S64`, `S67` were re-aimed in place.
 

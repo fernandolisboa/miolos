@@ -1,12 +1,12 @@
 # Do I need to do anything?
 
-Nothing required from #333. New, low urgency: NOW §4 ⚡, Termo free play shipped on the recommended pool; answer only to change it. NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing required. New, low urgency: NOW §4 ⚡, Termo free play shipped on the recommended pool; answer only to change it. NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
 **Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily. The pool is `@miolos/games/termo-free`; the answer list is `@miolos/games/termo-answers`, banned in `apps/web` source.
 
-**Hints** (ADR-0099, ADR-0101): each game's `next<Game>Hint` (`apps/web/src/<game>/hint.ts`) sits on `nextLogicalHint` (`play/grid-hint.ts`); the reason and spotlight live in `HintState<R>`. The reason shows in a card on the hinted cell (#332, ADR-0113): the chrome lazy-loads `HintCard` (`play/hint-card.tsx`); the visually hidden live region is the screen-reader copy, so tests read it through `SPOKEN` (`test/hint-reason.ts`).
+**Hints** (ADR-0099, ADR-0101): each game's `next<Game>Hint` (`apps/web/src/<game>/hint.ts`) sits on `nextLogicalHint` (`play/grid-hint.ts`); the reason and spotlight live in `HintState<R>`. The reason shows in a card on the hinted cell (#332, ADR-0113): the chrome lazy-loads `HintCard` (`play/hint-card.tsx`); the visually hidden live region is the screen-reader copy, so tests read it through `SPOKEN` (`test/hint-reason.ts`). The loader ignores a chunk that lands after unmount (T-WEB-S720); that race was the `window is not defined` CI flake.
 
 **Player settings** (#300, ADR-0102): one device-local key, `miolos-settings`, read through `useSettings` (`settings/settings.ts`). A new setting is a schema field, a copy entry and a key in `settings.games[game]`. Per-game options: ADR-0104 (struck clues), ADR-0105 (Rainhas), #322, #323, #325, #329. Account sync is #317.
 

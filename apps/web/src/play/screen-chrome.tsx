@@ -117,13 +117,17 @@ function useHintCardLoaded(): boolean {
   const [loaded, setLoaded] = useState(LoadedHintCard !== null);
   useEffect(() => {
     if (loaded) return;
+    let live = true;
     import("./hint-card").then(
       (module) => {
         LoadedHintCard = module.HintCard;
-        setLoaded(true);
+        if (live) setLoaded(true);
       },
       () => undefined,
     );
+    return () => {
+      live = false;
+    };
   }, [loaded]);
   return loaded;
 }
