@@ -39,13 +39,15 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 |---|---|---|---|
 | `T-CORE` | `S187` | `S185` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
-| `T-API` | `S323` | `S322` | `T-API-16` |
+| `T-API` | `S331` | `S330` | `T-API-16` |
 | `T-WEB` | `S662` | `S661` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
 #329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.
+
+#330 part 1 (the Cruzadinha size parameter, ADR-0108) spent **`T-API-S330`** in `apps/api/test/publishing-service.test.ts` (the stored daily contract refuses a 7×7 puzzle), leaving `S323…S329` to sibling branches.
 
 #324 (struck Nonogram clue numbers, ADR-0104) spent **`T-WEB-S613…S614`** in `apps/web/test/nonogram-placed-clues.test.tsx`.
 
@@ -58,6 +60,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 #328 (the Sudoku keypad tallies each digit) spent **`T-WEB-S650`** (`sudoku-engine.test.ts`: `placedCount` and `digitTally`) and **`T-WEB-S651`** (`sudoku-screen.test.tsx`: the key fades at nine, turns red above nine, and returns as copies leave), **`T-WEB-S652`** (`wrong-mark-contrast.test.ts`: the complete key is dimmer than an open key and above 3:1, the over and pressed keys clear 3:1, both themes), **`T-WEB-S653`** (`free-play-sudoku.test.tsx`: free play tallies too) and **`T-WEB-S654`** (`sudoku-digit-lock.test.tsx`: a complete key still locks and writes a tenth copy), jumping `S624…S649` so wave-2 siblings can claim the space below without a collision.
 
 #321 (keyboard-like keys) spent **`T-WEB-S620…S623`**, jumping `S606…S619` because three sibling wave-1 branches (#322, #323, #325) claimed `S606`/`S607` at the same time: `S620` (Termo's `apagar` after P and `enviar` after L on 22 columns, drawn as glyphs), `S621` (the Termo keyboard skeleton equals the live one), `S622` (the Cruzadinha keyboard: `apagar` after P, skeleton equals live, in the board's column), `S623` (Sudoku's `apagar` is the ⌫ glyph, skeleton equals live). `T-WEB-S88`, `S94` and `S102` were rewritten in place.
+
+#327 (the Termo current row is editable, ADR-0106) spent **`T-WEB-S640`** (`termo-state.test.ts`: the cursor, gaps, erase, select and a gapped submit) and **`T-WEB-S641`** (`termo-screen.test.tsx`: the active row as a roving-focus widget, focus after a submit), jumping `S624…S639` for the wave-2 siblings in flight. `T-WEB-S86` and `S87` were re-aimed in place.
 
 #303 (boards size from the space they have, ADR-0103) spent **`T-WEB-S596…S602`** in `apps/web/test/board-sizing.test.tsx`: `S596` the shared well and `--board-side`, `S597` each game's ceiling, font floor and fluid tracks, `S598` the floor (fits 320px, cells at or above 24px), `S599` every `gridCard` inside a `boardWell`, `S600` the reset overlay and the 44px targets, `S601` the one fold at 1023px, `S602` the reserved explanation slot. `T-WEB-S34`, `S48` (A1–A3, A6, A7, A10; A12 retired), `S91` and `S102` and the Binairo layout tripwires were rewritten in place. `T-WEB-S367`'s class list gained `hintSlot`. `packages/games/test/nonogram/clue-bounds.test.ts` carries no id and gained the column-run bound `WORST_COLUMN_RUNS`. Part 2 (the Cruzadinha) spent `S603` (free play's generating note on the well, outside the hidden card), `S604` (`crossword-screen.test.tsx`: the *Pistas* disclosure and the empty clue-bar prompt) and `S605` (the clue bar is a fixed two lines that clamps), and widened `S597`–`S600` in place.
 

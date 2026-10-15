@@ -12,15 +12,17 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **The free hint allowance is the `freeHintsPerPuzzle` key** (1 to 9, default 3, ADR-0098): daily and archive puzzles read it from `GET /hints` through `FetchedFreeHints`; free play stays at `FREE_HINTS_PER_PUZZLE`. `HINTS_PER_PUZZLE_CEILING` (9) is the only wire bound. Before rolling either app back, set the key to 3 or less and wait for the rollover.
 
-**One daily and one archive screen shell** (#289, ADR-0093): every daily and archive screen root, Termo included, now only calls its hooks and hands nodes to `DailyScreen` (`apps/web/src/play/daily-screen.tsx`) or `ArchiveScreen` (`apps/web/src/archive/archive-screen.tsx`). A change to the ladder is one edit. The per-game play views use `DailyPlayChrome`, and every `buildRecord` spreads `recordHeader`.
-
 **Control tips** (#331): the keyboard and mouse tips of Termo, Sudoku, Nonogram, Binairo and Rainhas sit behind one circled-i button, `InfoTip` (`play/info-tip.tsx`): tap toggles it, hover and keyboard focus open it, Escape, blur and an outside tap close it. Each game keeps its own visibility rule on the `.affordance` wrapper (hidden on phones). The Nonogram toggle and the Binairo buttons are centred in a `1fr auto 1fr` row with the tip in the third column.
 
 **Keyboards** (#321): the Termo and Cruzadinha keyboards are laid out by `qwertySlots` (`play/letter-keyboard.tsx`) on 22 columns, `apagar` after P and `enviar` after L; the ⌫ and ↵ glyphs, Sudoku's keypad included, come from `play/key-glyph.tsx`. The Cruzadinha keyboard sits in the board's column.
 
+**Termo's current row is editable** (#327, ADR-0106): the draft is five slots and a cursor; a tap or the arrows move the cursor, typing goes to the next empty cell, wrapping, and a gapped Enter does nothing. One key map, `pressKey` (`termo/play-view.tsx`), serves the window listener and the row's own listener.
+
 **The Sudoku keypad tallies each digit** (#328): `placedCount` and `digitTally` (`sudoku/engine.ts`) count givens and entries on the public rules, never the solution; at nine the key fades with a ✓, above nine it takes the conflict red with the count. It stays pressable, so the *Número fixo* lock still works.
 
 **Cruzadinha typing skips filled cells** (#322): with *Pular letras já preenchidas* on (the default), `nextEmptyCell` (`crossword/grid.ts`) moves the cursor to the entry's next empty cell, then to the next open pista by number in the same direction, wrapping; off keeps `nextCellInEntry`. The flag rides on the `type-letter` action.
+
+**Cruzadinha 7×7 engine** (#330 part 1, ADR-0108): `generateCrossword(seed, 7)` works and the lexicon has 6- and 7-letter answers; players see nothing yet. `golden.test.ts` pins 5×5 output.
 
 **Right-click marks** (#299, ADR-0094): `apps/web/src/play/brush.ts` holds the mark and stroke rules; the board reads a `Press` from `usePointerStroke`. Binairo's tap cycle and left click start from the *Primeiro valor* setting (#325, default 1), carried on the `tap` action; it is the first setting that is not a switch (two radios, `FirstValueChoice` in `settings/game-settings.tsx`).
 
@@ -45,6 +47,6 @@ The fold is 1024px, the page is `100svh`, the Recomeçar confirm overlays the hi
 
 ## Next
 
-**Next:** the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
+**Next:** #330 part 2, the 7×7 picker in Cruzadinha free play. It must split `crosswordDailyContentSchema` into a daily and a free-play shape, never widen it, Zod-parse the size, and paint `generating` before the synchronous 7×7 generation (up to ~650 ms). Alongside, the rest of the quality-of-life waves (#321–#333); then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); #155 (`bundle-check` into CI); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.

@@ -22,6 +22,7 @@ export interface TermoPlay {
   readonly unavailable: boolean;
   readonly type: (letter: string) => void;
   readonly erase: () => void;
+  readonly select: (slot: number) => void;
   readonly submit: () => void;
 
   readonly retry: () => void;
@@ -119,6 +120,10 @@ export function useTermoPlay(
     dispatch({ type: "erase" });
   }, []);
 
+  const select = useCallback((slot: number) => {
+    dispatch({ type: "select", slot });
+  }, []);
+
   const submit = useCallback(() => {
     arm({ type: "submit" });
   }, [arm]);
@@ -153,6 +158,7 @@ export function useTermoPlay(
     unavailable: state.gone,
     type,
     erase,
+    select,
     submit,
     retry,
   };

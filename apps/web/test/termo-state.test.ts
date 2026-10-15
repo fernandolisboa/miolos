@@ -44,6 +44,14 @@ function typed(word: string, from = hydrated()): TermoPlayState {
     );
 }
 
+function selected(slot: number, from: TermoPlayState): TermoPlayState {
+  return termoPlayReducer(from, { type: "select", slot });
+}
+
+function gapped(head: string, tail: string): TermoPlayState {
+  return typed(tail, selected(WORD_LENGTH - tail.length, typed(head)));
+}
+
 function record(overrides: Partial<TermoPlayRecord> = {}): TermoPlayRecord {
   return {
     v: 1,
@@ -274,6 +282,8 @@ const EVERY_ACTION: readonly TermoPlayAction[] = [
   { type: "resume", now: 9_000 },
   { type: "type", letter: "a" },
   { type: "erase" },
+  { type: "select", slot: 0 },
+  { type: "select", slot: 3 },
   { type: "submit" },
   { type: "retry" },
   { type: "held", reason: "offline" },
@@ -298,15 +308,15 @@ const EVERY_ACTION: readonly TermoPlayAction[] = [
 ];
 
 describe("typing, erasing and submitting", () => {
-  it("accepts five letters and no more, accent-insensitively", () => {
+  it("accepts letters accent-insensitively, and a full row overwrites its last cell", () => {
     const state = typed("caf");
-    expect(state.draft).toBe("caf");
-    expect(termoPlayReducer(state, { type: "type", letter: "É" }).draft).toBe(
-      "cafe",
-    );
-    expect(termoPlayReducer(state, { type: "type", letter: "Ç" }).draft).toBe(
-      "cafc",
-    );
+    expect(state.draft.join("")).toBe("caf");
+    expect(
+      termoPlayReducer(state, { type: "type", letter: "É" }).draft.join(""),
+    ).toBe("cafe");
+    expect(
+      termoPlayReducer(state, { type: "type", letter: "Ç" }).draft.join(""),
+    ).toBe("cafc");
 
     expect(termoPlayReducer(state, { type: "type", letter: "1" })).toBe(state);
     expect(termoPlayReducer(state, { type: "type", letter: "Enter" })).toBe(
@@ -314,13 +324,17 @@ describe("typing, erasing and submitting", () => {
     );
 
     const full = typed(ANSWER);
-    expect(full.draft).toHaveLength(WORD_LENGTH);
-    expect(termoPlayReducer(full, { type: "type", letter: "a" })).toBe(full);
+    expect(full.cursor).toBe(WORD_LENGTH - 1);
+    expect(
+      termoPlayReducer(full, { type: "type", letter: "s" }).draft.join(""),
+    ).toBe(`${ANSWER.slice(0, -1)}s`);
   });
 
   it("erases one letter, and no-ops on an empty row", () => {
     const state = typed("caf");
-    expect(termoPlayReducer(state, { type: "erase" }).draft).toBe("ca");
+    expect(termoPlayReducer(state, { type: "erase" }).draft.join("")).toBe(
+      "ca",
+    );
     const empty = hydrated();
     expect(termoPlayReducer(empty, { type: "erase" })).toBe(empty);
   });
@@ -331,7 +345,7 @@ describe("typing, erasing and submitting", () => {
 
     const junk = termoPlayReducer(typed("zzzzz"), { type: "submit" });
     expect(junk.pending).toBeNull();
-    expect(junk.draft).toBe("zzzzz");
+    expect(junk.draft.join("")).toBe("zzzzz");
     expect(junk.notice).not.toBeNull();
   });
 
@@ -406,7 +420,7 @@ describe("typing, erasing and submitting", () => {
     });
 
     expect(rejected.pending).toBeNull();
-    expect(rejected.draft).toBe(ANSWER);
+    expect(rejected.draft.join("")).toBe(ANSWER);
     expect(rejected.guesses).toHaveLength(0);
     expect(rejected.held).toBe(false);
     expect(rejected.notice).not.toBeNull();
@@ -417,6 +431,7 @@ describe("typing, erasing and submitting", () => {
     const seeds: readonly TermoPlayState[] = [
       hydrated(),
       typed("caf"),
+      gapped("c", "f"),
       typed(ANSWER),
       submitted,
       termoPlayReducer(submitted, { type: "held", reason: "offline" }),
@@ -450,5 +465,99 @@ describe("typing, erasing and submitting", () => {
         expect(next.guesses).toHaveLength(closed.guesses.length);
       }
     }
+  });
+});
+
+describe("the cursor: any cell of the current row, gaps allowed (T-WEB-S640)", () => {
+  it("moves to the next empty cell after a write, wrapping to an earlier gap", () => {
+    const atTwo = selected(2, hydrated());
+    expect(atTwo.cursor).toBe(2);
+
+    const one = termoPlayReducer(atTwo, { type: "type", letter: "f" });
+    expect(one.draft).toEqual(["", "", "f", "", ""]);
+    expect(one.cursor).toBe(3);
+
+    const wrapped = typed("es", one);
+    expect(wrapped.draft).toEqual(["", "", "f", "e", "s"]);
+    expect(wrapped.cursor).toBe(0);
+    expect(typed("ca", wrapped).draft.join("")).toBe("cafes");
+  });
+
+  it("with no empty cell left, advances one and stops at the last cell", () => {
+    const edited = termoPlayReducer(selected(1, typed(ANSWER)), {
+      type: "type",
+      letter: "e",
+    });
+    expect(edited.draft.join("")).toBe("peaga");
+    expect(edited.cursor).toBe(2);
+  });
+
+  it("announces the letter with the position it was written to", () => {
+    const state = termoPlayReducer(selected(3, hydrated()), {
+      type: "type",
+      letter: "a",
+    });
+    expect(state.announcement).toBe(copy.letterTypedAria("a", 4, WORD_LENGTH));
+  });
+
+  it("erases the cursor cell, or steps left over an empty one and erases there", () => {
+    const filled = selected(1, typed("caf"));
+    const cleared = termoPlayReducer(filled, { type: "erase" });
+    expect(cleared.draft).toEqual(["c", "", "f", "", ""]);
+    expect(cleared.cursor).toBe(1);
+    expect(cleared.announcement).toBe(
+      copy.letterErasedAria("a", 2, WORD_LENGTH),
+    );
+
+    const stepped = termoPlayReducer(cleared, { type: "erase" });
+    expect(stepped.draft).toEqual(["", "", "f", "", ""]);
+    expect(stepped.cursor).toBe(0);
+  });
+
+  it("only moves left when the cell before is empty too, and no-ops at the first cell", () => {
+    const gap = selected(3, typed("c"));
+    const moved = termoPlayReducer(gap, { type: "erase" });
+    expect(moved.draft).toBe(gap.draft);
+    expect(moved.cursor).toBe(2);
+    expect(moved.announcement).toBe(gap.announcement);
+
+    const first = hydrated();
+    expect(termoPlayReducer(first, { type: "erase" })).toBe(first);
+  });
+
+  it("selects only a cell of the row, only while the row takes input", () => {
+    const state = typed("ca");
+    for (const slot of [-1, WORD_LENGTH, 1.5, state.cursor]) {
+      expect(selected(slot, state)).toBe(state);
+    }
+    expect(selected(WORD_LENGTH - 1, state).cursor).toBe(WORD_LENGTH - 1);
+
+    const pending = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    expect(selected(0, pending)).toBe(pending);
+    for (const closed of closedStates()) {
+      expect(selected(0, closed)).toBe(closed);
+    }
+  });
+
+  it("refuses a row with a gap, and starts the next row at its first cell", () => {
+    const withGap = gapped("pra", "a");
+    expect(withGap.draft.join("")).toBe("praa");
+    expect(termoPlayReducer(withGap, { type: "submit" })).toBe(withGap);
+
+    const submitted = termoPlayReducer(selected(1, typed(ANSWER)), {
+      type: "submit",
+    });
+    expect(submitted.pending).toBe(ANSWER);
+    expect(submitted.draft.join("")).toBe("");
+    expect(submitted.cursor).toBe(0);
+  });
+
+  it("puts a rejected guess back with the cursor on its last cell", () => {
+    const rejected = termoPlayReducer(
+      termoPlayReducer(typed(ANSWER), { type: "submit" }),
+      { type: "rejected", reason: "refused" },
+    );
+    expect(rejected.draft.join("")).toBe(ANSWER);
+    expect(rejected.cursor).toBe(WORD_LENGTH - 1);
   });
 });

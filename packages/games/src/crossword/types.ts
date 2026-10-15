@@ -1,3 +1,5 @@
+export type CrosswordSize = 5 | 7;
+
 export type CrosswordDirection = "across" | "down";
 
 export interface CrosswordLexiconEntry {
