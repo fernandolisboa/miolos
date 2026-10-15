@@ -16,6 +16,7 @@ import { countFilled } from "../play/progress";
 import { hasDecidedCell } from "../play/reset-board";
 import { useReset } from "../play/use-reset";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -54,7 +55,7 @@ export function BinairoFreeScreen({
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      level={{ value: level, onChange: setLevel }}
+      choice={levelChoice(level, setLevel)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -106,15 +107,18 @@ function BinairoFreeBoard({
 
   const reset = useReset(dispatch);
 
+  const choice = levelChoice(level, onLevelChange);
   if (state.status === "solved") {
-    return <FreePlaySolvedCard game="binairo" level={level} onAgain={onNext} />;
+    return (
+      <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
+    );
   }
 
   return (
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      level={{ value: level, onChange: onLevelChange }}
+      choice={choice}
       state={{
         kind: "playing",
         readouts: {

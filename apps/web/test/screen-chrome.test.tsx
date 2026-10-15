@@ -54,6 +54,7 @@ import { initSudokuPlayState } from "../src/sudoku/state";
 import { stylesheet } from "./css-source";
 import { valueSpecifiersOf } from "./module-graph";
 import { withoutComments } from "./ts-source";
+import { flushGeneration } from "./free-generation";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const CHROME = "apps/web/src/play/screen-chrome.tsx";
@@ -174,6 +175,12 @@ function mountedPage(element: ReactElement): Element {
   return pageIn(render(element).container);
 }
 
+async function generatedPage(element: ReactElement): Promise<Element> {
+  const { container } = render(element);
+  await flushGeneration();
+  return pageIn(container);
+}
+
 const GRID_AREAS = [
   "topBar",
   "titleBlock",
@@ -199,7 +206,7 @@ function placed(state: string): Record<string, unknown> {
 }
 
 describe("`.page` places the same six children, in DOM order, everywhere (T-WEB-S366)", () => {
-  it("holds for the nine shipped composition shapes", () => {
+  it("holds for the nine shipped composition shapes", async () => {
     expect({
       "binairo daily": placementOf(
         staticPage(<BinairoView play={BINAIRO_PLAY} />),
@@ -226,13 +233,15 @@ describe("`.page` places the same six children, in DOM order, everywhere (T-WEB-
         ),
       ),
       "free play playing": placementOf(
-        mountedPage(<BinairoFreeScreen deps={{ pickSeed: () => SEED }} />),
+        await generatedPage(
+          <BinairoFreeScreen deps={{ pickSeed: () => SEED }} />,
+        ),
       ),
       "free play generating": placementOf(
         staticPage(<SudokuFreeScreen deps={{ pickSeed: () => SEED }} />),
       ),
       "free play error": placementOf(
-        mountedPage(
+        await generatedPage(
           <NonogramFreeScreen
             deps={{
               pickSeed: () => {

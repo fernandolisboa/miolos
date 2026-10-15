@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #332)
 **Depends on:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md), [ADR-0099](./0099-the-sudoku-hint-reveals-the-next-logical-step.md), [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md), [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md)
 **Supersedes in part:** ADR-0103 decision 7 (the reserved slot is gone).
-**Amends:** ADR-0077 (the chrome gains a third stateful child, `HintCard`, which reads its children's `data-cell-index`) and ADR-0099 decisions 4 and 5 (where the reason is seen, and for how long).
+**Amends:** ADR-0077 (the chrome gains a third stateful child, `HintCard`, which reads its children's `data-cell-index`) and ADR-0099 decisions 4 and 5 (where the reason is seen, and for how long), and ADR-0112 decision 3 (the `/modo-livre/cruzadinha` budget).
 
 ## Context
 
@@ -21,6 +21,7 @@ The reason sentence sat under the board in `.hintSlot`. On a desktop that is far
 ## Consequences
 
 - Pinned by `T-WEB-S690` (placement), `S691` (open, survive, close, reopen) and `S692` (each game anchors on the cell its hint wrote); `S367`, `S517`, `S555` and `S602` were re-aimed in place.
+- The lazy load still adds about 0.5 KB to every grid route's first load (the loader and `useDismiss`). That put `/modo-livre/cruzadinha` at 660.2 KB, 0.2 KB over its 660 KB budget after #330's 7×7 picker (659.6), so its budget is 664 KB: the route is the lexicon (~650 KB), the budget only catches a large leak, and 4 KB matches ADR-0112's margin.
 - The issue asked for about three cells; the 180px floor departs from that on small cells, on purpose.
 - Tests that read the reason by text select the live region (`test/hint-reason.ts`), since the sentence is now in the DOM twice.
 

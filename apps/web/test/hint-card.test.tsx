@@ -25,6 +25,7 @@ import { PlayScreenChrome } from "../src/play/screen-chrome";
 import screenStyles from "../src/play/screen.module.css";
 import queensStyles from "../src/queens/queens-board.module.css";
 import sudokuStyles from "../src/sudoku/sudoku-board.module.css";
+import { flushGeneration } from "./free-generation";
 import { hintCardLoaded } from "./hint-reason";
 
 const REASON = "O 7 só cabe aqui na linha.";
@@ -269,31 +270,43 @@ const SCREENS: readonly (readonly [
   string,
   () => ReactElement,
   string | undefined,
+  7 | null,
 ])[] = [
   [
     "Sudoku",
     () => <SudokuFreeScreen deps={{ pickSeed: () => 7 }} />,
     sudokuStyles.cellHinted,
+    null,
   ],
   [
     "Binairo",
     () => <BinairoFreeScreen deps={{ pickSeed: () => 7 }} />,
     binairoStyles.cellHinted,
+    null,
   ],
   [
     "Nonogram",
     () => <NonogramFreeScreen deps={{ pickSeed: () => 7 }} />,
     nonogramStyles.cellHinted,
+    null,
   ],
   [
     "Rainhas",
     () => <QueensFreeScreen deps={{ pickSeed: () => 7 }} />,
     queensStyles.cellHinted,
+    null,
   ],
   [
     "Cruzadinha",
     () => <CrosswordFreeScreen deps={{ pickSeed: () => 7 }} />,
     crosswordStyles.cellHinted,
+    null,
+  ],
+  [
+    "Cruzadinha 7×7",
+    () => <CrosswordFreeScreen deps={{ pickSeed: () => 7 }} />,
+    crosswordStyles.cellHinted,
+    7,
   ],
 ];
 
@@ -308,8 +321,15 @@ describe("every grid game anchors the card on the cell its hint wrote (T-WEB-S69
     vi.restoreAllMocks();
   });
 
-  it.each(SCREENS)("%s", async (_, element, hinted) => {
+  it.each(SCREENS)("%s", async (_, element, hinted, size) => {
     const { container } = render(element());
+    await flushGeneration();
+    if (size !== null) {
+      fireEvent.click(
+        screen.getByRole("radio", { name: messages.freePlay.size.aria(size) }),
+      );
+      await flushGeneration();
+    }
 
     fireEvent.click(
       screen.getByText(messages.play.hint.available(FREE_HINTS_PER_PUZZLE)),

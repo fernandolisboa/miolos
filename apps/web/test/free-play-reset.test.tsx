@@ -12,6 +12,7 @@ import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 import hintCardStyles from "../src/play/hint-card.module.css";
 import screenStyles from "../src/play/screen.module.css";
+import { flushGeneration } from "./free-generation";
 import { hintCardLoaded } from "./hint-reason";
 
 const SEED = 20_261_013;
@@ -76,6 +77,7 @@ describe("Recomeçar in free play clears the board and keeps the hint spent (T-W
       );
       const setItem = vi.spyOn(Storage.prototype, "setItem");
       const { container } = render(element);
+      await flushGeneration();
       const fresh = cells(container);
       expect(screen.getByRole("button", { name: reset.label })).toHaveAttribute(
         "aria-disabled",

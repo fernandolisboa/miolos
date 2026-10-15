@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing new from #332 or #155. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing new from #332. New, low urgency: NOW §3, whether the daily Cruzadinha ever becomes 7×7 (#330); play 7×7 in free play first. Also open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -14,7 +14,7 @@ Nothing new from #332 or #155. Open, low urgency: NOW §1 (#200), and NOW §2, t
 
 **Boards size from the space they have** (ADR-0103): `BoardCard` wraps every board in a size container; `--board-below` mirrors the rows under the card by hand. jsdom has no layout, so re-measure in a browser (360×780 to 1440×900) after any change to the shared sheet.
 
-**Cruzadinha 7×7** (ADR-0108): `generateCrossword(seed, 7)` works; `golden.test.ts` pins 5×5.
+**Cruzadinha 7×7 in free play** (#330, ADR-0108, ADR-0111): a *Tamanho* choice through `ChoicePicker` (`free-play/choice-picker.tsx`); the daily stays 5×5. Every free-play build waits a paint (`useFreeGeneration`); tests await `flushGeneration()` (`test/free-generation.ts`).
 
 ## Traps
 
@@ -32,6 +32,6 @@ Nothing new from #332 or #155. Open, low urgency: NOW §1 (#200), and NOW §2, t
 
 ## Next
 
-**Next:** #330 part 2 (PR #346, the 7×7 picker in Cruzadinha free play) and #333 (Termo free play, in its own thread). Then file per-game time buckets as an issue, and #317 (settings sync, needs a migration).
+**Next:** #333 (Termo free play, in its own thread), the last of the #321–#333 waves. Then file per-game time buckets as an issue, and #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`.
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.2 of 664 KB (ADR-0113).
