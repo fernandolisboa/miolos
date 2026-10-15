@@ -2,9 +2,11 @@
 
 import { messages } from "../i18n";
 import { accentVars } from "../play/accent";
+import { FinishedBoard } from "../termo/board";
 import { PlaySkeleton, PlayView } from "../termo/play-view";
 import type { TermoChrome } from "../termo/types";
-import { FREE_PLAY_BACK, FREE_PLAY_DATE } from "./catalog";
+import { FREE_PLAY_BACK } from "./back";
+import { FREE_PLAY_DATE } from "./catalog";
 import { FreePlayErrorCard } from "./error-card";
 import styles from "./free-play.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
@@ -63,7 +65,9 @@ function TermoFreeBoard({
         game="termo"
         word={{ canonical: puzzle.canonical, won: status === "solved" }}
         onAgain={onNext}
-      />
+      >
+        <FinishedBoard guesses={play.state.guesses} />
+      </FreePlaySolvedCard>
     );
   }
 

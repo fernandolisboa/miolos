@@ -26,6 +26,7 @@ Fernando asked for Termo in free play (#333). It was excluded because the 400 cu
 - An answer extension moves words from `reserve.txt` into `answers.csv`; when the reserve floor test fails, add reserve words first.
 - An answer removed from `answers.csv` after it was published would re-enter the pool on regeneration: re-curation moves published answers to `reserve.txt`, never deletes them.
 - A lexicon, answers or reserve edit needs `generate:termo`; the pool's staleness test says so.
+- The shared free-play card gained the finished-board slot, which tipped `/modo-livre/cruzadinha` over its budget; per ADR-0111 it is re-sized with ADR-0112's margin.
 
 ## Rejected
 

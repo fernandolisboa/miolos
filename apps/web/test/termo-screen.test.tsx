@@ -131,7 +131,7 @@ interface PlayFixture {
 
 function playFixture(overrides: Partial<TermoPlayState> = {}): PlayFixture {
   const state: TermoPlayState = {
-    ...initTermoPlayState(DAILY),
+    ...initTermoPlayState(DAILY.date),
     hydrated: true,
     ...overrides,
   };
@@ -347,7 +347,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       { type: "rejected", reason: "refused" },
     ];
 
-    let state = initTermoPlayState(DAILY);
+    let state = initTermoPlayState(DAILY.date);
     const seen = new Set<string>();
     const noticeWriters = new Set<string>();
     const announcementWriters = new Set<string>();

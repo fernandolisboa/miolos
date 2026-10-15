@@ -28,7 +28,7 @@ const SIX_REAL_GUESSES = [
 ] as const;
 
 function hydrated(): TermoPlayState {
-  return termoPlayReducer(initTermoPlayState(DAILY), {
+  return termoPlayReducer(initTermoPlayState(DAILY.date), {
     type: "restore",
     record: undefined,
     now: 1_000,
@@ -84,7 +84,7 @@ describe("the fixtures the reducer actually accepts", () => {
 
 describe("restore (T-WEB-S81)", () => {
   it("accepts a record whose stored outcome agrees with the tiles", () => {
-    const state = termoPlayReducer(initTermoPlayState(DAILY), {
+    const state = termoPlayReducer(initTermoPlayState(DAILY.date), {
       type: "restore",
       record: record(),
       now: 5_000,
@@ -106,7 +106,7 @@ describe("restore (T-WEB-S81)", () => {
       outcome: "won",
     });
 
-    const state = termoPlayReducer(initTermoPlayState(DAILY), {
+    const state = termoPlayReducer(initTermoPlayState(DAILY.date), {
       type: "restore",
       record: forged,
       now: 5_000,
@@ -132,7 +132,7 @@ describe("restore (T-WEB-S81)", () => {
     });
 
     for (const forged of [claimsTooMuch, claimsTooLittle]) {
-      const state = termoPlayReducer(initTermoPlayState(DAILY), {
+      const state = termoPlayReducer(initTermoPlayState(DAILY.date), {
         type: "restore",
         record: forged,
         now: 5_000,
@@ -156,7 +156,7 @@ describe("restore (T-WEB-S81)", () => {
     };
 
     for (const input of [foreign, undefined]) {
-      const state = termoPlayReducer(initTermoPlayState(DAILY), {
+      const state = termoPlayReducer(initTermoPlayState(DAILY.date), {
         type: "restore",
         record: input,
         now: 5_000,

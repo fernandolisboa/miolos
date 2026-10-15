@@ -180,8 +180,12 @@
   color: var(--ink-2);
 }
 
-/* The word (Termo only): the accented spelling, revealed once the board
-   closes, set in the display face so it reads as the answer. */
+.boardRow {
+  --board-side: 200px;
+  width: var(--board-side);
+  margin-top: var(--space-6);
+}
+
 .wordLine {
   display: flex;
   flex-direction: column;

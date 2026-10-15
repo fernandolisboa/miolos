@@ -180,6 +180,31 @@ function ActiveRow({
   );
 }
 
+const NO_DRAFT: readonly string[] = [];
+
+const ignoreSelect = (): void => undefined;
+
+const ignoreKey = (): boolean => false;
+
+export function FinishedBoard({
+  guesses,
+}: {
+  readonly guesses: readonly TermoJudgedRow[];
+}) {
+  return (
+    <Board
+      guesses={guesses}
+      activeRow={null}
+      heldRow={null}
+      draft={NO_DRAFT}
+      cursor={0}
+      pending={null}
+      onSelect={ignoreSelect}
+      onKey={ignoreKey}
+    />
+  );
+}
+
 export function BoardSkeleton() {
   return (
     <div aria-hidden className={styles.grid}>

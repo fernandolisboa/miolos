@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
@@ -16,12 +17,14 @@ export function FreePlaySolvedCard<T extends string | number>({
   picture,
   word,
   onAgain,
+  children,
 }: {
   readonly game: FreePlayGame;
   readonly choice?: FreePlayChoice<T>;
   readonly picture?: ConclusionPicture;
   readonly word?: { readonly canonical: string; readonly won: boolean };
   readonly onAgain: () => void;
+  readonly children?: ReactNode;
 }) {
   const lost = word?.won === false;
   const copy = messages.freePlay.solved;
@@ -42,6 +45,9 @@ export function FreePlaySolvedCard<T extends string | number>({
             choice?.optionLabel(choice.value),
           )}
         </p>
+        {children !== undefined && (
+          <div className={styles.boardRow}>{children}</div>
+        )}
         {word !== undefined && (
           <p className={styles.wordLine}>
             <span className={styles.wordLead}>{copy.wordLead}</span>

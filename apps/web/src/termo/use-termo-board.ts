@@ -1,4 +1,3 @@
-import type { DailyTermoResponse } from "@miolos/core";
 import { deriveKeyboardState } from "@miolos/games/termo";
 import {
   useCallback,
@@ -18,12 +17,12 @@ import type {
 } from "./types";
 
 export function useTermoBoard(
-  daily: DailyTermoResponse,
+  date: string,
   judge: TermoJudge,
-): TermoPlay & { readonly dispatch: Dispatch<TermoPlayAction> } {
+): { readonly play: TermoPlay; readonly dispatch: Dispatch<TermoPlayAction> } {
   const [state, dispatch] = useReducer(
     termoPlayReducer,
-    daily,
+    date,
     initTermoPlayState,
   );
 
@@ -77,17 +76,19 @@ export function useTermoBoard(
   const live = state.status === "playing";
 
   return {
-    state,
-    used: state.guesses.length,
-    activeRow: live && state.pending === null ? state.guesses.length : null,
-    heldRow: state.pending === null ? null : state.guesses.length,
-    keyboardState,
-    unavailable: state.gone,
-    type,
-    erase,
-    select,
-    submit,
-    retry,
+    play: {
+      state,
+      used: state.guesses.length,
+      activeRow: live && state.pending === null ? state.guesses.length : null,
+      heldRow: state.pending === null ? null : state.guesses.length,
+      keyboardState,
+      unavailable: state.gone,
+      type,
+      erase,
+      select,
+      submit,
+      retry,
+    },
     dispatch,
   };
 }

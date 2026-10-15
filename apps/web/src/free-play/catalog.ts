@@ -1,9 +1,6 @@
 import type { Game } from "@miolos/core";
 import type { Weekday } from "@miolos/games";
 
-import { messages, routes } from "../i18n";
-import type { PlayChromeBack } from "../play/screen-chrome";
-
 export const FREE_PLAY_GAMES = [
   "binairo",
   "sudoku",
@@ -34,9 +31,3 @@ export function pickSeed(): number {
 }
 
 export const FREE_PLAY_DATE = "1970-01-01";
-
-export const FREE_PLAY_BACK: PlayChromeBack = {
-  href: routes.freePlay,
-  label: messages.freePlay.back,
-  ariaLabel: messages.freePlay.backToIndexAria,
-};

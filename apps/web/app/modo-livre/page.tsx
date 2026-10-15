@@ -33,9 +33,8 @@ export default function FreePlayIndexPage() {
                 {messages.games[game].name}
               </span>
               <span className={styles.cardDescription}>
-                {game === "termo"
-                  ? messages.freePlay.termoDescription
-                  : messages.games[game].description}
+                {messages.freePlay.descriptions[game] ??
+                  messages.games[game].description}
               </span>
             </span>
           </Link>

@@ -1,6 +1,5 @@
 "use client";
 
-import type { DailyTermoResponse } from "@miolos/core";
 import { deriveBoardStatus, evaluateGuess } from "@miolos/games/termo";
 import { drawFreeTermoWord } from "@miolos/games/termo-free";
 import { useCallback } from "react";
@@ -35,11 +34,6 @@ const FREE_TERMO: FreeGame<typeof drawFreeTermoWord, FreeTermoPuzzle, null> = {
   },
 };
 
-const FREE_TERMO_DAILY: DailyTermoResponse = {
-  game: "termo",
-  date: FREE_PLAY_DATE,
-};
-
 export function useFreeTermo(
   deps?: FreeTermoDeps,
 ): FreeGeneration<FreeTermoPuzzle> {
@@ -70,5 +64,5 @@ export function useFreeTermoBoard(canonical: string): TermoPlay {
     (armed, guess) => judgeFreeGuess(armed, guess, canonical),
     [canonical],
   );
-  return useTermoBoard(FREE_TERMO_DAILY, judge);
+  return useTermoBoard(FREE_PLAY_DATE, judge).play;
 }

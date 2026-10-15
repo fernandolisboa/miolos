@@ -31,7 +31,7 @@ const NEXT_SEED = 20_261_016;
 const WORD = drawFreeTermoWord(SEED);
 const NEXT_WORD = drawFreeTermoWord(NEXT_SEED);
 const ACCENTED = "ábaco";
-const START = initTermoPlayState({ game: "termo", date: FREE_PLAY_DATE });
+const START = initTermoPlayState(FREE_PLAY_DATE);
 
 function misses(answer: string): readonly string[] {
   return TERMO_VALIDATION_WORDS.filter(
@@ -125,7 +125,7 @@ describe("the free Termo board judges a guess with no request (T-WEB-S701)", () 
 });
 
 describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", () => {
-  it("is tagged Modo livre, backs out to the index, wins to the solved card and draws a new word", async () => {
+  it("is tagged Modo livre, backs out to the index, wins to the solved card with the finished board and draws a new word", async () => {
     const { fetchMock, setItem } = stubNoIo();
     const seeds = [SEED, NEXT_SEED];
     const pickSeed = vi.fn(() => seeds.shift() ?? 0);
@@ -151,6 +151,17 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     ).toBeInTheDocument();
     expect(screen.getByText("Modo livre · Termo")).toBeInTheDocument();
     expect(screen.getByText(WORD)).toBeInTheDocument();
+    const won = normalizeWord(WORD);
+    const winningRow = screen.getByRole("group", {
+      name: messages.games.termo.play.rowAria(
+        1,
+        MAX_GUESSES,
+        won,
+        evaluateGuess(won, WORD),
+      ),
+    });
+    expect(winningRow).toHaveTextContent(won);
+    expect(screen.queryByRole("button", { name: /letra/i })).toBeNull();
 
     fireEvent.click(screen.getByText("Mais uma"));
     await flushGeneration();
@@ -166,7 +177,7 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     expect(setItem).not.toHaveBeenCalled();
   });
 
-  it("loses after six misses to a card that says so and shows the word", async () => {
+  it("loses after six misses to a card that says so and shows the word and the sixth row", async () => {
     const { container } = render(
       <TermoFreeScreen deps={{ pickSeed: () => SEED }} />,
     );
@@ -184,6 +195,17 @@ describe("the free Termo screen plays to its card and goes again (T-WEB-S702)", 
     expect(screen.queryByText(messages.freePlay.solved.stamp)).toBeNull();
     expect(screen.getByText(messages.freePlay.solved.wordLead)).toBeVisible();
     expect(screen.getByText(WORD)).toBeVisible();
+    const last = misses(WORD).at(-1) ?? "";
+    expect(
+      screen.getByRole("group", {
+        name: messages.games.termo.play.rowAria(
+          MAX_GUESSES,
+          MAX_GUESSES,
+          last,
+          evaluateGuess(last, WORD),
+        ),
+      }),
+    ).toHaveTextContent(last);
   });
 });
 

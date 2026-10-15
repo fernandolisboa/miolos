@@ -87,7 +87,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     expect(cardAnchors).toHaveLength(6);
 
     expect(
-      screen.getByText(messages.freePlay.termoDescription),
+      screen.getByText(String(messages.freePlay.descriptions.termo)),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(messages.games.termo.description),

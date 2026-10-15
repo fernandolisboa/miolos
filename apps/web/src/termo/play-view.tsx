@@ -25,9 +25,67 @@ const PAGE_KEYS = new Set(["Home", "End"]);
 const INTERACTIVE_TARGET =
   'button, a[href], [role="button"], [tabindex], input, textarea, select, [contenteditable]';
 
+const DAILY_CHROME: TermoChrome = {
+  back: {
+    href: routes.home,
+    label: messages.play.back,
+    ariaLabel: messages.play.backAria,
+  },
+};
+
+function TermoHeading({
+  chrome,
+  date,
+  progress,
+}: {
+  readonly chrome: TermoChrome;
+  readonly date: string;
+  readonly progress: string | null;
+}) {
+  const copy = messages.games.termo.play;
+
+  return (
+    <>
+      <header className={screen.topBar}>
+        <Link
+          className={screen.back}
+          href={chrome.back.href}
+          aria-label={chrome.back.ariaLabel}
+        >
+          {chrome.back.label}
+        </Link>
+        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
+        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
+        <span className={screen.topDate}>
+          {chrome.topTag ?? formatLongDate(date)}
+        </span>
+        {progress === null ? (
+          <span aria-hidden className={screen.progressBar}>
+            {BLANK_READOUT}
+          </span>
+        ) : (
+          <span className={screen.progressBar}>{progress}</span>
+        )}
+      </header>
+
+      <div className={screen.titleBlock}>
+        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
+
+        <div className={screen.titleRow}>
+          <h1 className={screen.title}>{copy.title}</h1>
+        </div>
+        <p className={screen.rules}>{copy.rules}</p>
+        {chrome.note === undefined ? null : (
+          <p className={chrome.note.className}>{chrome.note.text}</p>
+        )}
+      </div>
+    </>
+  );
+}
+
 export function PlayView({
   play,
-  chrome,
+  chrome = DAILY_CHROME,
 }: {
   readonly play: TermoPlay;
   readonly chrome?: TermoChrome;
@@ -76,36 +134,11 @@ export function PlayView({
       style={ACCENT}
       data-play-state="playing"
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={chrome?.back.href ?? routes.home}
-          aria-label={chrome?.back.ariaLabel ?? messages.play.backAria}
-        >
-          {chrome?.back.label ?? messages.play.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>
-          {chrome?.topTag ?? formatLongDate(state.date)}
-        </span>
-
-        <span className={screen.progressBar}>
-          {copy.progressShort(play.used, MAX_GUESSES)}
-        </span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-        {chrome?.note === undefined ? null : (
-          <p className={chrome.note.className}>{chrome.note.text}</p>
-        )}
-      </div>
+      <TermoHeading
+        chrome={chrome}
+        date={state.date}
+        progress={copy.progressShort(play.used, MAX_GUESSES)}
+      />
 
       <div className={screen.statsCard}>
         <div aria-hidden className={screen.tape} />
@@ -212,48 +245,18 @@ function pressKey(key: string, play: TermoPlay): boolean {
 
 export function PlaySkeleton({
   date,
-  chrome,
+  chrome = DAILY_CHROME,
 }: {
   readonly date: string;
   readonly chrome?: TermoChrome;
 }) {
-  const copy = messages.games.termo.play;
-
   return (
     <main
       className={`${screen.page} ${styles.pageTermo}`}
       style={ACCENT}
       data-play-state="skeleton"
     >
-      <header className={screen.topBar}>
-        <Link
-          className={screen.back}
-          href={chrome?.back.href ?? routes.home}
-          aria-label={chrome?.back.ariaLabel ?? messages.play.backAria}
-        >
-          {chrome?.back.label ?? messages.play.back}
-        </Link>
-        <span className={screen.wordmark}>{messages.brand.wordmark}</span>
-        <span className={screen.barKicker}>{messages.games.termo.kicker}</span>
-        <span className={screen.topDate}>
-          {chrome?.topTag ?? formatLongDate(date)}
-        </span>
-        <span aria-hidden className={screen.progressBar}>
-          {BLANK_READOUT}
-        </span>
-      </header>
-
-      <div className={screen.titleBlock}>
-        <p className={screen.titleKicker}>{messages.games.termo.kicker}</p>
-
-        <div className={screen.titleRow}>
-          <h1 className={screen.title}>{copy.title}</h1>
-        </div>
-        <p className={screen.rules}>{copy.rules}</p>
-        {chrome?.note === undefined ? null : (
-          <p className={chrome.note.className}>{chrome.note.text}</p>
-        )}
-      </div>
+      <TermoHeading chrome={chrome} date={date} progress={null} />
 
       <div aria-hidden className={screen.statsCard}>
         <div className={screen.tape} />

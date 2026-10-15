@@ -4,8 +4,11 @@ import type {
   TileStates,
 } from "@miolos/games/termo";
 
-import type { PlayChromeBack, PlayChromeNote } from "../play/screen-chrome";
-import type { LifecycleAction, PlayCore } from "../play/types";
+import type {
+  ArchivePlayChrome,
+  LifecycleAction,
+  PlayCore,
+} from "../play/types";
 import type { HeldReason } from "./guess-client";
 
 export interface TermoJudgedRow {
@@ -71,8 +74,7 @@ export interface TermoPlay {
   readonly retry: () => void;
 }
 
-export interface TermoChrome {
-  readonly back: PlayChromeBack;
-  readonly note?: PlayChromeNote;
+export type TermoChrome = Omit<ArchivePlayChrome, "note"> & {
+  readonly note?: ArchivePlayChrome["note"];
   readonly topTag?: string;
-}
+};

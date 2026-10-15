@@ -12,7 +12,7 @@ export function useTermoPlay(
   daily: DailyTermoResponse,
   remotelyClaimed = false,
 ): TermoPlay {
-  const { dispatch, ...play } = useTermoBoard(daily, judgeOnServer);
+  const { play, dispatch } = useTermoBoard(daily.date, judgeOnServer);
   const { state, retry } = play;
 
   usePlayLifecycle({

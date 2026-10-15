@@ -8,7 +8,7 @@ import {
   type PlayChromeState,
 } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
-import { FREE_PLAY_BACK } from "./catalog";
+import { FREE_PLAY_BACK } from "./back";
 import { ChoicePicker, type FreePlayChoice } from "./choice-picker";
 
 function choiceStat<T extends string | number>(

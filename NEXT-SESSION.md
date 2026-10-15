@@ -4,7 +4,7 @@ Nothing required from #333. New, low urgency: NOW §4 ⚡, Termo free play shipp
 
 ## Start here
 
-**Termo free play** (#333, ADR-0114): `/modo-livre/termo` draws from the free pool (`@miolos/games/termo-free`, crossword-lexicon words never in the answer list) and judges on the device (`judgeFreeGuess`, `free-play/use-free-termo.ts`). The daily and free screens share `termo/use-termo-board.ts`; `TERMO_ANSWERS` moved to `@miolos/games/termo-answers`, banned in all `apps/web` source. The free-play wall allow-lists the reused `termo/` modules; a new one is banned there until added. Budget 64 KB (measured 59.4).
+**Termo free play** (#333, ADR-0114): `free-play/termo-free-screen.tsx` plays through `useFreeTermoBoard` (`free-play/use-free-termo.ts`), which judges on the device and shares `termo/use-termo-board.ts` with the daily.
 
 Every grid game's hint reveals and explains the next logical step (#296 ADR-0099, #297 ADR-0101). Each game's `next<Game>Hint` is in `apps/web/src/<game>/hint.ts` on the shared `nextLogicalHint` (`play/grid-hint.ts`); the engines export `nextSudokuStep`, `nextBinairoStep`, `nextNonogramStep` and `nextQueensStep`. The reason and the spotlight live in `HintState<R>` in every reducer. Binairo and Rainhas generation is pinned (`packages/games/test/{binairo,queens}/`).
 
@@ -24,13 +24,11 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 ## Traps
 
-**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change. The same holds for the crossword lexicon: after editing `content/crossword/lexicon.tsv`, run `pnpm --filter @miolos/games generate:crossword` first.
+**Turbo's cache for `packages/db` tests does not cover `apps/api/src`.** `users-updated-at.test.ts` scans `apps/api/src`, but the db test task's cache key does not include that folder, so pre-commit can replay a stale pass. Run `pnpm test --force` before trusting a green gate after an `apps/api` change. Content is not a Turbo input either: after editing `content/crossword/lexicon.tsv`, `content/termo/answers.csv` or `content/termo/reserve.txt`, run `generate:crossword` and `generate:termo` (`pnpm --filter @miolos/games`), then `pnpm test --force`. An answer extension moves words out of `reserve.txt` (ADR-0114); a published answer is never deleted.
 
 **Dependabot npm PRs cannot be merged as opened.** They change one `package.json` and never `pnpm-lock.yaml`, so `--frozen-lockfile` fails. Land them as one hand-made bump across every pin, outside `minimumReleaseAge` (7 days).
 
 **A perfect day needs a lineup buffered before midnight (ADR-0087).** If every buffer ran dry and all of a day's rows were inserted after `published_at`, that day cannot be perfect. The buffer alert exists to prevent that.
-
-**The crossword lexicon is not a Turbo test input, and it feeds the Termo free pool.** After editing `content/crossword/lexicon.tsv` (or `content/termo/answers.csv`), run `pnpm --filter @miolos/games generate:crossword`, `generate:termo` and `pnpm test --force`.
 
 **A Rainhas record with `autoCrossed` fails the pre-#326 schema.** Rolling `apps/web` back past #326 drops a pending Rainhas completion saved with *Marcar ✕ automático* on; sync it first. **Six per-game medals is T-CORE-S70's maximum** (`queens-30` reached it); a seventh game raises that cap first, with a reason.
 
@@ -38,4 +36,4 @@ Every grid game's hint reveals and explains the next logical step (#296 ADR-0099
 
 **Next:** #332 (the hint reason as a card by the hinted cell), the last quality-of-life item; then file per-game time buckets as an issue, and #317 (sync settings with the account, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 659.6 of 660 KB and CI's `bundle-check` fails a route over budget, so client code added there re-sizes that budget with a reason.
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (ADR-0069 decision 5, #37); the remaining write routes onto `writePreamble` (`apps/api/src/http/write-preamble.ts`); #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.2 of 664 KB and CI's `bundle-check` fails a route over budget, so client code added there re-sizes that budget with a reason.

@@ -327,6 +327,7 @@ jobs:
           "$DEPLOYMENT_URL/modo-livre/binairo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/sudoku?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/nonogram?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
+          "$DEPLOYMENT_URL/modo-livre/termo?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/cruzadinha?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/modo-livre/rainhas?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
           "$DEPLOYMENT_URL/privacidade?x-vercel-protection-bypass=$BYPASS&x-vercel-set-bypass-cookie=true"
