@@ -294,8 +294,10 @@ for (const marker of EXPECTED_DAILY_SCOPE) {
   ).length;
   if (hits === 0) {
     fail(
-      `\`${marker}\` appears in 0 daily-scope chunks — the scan is looking ` +
-        "at the wrong files, so its negatives prove nothing.",
+      `\`${marker}\` appears in 0 daily-scope chunks — either its source ` +
+        "text changed (apps/web/src/i18n/messages.ts or packages/games), so " +
+        "update the marker, or the scan is looking at the wrong files, so its " +
+        "negatives prove nothing.",
     );
   } else {
     console.log(`ok    \`${marker}\` present in ${hits} daily-scope chunk(s)`);
@@ -308,8 +310,9 @@ for (const marker of EXPECTED_FREE_PLAY_SCOPE) {
   ).length;
   if (hits === 0) {
     fail(
-      `\`${marker}\` appears in 0 free-play-only chunks — either the ` +
-        "attribution collapsed or the scan stopped looking, and the daily " +
+      `\`${marker}\` appears in 0 free-play-only chunks — either its ` +
+        "source text changed, so update the marker, or the attribution " +
+        "collapsed or the scan stopped looking, and the daily " +
         "forbidden side above is only meaningful while this side finds it.",
     );
   } else {

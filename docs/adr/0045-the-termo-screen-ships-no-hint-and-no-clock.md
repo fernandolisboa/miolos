@@ -6,6 +6,7 @@
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 6's three accented canonicals become adjacent answer-list pairs, with `zurre\nzurro` as the positive control.
 **Amended by:** [ADR-0106](./0106-the-termo-current-row-is-editable.md) (#327) — decision 1's premise "the player writes guesses, not cells" no longer holds for the active row, whose cells now take a cursor. The argument that a revealed letter is a fifth of the word, and the no-hint outcome, stand.
 **Amended by:** [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) — decision 7: `MAX_DELTA_BYTES` is raised to 48 KB. It still trips on a motif (~35 KB) or dictionary (~36 KB) leak on every play and conclusion route, the tightest at ~51 KB, so it is not un-armed.
+**Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — consequence (g): `route-client-js.mjs` runs in the CI gate.
 
 ## Context
 
