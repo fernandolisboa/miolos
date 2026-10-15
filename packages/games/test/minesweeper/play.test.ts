@@ -132,7 +132,7 @@ describe("newMinesweeperGame", () => {
 });
 
 describe("openMinesweeperCell", () => {
-  it("lays the mines at the first reveal and never on that cell", () => {
+  it("lays the mines at the first open and never on that cell", () => {
     fc.assert(
       fc.property(firstRevealArb, ({ level, seed, start }) => {
         const state = openMinesweeperCell(
@@ -405,7 +405,7 @@ describe("cycleMinesweeperMark", () => {
     expect(cycleMinesweeperMark(question, 5, false).marks[5]).toBeNull();
   });
 
-  it("marks before the first reveal without laying mines", () => {
+  it("marks before the first open without laying mines", () => {
     const state = cycleMinesweeperMark(
       newMinesweeperGame("expert", 9),
       3,

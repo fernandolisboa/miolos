@@ -38,6 +38,6 @@ New, low urgency: NOW §3 ⚡, three yes/no questions on Campo Minado (a daily, 
 
 ## Next
 
-**Next:** the #321–#333 waves are done. The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367, with the plan on the issue and an ADR number of its own for the screen decisions (free-play-only type, no hint, timer, 24 px floor; it amends ADR-0046, 0077, 0095, 0098, 0103, 0030, 0094). File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
+**Next:** the #321–#333 waves are done. The Campo Minado engine shipped (`@miolos/games/minesweeper`, ADR-0133: Windows rules, a field can force a guess); its screen is #373 PR 2, after #367; the plan and the list of ADRs its own screen ADR amends are on the issue. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
 **Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 665.3 of 667 KB, `/modo-livre/termo` at 63.5 of 65 and `/modo-livre/nonogram` at 68.1 of 69 KB (ADR-0119, after #354).
