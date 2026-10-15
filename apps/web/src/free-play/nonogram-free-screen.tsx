@@ -107,11 +107,12 @@ function NonogramFreeBoard({
   const target = filledTarget(state.clues);
   const filled = countFilledCells(state.entries);
 
+  const choice = levelChoice(level, onLevelChange);
   if (state.status === "solved" && state.solution !== null) {
     return (
       <FreePlaySolvedCard
         game="nonogram"
-        choice={messages.freePlay.level[level]}
+        choice={choice}
         onAgain={onNext}
         picture={{
           size: state.size,
@@ -125,7 +126,7 @@ function NonogramFreeBoard({
   return (
     <FreePlayChrome
       game="nonogram"
-      choice={levelChoice(level, onLevelChange)}
+      choice={choice}
       pageModifier={nonogramPageModifier(state.size)}
       state={{
         kind: "playing",

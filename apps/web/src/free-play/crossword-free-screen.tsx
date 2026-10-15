@@ -8,7 +8,7 @@ import {
   CrosswordSkeletonBody,
   crosswordReadouts,
 } from "../crossword/board-view";
-import boardStyles from "../crossword/crossword-board.module.css";
+import { pageClassName } from "../crossword/size-classes";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
 import { messages } from "../i18n";
 import type { FreePlayChoice } from "./choice-picker";
@@ -36,11 +36,6 @@ function sizeChoice(
   };
 }
 
-function pageModifier(size: CrosswordSize): string {
-  const base = boardStyles.pageCrossword ?? "";
-  return size === 7 ? `${base} ${boardStyles.pageSize7 ?? ""}` : base;
-}
-
 export function CrosswordFreeScreen({
   deps,
 }: {
@@ -64,7 +59,7 @@ export function CrosswordFreeScreen({
   return (
     <FreePlayChrome
       game="crossword"
-      pageModifier={pageModifier(size)}
+      pageModifier={pageClassName(size)}
       choice={sizeChoice(size, setSize)}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
@@ -94,21 +89,19 @@ function CrosswordFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, [dispatch]);
 
+  const choice = sizeChoice(size, onSizeChange);
+
   if (board.state.status === "solved") {
     return (
-      <FreePlaySolvedCard
-        game="crossword"
-        choice={messages.freePlay.size.option(size)}
-        onAgain={onNext}
-      />
+      <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
     );
   }
 
   return (
     <FreePlayChrome
       game="crossword"
-      pageModifier={pageModifier(size)}
-      choice={sizeChoice(size, onSizeChange)}
+      pageModifier={pageClassName(size)}
+      choice={choice}
       state={{ kind: "playing", readouts: crosswordReadouts(board) }}
     >
       <CrosswordBoardView board={board} />

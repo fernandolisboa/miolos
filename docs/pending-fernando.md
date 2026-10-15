@@ -37,7 +37,7 @@
 
 ### §3 ⚡ Should the daily Cruzadinha ever be 7×7? — issue #330
 
-- **Do:** play a few 7×7 puzzles in free play (*Modo livre → Cruzadinha → Tamanho 7×7*), then answer on #330 with one word. **(a) não** — the daily stays 5×5; **(b) sim** — the daily becomes 7×7 (an agent writes the ADR, splits the daily schemas and handles the archive); **(c) alterna** — 7×7 on some weekdays, which ones is your call.
+- **Do:** play a few 7×7 puzzles in free play (*Modo livre → Cruzadinha → Tamanho 7×7*), then answer on #330 with one word. **(a) não** — the daily stays 5×5; **(b) sim** — the daily becomes 7×7 (an agent writes the ADR, splits the daily schemas and handles the archive); **(c) alterna** — 7×7 on some weekdays; name them in the same line, e.g. *alterna: sáb, dom*.
 - **Verify:** the answer is on #330.
 - **Blocks:** nothing. Until you answer, the daily stays 5×5.
 - **Urgency: low.** Answer only after you have played 7×7 for a while.

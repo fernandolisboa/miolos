@@ -168,6 +168,11 @@ function crosswordResponseSchema(size: CrosswordSize) {
 export const dailyCrosswordResponseSchema =
   crosswordResponseSchema(DAILY_CROSSWORD_SIZE);
 
+const crosswordResponseSchemas = {
+  5: dailyCrosswordResponseSchema,
+  7: crosswordResponseSchema(7),
+} satisfies Record<CrosswordSize, z.ZodType>;
+
 export type DailyCrosswordResponse = z.infer<
   typeof dailyCrosswordResponseSchema
 >;
@@ -187,7 +192,7 @@ export function projectCrossword(
   },
   size: CrosswordSize,
 ): DailyCrosswordResponse {
-  return crosswordResponseSchema(size).parse({
+  return crosswordResponseSchemas[size].parse({
     game: "crossword",
     date,
     grid,

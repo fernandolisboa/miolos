@@ -22,6 +22,7 @@ import {
   type CrosswordDirection,
 } from "./grid";
 import styles from "./crossword-board.module.css";
+import { gridClassName, gridStyle } from "./size-classes";
 
 const copy = messages.games.crossword.play;
 
@@ -43,10 +44,6 @@ function numbering(
     }
   }
   return map;
-}
-
-function gridClassName(size: number): string {
-  return size === 7 ? `${styles.grid} ${styles.size7}` : (styles.grid ?? "");
 }
 
 export function Board({
@@ -127,6 +124,7 @@ export function Board({
     <div
       ref={boardRef}
       className={gridClassName(size)}
+      style={gridStyle(size)}
       role="group"
       aria-label={copy.boardAria(size)}
       onKeyDown={onKeyDown}
@@ -186,7 +184,7 @@ export function Board({
 
 export function BoardSkeleton({ size }: { readonly size: number }) {
   return (
-    <div aria-hidden className={gridClassName(size)}>
+    <div aria-hidden className={gridClassName(size)} style={gridStyle(size)}>
       {Array.from({ length: size * size }, (_unused, index) => (
         <div key={index} className={`${styles.cell} ${styles.cellSkeleton}`} />
       ))}

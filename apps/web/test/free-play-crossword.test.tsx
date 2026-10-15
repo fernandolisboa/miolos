@@ -44,6 +44,29 @@ function cellAt(index: number, size = 5): HTMLElement {
   return cell;
 }
 
+function radio(size: CrosswordSize): HTMLElement {
+  return screen.getByRole("radio", { name: messages.freePlay.size.aria(size) });
+}
+
+function puzzleOf(
+  seed: number,
+  daily: DailyCrosswordResponse,
+): ReturnType<NonNullable<FreeCrosswordDeps["generate"]>> {
+  return {
+    seed,
+    grid: daily.grid,
+    entries: daily.clues.map((clue) => ({
+      number: clue.number,
+      direction: clue.direction,
+      row: clue.row,
+      col: clue.col,
+      normalized: "x".repeat(clue.length),
+      canonical: "x".repeat(clue.length),
+      clue: clue.clue,
+    })),
+  };
+}
+
 function solve(daily: DailyCrosswordResponse): void {
   for (const [index, letter] of daily.grid.flat().entries()) {
     if (letter === null) {
@@ -133,19 +156,7 @@ describe("a failed free crossword offers a retry that recovers (T-WEB-S447)", ()
         throws = false;
         throw new Error("generation failed");
       }
-      return {
-        seed,
-        grid: real.grid,
-        entries: real.clues.map((clue) => ({
-          number: clue.number,
-          direction: clue.direction,
-          row: clue.row,
-          col: clue.col,
-          normalized: "x".repeat(clue.length),
-          canonical: "x".repeat(clue.length),
-          clue: clue.clue,
-        })),
-      };
+      return puzzleOf(seed, real);
     };
 
     render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED, generate }} />);
@@ -162,9 +173,6 @@ describe("a failed free crossword offers a retry that recovers (T-WEB-S447)", ()
 });
 
 describe("the size picker is a Tamanho radiogroup (T-WEB-S672)", () => {
-  const radio = (size: CrosswordSize) =>
-    screen.getByRole("radio", { name: messages.freePlay.size.aria(size) });
-
   it("offers 5x5 checked and 7x7, with one tab stop, in the generating state too", async () => {
     render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
 
@@ -201,9 +209,7 @@ describe("the size picker is a Tamanho radiogroup (T-WEB-S672)", () => {
 describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB-S673)", () => {
   async function chooseSeven() {
     await flushGeneration();
-    fireEvent.click(
-      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
-    );
+    fireEvent.click(radio(7));
     await flushGeneration();
   }
 
@@ -251,9 +257,7 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
     expect(page()).not.toHaveClass(boardStyles.pageSize7 ?? "");
     expect(sevenTracks()).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
-    );
+    fireEvent.click(radio(7));
 
     expect(page()).toHaveClass(boardStyles.pageCrossword ?? "");
     expect(page()).toHaveClass(boardStyles.pageSize7 ?? "");
@@ -263,22 +267,23 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
 
     expect(page()).toHaveClass(boardStyles.pageSize7 ?? "");
     expect(sevenTracks()).toBe(boardOf(7));
+    expect(boardOf(7).style.getPropertyValue("--crossword-size")).toBe("7");
   });
 
   it("goes back to 5x5 when asked", async () => {
     render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED }} />);
     await chooseSeven();
 
-    fireEvent.click(
-      screen.getByRole("radio", { name: messages.freePlay.size.aria(5) }),
-    );
+    fireEvent.click(radio(5));
     await flushGeneration();
 
     expect(boardOf(5).querySelectorAll("[data-cell-index]")).toHaveLength(25);
+    expect(boardOf(5).style.getPropertyValue("--crossword-size")).toBe("5");
   });
 
   it("lands a failed 7x7 on the error card and retries at 7", async () => {
-    const real = await generated(SEED, 7);
+    const five = await generated(SEED, 5);
+    const seven = await generated(SEED, 7);
     let throws = false;
     const sizes: number[] = [];
     const generate: NonNullable<FreeCrosswordDeps["generate"]> = (
@@ -286,36 +291,21 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
       size,
     ) => {
       sizes.push(size ?? 5);
-      if (throws) {
+      if (size === 7 && throws) {
         throws = false;
         throw new Error("generation failed");
       }
-      return {
-        seed,
-        grid: real.grid,
-        entries: real.clues.map((clue) => ({
-          number: clue.number,
-          direction: clue.direction,
-          row: clue.row,
-          col: clue.col,
-          normalized: "x".repeat(clue.length),
-          canonical: "x".repeat(clue.length),
-          clue: clue.clue,
-        })),
-      };
+      return puzzleOf(seed, size === 7 ? seven : five);
     };
     render(<CrosswordFreeScreen deps={{ pickSeed: () => SEED, generate }} />);
     await flushGeneration();
+    expect(boardOf(5)).toBeInTheDocument();
     throws = true;
-    fireEvent.click(
-      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
-    );
+    fireEvent.click(radio(7));
     await flushGeneration();
 
     expect(screen.getByText(messages.freePlay.error.title)).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: messages.freePlay.size.aria(7) }),
-    ).toHaveAttribute("aria-checked", "true");
+    expect(radio(7)).toHaveAttribute("aria-checked", "true");
 
     fireEvent.click(screen.getByText(messages.freePlay.error.retry));
     await flushGeneration();

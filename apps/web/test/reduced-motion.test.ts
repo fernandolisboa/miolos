@@ -32,9 +32,12 @@ describe("every CSS animation has a reduced-motion stand-down (T-WEB-S405)", () 
   it("declares no JS animation API, or the repo would need this test extended", () => {
     for (const source of webSources()) {
       const code = webCodeOf(source);
+      if (source === FRAME_SCHEDULER) {
+        expect(code.match(/requestAnimationFrame\(/g)).toHaveLength(1);
+      }
       const checked =
         source === FRAME_SCHEDULER
-          ? code.replace(/(?:request|cancel)AnimationFrame/g, "")
+          ? code.replace("requestAnimationFrame(", "")
           : code;
       const hit = JS_MOTION.exec(checked);
       expect(hit, `${source}: ${String(hit?.[0])}`).toBeNull();

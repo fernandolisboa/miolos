@@ -6,7 +6,7 @@
 
 ## Context
 
-ADR-0108 gave the engine a 7×7 grid and left the player's choice for later. The daily and archive stay 5×5. Free play had no choice at all (ADR-0088 decision 2: no level, state `{seed}`), and a 7×7 build can block the main thread for up to 653 ms on its throw path.
+ADR-0108 gave the engine a 7×7 grid and left the player's choice for later. The daily and archive stay 5×5. Free play had no choice at all (ADR-0088 decision 2: no level, state `{seed}`), and a 7×7 build blocks the main thread: 6.7 ms on average, 143 ms at worst when it fills, 653 ms when every attempt fails and it throws (ADR-0108).
 
 ## Decision
 
@@ -18,12 +18,13 @@ ADR-0108 gave the engine a 7×7 grid and left the player's choice for later. The
 ## Consequences
 
 - Every first build waits one frame; a hidden tab builds when it becomes visible.
-- A size switch and back inside one frame rebuilds at the first size with a fresh seed.
-- The route bundle: see the PR's `bundle-check` output; `/modo-livre/cruzadinha` stays under its 660 KB budget.
+- A size switch and back inside one frame shows the old puzzle for a frame, then rebuilds it with a fresh seed.
+- At 360×780 the 7×7 board sits at its 232px floor and the keyboard still fits under it; shorter phones scroll (ADR-0103 decision 3).
+- `/modo-livre/cruzadinha` adds 659.4 KB raw / 158.8 KB gzip over `/`, 0.6 KB under its 660 KB budget (main: 658.3). The next client change on that route re-sizes the budget with a reason.
 - The daily's size remains Fernando's call, now that 7×7 can be played (`docs/pending-fernando.md`).
 
 ## Rejected
 
-- **A Web Worker.** The lexicon would need its own worker chunk, outside ADR-0088's one-importer wall and the route attribution of `bundle-check`; 6.7 ms mean and 143 ms max per 7×7 puzzle do not pay for that.
+- **A Web Worker.** The lexicon would need its own worker chunk, outside ADR-0088's one-importer wall and the route attribution of `bundle-check`; the build times above do not pay for that.
 - **A second picker component.** It would copy the roving tabindex and arrow handling of the level picker.
 - **A free-play response type.** It would infer to the same shape as `DailyCrosswordResponse`; Queens and Nonogram already play several sizes on their daily response types.

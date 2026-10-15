@@ -125,13 +125,10 @@ function SudokuFreeBoard({
 
   const reset = useReset(dispatch);
 
+  const choice = levelChoice(level, onLevelChange);
   if (state.status === "solved") {
     return (
-      <FreePlaySolvedCard
-        game="sudoku"
-        choice={messages.freePlay.level[level]}
-        onAgain={onNext}
-      />
+      <FreePlaySolvedCard game="sudoku" choice={choice} onAgain={onNext} />
     );
   }
 
@@ -139,7 +136,7 @@ function SudokuFreeBoard({
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      choice={levelChoice(level, onLevelChange)}
+      choice={choice}
       state={{
         kind: "playing",
         readouts: {

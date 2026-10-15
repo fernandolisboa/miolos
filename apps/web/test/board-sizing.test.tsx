@@ -125,7 +125,7 @@ describe("each game sheet sets its ceiling and keeps its cells fluid (T-WEB-S597
       [GAME_SHEETS.binairo, [".grid"]],
       [GAME_SHEETS.queens, [".size7", ".size8", ".size9"]],
       [GAME_SHEETS.nonogram, [".size5", ".size8", ".size10", ".size15"]],
-      [GAME_SHEETS.crossword, [".grid", ".size7"]],
+      [GAME_SHEETS.crossword, [".grid"]],
     ] as const;
 
     for (const [sheet, selectors] of boards) {
@@ -225,13 +225,15 @@ describe("a 7x7 Cruzadinha keeps a usable cell at its own floor (T-WEB-S598)", (
   const cellAt = (padding: number, gap: number) =>
     (floor * aspect - 2 * padding - 2 * CARD_BORDER - 6 * gap) / 7;
 
-  it("lays out seven tracks and sets the floor on the page modifier, under the shared floor and the narrowest phone", () => {
-    const grid = bodyOf(sheet, ".size7");
+  it("takes its track count from --crossword-size and sets the floor on the page modifier, under the shared floor and the narrowest phone", () => {
+    const grid = bodyOf(sheet, ".grid");
 
     expect(decl(grid, "grid-template-columns")).toBe(
-      "repeat(7, minmax(0, 1fr))",
+      "repeat(var(--crossword-size), minmax(0, 1fr))",
     );
-    expect(decl(grid, "grid-template-rows")).toBe("repeat(7, minmax(0, 1fr))");
+    expect(decl(grid, "grid-template-rows")).toBe(
+      "repeat(var(--crossword-size), minmax(0, 1fr))",
+    );
     expect(floor).toBeLessThanOrEqual(boardFloor());
     expect(floor).toBeLessThanOrEqual(NARROWEST_VIEWPORT - PAGE_PADDING);
   });

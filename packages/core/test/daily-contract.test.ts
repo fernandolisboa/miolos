@@ -2,6 +2,7 @@ import { generateBinairo } from "@miolos/games/binairo";
 import {
   generateCrossword,
   type CrosswordPuzzle,
+  type CrosswordSize as GamesCrosswordSize,
 } from "@miolos/games/crossword";
 import {
   generateNonogram,
@@ -24,7 +25,7 @@ import {
   TERMO_ANSWERS,
   WORD_LENGTH,
 } from "@miolos/games/termo";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   binairoDailyContentSchema,
@@ -45,6 +46,7 @@ import {
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CrosswordDailyContent,
+  type CrosswordSize,
   type QueensDailyContent,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
@@ -869,6 +871,7 @@ describe("projectCrossword (sized)", () => {
       );
     }
     expect(CROSSWORD_SIZES).toEqual([5, 7]);
+    expectTypeOf<CrosswordSize>().toEqualTypeOf<GamesCrosswordSize>();
   });
 
   it("T-CORE-S188: the daily response and content schemas still refuse a 7x7 puzzle", () => {

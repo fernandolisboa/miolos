@@ -40,14 +40,14 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S190` | `S188` | never used |
 | `T-DB` | `S142` | `S140` | `T-DB-21` |
 | `T-API` | `S331` | `S330` | `T-API-16` |
-| `T-WEB` | `S680` | `S674` | `T-WEB-23` |
+| `T-WEB` | `S680` | `S675` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
 #331 (centred controls and the (i) tip) spent **`T-WEB-S660`** (`info-tip.test.tsx`: the tip opens on tap, hover and keyboard focus and closes on Escape, blur and an outside tap) and **`T-WEB-S661`** (same file: the Nonogram and Binairo controls sit in the middle of a `1fr auto 1fr` row, and no tip says Backspace). `T-WEB-S103`'s focus order and the Rainhas `--board-below` pin in `board-sizing.test.tsx` were widened in place.
 
 #329 (Nonogram *Arrastar só em linha reta*) spent **`T-WEB-S655`** (`straight-stroke.test.tsx`: `strokeAxis`, `projectOnLine`, `cellsAfter`) and **`T-WEB-S656`** (same file: the board keeps a stroke on its row or column, fills a jump, and paints freely with the switch off). `T-WEB-S580` and `S593` were widened in place.
 
-#330 part 2 (the Cruzadinha *Tamanho* choice in free play, ADR-0111) spent **`T-CORE-S187…S188`** in `packages/core/test/daily-contract.test.ts` (the projection sized by its caller; every daily shape still refuses 7×7) and **`T-WEB-S670…S674`**: `S670` (`crossword-grid`/`crossword-state` at side 7), `S671` (`crossword-hint`: the sentence and `nextCrosswordHint` at 7), `S672` and `S673` (`free-play-crossword`: the *Tamanho* radiogroup; a 7×7 played, solved and retried), `S674` (`free-play-generation`: the build waits a frame). `T-CORE-S189` and `T-WEB-S675…S679` are **burned**. `T-WEB-S425`, `S445`, `S446`, `S447`, `S405`, `S415`, `S416`, `S597` and `S598` were widened in place.
+#330 part 2 (the Cruzadinha *Tamanho* choice in free play, ADR-0111) spent **`T-CORE-S187…S188`** in `packages/core/test/daily-contract.test.ts` (the projection sized by its caller; every daily shape still refuses 7×7) and **`T-WEB-S670…S675`**: `S670` (`crossword-grid`/`crossword-state` at side 7), `S671` (`crossword-hint`: the sentence and `nextCrosswordHint` at 7), `S672` and `S673` (`free-play-crossword`: the *Tamanho* radiogroup; a 7×7 played, solved and retried), `S674` (`free-play-generation`: the build waits a frame) and `S675` (a rendered 7×7: numbering, keys, clue list and hint at side 7), jumping `S662…S669` for siblings in flight; whatever none spends is burned. `T-CORE-S189` and `T-WEB-S676…S679` are **burned**. `T-WEB-S425`, `S445`, `S446`, `S447`, `S405`, `S415`, `S416`, `S597` and `S598` were widened in place; `S439`, `S576…S578` and `S607` gained a size argument, and every free-play suite now awaits `flushGeneration()` with no assertion changed.
 
 #330 part 1 (the Cruzadinha size parameter, ADR-0108) spent **`T-API-S330`** in `apps/api/test/publishing-service.test.ts` (the stored daily contract refuses a 7×7 puzzle), leaving `S323…S329` to sibling branches.
 

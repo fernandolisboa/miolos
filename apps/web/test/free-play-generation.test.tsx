@@ -177,7 +177,16 @@ describe("a switch paints generating before it builds (T-WEB-S674)", () => {
     expect(generate).not.toHaveBeenCalled();
 
     act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(generate).not.toHaveBeenCalled();
+
+    act(() => {
       vi.advanceTimersToNextFrame();
+    });
+    expect(generate).not.toHaveBeenCalled();
+
+    act(() => {
       vi.advanceTimersByTime(1);
     });
     expect(generate).toHaveBeenCalledTimes(1);

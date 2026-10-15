@@ -7,17 +7,17 @@ import { accentVars } from "../play/accent";
 import { picturePath } from "../play/picture-path";
 import type { ConclusionPicture } from "../play/types";
 import type { FreePlayGame } from "./catalog";
+import type { FreePlayChoice } from "./choice-picker";
 import styles from "./free-play.module.css";
 
-export function FreePlaySolvedCard({
+export function FreePlaySolvedCard<T extends string | number>({
   game,
   choice,
   picture,
   onAgain,
 }: {
   readonly game: FreePlayGame;
-  readonly choice?: string;
-
+  readonly choice: FreePlayChoice<T>;
   readonly picture?: ConclusionPicture;
   readonly onAgain: () => void;
 }) {
@@ -34,7 +34,7 @@ export function FreePlaySolvedCard({
           {messages.freePlay.solved.modeLine(
             messages.freePlay.modeTag,
             messages.games[game].name,
-            choice,
+            choice.optionLabel(choice.value),
           )}
         </p>
         {picture !== undefined && (

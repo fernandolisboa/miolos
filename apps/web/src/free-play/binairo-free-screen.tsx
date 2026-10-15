@@ -106,13 +106,10 @@ function BinairoFreeBoard({
 
   const reset = useReset(dispatch);
 
+  const choice = levelChoice(level, onLevelChange);
   if (state.status === "solved") {
     return (
-      <FreePlaySolvedCard
-        game="binairo"
-        choice={messages.freePlay.level[level]}
-        onAgain={onNext}
-      />
+      <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
     );
   }
 
@@ -120,7 +117,7 @@ function BinairoFreeBoard({
     <FreePlayChrome
       game="binairo"
       pageModifier={boardStyles.pageBinairo ?? ""}
-      choice={levelChoice(level, onLevelChange)}
+      choice={choice}
       state={{
         kind: "playing",
         readouts: {

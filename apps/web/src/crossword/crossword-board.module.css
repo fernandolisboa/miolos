@@ -73,16 +73,11 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--crossword-size), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--crossword-size), minmax(0, 1fr));
   gap: 4px;
   aspect-ratio: 1;
   touch-action: manipulation;
-}
-
-.size7 {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: repeat(7, minmax(0, 1fr));
 }
 
 .cell {
