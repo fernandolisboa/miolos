@@ -8,10 +8,11 @@ import {
 } from "../../src/crossword/generate";
 import { CROSSWORD_TEMPLATES } from "../../src/crossword/templates";
 import { CrosswordGenerationError } from "../../src/crossword/types";
-import type { CrosswordPuzzle } from "../../src/crossword/types";
+import type { CrosswordPuzzle, CrosswordSize } from "../../src/crossword/types";
 import { validateCrossword } from "../../src/crossword/validate";
 
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
+const SIZES: readonly CrosswordSize[] = [5, 7];
 
 function shapeOf(puzzle: CrosswordPuzzle): string {
   return puzzle.grid
@@ -20,25 +21,31 @@ function shapeOf(puzzle: CrosswordPuzzle): string {
 }
 
 describe("generateCrossword", () => {
-  it("P1 — every generated puzzle validates", () => {
+  it.each(SIZES)("P1 — every generated puzzle of side %i validates", (size) => {
     fc.assert(
       fc.property(seedArb, (seed) => {
-        const puzzle = generateCrossword(seed);
+        const puzzle = generateCrossword(seed, size);
         expect(puzzle.seed).toBe(seed);
+        expect(puzzle.grid).toHaveLength(size);
         expect(validateCrossword(puzzle)).toEqual({ ok: true, failures: [] });
       }),
       { numRuns: 100 },
     );
   });
 
-  it("P2 — determinism: the same seed yields a deep-equal puzzle", () => {
-    fc.assert(
-      fc.property(seedArb, (seed) => {
-        expect(generateCrossword(seed)).toEqual(generateCrossword(seed));
-      }),
-      { numRuns: 100 },
-    );
-  });
+  it.each(SIZES)(
+    "P2 — determinism: the same seed yields a deep-equal puzzle of side %i",
+    (size) => {
+      fc.assert(
+        fc.property(seedArb, (seed) => {
+          expect(generateCrossword(seed, size)).toEqual(
+            generateCrossword(seed, size),
+          );
+        }),
+        { numRuns: 100 },
+      );
+    },
+  );
 
   it("P3 — seeds alias modulo 2^32", () => {
     fc.assert(
@@ -51,14 +58,21 @@ describe("generateCrossword", () => {
     );
   });
 
-  it("every shipped template is drawn and filled", () => {
-    const drawn = new Set(
-      Array.from({ length: 60 }, (_, seed) => shapeOf(generateCrossword(seed))),
-    );
-    expect(drawn).toEqual(
-      new Set(CROSSWORD_TEMPLATES.map((template) => template.join("/"))),
-    );
-  });
+  it.each(SIZES)(
+    "every shipped template of side %i is drawn and filled",
+    (size) => {
+      const drawn = new Set(
+        Array.from({ length: 60 }, (_, seed) =>
+          shapeOf(generateCrossword(seed, size)),
+        ),
+      );
+      expect(drawn).toEqual(
+        new Set(
+          CROSSWORD_TEMPLATES[size].map((template) => template.join("/")),
+        ),
+      );
+    },
+  );
 
   it("throws CrosswordGenerationError after every attempt fails", () => {
     const unfillable = ["mar", "casa", "praia"].map((word) => ({
@@ -68,7 +82,7 @@ describe("generateCrossword", () => {
     }));
     let caught: unknown;
     try {
-      generateFrom(7, unfillable);
+      generateFrom(7, 5, unfillable);
     } catch (error) {
       caught = error;
     }

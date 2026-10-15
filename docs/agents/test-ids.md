@@ -43,6 +43,8 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-WEB` | `S624` | `S623` | `T-WEB-23` |
 | `T-LINT` | `S70` | `S69` | `T-LINT-10` |
 
+#330 part 1 (the Cruzadinha size parameter, ADR-0108) spent **`T-API-S330`** in `apps/api/test/publishing-service.test.ts` (the stored daily contract refuses a 7×7 puzzle), leaving `S323…S329` to sibling branches.
+
 #323 (a double tap on a board cell fixes its digit) spent **`T-WEB-S606`** in `apps/web/test/sudoku-digit-lock.test.tsx`.
 
 #322 (Cruzadinha *Pular letras já preenchidas*) spent **`T-WEB-S607`** in `crossword-grid.test.ts` (`nextEmptyCell`), `crossword-state.test.ts` (the reducer) and `crossword-screen.test.tsx` (the device setting reaches the board).
