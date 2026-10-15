@@ -593,7 +593,6 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "topBar",
         "topDate",
         "wordmark",
-        "wordmarkMark",
       ],
     });
   });

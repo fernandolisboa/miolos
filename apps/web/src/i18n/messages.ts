@@ -7,7 +7,7 @@ import {
 
 const wordmark = "Miolos";
 const tagline = "jogos de raciocínio por dia";
-const Tagline = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
+const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
 
 const freePlayDescriptions: Partial<Record<Game, string>> = {
@@ -183,12 +183,12 @@ const cellAriaQueens = (
 export const messages = {
   meta: {
     title: `${wordmark} — ${tagline}`,
-    description: `${Tagline} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. ${signOff}`,
+    description: `${taglineCapitalised} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. ${signOff}`,
   },
   brand: {
     wordmark,
     tagline,
-    taglineSentence: `${Tagline}.`,
+    taglineSentence: `${taglineCapitalised}.`,
     signOff,
   },
   hoje: {

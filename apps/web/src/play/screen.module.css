@@ -45,20 +45,11 @@
 }
 
 .wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.22em;
   font-family: var(--font-display);
   font-style: italic;
   font-size: 24px;
   font-weight: 600;
   transform: rotate(-1deg);
-}
-
-.wordmarkMark {
-  flex: none;
-  width: 1.12em;
-  height: 1em;
 }
 
 .topDate {
@@ -308,6 +299,15 @@
   padding: var(--space-2) var(--space-3);
   background: var(--paper-card);
   border-radius: var(--radius);
+  transform: translate(-50%, -50%);
+}
+
+.boardLoading {
+  position: absolute;
+  top: calc((100cqb - var(--board-below, 0px)) / 2);
+  left: 50%;
+  width: min(40%, 160px);
+  aspect-ratio: 58 / 52;
   transform: translate(-50%, -50%);
 }
 

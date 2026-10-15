@@ -5,17 +5,25 @@ import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BrandMark } from "../src/components/brand-mark";
+import { BRAIN, BrandMark } from "../src/components/brand-mark";
+import { BoardCard } from "../src/play/board-card";
 
 const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file: string) => readFileSync(path.join(WEB, file), "utf8");
 const tokensCss = read("../../packages/ui/tokens.css");
+const sheet = read("src/components/brand-mark.module.css");
 
-const accentsOf = (svg: SVGElement) =>
-  [...svg.querySelectorAll("rect")].map((cell) => cell.getAttribute("class"));
+const LOBE_TOKENS = [
+  "--accent-termo",
+  "--accent-sudoku",
+  "--accent-nonogram",
+  "--accent-binairo",
+  "--accent-crossword",
+  "--accent-queens",
+];
 
 describe("the brand mark (T-WEB-S750)", () => {
-  it("is decorative, draws one cell per game when detailed and three sealing-wax cells when small, and never writes a colour literal", () => {
+  it("is decorative, builds its lobes from cells in six classes, and never writes a colour literal", () => {
     const { container } = render(
       <>
         <BrandMark detailed />
@@ -28,31 +36,21 @@ describe("the brand mark (T-WEB-S750)", () => {
     for (const svg of [detailed, small]) {
       expect(svg).toHaveAttribute("aria-hidden", "true");
       expect(svg.outerHTML).not.toMatch(/#[0-9a-f]{3,8}\b|var\(/i);
+      const lobes = new Set(
+        [...svg.querySelectorAll("rect")].map((cell) =>
+          cell.getAttribute("class"),
+        ),
+      );
+      expect(lobes.size).toBeGreaterThanOrEqual(svg === detailed ? 6 : 5);
     }
-    expect(new Set(accentsOf(detailed)).size).toBe(6);
-    expect(accentsOf(small)).toHaveLength(3);
-    expect(new Set(accentsOf(small)).size).toBe(1);
-
-    const clipIds = [...container.querySelectorAll("clipPath")].map(
-      (clip) => clip.id,
+    expect(detailed.querySelectorAll("rect").length).toBeGreaterThan(
+      small.querySelectorAll("rect").length,
     );
-    expect(new Set(clipIds).size).toBe(2);
   });
 
-  it("colours every cell from a game accent token, or the app accent on the small mark", () => {
-    const sheet = read("src/components/brand-mark.module.css");
+  it("colours the paper, the ink and every lobe from tokens", () => {
     const used = [...sheet.matchAll(/var\((--[a-z-]+)\)/g)].map((m) => m[1]);
-    for (const token of [
-      "--accent-termo",
-      "--accent-sudoku",
-      "--accent-nonogram",
-      "--accent-binairo",
-      "--accent-crossword",
-      "--accent-queens",
-      "--accent-app",
-      "--paper-card",
-      "--ink",
-    ]) {
+    for (const token of [...LOBE_TOKENS, "--paper-card", "--ink"]) {
       expect(used).toContain(token);
       expect(tokensCss).toContain(`${token}:`);
     }
@@ -60,9 +58,11 @@ describe("the brand mark (T-WEB-S750)", () => {
 });
 
 describe("the favicon and the app-icon master (T-WEB-S753)", () => {
-  it("take every colour literal from the tokens file, and the favicon follows a dark system scheme", () => {
+  it("draw the component's brain, take every colour literal from the tokens file, and the favicon follows a dark system scheme", () => {
     for (const file of ["app/icon.svg", "scripts/app-icon.svg"]) {
-      const literals = read(file).match(/#[0-9A-Fa-f]{6}\b/g) ?? [];
+      const svg = read(file);
+      expect(svg, file).toContain(BRAIN);
+      const literals = svg.match(/#[0-9A-Fa-f]{6}\b/g) ?? [];
       expect(literals.length, file).toBeGreaterThan(0);
       for (const literal of literals) {
         expect(tokensCss.toUpperCase(), `${file} ${literal}`).toContain(
@@ -71,6 +71,45 @@ describe("the favicon and the app-icon master (T-WEB-S753)", () => {
       }
     }
     expect(read("app/icon.svg")).toContain("prefers-color-scheme: dark");
-    expect(read("scripts/render-icons.mjs")).toContain('"app-icon.svg"');
+  });
+});
+
+describe("a loading board shows the brand mark shuffling its cells (T-WEB-S754)", () => {
+  it("draws the shuffling mark on a placeholder board, never over an overlay or a live board", () => {
+    const shuffling = (node: HTMLElement) =>
+      node.querySelectorAll("svg[aria-hidden='true'] rect").length > 0;
+
+    const loading = render(
+      <BoardCard placeholder>
+        <div />
+      </BoardCard>,
+    );
+    expect(shuffling(loading.container)).toBe(true);
+    loading.unmount();
+
+    const withOverlay = render(
+      <BoardCard placeholder overlay={<p>indisponível</p>}>
+        <div />
+      </BoardCard>,
+    );
+    expect(shuffling(withOverlay.container)).toBe(false);
+    withOverlay.unmount();
+
+    const live = render(
+      <BoardCard>
+        <div />
+      </BoardCard>,
+    );
+    expect(shuffling(live.container)).toBe(false);
+  });
+
+  it("cycles the cells through the lobe accents and blank paper, and stands still under reduced motion", () => {
+    const keyframes = sheet.slice(sheet.indexOf("@keyframes"));
+    for (const token of [...LOBE_TOKENS, "--paper-card"]) {
+      expect(keyframes).toContain(`fill: var(${token})`);
+    }
+    const calm = sheet.slice(sheet.indexOf("prefers-reduced-motion"));
+    expect(calm).toContain(".shuffling rect");
+    expect(calm).toContain("animation: none");
   });
 });

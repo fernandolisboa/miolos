@@ -1,6 +1,6 @@
 # Do I need to do anything?
 
-Nothing required. The logo is in (#354, option B, a brain drawn from the games' grid); NOW §3 ⚡ only if you want A or C instead. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
+Nothing required. The logo is in (#354, option E, a brain whose lobes are grid cells); NOW §3 ⚡ only if you want B, C or D instead. Open, low urgency: NOW §1 (#200), and NOW §2, the Google OAuth client and its two Vercel variables (#280, ADR-0089; Sign in with Google is dormant until then). Optional: ANY TIME has a real-phone check of the Sudoku *Número fixo* double tap (#300). Attach your Gmail in Ajustes once to count as an admin. To work the ledger: *"run /wizard over docs/pending-fernando.md, NOW section"*.
 
 ## Start here
 
@@ -18,7 +18,7 @@ Nothing required. The logo is in (#354, option B, a brain drawn from the games' 
 
 **Cruzadinha 7×7** (#330, ADR-0108, ADR-0111, ADR-0117): new dailies are generated at 7×7 (`attemptCrossword`); stored 5×5 days stay as they are, so every crossword schema takes either side and a day's size is its `grid.length`. The first 7×7 daily is due about 2026-10-22, once the 5×5 buffer runs out. Free play offers both through `ChoicePicker`; its builds wait a paint (`useFreeGeneration`), and tests await `flushGeneration()`.
 
-**Brand mark** (#354, ADR-0119): `BrandMark` (`components/brand-mark.tsx`) sits in every top bar and on the hub, which also shows `messages.brand.tagline` and `signOff`. The conclusion top bar (`play/conclusion-view.tsx`) still lacks it; add it once the end-screen animation work has landed. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
+**Brand mark** (#354, ADR-0119): `BrandMark` and `Wordmark` (`components/brand-mark.tsx`) sit in every top bar and on the hub, which also shows `messages.brand.tagline` and `signOff`; a placeholder `BoardCard` shows the mark shuffling. The conclusion top bar (`play/conclusion-view.tsx`) still has the bare wordmark: switch it to `<Wordmark>` once the end-screen animation work has landed. The favicon is `app/icon.svg`; the PWA and apple PNGs come from `scripts/app-icon.svg` through `node scripts/render-icons.mjs`.
 
 ## Traps
 
@@ -38,4 +38,4 @@ Nothing required. The logo is in (#354, option B, a brain drawn from the games' 
 
 **Next:** the #321–#333 waves are done. File per-game time buckets as an issue (Cruzadinha times now mix 5×5 and 7×7 days), then #317 (settings sync, needs a migration).
 
-**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at 660.8 of 664 KB (ADR-0113).
+**Queued:** #206 cluster 10's `Frame` half; the telemetry opt-out UI (#37); the remaining write routes onto `writePreamble`; #254; #205's CSS half (~1,820 lines, NOT a sweep); the `jsonResponse`/`stubFetch` Quick change; `T-WEB-S183`'s module walker onto `module-graph.ts`. `/modo-livre/cruzadinha` sits at about 662.5 of 664 KB and `/modo-livre/nonogram` at about 65.2 of 66 KB.

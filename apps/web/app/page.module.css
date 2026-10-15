@@ -18,9 +18,6 @@
 }
 
 .wordmark {
-  display: flex;
-  align-items: center;
-  gap: 0.22em;
   margin: 0;
   font-family: var(--font-display);
   font-style: italic;
@@ -28,12 +25,6 @@
   font-size: 42px;
   line-height: 1.1;
   transform: rotate(-1deg);
-}
-
-.mark {
-  flex: none;
-  width: 1.12em;
-  height: 1em;
 }
 
 .tagline {
@@ -359,6 +350,7 @@
   }
 
   .signOff {
+    flex-direction: column;
     margin-top: var(--space-6);
     font-size: 13px;
   }

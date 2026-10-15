@@ -421,8 +421,10 @@ describe("the hub masthead names the product and says what it is (T-WEB-S751)", 
     expect(screen.getByText(messages.brand.tagline)).toBeInTheDocument();
     expect(screen.getByText(messages.brand.signOff)).toBeInTheDocument();
 
-    expect(messages.meta.title).toContain(messages.brand.tagline);
-    expect(messages.meta.description).toContain(messages.brand.signOff);
+    expect(messages.meta.title).toBe("Miolos — jogos de raciocínio por dia");
+    expect(messages.meta.description).toBe(
+      "Jogos de raciocínio por dia — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. Um puzzle novo de cada, todos os dias, igual para todo mundo.",
+    );
     expect(ogCopy.siteTagline.toLowerCase()).toBe(`${messages.brand.tagline}.`);
   });
 });
