@@ -73,55 +73,69 @@
   }
 }
 
-.sag {
-  animation: ending-sag calc(var(--duration-slow) * 5) ease-in-out;
+.drop {
+  transform-origin: 50% 100%;
+  animation: ending-drop calc(var(--duration-slow) * 6);
 }
 
-@keyframes ending-sag {
-  0%,
+@keyframes ending-drop {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  26% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: ease-out;
+  }
+  44% {
+    transform: rotate(-4deg);
+  }
+  62% {
+    transform: rotate(2.5deg);
+  }
+  80% {
+    transform: rotate(-1deg);
+  }
   100% {
     transform: none;
-  }
-  45% {
-    transform: translateY(6px) rotate(5deg);
+    opacity: 1;
   }
 }
 
-.drip {
+.dust {
   position: absolute;
-  top: 92%;
-  width: 3px;
-  height: 26px;
-  margin-left: -1.5px;
-  border-radius: 0 0 2px 2px;
+  bottom: 8%;
+  left: 50%;
+  width: 46%;
+  height: 2px;
+  border-radius: 1px;
   background: var(--ink-2);
-  transform-origin: top;
+  transform-origin: left;
+  rotate: var(--angle);
   opacity: 0;
-  animation: ending-drip calc(var(--duration-slow) * 4) ease-in
-    calc(var(--duration-slow) * 1.2 + var(--drip-delay)) both;
+  animation: ending-dust calc(var(--duration-slow) * 2) ease-out
+    calc(var(--duration-slow) * 1.56);
 }
 
-@keyframes ending-drip {
-  0% {
-    transform: scaleY(0);
+@keyframes ending-dust {
+  from {
+    transform: translateX(80%) scaleX(0.2);
     opacity: 0.9;
   }
-  60% {
-    transform: scaleY(1);
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(8px) scaleY(1);
+  to {
+    transform: translateX(130%) scaleX(0.5);
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .press,
-  .sag,
+  .drop,
   .ring,
   .flick,
-  .drip {
+  .dust {
     animation: none;
   }
 }

@@ -325,24 +325,24 @@ describe("the flourish is ink on paper, and calm under reduced motion (T-WEB-S74
     (match) => match[1],
   );
 
-  it("names a keyframe for the press, the splash and the run", () => {
+  it("names a keyframe for the press, the splash and the heavy drop", () => {
     expect(KEYFRAMES).toEqual(
       expect.arrayContaining([
         "ending-press",
         "ending-ring",
         "ending-flick",
-        "ending-sag",
-        "ending-drip",
+        "ending-drop",
+        "ending-dust",
       ]),
     );
   });
 
-  it("never bounces, loops or rocks", () => {
+  it("never bounces or loops", () => {
     expect(CSS).not.toMatch(/bounce|elastic|wobble|jiggle|spring/i);
     expect(CSS).not.toMatch(/\binfinite\b|\balternate\b/);
   });
 
-  it("presses down from above, and the sag comes back to rest", () => {
+  it("presses down from above, and the loss drops heavily and rocks to rest", () => {
     const press = bodyOf(CSS, "@keyframes ending-press");
     const scales = [...press.matchAll(/scale\(([\d.]+)\)/g)].map((match) =>
       Number(match[1]),
@@ -354,19 +354,29 @@ describe("the flourish is ink on paper, and calm under reduced motion (T-WEB-S74
       "var(--ease-settle)",
     );
 
-    expect(decl(bodyOf(CSS, ".sag"), "animation")).not.toMatch(/forwards|both/);
-    expect(
-      decl(
-        bodyOf(bodyOf(CSS, "@keyframes ending-sag"), "0%,\n  100%"),
-        "transform",
-      ),
-    ).toBe("none");
+    const drop = bodyOf(CSS, "@keyframes ending-drop");
+    const fall = decl(bodyOf(drop, "0%"), "animation-timing-function") ?? "";
+    const curve = /cubic-bezier\(([^)]+)\)/.exec(fall)?.[1] ?? "";
+    const [, y1, , y2] = curve.split(",").map(Number);
+    expect([y1, y2]).toEqual([0, expect.any(Number)]);
+    expect(Math.max(y1 ?? 2, y2 ?? 2)).toBeLessThanOrEqual(1);
+    expect(decl(bodyOf(drop, "100%"), "transform")).toBe("none");
+    expect(decl(bodyOf(CSS, ".drop"), "animation")).not.toMatch(
+      /forwards|both/,
+    );
+    const swings = [...drop.matchAll(/rotate\((-?[\d.]+)deg\)/g)].map((match) =>
+      Math.abs(Number(match[1])),
+    );
+    expect(swings.length).toBeGreaterThan(0);
+    expect(Math.max(...swings)).toBeLessThanOrEqual(4);
+    expect(swings).toEqual([...swings].sort((a, b) => b - a));
+    expect(drop).not.toMatch(/accent/);
   });
 
   it("paints only with the system's tokens", () => {
     expect(CSS).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
     expect(decl(bodyOf(CSS, ".ring"), "border-color")).toBe("var(--accent)");
-    expect(decl(bodyOf(CSS, ".drip"), "background")).toBe("var(--ink-2)");
+    expect(decl(bodyOf(CSS, ".dust"), "background")).toBe("var(--ink-2)");
   });
 
   it("stands every animated piece down by name", () => {

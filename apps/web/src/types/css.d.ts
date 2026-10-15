@@ -9,7 +9,6 @@ declare module "csstype" {
     "--ink-on-accent"?: string;
     "--crossword-size"?: number;
     "--angle"?: string;
-    "--drip-delay"?: string;
     "--ribbon"?: string;
   }
 }

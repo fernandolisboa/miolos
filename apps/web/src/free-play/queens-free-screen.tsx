@@ -11,6 +11,7 @@ import {
 } from "../queens/board-panel";
 import styles from "../queens/queens-board.module.css";
 import { useQueensBoard } from "../queens/use-queens-board";
+import { EndingStage } from "../play/ending-stage";
 import {
   DEFAULT_FREE_PLAY_LEVEL,
   LEVEL_WEEKDAYS,
@@ -75,21 +76,23 @@ function QueensFreeBoard({
   const board = useQueensBoard(puzzle.daily);
 
   const choice = levelChoice(level, onLevelChange);
-  if (board.state.status === "solved") {
-    return (
-      <FreePlaySolvedCard game="queens" choice={choice} onAgain={onNext} />
-    );
-  }
-
   return (
-    <FreePlayChrome
-      game="queens"
-      choice={choice}
-      pageModifier={styles.pageQueens ?? ""}
-      state={{ kind: "playing", readouts: queensReadouts(board) }}
+    <EndingStage
+      over={board.state.status === "solved"}
+      won
+      ending={() => (
+        <FreePlaySolvedCard game="queens" choice={choice} onAgain={onNext} />
+      )}
     >
-      <BoardPanel board={board} />
-    </FreePlayChrome>
+      <FreePlayChrome
+        game="queens"
+        choice={choice}
+        pageModifier={styles.pageQueens ?? ""}
+        state={{ kind: "playing", readouts: queensReadouts(board) }}
+      >
+        <BoardPanel board={board} />
+      </FreePlayChrome>
+    </EndingStage>
   );
 }
 

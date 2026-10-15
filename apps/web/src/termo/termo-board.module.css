@@ -130,6 +130,8 @@
    glyphs that are 24px on a phone, the one element a low-vision player wants
    to enlarge. A tap on a cell only moves the cursor, so no tap delay is paid. */
 .grid {
+  --reveal-stagger: 60ms;
+  --wave-lead: calc(var(--duration-fast) + var(--reveal-stagger) * 4);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -268,19 +270,19 @@
 }
 
 .tileJudged:nth-child(2) {
-  transition-delay: 60ms;
+  transition-delay: calc(var(--reveal-stagger) * 1);
 }
 
 .tileJudged:nth-child(3) {
-  transition-delay: 120ms;
+  transition-delay: calc(var(--reveal-stagger) * 2);
 }
 
 .tileJudged:nth-child(4) {
-  transition-delay: 180ms;
+  transition-delay: calc(var(--reveal-stagger) * 3);
 }
 
 .tileJudged:nth-child(5) {
-  transition-delay: 240ms;
+  transition-delay: calc(var(--reveal-stagger) * 4);
 }
 
 /* Declared AFTER `.tile` so same-specificity-later-wins retires the desk

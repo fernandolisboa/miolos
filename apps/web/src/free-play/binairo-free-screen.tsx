@@ -9,6 +9,7 @@ import { binairoHintExplanation } from "../binairo/hint";
 import { canHint, initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
+import { EndingStage } from "../play/ending-stage";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
@@ -108,51 +109,53 @@ function BinairoFreeBoard({
   const reset = useReset(dispatch);
 
   const choice = levelChoice(level, onLevelChange);
-  if (state.status === "solved") {
-    return (
-      <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
-    );
-  }
-
   return (
-    <FreePlayChrome
-      game="binairo"
-      pageModifier={boardStyles.pageBinairo ?? ""}
-      choice={choice}
-      state={{
-        kind: "playing",
-        readouts: {
-          progressShort: copy.progressShort(filled, TOTAL_CELLS),
-          progressLong: copy.progressLong(filled, TOTAL_CELLS),
-          hint: {
-            ...hintReadout(
-              state.hint,
-              binairoHintExplanation(state.hint.reason),
-            ),
-            ready: hintReady,
-            onReveal: revealHint,
-          },
-          onReset: hasDecidedCell(state.entries) ? reset : null,
-        },
-      }}
+    <EndingStage
+      over={state.status === "solved"}
+      won
+      ending={() => (
+        <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
+      )}
     >
-      <BoardCard
-        below={<Controls paint={state.paint} onToggleMode={toggleMode} />}
+      <FreePlayChrome
+        game="binairo"
+        pageModifier={boardStyles.pageBinairo ?? ""}
+        choice={choice}
+        state={{
+          kind: "playing",
+          readouts: {
+            progressShort: copy.progressShort(filled, TOTAL_CELLS),
+            progressLong: copy.progressLong(filled, TOTAL_CELLS),
+            hint: {
+              ...hintReadout(
+                state.hint,
+                binairoHintExplanation(state.hint.reason),
+              ),
+              ready: hintReady,
+              onReveal: revealHint,
+            },
+            onReset: hasDecidedCell(state.entries) ? reset : null,
+          },
+        }}
       >
-        <Grid
-          givens={state.givens}
-          solution={puzzle.solution}
-          entries={state.entries}
-          violating={state.violating}
-          hintIndex={state.hint.lastIndex}
-          spotlight={state.hint.spotlight}
-          painting={state.paint.kind !== "cycle"}
-          onTap={tapCell}
-          onStrokeStart={strokeStart}
-          onPaintOver={paintOver}
-        />
-      </BoardCard>
-    </FreePlayChrome>
+        <BoardCard
+          below={<Controls paint={state.paint} onToggleMode={toggleMode} />}
+        >
+          <Grid
+            givens={state.givens}
+            solution={puzzle.solution}
+            entries={state.entries}
+            violating={state.violating}
+            hintIndex={state.hint.lastIndex}
+            spotlight={state.hint.spotlight}
+            painting={state.paint.kind !== "cycle"}
+            onTap={tapCell}
+            onStrokeStart={strokeStart}
+            onPaintOver={paintOver}
+          />
+        </BoardCard>
+      </FreePlayChrome>
+    </EndingStage>
   );
 }
 

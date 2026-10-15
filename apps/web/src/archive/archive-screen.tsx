@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { DailyUnavailable } from "../components/daily-unavailable";
 import { messages } from "../i18n";
+import { EndingStage } from "../play/ending-stage";
 import { JustEnded, useSawPlay } from "../play/just-ended";
 import type { PlayCore } from "../play/types";
 import { isClosedAndFrozen } from "../play/use-play-lifecycle";
@@ -36,18 +37,22 @@ export function ArchiveScreen({
     return skeleton;
   }
 
-  if (closed) {
-    return (
-      <JustEnded value={ended}>
-        <LateResult
-          game={game}
-          date={state.date}
-          outcome={state.status === "solved" ? "won" : "lost"}
-          alreadyConcluded={alreadyConcluded}
-        />
-      </JustEnded>
-    );
-  }
-
-  return view;
+  return (
+    <EndingStage
+      over={closed}
+      won={ended && state.status === "solved"}
+      ending={() => (
+        <JustEnded value={ended}>
+          <LateResult
+            game={game}
+            date={state.date}
+            outcome={state.status === "solved" ? "won" : "lost"}
+            alreadyConcluded={alreadyConcluded}
+          />
+        </JustEnded>
+      )}
+    >
+      {view}
+    </EndingStage>
+  );
 }

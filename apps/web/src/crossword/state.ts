@@ -209,6 +209,9 @@ function withEntry(
   index: number,
   value: CrosswordCellValue,
 ): CrosswordPlayState {
+  if (state.status !== "playing") {
+    return state;
+  }
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
@@ -217,7 +220,7 @@ function withEntry(
     ...state,
     entries,
     status: solved ? "solved" : "playing",
-    pendingSync: solved && state.status !== "solved" ? true : state.pendingSync,
+    pendingSync: solved ? true : state.pendingSync,
   };
 }
 
