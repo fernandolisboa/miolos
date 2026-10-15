@@ -1,7 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { DIAGONAL_LAYOUT, geometryOf } from "../../src/sudoku/board";
+import { geometryOf } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import { gradeInternal } from "../../src/sudoku/grade";
 import {
   generateDailySudoku,

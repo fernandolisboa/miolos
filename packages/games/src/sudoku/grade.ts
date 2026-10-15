@@ -8,7 +8,7 @@ import {
   ROW_UNITS,
   assertSudokuGrid,
   colOf,
-  geometryOf,
+  geometryFor,
   rowOf,
 } from "./board";
 import type { SudokuGeometry } from "./board";
@@ -488,8 +488,7 @@ export function nextSudokuStep(
   layout: SudokuLayout = CLASSIC_LAYOUT,
 ): SudokuStep | null {
   assertSudokuGrid(grid);
-  const geometry =
-    layout === CLASSIC_LAYOUT ? CLASSIC_GEOMETRY : geometryOf(layout);
+  const geometry = geometryFor(layout);
   const ladder = createLadder(grid, geometry);
   let after: SudokuElimination | null = null;
   while (ladder.remaining() > 0) {

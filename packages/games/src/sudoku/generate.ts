@@ -1,12 +1,7 @@
 import { createSeededRandom, shuffleInPlace } from "../random";
 import type { SeededRandom } from "../random";
 import type { Weekday } from "../weekday";
-import {
-  CLASSIC_GEOMETRY,
-  CLASSIC_LAYOUT,
-  DIAGONAL_LAYOUT,
-  geometryOf,
-} from "./board";
+import { CLASSIC_GEOMETRY, CLASSIC_LAYOUT, geometryOf } from "./board";
 import type { SudokuGeometry } from "./board";
 import { gradeInternal } from "./grade";
 import { drawIrregularLayout } from "./irregular";
@@ -14,6 +9,7 @@ import { countSolutionsInternal, fillGrid, fillVariant } from "./solve";
 import type {
   SudokuApprovalCriteria,
   SudokuGrid,
+  SudokuLayout,
   SudokuPuzzle,
   SudokuTier,
   SudokuVariant,
@@ -27,6 +23,16 @@ export const SUDOKU_MAX_GENERATION_ATTEMPTS = 1200;
 const FILL_BUDGET = 1000;
 
 const FAILURES_PER_MAP = 8;
+
+export const SUDOKU_VARIANTS = ["classic", "diagonal", "irregular"] as const;
+
+export const DIAGONAL_LAYOUT: SudokuLayout = Object.freeze({
+  regions: CLASSIC_LAYOUT.regions,
+  extraUnits: Object.freeze([
+    Object.freeze(Array.from({ length: 9 }, (_, k) => k * 10)),
+    Object.freeze(Array.from({ length: 9 }, (_, k) => (k + 1) * 8)),
+  ]),
+});
 
 export class SudokuGenerationError extends Error {
   readonly seed: number;
@@ -145,8 +151,6 @@ export function generateDailySudoku(options: {
   });
 }
 
-const VARIANTS: readonly SudokuVariant[] = ["classic", "diagonal", "irregular"];
-
 export function generateSudokuVariant(options: {
   readonly seed: number;
   readonly weekday: Weekday;
@@ -154,9 +158,9 @@ export function generateSudokuVariant(options: {
   readonly maxAttempts?: number;
 }): SudokuVariantPuzzle {
   const { variant } = options;
-  if (!VARIANTS.includes(variant)) {
+  if (!(SUDOKU_VARIANTS as readonly string[]).includes(variant)) {
     throw new RangeError(
-      `variant must be one of ${VARIANTS.join(", ")}, got ${String(variant)}`,
+      `variant must be one of ${SUDOKU_VARIANTS.join(", ")}, got ${String(variant)}`,
     );
   }
   if (variant === "classic") {

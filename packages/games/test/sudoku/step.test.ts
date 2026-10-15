@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   CLASSIC_GEOMETRY,
   COLUMN_UNITS,
-  DIAGONAL_LAYOUT,
   EXTRA_UNITS,
   REGION_UNITS,
   ROW_UNITS,
   geometryOf,
 } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import {
   generateDailySudoku,
   nextSudokuStep,

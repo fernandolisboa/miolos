@@ -1,3 +1,5 @@
+import type { SUDOKU_VARIANTS } from "./generate";
+
 export type SudokuTier = 1 | 2 | 3 | 4 | 5;
 
 export type SudokuGrade = SudokuTier | "beyond";
@@ -23,7 +25,7 @@ export interface SudokuApprovalCriteria {
   readonly maxClues: number;
 }
 
-export type SudokuVariant = "classic" | "diagonal" | "irregular";
+export type SudokuVariant = (typeof SUDOKU_VARIANTS)[number];
 
 export interface SudokuLayout {
   readonly regions: readonly number[];

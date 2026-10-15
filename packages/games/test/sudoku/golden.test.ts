@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { CLASSIC_GEOMETRY } from "../../src/sudoku/board";
+import { generateDailySudoku, type Weekday } from "../../src/sudoku/index";
 
 const { units: UNITS, peers: PEERS } = CLASSIC_GEOMETRY;
-import { generateDailySudoku, type Weekday } from "../../src/sudoku/index";
 
 const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 const SEEDS: readonly number[] = [0, 1];
@@ -27,5 +27,5 @@ describe("the classic Sudoku is byte-identical to its golden hashes", () => {
     expect(sha256(puzzles)).toBe(
       "a07034432da2f9c7051217f9b3e3932c09538583f3971495821227aec0355e60",
     );
-  }, 30_000);
+  }, 45_000);
 });

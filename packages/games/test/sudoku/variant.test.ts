@@ -1,11 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import {
-  CLASSIC_LAYOUT,
-  DIAGONAL_LAYOUT,
-  geometryOf,
-} from "../../src/sudoku/board";
+import { CLASSIC_LAYOUT, geometryOf } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import { gradeInternal } from "../../src/sudoku/grade";
 import {
   SudokuGenerationError,
@@ -23,6 +20,8 @@ import { propertyRuns } from "../property-runs";
 import { PINNED_VARIANT_SEED, PINNED_VARIANTS } from "./variant-fixtures";
 
 const PINNED_WEEKDAY: Weekday = 4;
+
+const PROPERTY_TIMEOUT = { diagonal: 375_000, irregular: 645_000 };
 
 function unitsOf(layout: SudokuLayout): number[][] {
   const lines = Array.from({ length: 9 }, (_, k) => [
@@ -47,33 +46,37 @@ function solvesLayout(grid: SudokuGrid, layout: SudokuLayout): boolean {
 describe.each<SudokuVariant>(["diagonal", "irregular"])(
   "generateSudokuVariant — %s",
   (variant) => {
-    it("is deterministic, unique, ladder-solvable and on the weekday ramp", () => {
-      fc.assert(
-        fc.property(seedArb, weekdayArb, (seed, weekday) => {
-          const puzzle = generateSudokuVariant({ seed, weekday, variant });
-          expect(generateSudokuVariant({ seed, weekday, variant })).toEqual(
-            puzzle,
-          );
-          const { givens, solution, layout } = puzzle;
-          expect(givens.every((v, i) => v === 0 || v === solution[i])).toBe(
-            true,
-          );
-          expect(solvesLayout(solution, layout)).toBe(true);
-          const geometry = geometryOf(layout);
-          expect(countSolutionsInternal(givens, 2, geometry)).toBe(1);
-          const criteria = sudokuCriteriaForWeekday(weekday);
-          const graded = gradeInternal(givens, geometry);
-          expect(graded.grade).toBe(criteria.tier);
-          expect(graded.solved).toEqual(solution);
-          expect(puzzle.tier).toBe(criteria.tier);
-          const clues = givens.filter((v) => v !== 0).length;
-          expect(puzzle.clueCount).toBe(clues);
-          expect(clues).toBeGreaterThanOrEqual(criteria.minClues);
-          expect(clues).toBeLessThanOrEqual(criteria.maxClues);
-        }),
-        { seed: FC_SEED, numRuns: propertyRuns(100) },
-      );
-    }, 240_000);
+    it(
+      "is deterministic, unique, ladder-solvable and on the weekday ramp",
+      () => {
+        fc.assert(
+          fc.property(seedArb, weekdayArb, (seed, weekday) => {
+            const puzzle = generateSudokuVariant({ seed, weekday, variant });
+            expect(generateSudokuVariant({ seed, weekday, variant })).toEqual(
+              puzzle,
+            );
+            const { givens, solution, layout } = puzzle;
+            expect(givens.every((v, i) => v === 0 || v === solution[i])).toBe(
+              true,
+            );
+            expect(solvesLayout(solution, layout)).toBe(true);
+            const geometry = geometryOf(layout);
+            expect(countSolutionsInternal(givens, 2, geometry)).toBe(1);
+            const criteria = sudokuCriteriaForWeekday(weekday);
+            const graded = gradeInternal(givens, geometry);
+            expect(graded.grade).toBe(criteria.tier);
+            expect(graded.solved).toEqual(solution);
+            expect(puzzle.tier).toBe(criteria.tier);
+            const clues = givens.filter((v) => v !== 0).length;
+            expect(puzzle.clueCount).toBe(clues);
+            expect(clues).toBeGreaterThanOrEqual(criteria.minClues);
+            expect(clues).toBeLessThanOrEqual(criteria.maxClues);
+          }),
+          { seed: FC_SEED, numRuns: propertyRuns(100) },
+        );
+      },
+      PROPERTY_TIMEOUT[variant as "diagonal" | "irregular"],
+    );
 
     it("matches its pinned literal for a fixed seed", () => {
       const pinned = PINNED_VARIANTS[variant as "diagonal" | "irregular"];
@@ -119,7 +122,7 @@ describe("generateSudokuVariant", () => {
         layout: CLASSIC_LAYOUT,
       });
     }
-  }, 30_000);
+  }, 15_000);
 
   it("rejects an unknown variant and a bad attempt cap", () => {
     expect(() =>

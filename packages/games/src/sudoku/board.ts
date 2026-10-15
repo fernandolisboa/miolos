@@ -45,14 +45,6 @@ export const CLASSIC_LAYOUT: SudokuLayout = Object.freeze({
   extraUnits: Object.freeze([]),
 });
 
-export const DIAGONAL_LAYOUT: SudokuLayout = Object.freeze({
-  regions: CLASSIC_LAYOUT.regions,
-  extraUnits: Object.freeze([
-    Object.freeze(Array.from({ length: 9 }, (_, k) => k * 10)),
-    Object.freeze(Array.from({ length: 9 }, (_, k) => (k + 1) * 8)),
-  ]),
-});
-
 export function assertSudokuLayout(layout: SudokuLayout): void {
   const { regions, extraUnits } = layout;
   if (
@@ -122,8 +114,17 @@ export function geometryOf(layout: SudokuLayout): SudokuGeometry {
 
 export const CLASSIC_GEOMETRY: SudokuGeometry = geometryOf(CLASSIC_LAYOUT);
 
-function geometryFor(layout: SudokuLayout): SudokuGeometry {
-  return layout === CLASSIC_LAYOUT ? CLASSIC_GEOMETRY : geometryOf(layout);
+const GEOMETRIES = new WeakMap<SudokuLayout, SudokuGeometry>([
+  [CLASSIC_LAYOUT, CLASSIC_GEOMETRY],
+]);
+
+export function geometryFor(layout: SudokuLayout): SudokuGeometry {
+  let geometry = GEOMETRIES.get(layout);
+  if (geometry === undefined) {
+    geometry = geometryOf(layout);
+    GEOMETRIES.set(layout, geometry);
+  }
+  return geometry;
 }
 
 export function sudokuPeers(

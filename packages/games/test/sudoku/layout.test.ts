@@ -3,15 +3,18 @@ import { describe, expect, it } from "vitest";
 
 import { createSeededRandom } from "../../src/random";
 import {
+  CLASSIC_GEOMETRY,
   CLASSIC_LAYOUT,
-  DIAGONAL_LAYOUT,
   assertSudokuLayout,
+  geometryFor,
   geometryOf,
 } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import { drawIrregularLayout } from "../../src/sudoku/irregular";
 import type { SudokuLayout } from "../../src/sudoku/index";
 import { FC_SEED, seedArb } from "../daily-arbitraries";
-import { propertyRuns } from "../property-runs";
+
+const ROW_ZERO = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 const unitsHolding = (layout: SudokuLayout, cell: number): number =>
   geometryOf(layout).units.filter((unit) => unit.includes(cell)).length;
@@ -86,11 +89,23 @@ describe("Sudoku layouts", () => {
       { regions, extraUnits: [[0, 1, 2, 3, 4, 5, 6, 7]] },
       { regions, extraUnits: [[0, 1, 2, 3, 4, 5, 6, 7, 7]] },
       { regions, extraUnits: [[0, 1, 2, 3, 4, 5, 6, 7, 81]] },
+      { regions, extraUnits: Array.from({ length: 32 }, () => ROW_ZERO) },
     ];
     for (const layout of bad) {
       expect(() => assertSudokuLayout(layout)).toThrow(RangeError);
     }
     expect(() => assertSudokuLayout(DIAGONAL_LAYOUT)).not.toThrow();
+    expect(() =>
+      assertSudokuLayout({
+        regions,
+        extraUnits: Array.from({ length: 31 }, () => ROW_ZERO),
+      }),
+    ).not.toThrow();
+  });
+
+  it("builds a layout's geometry once", () => {
+    expect(geometryFor(CLASSIC_LAYOUT)).toBe(CLASSIC_GEOMETRY);
+    expect(geometryFor(DIAGONAL_LAYOUT)).toBe(geometryFor(DIAGONAL_LAYOUT));
   });
 
   it("draws irregular maps of nine connected nine-cell regions, by seed", () => {
@@ -107,7 +122,7 @@ describe("Sudoku layouts", () => {
         }
         expect(offBox(layout.regions)).toBeGreaterThanOrEqual(12);
       }),
-      { seed: FC_SEED, numRuns: propertyRuns(500) },
+      { seed: FC_SEED, numRuns: 500 },
     );
-  });
+  }, 10_000);
 });

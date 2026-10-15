@@ -2,11 +2,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { createSeededRandom } from "../../src/random";
-import {
-  CLASSIC_LAYOUT,
-  DIAGONAL_LAYOUT,
-  geometryOf,
-} from "../../src/sudoku/board";
+import { CLASSIC_LAYOUT, geometryOf } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import {
   SUDOKU_TIER_CRITERIA,
   countSudokuSolutions,
