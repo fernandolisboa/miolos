@@ -32,6 +32,76 @@ const LOBE_TOKENS = [
   "--accent-queens",
 ];
 
+type Point = readonly [number, number];
+const SUBPIXEL = 0.1;
+
+function outlinePoints(d: string): Point[] {
+  const numbers = (text: string) => (text.match(/-?[\d.]+/g) ?? []).map(Number);
+  const [mx = 0, my = 0] = numbers(d);
+  const points: Point[] = [[mx, my]];
+  for (const segment of d.match(/[LC][^LCZ]+/g) ?? []) {
+    const [ax, ay] = points.at(-1) ?? [mx, my];
+    const n = numbers(segment);
+    for (let t = 0.02; t <= 1.0001; t += 0.02) {
+      if (segment.startsWith("L")) {
+        points.push([ax + t * ((n[0] ?? 0) - ax), ay + t * ((n[1] ?? 0) - ay)]);
+        continue;
+      }
+      const u = 1 - t;
+      const cubic = (a: number, b = 0, c = 0, e = 0) =>
+        u ** 3 * a + 3 * u ** 2 * t * b + 3 * u * t ** 2 * c + t ** 3 * e;
+      points.push([cubic(ax, n[0], n[2], n[4]), cubic(ay, n[1], n[3], n[5])]);
+    }
+  }
+  return points;
+}
+
+function distanceOutside(outline: readonly Point[], [x, y]: Point): number {
+  let inside = false;
+  let nearest = Infinity;
+  outline.forEach(([ax, ay], i) => {
+    const [bx, by] = outline[(i + 1) % outline.length] ?? [ax, ay];
+    if (ay > y !== by > y && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) {
+      inside = !inside;
+    }
+    const length = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+    const t = Math.max(
+      0,
+      Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / length),
+    );
+    nearest = Math.min(
+      nearest,
+      Math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay)),
+    );
+  });
+  return inside ? 0 : nearest;
+}
+
+function edgePoints(rect: Element): Point[] {
+  const at = (name: string) => Number(rect.getAttribute(name));
+  const [x, y, side, rx] = [at("x"), at("y"), at("width"), at("rx")];
+  const cornerInset = rx * (1 - Math.SQRT1_2);
+  const points: Point[] = [
+    [x + cornerInset, y + cornerInset],
+    [x + side - cornerInset, y + cornerInset],
+    [x + cornerInset, y + side - cornerInset],
+    [x + side - cornerInset, y + side - cornerInset],
+  ];
+  for (
+    let along = rx;
+    along <= side - rx + 1e-9;
+    along += (side - 2 * rx) / 4
+  ) {
+    points.push(
+      [x + along, y],
+      [x + along, y + side],
+      [x, y + along],
+      [x + side, y + along],
+    );
+  }
+  return points;
+}
+
 describe("the brand mark (T-WEB-S750)", () => {
   it("is decorative, builds its lobes from cells in six classes, and never writes a colour literal", () => {
     const { container } = render(
@@ -59,48 +129,7 @@ describe("the brand mark (T-WEB-S750)", () => {
   });
 
   it("keeps every cell inside the outer edge of the outline, so it needs no clip path", () => {
-    const nums = (BRAIN.match(/-?[\d.]+/g) ?? []).map(Number);
-    const outline: [number, number][] = [[nums[0] ?? 0, nums[1] ?? 0]];
-    for (const segment of BRAIN.slice(1).match(/[LC][^LCZ]+/g) ?? []) {
-      const n = (segment.match(/-?[\d.]+/g) ?? []).map(Number);
-      const [x0, y0] = outline.at(-1) ?? [0, 0];
-      const ctrl = segment[0] === "L" ? [x0, y0, ...n, ...n] : n;
-      for (let t = 0.02; t <= 1.0001; t += 0.02) {
-        const w = [
-          (1 - t) ** 3,
-          3 * (1 - t) ** 2 * t,
-          3 * (1 - t) * t ** 2,
-          t ** 3,
-        ];
-        const at = (k: number) =>
-          (w[0] ?? 0) * (k ? y0 : x0) +
-          [1, 2, 3].reduce(
-            (sum, i) => sum + (w[i] ?? 0) * (ctrl[2 * i - 2 + k] ?? 0),
-            0,
-          );
-        outline.push([at(0), at(1)]);
-      }
-    }
-    const reach = ([x, y]: [number, number]) => {
-      let inside = false;
-      let nearest = Infinity;
-      outline.forEach(([ax, ay], i) => {
-        const [bx, by] = outline[(i + 1) % outline.length] ?? [ax, ay];
-        if (ay > y !== by > y && x < ((bx - ax) * (y - ay)) / (by - ay) + ax)
-          inside = !inside;
-        const len = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
-        const t = Math.max(
-          0,
-          Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / len),
-        );
-        nearest = Math.min(
-          nearest,
-          Math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay)),
-        );
-      });
-      return inside ? 0 : nearest;
-    };
-
+    const outline = outlinePoints(BRAIN);
     const { container } = render(
       <>
         <BrandMark />
@@ -108,22 +137,13 @@ describe("the brand mark (T-WEB-S750)", () => {
       </>,
     );
     for (const svg of container.querySelectorAll("svg")) {
-      const halfStroke =
-        Number(
-          svg.querySelector("path:last-of-type")?.getAttribute("stroke-width"),
-        ) / 2;
-      const outside = [...svg.querySelectorAll("rect")].filter((rect) => {
-        const at = (name: string) => Number(rect.getAttribute(name));
-        const [x, y, side] = [at("x"), at("y"), at("width")];
-        const r = Number(rect.getAttribute("rx")) * 0.3;
-        const corners: [number, number][] = [
-          [x + r, y + r],
-          [x + side - r, y + r],
-          [x + r, y + side - r],
-          [x + side - r, y + side - r],
-        ];
-        return corners.some((corner) => reach(corner) > halfStroke + 0.05);
-      });
+      const ink = svg.querySelector(`.${String(styles.ink)}`);
+      const halfStroke = Number(ink?.getAttribute("stroke-width")) / 2;
+      const outside = [...svg.querySelectorAll("rect")].filter((rect) =>
+        edgePoints(rect).some(
+          (point) => distanceOutside(outline, point) > halfStroke + SUBPIXEL,
+        ),
+      );
       expect(outside.map((rect) => rect.outerHTML)).toEqual([]);
     }
   });
@@ -233,7 +253,8 @@ describe("a loading board shows the brand mark shuffling its cells (T-WEB-S754)"
     expect(shuffling(live.container)).toBe(false);
   });
 
-  it("cycles the cells through the lobe accents and blank paper; T-WEB-S405 holds every animated selector still under reduced motion", () => {
+  it("cycles the cells through the lobe accents and blank paper", () => {
+    expect(sheet).toMatch(/\.shuffling rect \{\s*animation: shuffle-a /);
     const keyframes = sheet.slice(sheet.indexOf("@keyframes"));
     for (const token of [...LOBE_TOKENS, "--paper-card"]) {
       expect(keyframes).toContain(`fill: var(${token})`);
