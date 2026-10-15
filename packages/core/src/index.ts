@@ -56,6 +56,7 @@ export {
 export {
   MEDAL_DEFINITIONS,
   MEDAL_IDS,
+  ORIGINAL_GAMES,
   type MedalDefinition,
   type MedalId,
   type MedalRule,

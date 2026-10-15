@@ -1,0 +1,133 @@
+/* Earned medals only, drawn on the page paper with no tile (ADR-0122). */
+
+.medals {
+  margin-top: var(--space-8);
+}
+
+.heading {
+  composes: sectionHeading from "../../app/estatisticas/page.module.css";
+}
+
+.list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5) var(--space-2);
+}
+
+.medal {
+  position: relative;
+  display: flex;
+  width: 104px;
+}
+
+.button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) 0 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  cursor: help;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tilt {
+  display: block;
+  line-height: 0;
+}
+
+.picture {
+  width: 64px;
+  height: 84px;
+  overflow: visible;
+}
+
+.disc {
+  fill: var(--paper-card);
+  stroke-width: 3;
+}
+
+.discLine {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.numeral {
+  fill: var(--ink);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+}
+
+.star {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.tip {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  z-index: 2;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 220px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+  font: var(--text-body);
+  font-size: 13px;
+  text-align: center;
+  text-wrap: pretty;
+  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
+  animation: tip-wait 0s 200ms backwards;
+}
+
+/* The tip stays invisible for its first 200 ms, so a pointer crossing the
+   row does not flash every description. */
+@keyframes tip-wait {
+  from {
+    visibility: hidden;
+  }
+}
+
+/* Bridges the gap to the medal, so the pointer can travel onto the tip
+   without leaving it (WCAG 1.4.13). */
+.tip::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 100%;
+  height: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    animation: none;
+  }
+}

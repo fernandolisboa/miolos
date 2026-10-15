@@ -12,6 +12,8 @@ Nothing new. You said "sim" to a 7×7 daily Cruzadinha (#330); it shipped and is
 
 **End flourish** (#353, ADR-0118): a game that ended in front of the player presses its stamp (win) or lets grey ink run (Termo loss). `useSawPlay`/`JustEnded` (`play/just-ended.ts`) decide "just ended" in `DailyScreen`/`ArchiveScreen`; `EndingFlourish` (`play/ending-flourish.tsx`) wraps the stamp. Setting `endAnimation`, on; reduced motion stands it down.
 
+**Medals** (#360, ADR-0122): earned medals are SVGs drawn from their rule (`artOf`, `medals/art.ts`) in `MedalsSection` (`medals/medals-section.tsx`); the description is a tooltip on `useTip` (`play/use-tip.ts`, shared with `InfoTip`). Unearned medals stay invisible (ADR-0052).
+
 **`/admin`** (ADR-0097, ADR-0100): admins are verified attached emails in `admin_users`. The free hint allowance is the `freeHintsPerPuzzle` key (ADR-0098); before rolling either app back, set it to 3 or less and wait for the rollover.
 
 **Shared play chrome** (ADR-0077): `PlayScreenChrome` holds three stateful children, `ResetControl` (ADR-0096), `GameSettingsButton` and `HintCard`. Control tips sit behind `InfoTip` (#331); keyboards come from `qwertySlots` and `KeyGlyph` (#321); Termo's current row is editable (ADR-0106).
