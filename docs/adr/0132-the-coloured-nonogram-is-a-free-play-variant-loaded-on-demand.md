@@ -22,8 +22,8 @@ Fernando asked for a colour variant of the Nonogram (issue #372). The curated mo
 
 ## Consequences
 
-- The ESLint wall bans `@miolos/games/colored-nonogram` outside `src/colored-nonogram/**` and `use-free-colored-nonogram.ts`, static and dynamic, and the Cores modules by relative path outside `src/free-play/**`, `src/colored-nonogram/**` and tests; `src/colored-nonogram/**` carries the free-play I/O wall.
-- The *Riscar números resolvidos* switch does nothing in Cores. Striking coloured numbers is a follow-up.
+- In `apps/web/app` and `apps/web/src`, the ESLint wall bans `@miolos/games/colored-nonogram` outside `src/colored-nonogram/**` and `use-free-colored-nonogram.ts`, static and dynamic, and the Cores modules by relative path outside `src/free-play/**`, `src/colored-nonogram/**` and tests; `src/colored-nonogram/**` carries the free-play I/O wall.
+- The *Riscar números resolvidos* switch does nothing in Cores. Striking coloured numbers is #386.
 - A new motif joins a Cores pool only if it passes decision 4; a changed `PICTURE_TONES` value must re-run the pair test.
 - `/nonogram` keeps 0.2 KB of headroom; the `playRecordSchema` split stays the next relief (ADR-0112).
 
