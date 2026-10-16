@@ -3,32 +3,17 @@
 import { useRef } from "react";
 
 import { messages } from "../i18n";
-import { ChoicePicker, type FreePlayChoice } from "./choice-picker";
+import type { Choice } from "./choice";
+import { ChoicePicker } from "./choice-picker";
 import styles from "./variant-menu.module.css";
 
-export function variantChoice<T extends string>(
-  options: readonly T[],
-  names: Readonly<Record<T, string>>,
-  value: T,
-  onChange: (variant: T) => void,
-): FreePlayChoice<T> {
-  return {
-    label: messages.freePlay.variant.label,
-    options,
-    value,
-    optionLabel: (option) => names[option],
-    optionAria: (option) => messages.freePlay.variant.aria(names[option]),
-    onChange,
-  };
-}
-
-export function VariantMenu<T extends string>({
+export function VariantMenu({
   id,
   choice,
   rules,
 }: {
   readonly id: string;
-  readonly choice: FreePlayChoice<T>;
+  readonly choice: Choice;
   readonly rules: string;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);

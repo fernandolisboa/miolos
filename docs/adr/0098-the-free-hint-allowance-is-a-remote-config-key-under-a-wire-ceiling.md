@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0025](./0025-remote-config-is-a-database-table.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md), [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md), [ADR-0097](./0097-admins-are-an-env-allow-list-and-edit-remote-config-through-the-api.md)
 **Supersedes in part:** [ADR-0095](./0095-three-free-hints-per-puzzle.md) decision 1, its "A configurable limit now" rejection, and decision 2's "Free play gets the same three" (free play keeps `FREE_HINTS_PER_PUZZLE`; the daily may differ)
 **Amends:** [ADR-0025](./0025-remote-config-is-a-database-table.md) — client-serving code now reads one config value, through `GET /hints`
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — free Campo Minado offers no hint, so it reads no allowance.
 
 ## Context
 

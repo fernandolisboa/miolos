@@ -80,8 +80,10 @@ describe("the board well sizes every board from the space it has (T-WEB-S596)", 
   it("takes the width first and never exceeds the game's ceiling", () => {
     const side = (decl(well, "--board-side") ?? "").replace(/\s+/g, " ");
 
-    expect(side).toMatch(/^min\( 100cqi,/);
-    expect(side).toMatch(/var\(--board-max\) \)$/);
+    expect(side).toMatch(/^max\( min\( 100cqi,/);
+    expect(side).toMatch(
+      /var\(--board-max\) \), var\(--board-floor-side, 0px\) \)$/,
+    );
   });
 
   it("measures the page against the small viewport, so a collapsing URL bar never resizes a board", () => {

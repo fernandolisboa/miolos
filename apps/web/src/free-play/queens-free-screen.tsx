@@ -47,7 +47,7 @@ export function QueensFreeScreen({ deps }: { readonly deps?: FreeQueensDeps }) {
   return (
     <FreePlayChrome
       game="queens"
-      choice={levelChoice(level, setLevel)}
+      choices={[levelChoice(level, setLevel)]}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
       pageModifier={styles.pageQueens ?? ""}
     >
@@ -75,22 +75,18 @@ function QueensFreeBoard({
 }) {
   const board = useQueensBoard(puzzle.daily);
 
-  const choice = levelChoice(level, onLevelChange);
+  const choices = [levelChoice(level, onLevelChange)];
   return (
     <EndingStage
       over={board.state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard
-          game="queens"
-          level={choice.optionLabel(choice.value)}
-          onAgain={onNext}
-        />
+        <FreePlaySolvedCard game="queens" choices={choices} onAgain={onNext} />
       )}
     >
       <FreePlayChrome
         game="queens"
-        choice={choice}
+        choices={choices}
         pageModifier={styles.pageQueens ?? ""}
         state={{ kind: "playing", readouts: queensReadouts(board) }}
       >

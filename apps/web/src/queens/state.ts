@@ -13,6 +13,7 @@ import type { PlayRecord } from "../play/play-record";
 import {
   binaryCellValue,
   binaryGridReducer,
+  restoreBinaryRecord,
   settled,
   withBinaryEntry,
   type BinaryCellValue,
@@ -77,7 +78,6 @@ export function initQueensPlayState(
 }
 
 const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {
-  game: "queens",
   hint: (state) =>
     nextQueensHint(
       { size: state.size, regions: state.regions },
@@ -144,6 +144,9 @@ function played(
       return binaryCellValue(state, action.index) === null
         ? withBinaryEntry(state, action.index, 0, QUEENS_RULES)
         : state;
+
+    case "restore":
+      return restoreBinaryRecord(state, action, "queens", QUEENS_RULES);
 
     default:
       return binaryGridReducer(state, action, QUEENS_RULES);

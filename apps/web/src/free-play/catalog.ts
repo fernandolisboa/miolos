@@ -1,4 +1,4 @@
-import type { Game } from "@miolos/core";
+import type { Game, NonogramSize } from "@miolos/core";
 import type { Weekday } from "@miolos/games";
 
 export const FREE_PLAY_GAMES = [
@@ -8,7 +8,8 @@ export const FREE_PLAY_GAMES = [
   "termo",
   "crossword",
   "queens",
-] as const satisfies readonly Game[];
+  "minesweeper",
+] as const satisfies readonly (Game | "minesweeper")[];
 
 export type FreePlayGame = (typeof FREE_PLAY_GAMES)[number];
 
@@ -16,6 +17,13 @@ export const FREE_PLAY_LEVELS = ["leve", "medio", "dificil"] as const;
 export type FreePlayLevel = (typeof FREE_PLAY_LEVELS)[number];
 
 export const DEFAULT_FREE_PLAY_LEVEL: FreePlayLevel = "medio";
+
+export const NONOGRAM_LEVEL_SIZES: Readonly<
+  Record<FreePlayLevel, NonogramSize>
+> = { leve: 5, medio: 10, dificil: 15 };
+
+export const NONOGRAM_VARIANTS = ["classico", "cores"] as const;
+export type NonogramVariant = (typeof NONOGRAM_VARIANTS)[number];
 
 export const LEVEL_WEEKDAYS: Readonly<Record<FreePlayLevel, Weekday>> = {
   leve: 1,

@@ -10,11 +10,12 @@ import { Board, FinishedBoard } from "../termo/board";
 import { TermoNotice, TermoPage, useTermoKeys } from "../termo/play-view";
 import type { TermoChrome } from "../termo/types";
 import { FREE_PLAY_DATE } from "./catalog";
+import { variantChoice } from "./choice-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import { SplitKeyboard } from "./split-keyboard";
 import styles from "./termo-variants.module.css";
 import { useTermoVariant } from "./use-termo-variant";
-import { VariantMenu, variantChoice } from "./variant-menu";
+import { VariantMenu } from "./variant-menu";
 
 const copy = messages.freePlay.variant;
 
@@ -42,11 +43,13 @@ export function TermoVariants({
   variant,
   words,
   chrome,
+  onVariant,
   onNext,
 }: {
   readonly variant: Exclude<TermoVariant, "classico">;
   readonly words: readonly string[];
   readonly chrome: TermoChrome;
+  readonly onVariant: (variant: TermoVariant) => void;
   readonly onNext: () => void;
 }) {
   const { maxGuesses } = TERMO_VARIANTS[variant];
@@ -71,7 +74,7 @@ export function TermoVariants({
       ending={() => (
         <FreePlaySolvedCard
           game="termo"
-          variant={copy[variant]}
+          choices={[variantChoice(VARIANTS, copy, variant, onVariant)]}
           words={words}
           lost={judged.status === "lost"}
           onAgain={onNext}

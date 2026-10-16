@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./binairo": "./src/binairo/index.ts",
+    "./colored-nonogram": "./src/colored-nonogram/index.ts",
     "./crossword": "./src/crossword/index.ts",
     "./minesweeper": "./src/minesweeper/index.ts",
     "./nonogram": "./src/nonogram/index.ts",

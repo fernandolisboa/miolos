@@ -126,8 +126,7 @@ function playBinairo(state: PlayState, action: PlayAction): PlayState {
       const current = playableValue(state, action.index);
       const { stroke, first } = startStroke(
         current ?? null,
-        state.paint.value,
-        action.press,
+        pressedMark(state.paint.value, action.press),
       );
       const started = { ...state, stroke };
       return current === undefined

@@ -9,6 +9,7 @@
     to bottom left,
     var(--accent-app) 46%,
     var(--paper-card) 46% 66%,
-    transparent 66%
+    var(--wrong-edge, transparent) 66% 72%,
+    transparent 72%
   );
 }

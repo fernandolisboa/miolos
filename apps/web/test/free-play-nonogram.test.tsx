@@ -67,10 +67,10 @@ describe("free-play Nonogram zero-fetch solve and the nameless picture (T-WEB-S1
     }
 
     expect(
-      screen.getByText(messages.freePlay.solved.stamp),
+      await screen.findByText(messages.freePlay.solved.stamp),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("img", {
+      await screen.findByRole("img", {
         name: messages.freePlay.solved.pictureAria,
       }),
     ).toBeInTheDocument();
@@ -197,9 +197,11 @@ describe("the free-play picture is painted from the device (T-WEB-S904)", () => 
       LEVE_PUZZLE.reveal.mirrored,
     );
     const painted = [
-      ...screen
-        .getByRole("img", { name: messages.freePlay.solved.pictureAria })
-        .querySelectorAll<SVGPathElement>("[data-toned] path[style]"),
+      ...(
+        await screen.findByRole("img", {
+          name: messages.freePlay.solved.pictureAria,
+        })
+      ).querySelectorAll<SVGPathElement>("[data-toned] path[style]"),
     ].map((path) => path.style.fill);
     expect(painted.length).toBeGreaterThan(0);
     expect(painted.sort()).toEqual(

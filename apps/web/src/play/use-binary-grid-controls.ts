@@ -26,7 +26,7 @@ export interface BinaryGridControls {
 }
 
 export function useBinaryGridControls(
-  state: BinaryGridState & Undoable<unknown>,
+  state: BinaryGridState<unknown, number> & Undoable<unknown>,
   dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
 ): BinaryGridControls {
   const allowance = useFreeHintsPerPuzzle();

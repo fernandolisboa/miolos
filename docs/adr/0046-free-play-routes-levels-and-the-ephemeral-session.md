@@ -11,6 +11,8 @@
 **Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — decision 1 gains `/modo-livre/termo`; decisions 2 and 3 give Termo no level, so its state is `{seed}`; the Termo exclusion in its context no longer holds.
 **Amended by:** [ADR-0135](./0135-termo-free-play-offers-dueto-and-quarteto.md) (#374) — for Termo, decisions 2 and 3 gain a _Variante_ picker (Clássico, Dueto or Quarteto) and its state is `{seed, variant}`, in component state, never the URL.
 **Amended by:** [ADR-0131](./0131-sudoku-free-play-offers-diagonal-and-formas.md) (#371) — for Sudoku, decisions 2 and 3 gain a _Variante_ picker (Clássico, Diagonal or Formas) beside the level; its state is `{seed, level, variant}`, in component state, never the URL.
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 2 gains a *Variante* (Clássico or Cores) beside the Nonogram level; decision 3: the Cores state is `{seed, size}`.
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 1 gains `/modo-livre/campo-minado`; decisions 2 and 3 give it Windows' three levels, default Iniciante, and a seed per game; decision 6: this game has a clock.
 
 ## Context
 

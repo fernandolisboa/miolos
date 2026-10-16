@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-14 (issue #324)
 **Depends on:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0095](./0095-three-free-hints-per-puzzle.md), [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 2 (the Nonogram gains a second setting, on by default).
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: Cores strikes no numbers yet, so *Riscar números resolvidos* does nothing there.
 
 ## Context
 

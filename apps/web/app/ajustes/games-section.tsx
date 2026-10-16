@@ -2,7 +2,14 @@ import { messages } from "../../src/i18n";
 import { GameSettings } from "../../src/settings/game-settings";
 import styles from "./page.module.css";
 
-const GAMES = ["sudoku", "binairo", "nonogram", "queens", "crossword"] as const;
+const GAMES = [
+  "sudoku",
+  "binairo",
+  "nonogram",
+  "queens",
+  "crossword",
+  "minesweeper",
+] as const;
 
 export function GamesSection() {
   const copy = messages.settings.games;

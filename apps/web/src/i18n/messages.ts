@@ -1,16 +1,17 @@
 import {
   FREE_HINTS_PER_PUZZLE,
   type AdminMemberRole,
-  type Game,
   type RemoteConfigKey,
 } from "@miolos/core";
+
+import type { FreePlayGame } from "../free-play/catalog";
 
 const wordmark = "Miolos";
 const tagline = "jogos de raciocínio por dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
 
-const freePlayDescriptions: Partial<Record<Game, string>> = {
+const freePlayDescriptions: Partial<Record<FreePlayGame, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
 };
 
@@ -114,7 +115,10 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
   }`;
 
-const runsText = (runs: readonly number[], placed: readonly boolean[]) =>
+const runsText = (
+  runs: readonly (number | string)[],
+  placed: readonly boolean[],
+) =>
   runs.length === 0
     ? "0"
     : runs
@@ -131,9 +135,9 @@ const LINE = {
 const nonogramStep = (
   line: LineKind,
   at: number,
-  runs: readonly number[],
+  runs: readonly (number | string)[],
   across: number,
-  value: 0 | 1,
+  mark: string,
 ) => {
   const { name, across: otherName } = LINE[line];
   const cell = `a célula da ${otherName} ${across}`;
@@ -144,7 +148,7 @@ const nonogramStep = (
     runs.length === 1
       ? `o número ${runs[0]} só fecha`
       : `os números ${runs.join(", ")} só fecham`;
-  return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
+  return `Na ${name} ${at}, ${numbers} com ${cell} ${mark}.`;
 };
 
 const BINAIRO_COUNT_WORDS = ["zero", "um", "dois", "três", "quatro"] as const;
@@ -522,6 +526,7 @@ export const messages = {
     variant: {
       label: "Variante",
       classico: "Clássico",
+      cores: "Cores",
       dueto: "Dueto",
       quarteto: "Quarteto",
       aria: (name: string) => `Variante: ${name}`,
@@ -581,14 +586,7 @@ export const messages = {
       lostStamp: "Não deu!",
       wordLead: "A palavra era",
       wordsLead: "As palavras eram",
-      modeLine: (
-        mode: string,
-        game: string,
-        ...details: (string | undefined)[]
-      ) =>
-        [mode, game, ...details]
-          .filter((part) => part !== undefined)
-          .join(" · "),
+      modeLine: (...parts: readonly string[]) => parts.join(" · "),
       again: {
         binairo: "Mais um",
         sudoku: "Mais um",
@@ -596,6 +594,7 @@ export const messages = {
         termo: "Mais uma",
         crossword: "Mais uma",
         queens: "Mais uma",
+        minesweeper: "Mais um",
       },
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
@@ -848,6 +847,10 @@ export const messages = {
         firstValue: {
           label: "Primeiro valor",
           hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
+        },
+        questionMarks: {
+          label: "Marcas (?)",
+          hint: "Entre a bandeira e a casa limpa, o botão direito (ou a tecla F) passa por uma marca de interrogação.",
         },
         skipFilled: {
           label: "Pular letras já preenchidas",
@@ -1187,12 +1190,12 @@ export const messages = {
 
         rowCluesAria: (
           row: number,
-          runs: readonly number[],
+          runs: readonly (number | string)[],
           placed: readonly boolean[],
         ) => `números da linha ${row}: ${runsText(runs, placed)}`,
         columnCluesAria: (
           column: number,
-          runs: readonly number[],
+          runs: readonly (number | string)[],
           placed: readonly boolean[],
         ) => `números da coluna ${column}: ${runsText(runs, placed)}`,
         controls: {
@@ -1207,6 +1210,8 @@ export const messages = {
             cross:
               "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
             step: nonogramStep,
+            filled: "preenchida",
+            crossed: "marcada",
           },
         },
         unavailable: {
@@ -1379,6 +1384,24 @@ export const messages = {
         notYet: {
           title: "Você ainda não concluiu as Rainhas de hoje.",
           cta: "Jogar as Rainhas de hoje",
+        },
+      },
+    },
+    minesweeper: {
+      kicker: "Minas",
+      name: "Campo Minado",
+      description:
+        "Abra as casas sem pisar em nenhuma mina. O clássico, em três níveis.",
+      play: {
+        title: "Campo Minado",
+
+        rules:
+          "Abra todas as casas sem mina. Cada número conta as minas em volta. Toque para abrir e segure para pôr a bandeira. No mouse, o botão direito põe a bandeira e os dois botões juntos abrem em volta de um número. Teclado: setas, Espaço e F.",
+
+        reset: {
+          label: "Novo jogo",
+          question: "Começar um novo jogo? Este será perdido.",
+          cancel: "Cancelar",
         },
       },
     },

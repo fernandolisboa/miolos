@@ -2,14 +2,31 @@ import type { GridLine } from "../line";
 import { isWellFormedClues } from "./solve";
 import type { NonogramCellState, NonogramClues } from "./types";
 
-export interface NonogramLineSpec {
+export interface LineCells {
   readonly line: GridLine;
-  readonly runs: readonly number[];
   readonly cells: readonly number[];
+}
+
+export interface NonogramLineSpec extends LineCells {
+  readonly runs: readonly number[];
 }
 
 export interface NonogramBoardLine extends NonogramLineSpec {
   readonly current: readonly NonogramCellState[];
+}
+
+export function lineCells(size: number): LineCells[] {
+  const span = Array.from({ length: size }, (_, k) => k);
+  return [
+    ...span.map((r) => ({
+      line: { kind: "row" as const, index: r },
+      cells: span.map((k) => r * size + k),
+    })),
+    ...span.map((c) => ({
+      line: { kind: "column" as const, index: c },
+      cells: span.map((k) => k * size + c),
+    })),
+  ];
 }
 
 export function nonogramLines(
@@ -22,26 +39,10 @@ export function nonogramLines(
       "a Nonogram board needs well-formed clues and size × size cells",
     );
   }
-  const span = Array.from({ length: n }, (_, k) => k);
-  const lineOf = (
-    line: GridLine,
-    runs: readonly number[],
-    at: (k: number) => number,
-  ) => {
-    const cells = span.map(at);
-    return {
-      line,
-      runs,
-      cells,
-      current: cells.map((cell) => states[cell] ?? "unknown"),
-    };
-  };
-  return [
-    ...clues.rows.map((runs, r) =>
-      lineOf({ kind: "row", index: r }, runs, (k) => r * n + k),
-    ),
-    ...clues.cols.map((runs, c) =>
-      lineOf({ kind: "column", index: c }, runs, (k) => k * n + c),
-    ),
-  ];
+  return lineCells(n).map(({ line, cells }) => ({
+    line,
+    runs: (line.kind === "row" ? clues.rows : clues.cols)[line.index] ?? [],
+    cells,
+    current: cells.map((cell) => states[cell] ?? "unknown"),
+  }));
 }

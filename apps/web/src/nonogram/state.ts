@@ -1,19 +1,10 @@
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
 import type { NonogramClues } from "@miolos/games/nonogram";
 
+import { pressedMark, type Press, type StrokeEffect } from "../play/brush";
 import {
-  painted,
-  pressedMark,
-  startStroke,
-  toggled,
-  type Press,
-  type StrokeEffect,
-} from "../play/brush";
-import {
-  binaryCellValue,
   binaryGridReducer,
-  settled,
-  withBinaryEntry,
+  restoreBinaryRecord,
   type BinaryCellValue,
   type BinaryGridAction,
   type BinaryGridRules,
@@ -22,8 +13,14 @@ import {
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
 import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
-import { isPictureComplete, solutionMarks } from "./engine";
+import { solutionMarks } from "./engine";
 import { nextNonogramHint, type NonogramHintReason } from "./hint";
+import {
+  painting,
+  pictureSettled,
+  pictureSnapshot,
+  type PaintAction,
+} from "./paint";
 
 export type NonogramMark = BinaryMark;
 
@@ -46,18 +43,8 @@ type NonogramSnapshot = Pick<
 
 export type NonogramPlayAction =
   | BinaryGridAction
-  | { readonly type: "set-brush"; readonly brush: NonogramBrush }
-  | {
-      readonly type: "mark-cell";
-      readonly index: number;
-      readonly press: Press;
-    }
-  | {
-      readonly type: "stroke-start";
-      readonly index: number;
-      readonly press: Press;
-    }
-  | { readonly type: "paint-over"; readonly index: number };
+  | PaintAction
+  | { readonly type: "set-brush"; readonly brush: NonogramBrush };
 
 export function initNonogramPlayState(
   daily: DailyNonogramResponse,
@@ -83,24 +70,11 @@ export function initNonogramPlayState(
 }
 
 const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState, NonogramHintReason> = {
-  game: "nonogram",
-  derive: (state, entries) =>
-    settled(
-      state,
-      entries,
-      state.solution !== null && isPictureComplete(state.solution, entries),
-    ),
+  derive: pictureSettled,
   hint: (state) => nextNonogramHint(state.clues, state.solution, state.entries),
 };
 
-export const nonogramPlayReducer = undoable(
-  playNonogram,
-  ({ entries, selected, hint }): NonogramSnapshot => ({
-    entries,
-    selected,
-    hint,
-  }),
-);
+export const nonogramPlayReducer = undoable(playNonogram, pictureSnapshot);
 
 function playNonogram(
   state: NonogramPlayState,
@@ -112,53 +86,24 @@ function playNonogram(
         ? state
         : { ...state, brush: action.brush };
 
-    case "mark-cell": {
-      const current = binaryCellValue(state, action.index);
-      return current === undefined
-        ? state
-        : withBinaryEntry(
-            state,
-            action.index,
-            toggled(current, pressedMark(brushMark(state.brush), action.press)),
-            NONOGRAM_RULES,
-          );
-    }
-
-    case "stroke-start": {
-      const current = binaryCellValue(state, action.index);
-      if (current === undefined) {
-        return { ...state, stroke: null };
-      }
-      const { stroke, first } = startStroke(
-        current,
-        brushMark(state.brush),
-        action.press,
-      );
-      return withBinaryEntry(
-        { ...state, stroke },
-        action.index,
-        first,
+    case "mark-cell":
+    case "stroke-start":
+    case "paint-over":
+      return painting(
+        state,
+        action,
+        (press: Press) => pressedMark(brushMark(state.brush), press),
         NONOGRAM_RULES,
       );
-    }
 
-    case "paint-over": {
-      const current = binaryCellValue(state, action.index);
-      return current === undefined || state.stroke === null
-        ? state
-        : withBinaryEntry(
-            state,
-            action.index,
-            painted(state.stroke, current),
-            NONOGRAM_RULES,
-          );
-    }
+    case "restore":
+      return restoreBinaryRecord(state, action, "nonogram", NONOGRAM_RULES);
 
     default:
       return binaryGridReducer(state, action, NONOGRAM_RULES);
   }
 }
 
-function brushMark(brush: NonogramBrush): NonogramMark {
+export function brushMark(brush: NonogramBrush): NonogramMark {
   return brush === "fill" ? 1 : 0;
 }

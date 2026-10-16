@@ -1,7 +1,9 @@
+import { SUDOKU_VARIANTS } from "@miolos/games/sudoku";
 import { generateSudokuVariant } from "@miolos/games/sudoku-variants";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { levelChoice, variantChoice } from "../src/free-play/choice-picker";
 import { FreePlaySolvedCard } from "../src/free-play/solved-card";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { useFreeSudoku } from "../src/free-play/use-free-sudoku";
@@ -197,24 +199,34 @@ describe("the free Sudoku layout is parsed at the boundary (T-WEB-S862)", () => 
 
 describe("the free-play card line names the variant before the level (T-WEB-S868)", () => {
   it("reads Formas · Médio for Sudoku and leaves Clássico and Termo as they were", () => {
+    const medio = levelChoice("medio", () => undefined);
     const lines = [
       <FreePlaySolvedCard
         key="formas"
         game="sudoku"
-        variant={variant.irregular}
-        level={messages.freePlay.level.medio}
+        choices={[
+          variantChoice(SUDOKU_VARIANTS, variant, "irregular", () => undefined),
+          medio,
+        ]}
         onAgain={() => undefined}
       />,
       <FreePlaySolvedCard
         key="classic"
         game="sudoku"
-        level={messages.freePlay.level.medio}
+        choices={[medio]}
         onAgain={() => undefined}
       />,
       <FreePlaySolvedCard
         key="termo"
         game="termo"
-        variant={messages.freePlay.variant.dueto}
+        choices={[
+          variantChoice(
+            ["dueto"],
+            messages.freePlay.variant,
+            "dueto",
+            () => undefined,
+          ),
+        ]}
         words={["ARDOR", "CASCO"]}
         onAgain={() => undefined}
       />,

@@ -5,6 +5,7 @@
 **Depends on:** [ADR-0006](./0006-monetization-convenience-not-access.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md), [ADR-0065](./0065-a-cross-device-done-day-opens-a-completed-view.md)
 **Supersedes in part:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) decision 2; [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decision 5
 **Amends:** the `.max(1)` bound named in ADR-0045 decision 2 and ADR-0065 decision 2; both rules (one bound for every game, read and write caps together) stand
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 2: free Campo Minado offers no hint.
 
 ## Context
 

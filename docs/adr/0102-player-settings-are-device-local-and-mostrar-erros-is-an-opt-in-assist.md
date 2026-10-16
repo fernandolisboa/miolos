@@ -9,6 +9,8 @@
 **Amended by:** [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md) (#324) — decision 2: the Nonogram also has *Riscar números resolvidos* (on).
 **Amended by:** [ADR-0118](./0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md) (#353) — decision 2 gains *Animação no fim do jogo* (on) for every game, Termo included, in the general group, which now shows in every dialog; Termo has no dialog, so its switch is in Ajustes only.
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — decision 2 gains *Limpar rascunho ao preencher* (on); decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes.
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: the *Mostrar erros* flag gains an edge stop in the label ink, so it reads on a tone fill (`T-WEB-S594`).
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 2 gains Campo Minado's *Marcas (?)*, a switch, off by default.
 
 ## Context
 

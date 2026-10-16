@@ -22,12 +22,7 @@ import {
   type FreeTermoDeps,
 } from "./use-free-termo";
 
-let loadedVariants: typeof import("./termo-variants") | null = null;
-const useVariantsLoaded = lazyChunk(() =>
-  import("./termo-variants").then((module) => {
-    loadedVariants = module;
-  }),
-);
+const useVariants = lazyChunk(() => import("./termo-variants"));
 
 const CHROME: TermoChrome = {
   back: FREE_PLAY_BACK,
@@ -38,7 +33,8 @@ export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
   const [variant, setVariant] = useState<TermoVariant>("classico");
   const { phase, regenerate } = useFreeTermo(variant, deps);
   const [asks, setAsks] = useState(0);
-  const variants = useVariantsLoaded(asks) ? loadedVariants : null;
+  const chunk = useVariants(asks);
+  const variants = chunk.state === "ready" ? chunk.value : null;
   const menuId = useId();
 
   const name = messages.freePlay.variant[variant];
@@ -73,6 +69,7 @@ export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
           variant={variant}
           words={phase.puzzle.words}
           chrome={chrome}
+          onVariant={setVariant}
           onNext={regenerate}
         />
       ) : (
