@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeCalendar,
   computeStats,
+  dayMarkOf,
+  fullDays,
   perfectDays,
   timeBucketIndex,
   type Game,
@@ -191,6 +193,94 @@ describe("perfectDays over the published lineup (ADR-0087)", () => {
         (day) => day.perfect,
       ),
     ).toEqual([false, true]);
+  });
+});
+
+describe("Dia Cheio (ADR-0129)", () => {
+  const ALL_SIX: readonly Game[] = [...ORIGINAL_FOUR, "crossword", "queens"];
+  const day = "2026-10-14";
+
+  it("T-CORE-S193: three on-time wins make a full day and two do not; late wins, a lost Termo and an empty lineup never count", () => {
+    const six = lineup([day], ALL_SIX);
+    const three = perfectDay(day, ["binairo", "sudoku", "queens"]);
+    expect(fullDays(three, six)).toEqual([day]);
+    expect(fullDays(three.slice(0, 2), six)).toEqual([]);
+
+    const twoGameLineup = lineup([day], ["binairo", "sudoku"]);
+    expect(fullDays(three.slice(0, 2), twoGameLineup)).toEqual([day]);
+    expect(perfectDays(three.slice(0, 2), twoGameLineup)).toEqual([day]);
+
+    expect(
+      fullDays(
+        [
+          ...three.slice(0, 2),
+          row({ game: "queens", date: day, onTime: false }),
+        ],
+        six,
+      ),
+    ).toEqual([]);
+    expect(
+      fullDays(
+        [
+          ...three.slice(0, 2),
+          row({ game: "termo", date: day, outcome: "lost", guesses: 6 }),
+        ],
+        six,
+      ),
+    ).toEqual([]);
+
+    expect(fullDays(three, [])).toEqual([day]);
+    expect(fullDays(three.slice(0, 2), [])).toEqual([]);
+  });
+
+  it("T-CORE-S193: an on-time win on a daily outside the lineup (minted late, or killed) still counts toward the three", () => {
+    const fourGames = lineup([day], ORIGINAL_FOUR);
+    const rows = [
+      ...perfectDay(day, ["binairo", "sudoku"]),
+      row({ game: "crossword", date: day }),
+    ];
+    expect(fullDays(rows, fourGames)).toEqual([day]);
+    expect(perfectDays(rows, fourGames)).toEqual([]);
+
+    const shortLineup = lineup([day], ["sudoku", "binairo"]);
+    const oneInOneOut = [
+      row({ game: "sudoku", date: day }),
+      row({ game: "crossword", date: day }),
+    ];
+    expect(fullDays(oneInOneOut, shortLineup)).toEqual([day]);
+    expect(perfectDays(oneInOneOut, shortLineup)).toEqual([]);
+  });
+
+  it("T-CORE-S195: dayMarkOf against lineups of every size, with wins inside and outside the lineup", () => {
+    const CASES: readonly [
+      readonly Game[],
+      readonly Game[],
+      "full" | "perfect" | undefined,
+    ][] = [
+      [[], [], undefined],
+      [["sudoku", "binairo"], [], undefined],
+      [["sudoku", "binairo", "queens"], [], "full"],
+      [["crossword"], ["sudoku"], "full"],
+      [["sudoku"], ["sudoku"], "perfect"],
+      [[], ["sudoku", "binairo"], undefined],
+      [["sudoku"], ["sudoku", "binairo"], undefined],
+      [["sudoku", "crossword"], ["sudoku", "binairo"], "full"],
+      [["sudoku", "binairo"], ["sudoku", "binairo"], "perfect"],
+      [["sudoku", "binairo"], ALL_SIX.slice(0, 3), undefined],
+      [["sudoku", "binairo", "crossword"], ALL_SIX.slice(0, 3), "full"],
+      [ALL_SIX.slice(0, 3), ALL_SIX.slice(0, 3), "perfect"],
+      [ALL_SIX.slice(0, 2), ALL_SIX, undefined],
+      [ALL_SIX.slice(0, 3), ALL_SIX, "full"],
+      [ALL_SIX.slice(0, 5), ALL_SIX, "full"],
+      [ALL_SIX, ALL_SIX, "perfect"],
+      [[...ALL_SIX.slice(0, 4), "queens"], ALL_SIX.slice(0, 5), "full"],
+    ];
+    for (const [won, lineupGames, expected] of CASES) {
+      expect(
+        dayMarkOf(new Set(won), new Set(lineupGames)),
+        `${won.join("+")} of ${lineupGames.join("+")}`,
+      ).toBe(expected);
+    }
   });
 });
 

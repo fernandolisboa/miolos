@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ColoredBoard } from "../src/colored-nonogram/board";
 import styles from "../src/colored-nonogram/colored-board.module.css";
 import { ColoredControls } from "../src/colored-nonogram/controls";
-import { coloredCopy, toneName } from "../src/colored-nonogram/copy";
+import { coloredCopy, runLabel, toneName } from "../src/colored-nonogram/copy";
 import {
   coloredNonogramReducer,
   initColoredNonogramState,
@@ -27,7 +27,7 @@ const SIZE = 5;
 function Harness() {
   const [state, dispatch] = useReducer(
     coloredNonogramReducer,
-    { date: "1970-01-01", size: SIZE, clues, solution },
+    { date: "1970-01-01", clues, solution },
     initColoredNonogramState,
   );
   const controls = useNonogramControls(state, dispatch);
@@ -97,9 +97,7 @@ describe("the coloured board: chips, names, errors, straight drag and keys (T-WE
     render(<Harness />);
     clues.rows.forEach((runs, row) => {
       const rail = document.getElementById(`nonogram-clue-row-${String(row)}`);
-      const named = runs.map((run) =>
-        coloredCopy.run(run.length, toneName(clues.palette, run.tone)),
-      );
+      const named = runs.map((run) => runLabel(clues.palette, run));
       expect(rail?.getAttribute("aria-label")).toBe(
         messages.games.nonogram.play.rowCluesAria(row + 1, named, []),
       );
@@ -120,7 +118,7 @@ describe("the coloured board: chips, names, errors, straight drag and keys (T-WE
         );
       });
     });
-    expect(coloredCopy.run(2, "vermelho")).toBe("2 vermelho");
+    expect(runLabel(["b", "r"], { tone: 2, length: 2 })).toBe("2 vermelho");
   });
 
   it("paints a tapped cell in the current tone and names it", () => {
@@ -130,7 +128,7 @@ describe("the coloured board: chips, names, errors, straight drag and keys (T-WE
     expect(cellAt(0).className).toContain(styles.cellTone);
     expect(cellAt(0).style.background).toBe(`var(--tone-${letter})`);
     expect(cellAt(0).getAttribute("aria-label")).toBe(
-      coloredCopy.cellAria(1, 1, coloredCopy.toneName(letter)),
+      coloredCopy.cellAria(1, 1, toneName(clues.palette, 1)),
     );
   });
 
@@ -258,26 +256,20 @@ describe("the palette is ✕ then the puzzle's tones, each named and pressed by 
     ).toEqual([messages.games.nonogram.play.controls.crossAria]);
   });
 
-  it("narrows on a phone past two segments and everywhere past four; mono keeps its two", () => {
-    const toggle = (palette: readonly string[]) => {
-      const { container, unmount } = render(
-        <ColoredControls
-          palette={palette}
-          brush="fill"
-          tone={1}
-          onSetBrush={vi.fn()}
-          onSetTone={vi.fn()}
-        />,
-      );
-      const className =
-        container.querySelector("button")?.parentElement?.className;
-      unmount();
-      return className ?? "";
-    };
-    expect(toggle(["r", "b"])).toContain(boardStyles.brushToggleNarrow);
-    expect(toggle(["r", "b", "y", "k", "s"])).toContain(
-      boardStyles.brushToggleCompact,
+  it("draws the palette dense; Clássico keeps its two plain segments", () => {
+    const { container: palette, unmount } = render(
+      <ColoredControls
+        palette={["r", "b"]}
+        brush="fill"
+        tone={1}
+        onSetBrush={vi.fn()}
+        onSetTone={vi.fn()}
+      />,
     );
+    expect(palette.querySelector("button")?.parentElement?.className).toBe(
+      `${boardStyles.brushToggle} ${styles.dense}`,
+    );
+    unmount();
 
     const { container } = render(
       <Controls brush="fill" onSetBrush={vi.fn()} />,

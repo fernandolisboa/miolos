@@ -1,9 +1,11 @@
+import type { PictureTone } from "@miolos/games/colored-nonogram";
+
 import { messages } from "../i18n";
 import { BrushToggle, CrossIcon } from "../nonogram/controls";
 import type { NonogramBrush } from "../nonogram/state";
 import { toneStyle } from "./board";
 import styles from "./colored-board.module.css";
-import { coloredCopy } from "./copy";
+import { coloredCopy, toneName } from "./copy";
 
 export function ColoredControls({
   palette,
@@ -12,7 +14,7 @@ export function ColoredControls({
   onSetBrush,
   onSetTone,
 }: {
-  readonly palette: readonly string[];
+  readonly palette: readonly PictureTone[];
   readonly brush: NonogramBrush;
   readonly tone: number;
   readonly onSetBrush: (brush: NonogramBrush) => void;
@@ -21,6 +23,7 @@ export function ColoredControls({
   return (
     <BrushToggle
       affordance={coloredCopy.affordance}
+      className={styles.dense}
       segments={[
         {
           key: "cross",
@@ -31,7 +34,7 @@ export function ColoredControls({
         },
         ...palette.map((letter, at) => ({
           key: letter,
-          label: coloredCopy.swatchAria(coloredCopy.toneName(letter)),
+          label: coloredCopy.swatchAria(toneName(palette, at + 1)),
           pressed: brush === "fill" && tone === at + 1,
           onPress: () => onSetTone(at + 1),
           icon: (

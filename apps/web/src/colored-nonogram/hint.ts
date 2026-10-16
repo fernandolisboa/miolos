@@ -11,7 +11,7 @@ import {
   type PictureHintReason,
 } from "../nonogram/hint";
 import type { Revealed } from "../play/grid-hint";
-import { coloredCopy, toneName } from "./copy";
+import { coloredCopy, runLabel, toneName } from "./copy";
 
 export type ColoredHintReason = PictureHintReason<ColoredNonogramStep>;
 
@@ -30,9 +30,7 @@ export function coloredHintExplanation(
   reason: ColoredHintReason | null,
 ): string | null {
   return pictureHintExplanation(clues.size, reason, ({ runs, value }) => ({
-    runs: runs.map((run) =>
-      coloredCopy.run(run.length, toneName(clues.palette, run.tone)),
-    ),
+    runs: runs.map((run) => runLabel(clues.palette, run)),
     mark:
       value === 0
         ? messages.games.nonogram.play.hint.explain.crossed

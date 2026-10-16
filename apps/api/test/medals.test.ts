@@ -235,7 +235,7 @@ describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
     }
 
     expect(await readMedals(token)).toEqual({
-      medals: ["first-win", "perfect-1", "all-games"],
+      medals: ["first-win", "perfect-1", "all-games", "full-1"],
     });
   });
 
@@ -251,7 +251,7 @@ describe("GET /medals — the crossword lineup (#276, ADR-0087)", () => {
     });
 
     expect(await readMedals(token)).toEqual({
-      medals: ["first-win", "perfect-1", "all-games"],
+      medals: ["first-win", "perfect-1", "all-games", "full-1"],
     });
   });
 });

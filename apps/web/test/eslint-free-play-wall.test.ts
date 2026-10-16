@@ -1090,9 +1090,33 @@ describe("the coloured Nonogram engine is walled to its chunk, statically and dy
     }
   });
 
-  it("the free-play importer still carries the free-play wall", async () => {
-    expect(
-      ruleIds(await lintProbe(IMPORTERS[1] ?? "", 'import "../play/sync";\n')),
-    ).toContain("no-restricted-imports");
+  it("both importers carry the free-play wall", async () => {
+    for (const path of IMPORTERS) {
+      expect
+        .soft(ruleIds(await lintProbe(path, 'import "../play/sync";\n')), path)
+        .toContain("no-restricted-imports");
+    }
+  });
+
+  it("the Cores modules are red by relative path outside free play and their own folder", async () => {
+    const doors = [
+      "../colored-nonogram/board",
+      "../free-play/colored-nonogram-free-screen",
+      "../free-play/use-free-colored-nonogram",
+    ];
+    for (const door of doors) {
+      const source = `import * as cores from "${door}";\n\nexport const probe = cores;\n`;
+      for (const path of [
+        DAILY_PATH,
+        "apps/web/src/nonogram/eslint-probe.ts",
+      ]) {
+        expect
+          .soft(ruleIds(await lintProbe(path, source)), `${path} ${door}`)
+          .toContain("no-restricted-imports");
+      }
+      expect
+        .soft(wallHits(await lintProbe(FREE_PATH, source)), door)
+        .toEqual([]);
+    }
   });
 });

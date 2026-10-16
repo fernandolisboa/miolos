@@ -1,14 +1,12 @@
-/* The coloured Nonogram's own paint, layered on the mono board module
-   (nonogram-board.module.css owns the grid, the ruled field, the rails and
-   the brush row). Rules here never redeclare a property a mono class sets on
-   the same element at the same specificity: the two sheets load from
-   different chunks, so their order is not guaranteed. A painted cell's fill
-   and a chip's tone come inline from `toneStyle`, which also sets
-   --cell-ink to the tone's measured label ink (--ink-on-tone-*). */
+/* Layered on nonogram-board.module.css, which loads from another chunk, so
+   their order is not guaranteed: never redeclare a property a Clássico class sets
+   on the same element at the same specificity. A painted cell's fill and a
+   chip's tone come inline from `toneStyle`, which also sets --cell-ink.
 
-/* Each size's worst column rail minus its row rail over the whole pool, with
-   the 13px chip: 5 → 33.4px, 10 → 55.2px, 15 → 41.8px. Two classes so the
-   value outranks the mono .pageSizeN it sits beside. */
+   Recorded design-system deviation (ADR-0035, ADR-0132): a palette segment is
+   36px wide (48px tall), below the 44px target in width only, so ✕ plus five
+   tones fit the 280px board floor. */
+
 .pageColored.overhang5 {
   --board-overhang: 34px;
 }
@@ -21,23 +19,14 @@
   --board-overhang: 42px;
 }
 
-/* One box-shadow carries both edges: the 1px --ink hairline that keeps a
-   painted cell apart from any neighbour, then the hint ring in the cell's own
-   label ink, which --tone-ring widens from hidden to 2px. */
 .cellTone {
   --wrong-edge: var(--cell-ink);
-  box-shadow:
-    inset 0 0 0 1px var(--ink),
-    inset 0 0 0 var(--tone-ring, 1px) var(--cell-ink);
 }
 
 .cellToneHinted {
-  --tone-ring: 3px;
+  box-shadow: inset 0 0 0 2px var(--cell-ink);
 }
 
-/* A clue number on its tone. var(--font-ui) 600/11px tabular like the mono
-   numeral, padded to 13px tall and 9.6px wide for one digit, which fits the
-   11.4px column of a 15×15 board at 320px. */
 .chip {
   box-sizing: border-box;
   padding: 1px 1.5px;
@@ -50,6 +39,12 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.dense > button {
+  width: 36px;
+  height: 48px;
+  padding: 0;
 }
 
 .swatch {

@@ -15,4 +15,10 @@ export {
   MAX_GUESSES,
   type TermoBoardStatus,
 } from "./status";
+export {
+  judgeBoards,
+  type JudgedBoard,
+  type JudgedBoards,
+} from "./judge-boards";
+export { TERMO_VARIANTS, type TermoVariant } from "./variants";
 export { isValidGuess, TERMO_VALIDATION_WORDS } from "./word-list";

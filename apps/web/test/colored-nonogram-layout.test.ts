@@ -12,13 +12,13 @@ import {
 
 const COLORED = stylesheet("src/colored-nonogram/colored-board.module.css");
 const MONO = stylesheet("src/nonogram/nonogram-board.module.css");
-const MOBILE = bodyOf(MONO, "@media (max-width: 768px)");
 const SHARED_MOBILE = bodyOf(
   stylesheet("src/play/screen.module.css"),
   "@media (max-width: 768px)",
 );
 
 const DIGIT = 6.609375;
+const MEASURED_OVERHANG = { 5: 33.4, 10: 55.2, 15: 41.8 } as const;
 const SEEDS = Array.from({ length: 300 }, (_unused, seed) => seed);
 
 function pair(value: string | undefined): readonly [number, number] {
@@ -86,6 +86,7 @@ describe("the coloured board fits: overhang, chips and palette at the 280px floo
         ),
       );
       const { overhang } = rails(size);
+      expect(overhang).toBeCloseTo(MEASURED_OVERHANG[size], 1);
       expect(declared).toBeGreaterThanOrEqual(overhang);
       expect(declared - overhang).toBeLessThan(3);
     });
@@ -99,28 +100,19 @@ describe("the coloured board fits: overhang, chips and palette at the 280px floo
     expect(cell).toBeGreaterThanOrEqual(chipWidth(9));
   });
 
-  it("narrows segments to 36×48 with a 2px gap, and the widest palette fits the floor", () => {
-    const compact = bodyOf(MONO, ".brushToggleCompact > .control");
-    const narrow = bodyOf(MOBILE, ".brushToggleNarrow > .control");
-    expect([decl(compact, "width"), decl(compact, "height")]).toEqual([
+  it("draws palette segments 36×48 at every width, and the widest palette fits the floor", () => {
+    const dense = bodyOf(COLORED, ".dense > button");
+    expect([decl(dense, "width"), decl(dense, "height")]).toEqual([
       "36px",
       "48px",
     ]);
-    expect(decl(narrow, "width")).toBe("36px");
-    expect(decl(bodyOf(MOBILE, ".control"), "height")).toBe("48px");
-    expect(decl(bodyOf(MONO, ".brushToggleCompact"), "gap")).toBe("2px");
-    expect(decl(bodyOf(MOBILE, ".brushToggleNarrow"), "gap")).toBe("2px");
 
     const controls = Math.max(
       ...[5, 10, 15].map((size) => rails(size).controls),
     );
     expect(controls).toBeLessThanOrEqual(6);
     expect(
-      controls * 36 + (controls - 1) * 2 + TOGGLE_CHROME,
-    ).toBeLessThanOrEqual(boardFloor());
-    const desktop = pixels(decl(bodyOf(MONO, ".control"), "width"));
-    expect(
-      4 * desktop + 3 * token("--space-1") + TOGGLE_CHROME,
+      controls * 36 + (controls - 1) * token("--space-1") + TOGGLE_CHROME,
     ).toBeLessThanOrEqual(boardFloor());
   });
 });

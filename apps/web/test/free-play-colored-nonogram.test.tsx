@@ -1,15 +1,27 @@
 import { generateColoredNonogram } from "@miolos/games/colored-nonogram";
+import { generateNonogram } from "@miolos/games/nonogram";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import styles from "../src/colored-nonogram/colored-board.module.css";
-import { coloredCopy } from "../src/colored-nonogram/copy";
+import { coloredCopy, toneName } from "../src/colored-nonogram/copy";
+import { LEVEL_WEEKDAYS } from "../src/free-play/catalog";
 import { NonogramFreeScreen } from "../src/free-play/nonogram-free-screen";
 import { messages } from "../src/i18n";
 import pictureStyles from "../src/play/picture-art.module.css";
 import { flushGeneration } from "./free-generation";
 
 const chunk = vi.hoisted(() => ({ failures: 1 }));
+const card = vi.hoisted(() => ({ failures: 0, loads: 0 }));
+
+vi.mock("../src/free-play/picture-solved-card", async (importOriginal) => {
+  card.loads += 1;
+  if (card.failures > 0) {
+    card.failures -= 1;
+    throw new Error("chunk load failed (test)");
+  }
+  return importOriginal();
+});
 
 vi.mock(
   "../src/free-play/colored-nonogram-free-screen",
@@ -65,6 +77,30 @@ afterEach(() => {
 });
 
 describe("Variante picks Clássico or Cores, Cores loads on demand at the current level (T-WEB-S877)", () => {
+  it("loads the lazy solved card again when it mounts, after the board's preload failed", async () => {
+    card.failures = 1;
+    vi.stubGlobal("fetch", vi.fn());
+    render(<NonogramFreeScreen deps={seeds()} />);
+    await flushGeneration();
+    await waitFor(() => {
+      expect(card.loads).toBe(1);
+    });
+
+    const medio = generateNonogram(SEED, LEVEL_WEEKDAYS.medio);
+    medio.reveal.solution.forEach((row, y) => {
+      row.forEach((filled, x) => {
+        if (filled) {
+          fireEvent.click(cellAt(y * medio.size + x));
+        }
+      });
+    });
+
+    expect(
+      await screen.findByText(messages.freePlay.solved.stamp),
+    ).toBeInTheDocument();
+    expect(card.loads).toBe(2);
+  });
+
   it("shows the error card when the Cores chunk fails, and the retry loads it", async () => {
     vi.stubGlobal("fetch", vi.fn());
     render(<NonogramFreeScreen deps={seeds()} />);
@@ -133,7 +169,7 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     palette.forEach((letter, at) => {
       fireEvent.click(
         screen.getByRole("button", {
-          name: coloredCopy.swatchAria(coloredCopy.toneName(letter)),
+          name: coloredCopy.swatchAria(toneName(palette, at + 1)),
         }),
       );
       LEVE.solution.forEach((mark, index) => {
@@ -144,7 +180,7 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     });
 
     expect(
-      screen.getByText(messages.freePlay.solved.stamp),
+      await screen.findByText(messages.freePlay.solved.stamp),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

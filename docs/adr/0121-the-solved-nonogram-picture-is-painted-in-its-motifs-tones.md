@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #366)
 **Depends on:** [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0033](./0033-the-nonogram-reveal-ships-no-name.md), [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md), [ADR-0118](./0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md)
 **Amends:** [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/modo-livre/nonogram` 69 → 74 KB); [ADR-0070](./0070-the-daily-nonogram-conclusion-names-its-motif.md) decision 4 (the wall read becomes `getPublishedNonogramMotif` and returns `{name, motifId, mirrored}` to `apps/api` only); [ADR-0047](./0047-bundle-markers-are-route-scoped.md) (marker `heart:mrmr13`); `PRODUCT.md` §3; `DESIGN.md` § Motion.
-**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: a second walled importer, `use-free-colored-nonogram.ts`, reaches the tones, still only on `/modo-livre/nonogram`.
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: the Cores engine `@miolos/games/colored-nonogram` also reaches the tones; only `apps/web/src/colored-nonogram/**` and `use-free-colored-nonogram.ts` import it, inside the chunk `/modo-livre/nonogram` alone loads.
 
 ## Context
 

@@ -3,8 +3,11 @@ export {
   type SudokuApprovalCriteria,
   type SudokuGrade,
   type SudokuGrid,
+  type SudokuLayout,
   type SudokuPuzzle,
   type SudokuTier,
+  type SudokuVariant,
+  type SudokuVariantPuzzle,
 } from "./types";
 export { getSudokuConflicts, isSudokuSolved, sudokuPeers } from "./board";
 export { countSudokuSolutions, solveSudoku } from "./solve";
@@ -24,6 +27,7 @@ export {
   SudokuGenerationError,
   generateDailySudoku,
   generateSudoku,
+  generateSudokuVariant,
 } from "./generate";
 export {
   validateSudoku,

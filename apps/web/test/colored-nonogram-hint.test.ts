@@ -2,7 +2,7 @@ import { generateColoredNonogram } from "@miolos/games/colored-nonogram";
 import { PICTURE_TONES } from "@miolos/games/nonogram-colors";
 import { describe, expect, it } from "vitest";
 
-import { coloredCopy, toneName } from "../src/colored-nonogram/copy";
+import { coloredCopy, runLabel, toneName } from "../src/colored-nonogram/copy";
 import {
   coloredHintExplanation,
   nextColoredHint,
@@ -63,9 +63,7 @@ describe("the coloured hint corrects a wrong tone first, then takes a logical st
       coloredCopy.painted(toneName(clues.palette, hint.value)),
     );
     for (const run of hint.reason.step.runs) {
-      expect(sentence).toContain(
-        coloredCopy.run(run.length, toneName(clues.palette, run.tone)),
-      );
+      expect(sentence).toContain(runLabel(clues.palette, run));
     }
     expect(coloredHintExplanation(clues, { kind: "correction" })).toBe(
       messages.games.nonogram.play.hint.explain.correction,
@@ -74,8 +72,11 @@ describe("the coloured hint corrects a wrong tone first, then takes a logical st
   });
 
   it("names every tone of the palette in pt-BR", () => {
-    for (const letter of PICTURE_TONES) {
-      expect(coloredCopy.toneName(letter)).not.toBe(letter);
-    }
+    const names = PICTURE_TONES.map((_letter, at) =>
+      toneName(PICTURE_TONES, at + 1),
+    );
+    expect(new Set(names).size).toBe(PICTURE_TONES.length);
+    expect(names).not.toContain("");
+    expect(toneName(PICTURE_TONES, PICTURE_TONES.length + 1)).toBe("");
   });
 });

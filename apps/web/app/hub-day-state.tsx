@@ -1,26 +1,29 @@
 "use client";
 
-import type { Game } from "@miolos/core";
+import { dayMarkOf, type Game } from "@miolos/core";
 import Link from "next/link";
 
 import { formatElapsed, messages, playRoutes } from "../src/i18n";
-import { completedCount, useDayState } from "../src/play/day-state";
+import { completedGames, useDayState } from "../src/play/day-state";
+import { DAY_GAMES } from "../src/play/day-games";
 import { useStats } from "../src/stats/use-stats";
 import styles from "./page.module.css";
 
 const BLANK_VALUE = " ";
 
-export function HubProgress({
-  date,
-  total,
-}: {
-  readonly date: string;
-  readonly total: number;
-}) {
-  const done = completedCount(useDayState(date));
+const LINEUP: ReadonlySet<Game> = new Set(DAY_GAMES);
+
+export function HubProgress({ date }: { readonly date: string }) {
+  const won = completedGames(useDayState(date));
+  const mark = dayMarkOf(won, LINEUP);
   return (
     <p className={`${styles.metaLine} tabular-nums`}>
-      {messages.hoje.completedOfTotal(done, total)}
+      {messages.hoje.completedOfTotal(won.size, DAY_GAMES.length)}
+      {mark !== undefined && (
+        <span className={styles.dayMark} data-mark={mark}>
+          {messages.dayMark[mark]}
+        </span>
+      )}
     </p>
   );
 }

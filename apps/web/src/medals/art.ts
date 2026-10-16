@@ -39,6 +39,12 @@ export function artOf(rule: MedalRule): MedalArt {
         stripes: [PAPER, PAPER],
         mark: numeral(rule.count),
       };
+    case "fullDaysReached":
+      return {
+        ribbon: APP,
+        stripes: [INK, PAPER],
+        mark: numeral(rule.count),
+      };
     case "termoGuessWins":
       return {
         ribbon: ACCENTS.termo,

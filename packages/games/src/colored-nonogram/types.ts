@@ -1,4 +1,5 @@
 import type { LineCells } from "../nonogram/lines";
+import type { PictureTone } from "../nonogram/tones";
 
 export interface ColoredRun {
   readonly tone: number;
@@ -7,7 +8,7 @@ export interface ColoredRun {
 
 export interface ColoredNonogramClues {
   readonly size: number;
-  readonly palette: readonly string[];
+  readonly palette: readonly PictureTone[];
   readonly rows: readonly (readonly ColoredRun[])[];
   readonly cols: readonly (readonly ColoredRun[])[];
 }
@@ -17,6 +18,7 @@ export interface ColoredNonogramPuzzle {
   readonly size: number;
   readonly clues: ColoredNonogramClues;
   readonly solution: readonly number[];
+  readonly tones: string;
 }
 
 export interface ColoredLineSpec extends LineCells {

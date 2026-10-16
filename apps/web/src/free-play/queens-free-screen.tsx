@@ -75,7 +75,7 @@ function QueensFreeBoard({
 }) {
   const board = useQueensBoard(puzzle.daily);
 
-  const choices = [levelChoice(level, onLevelChange)] as const;
+  const choices = [levelChoice(level, onLevelChange)];
   return (
     <EndingStage
       over={board.state.status === "solved"}

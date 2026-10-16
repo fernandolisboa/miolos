@@ -2,34 +2,31 @@
 
 import { useEffect, useState } from "react";
 
-export type ChunkState = "loading" | "ready" | "failed";
+export type Chunk<T> =
+  | { readonly state: "loading" | "failed" }
+  | { readonly state: "ready"; readonly value: T };
 
-export function lazyChunk(load: () => Promise<void>) {
-  let done = false;
-  return function useChunk(retryKey?: unknown): ChunkState {
-    const [ready, setReady] = useState(done);
-    const [failed, setFailed] = useState<{ readonly key: unknown } | null>(
-      null,
-    );
+export function lazyChunk<T>(load: () => Promise<T>) {
+  let loaded: Chunk<T> | null = null;
+  return function useChunk(retryKey = 0): Chunk<T> {
+    const [ready, setReady] = useState(loaded);
+    const [failedKey, setFailedKey] = useState<number | null>(null);
     useEffect(() => {
-      if (ready) return;
+      if (ready !== null) return;
       let live = true;
       load().then(
-        () => {
-          done = true;
-          if (live) setReady(true);
+        (value) => {
+          loaded = { state: "ready", value };
+          if (live) setReady(loaded);
         },
         () => {
-          if (live) setFailed({ key: retryKey });
+          if (live) setFailedKey(retryKey);
         },
       );
       return () => {
         live = false;
       };
     }, [ready, retryKey]);
-    if (ready) return "ready";
-    return failed !== null && Object.is(failed.key, retryKey)
-      ? "failed"
-      : "loading";
+    return ready ?? { state: failedKey === retryKey ? "failed" : "loading" };
   };
 }

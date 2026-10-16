@@ -10,6 +10,7 @@ import { medalCopy } from "../src/medals/copy";
 const clients = vi.hoisted(() => ({
   fetchStats: vi.fn(),
   fetchStatsCalendar: vi.fn(),
+  fetchFullDays: vi.fn(),
 }));
 vi.mock("../src/stats/stats-client", () => clients);
 

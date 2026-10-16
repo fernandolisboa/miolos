@@ -102,6 +102,19 @@ export const medalCopy = {
     name: "Da primeira leva",
     description: "Estava aqui quando tudo começou.",
   },
+  "full-1": {
+    name: "Página cheia",
+    description:
+      "Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia.",
+  },
+  "full-10": {
+    name: "Caderno cheio",
+    description: "Concluiu 10 Dias Cheios.",
+  },
+  "full-50": {
+    name: "Cinquenta páginas cheias",
+    description: "Concluiu 50 Dias Cheios.",
+  },
 } as const satisfies Record<
   MedalId,
   { readonly name: string; readonly description: string }

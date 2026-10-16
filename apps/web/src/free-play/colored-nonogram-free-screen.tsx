@@ -1,7 +1,7 @@
 "use client";
 
 import type { NonogramSize } from "@miolos/core";
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useReducer } from "react";
 
 import { ColoredBoard } from "../colored-nonogram/board";
 import styles from "../colored-nonogram/colored-board.module.css";
@@ -11,21 +11,12 @@ import {
   coloredNonogramReducer,
   initColoredNonogramState,
 } from "../colored-nonogram/state";
-import { messages } from "../i18n";
 import { countFilledCells } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
-import { BoardCard } from "../play/board-card";
-import { EndingStage } from "../play/ending-stage";
-import type { FreePlayLevel } from "./catalog";
-import { FreePlayChrome } from "./chrome";
-import { FreePlayPicture } from "./free-play-picture";
-import {
-  NonogramFreeShell,
-  pictureReadouts,
-  type NonogramChoices,
-} from "./nonogram-free-shell";
-import { FreePlaySolvedCard } from "./solved-card";
+import { NONOGRAM_LEVEL_SIZES, type FreePlayLevel } from "./catalog";
+import type { Choice } from "./choice";
+import { PictureFreeFrame, PictureFreeScreen } from "./picture-free-frame";
 import {
   useFreeColoredNonogram,
   type FreeColoredNonogramPuzzle,
@@ -44,36 +35,36 @@ export function ColoredNonogramFreeScreen({
   pickSeed,
 }: {
   readonly level: FreePlayLevel;
-  readonly choices: NonogramChoices;
+  readonly choices: readonly Choice[];
   readonly pickSeed: (() => number) | undefined;
 }) {
-  const { phase, regenerate } = useFreeColoredNonogram(level, { pickSeed });
-
-  if (phase.kind !== "ready") {
-    return (
-      <NonogramFreeShell
-        level={level}
-        choices={choices}
-        {...(phase.kind === "failed" ? { onRetry: regenerate } : {})}
-      />
-    );
-  }
+  const generation = useFreeColoredNonogram(level, { pickSeed });
+  const size = NONOGRAM_LEVEL_SIZES[level];
   return (
-    <ColoredFreeBoard
-      key={`${String(phase.puzzle.seed)}:${level}:${String(phase.run)}`}
+    <PictureFreeScreen
+      level={level}
       choices={choices}
-      puzzle={phase.puzzle}
-      onNext={regenerate}
+      generation={generation}
+      board={(puzzle, onNext) => (
+        <ColoredFreeBoard
+          size={size}
+          choices={choices}
+          puzzle={puzzle}
+          onNext={onNext}
+        />
+      )}
     />
   );
 }
 
 function ColoredFreeBoard({
+  size,
   choices,
   puzzle,
   onNext,
 }: {
-  readonly choices: NonogramChoices;
+  readonly size: NonogramSize;
+  readonly choices: readonly Choice[];
   readonly puzzle: FreeColoredNonogramPuzzle;
   readonly onNext: () => void;
 }) {
@@ -87,82 +78,56 @@ function ColoredFreeBoard({
     dispatch({ type: "set-tone", tone });
   }, []);
 
-  useEffect(() => {
-    dispatch({ type: "restore", record: undefined, now: Date.now() });
-  }, []);
-
-  const { size, clues, solution } = puzzle;
+  const { clues, solution } = puzzle;
   return (
-    <EndingStage
-      over={state.status === "solved"}
-      won
-      ending={() => (
-        <FreePlaySolvedCard
-          game="nonogram"
-          choices={choices}
-          onAgain={onNext}
-          picture={
-            <FreePlayPicture
-              picture={{
-                size,
-                cells: solution.map((mark) => (mark === 0 ? 0 : 1)),
-                label: messages.freePlay.solved.pictureAria,
-                tones: solution
-                  .map((mark) => clues.palette[mark - 1] ?? ".")
-                  .join(""),
-              }}
-            />
-          }
+    <PictureFreeFrame
+      choices={choices}
+      size={size}
+      pageModifier={`${nonogramPageModifier(size)} ${styles.pageColored ?? ""} ${OVERHANG[size] ?? ""}`}
+      picture={
+        state.status === "solved"
+          ? {
+              size,
+              cells: solution.map((mark) => (mark === 0 ? 0 : 1)),
+              tones: puzzle.tones,
+            }
+          : null
+      }
+      filled={countFilledCells(state.entries)}
+      target={countFilledCells(solution)}
+      hint={{
+        state: state.hint,
+        explain: coloredHintExplanation(clues, state.hint.reason),
+      }}
+      controls={controls}
+      dispatch={dispatch}
+      below={
+        <ColoredControls
+          palette={clues.palette}
+          brush={state.brush}
+          tone={state.tone}
+          onSetBrush={controls.setBrush}
+          onSetTone={setTone}
         />
-      )}
+      }
+      onNext={onNext}
     >
-      <FreePlayChrome
-        game="nonogram"
-        choices={choices}
-        pageModifier={`${nonogramPageModifier(size)} ${styles.pageColored ?? ""} ${OVERHANG[size] ?? ""}`}
-        state={{
-          kind: "playing",
-          readouts: pictureReadouts(
-            size,
-            countFilledCells(state.entries),
-            countFilledCells(solution),
-            {
-              state: state.hint,
-              explain: coloredHintExplanation(clues, state.hint.reason),
-            },
-            controls,
-          ),
-        }}
-      >
-        <BoardCard
-          below={
-            <ColoredControls
-              palette={clues.palette}
-              brush={state.brush}
-              tone={state.tone}
-              onSetBrush={controls.setBrush}
-              onSetTone={setTone}
-            />
-          }
-        >
-          <ColoredBoard
-            size={size}
-            clues={clues}
-            solution={state.solution}
-            entries={state.entries}
-            selected={state.selected}
-            hintIndex={state.hint.lastIndex}
-            spotlight={state.hint.spotlight}
-            onSelect={controls.selectCell}
-            onMove={controls.moveSelection}
-            onMarkCell={controls.markCell}
-            onStrokeStart={controls.strokeStart}
-            onEnterValue={controls.enterValue}
-            onClear={controls.clearCell}
-            onPaintOver={controls.paintOver}
-          />
-        </BoardCard>
-      </FreePlayChrome>
-    </EndingStage>
+      <ColoredBoard
+        size={size}
+        clues={clues}
+        solution={state.solution}
+        entries={state.entries}
+        selected={state.selected}
+        hintIndex={state.hint.lastIndex}
+        spotlight={state.hint.spotlight}
+        onSelect={controls.selectCell}
+        onMove={controls.moveSelection}
+        onMarkCell={controls.markCell}
+        onStrokeStart={controls.strokeStart}
+        onEnterValue={controls.enterValue}
+        onClear={controls.clearCell}
+        onPaintOver={controls.paintOver}
+      />
+    </PictureFreeFrame>
   );
 }

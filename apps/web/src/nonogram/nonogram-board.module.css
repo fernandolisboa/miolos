@@ -19,11 +19,7 @@
      4. Board touch targets below 44px at sizes 10 and 15, and below 24px at
         size 15 on a phone: the grid is the content (ADR-0035 decision 7).
      5. No press affordance on a board cell: a ruled-field cell has no shadow,
-        and at gap 0 a 1px translate paints over its neighbour.
-     6. A brush segment narrows to 36px wide (48px tall) when the toggle holds
-        more than four, or more than two on a phone: the coloured palette's
-        tones plus ✕ must fit the 280px board floor. Width only; the height
-        keeps the 44px target. */
+        and at gap 0 a 1px translate paints over its neighbour. */
 
 /* The per-game half of the shared layout, carried on the SAME element as
    `screen.page`: custom properties only, never a redeclared `.gridCard`
@@ -361,9 +357,7 @@
    and the ring underneath it is a free hint on a cell the player
    has already been shown. Scoping the outline to `:focus-visible` alone was
    rejected — WebKit does not focus-visible a clicked button, so the pointer
-   path would lose its caret entirely. A coloured Nonogram cell sets
-   --cell-ink, its tone's label ink (≥ 4.5:1 on it), because --ink falls to
-   1.12:1 on the darkest tone; no mono cell sets it. */
+   path would lose its caret entirely. */
 .cellSelected,
 .cell:focus-visible {
   outline: 2px solid var(--cell-ink, var(--ink));
@@ -427,16 +421,6 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-.brushToggleCompact {
-  gap: 2px;
-}
-
-.brushToggleCompact > .control {
-  width: 36px;
-  height: 48px;
-  padding: 0;
-}
-
 .brushIcon {
   display: block;
   width: 24px;
@@ -475,15 +459,6 @@
   .control {
     width: 64px;
     height: 48px;
-  }
-
-  .brushToggleNarrow {
-    gap: 2px;
-  }
-
-  .brushToggleNarrow > .control {
-    width: 36px;
-    padding: 0;
   }
 
   .affordance {

@@ -27,19 +27,20 @@ describe("generateColoredNonogram", () => {
       fc.property(seedArb, sizeArb, (seed, size) => {
         const puzzle = generateColoredNonogram(seed, size);
         const { palette } = puzzle.clues;
-        const tones = puzzle.solution
-          .map((tone) => palette[tone - 1] ?? ".")
-          .join("");
 
         expect(Object.keys(puzzle).sort()).toEqual([
           "clues",
           "seed",
           "size",
           "solution",
+          "tones",
         ]);
         expect(puzzle.size).toBe(size);
         expect(puzzle.seed).toBe(seed);
-        expect(deriveColoredClues(size, tones)).toEqual(puzzle.clues);
+        expect(puzzle.tones).toBe(
+          puzzle.solution.map((tone) => palette[tone - 1] ?? ".").join(""),
+        );
+        expect(deriveColoredClues(size, puzzle.tones)).toEqual(puzzle.clues);
         expect(solveColoredNonogram(puzzle.clues)).toEqual(puzzle.solution);
       }),
       { seed: FC_SEED, numRuns: propertyRuns(1000) },

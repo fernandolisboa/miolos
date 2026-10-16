@@ -2,6 +2,7 @@ import type { NonogramSize } from "@miolos/core";
 import type {
   ColoredNonogramClues,
   ColoredRun,
+  PictureTone,
 } from "@miolos/games/colored-nonogram";
 import {
   Fragment,
@@ -16,7 +17,7 @@ import {
   columnRailId,
   rowRailId,
   ruleClasses,
-} from "../nonogram/board-grid";
+} from "../nonogram/board";
 import boardStyles from "../nonogram/nonogram-board.module.css";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
@@ -25,11 +26,11 @@ import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
 import styles from "./colored-board.module.css";
-import { coloredCopy, toneName } from "./copy";
+import { coloredCopy, runLabel, toneName } from "./copy";
 
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
-export function toneStyle(letter: string): CSSProperties {
+export function toneStyle(letter: PictureTone): CSSProperties {
   return {
     background: `var(--tone-${letter})`,
     "--cell-ink": `var(--ink-on-tone-${letter})`,
@@ -116,7 +117,7 @@ export const ColoredBoard = memo(function ColoredBoard({
                 column={column}
                 size={size}
                 value={entries[index] ?? null}
-                letter={clues.palette[(entries[index] ?? 0) - 1]}
+                palette={clues.palette}
                 wrong={wrong.has(index)}
                 hinted={hintIndex === index}
                 spotlit={spotlight.includes(index)}
@@ -142,13 +143,11 @@ const ChipRail = memo(function ChipRail({
   readonly kind: "row" | "column";
   readonly index: number;
   readonly runs: readonly ColoredRun[];
-  readonly palette: readonly string[];
+  readonly palette: readonly PictureTone[];
 }) {
   const copy = messages.games.nonogram.play;
   const row = kind === "row";
-  const named = runs.map((run) =>
-    coloredCopy.run(run.length, toneName(palette, run.tone)),
-  );
+  const named = runs.map((run) => runLabel(palette, run));
   return (
     <div
       id={row ? rowRailId(index) : columnRailId(index)}
@@ -170,16 +169,19 @@ const ChipRail = memo(function ChipRail({
           0
         </span>
       ) : (
-        runs.map((run, at) => (
-          <span
-            aria-hidden
-            key={at}
-            className={styles.chip}
-            style={toneStyle(palette[run.tone - 1] ?? "")}
-          >
-            {run.length}
-          </span>
-        ))
+        runs.map((run, at) => {
+          const letter = palette[run.tone - 1];
+          return (
+            <span
+              aria-hidden
+              key={at}
+              className={styles.chip}
+              style={letter === undefined ? undefined : toneStyle(letter)}
+            >
+              {run.length}
+            </span>
+          );
+        })
       )}
     </div>
   );
@@ -191,7 +193,7 @@ const ColoredCell = memo(function ColoredCell({
   column,
   size,
   value,
-  letter,
+  palette,
   wrong,
   hinted,
   spotlit,
@@ -205,7 +207,7 @@ const ColoredCell = memo(function ColoredCell({
   readonly column: number;
   readonly size: number;
   readonly value: number | null;
-  readonly letter: string | undefined;
+  readonly palette: readonly PictureTone[];
   readonly wrong: boolean;
   readonly hinted: boolean;
   readonly spotlit: boolean;
@@ -217,9 +219,10 @@ const ColoredCell = memo(function ColoredCell({
     event: ReactMouseEvent<HTMLButtonElement>,
   ) => void;
 }) {
-  const painted = value !== null && value > 0 && letter !== undefined;
+  const letter = value === null ? undefined : palette[value - 1];
+  const painted = letter !== undefined;
   const label = painted
-    ? coloredCopy.cellAria(row + 1, column + 1, coloredCopy.toneName(letter))
+    ? coloredCopy.cellAria(row + 1, column + 1, toneName(palette, value ?? 0))
     : messages.games.nonogram.play.cellAria(
         row + 1,
         column + 1,

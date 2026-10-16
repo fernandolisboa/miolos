@@ -67,7 +67,7 @@ describe("free-play Nonogram zero-fetch solve and the nameless picture (T-WEB-S1
     }
 
     expect(
-      screen.getByText(messages.freePlay.solved.stamp),
+      await screen.findByText(messages.freePlay.solved.stamp),
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("img", {

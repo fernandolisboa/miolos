@@ -15,4 +15,6 @@ export const PICTURE_TONES = [
   "m",
 ] as const;
 
+export type PictureTone = (typeof PICTURE_TONES)[number];
+
 export type MotifTones = Readonly<Record<string, ReadonlyArray<string>>>;

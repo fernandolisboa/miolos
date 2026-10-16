@@ -14,7 +14,6 @@ const PUZZLE = generateColoredNonogram(20_260_801, 10);
 function fresh(): ColoredNonogramState {
   return initColoredNonogramState({
     date: "1970-01-01",
-    size: 10,
     clues: PUZZLE.clues,
     solution: PUZZLE.solution,
   });
@@ -121,6 +120,20 @@ describe("the coloured Nonogram reducer: brush, presses, strokes, completion and
     const solved = paintAll((mark) => mark);
     expect(solved.status).toBe("solved");
     expect(solved.entries).toContain(0);
+
+    const tonesOnly = PUZZLE.solution.reduce<ColoredNonogramState>(
+      (state, mark, index) =>
+        mark === 0
+          ? state
+          : play(
+              state,
+              { type: "set-tone", tone: mark },
+              { type: "mark-cell", index, press: "tap" },
+            ),
+      fresh(),
+    );
+    expect(tonesOnly.entries).not.toContain(0);
+    expect(tonesOnly.status).toBe("solved");
   });
 
   it("a whole drag is one undo step, and the tone and brush survive the undo", () => {

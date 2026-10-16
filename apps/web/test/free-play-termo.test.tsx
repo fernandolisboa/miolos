@@ -4,7 +4,7 @@ import {
   MAX_GUESSES,
   TERMO_VALIDATION_WORDS,
 } from "@miolos/games/termo";
-import { drawFreeTermoWord } from "@miolos/games/termo-free";
+import { drawFreeTermoWords } from "@miolos/games/termo-free";
 import {
   act,
   fireEvent,
@@ -28,8 +28,8 @@ import { flushGeneration } from "./free-generation";
 
 const SEED = 20_261_015;
 const NEXT_SEED = 20_261_016;
-const WORD = drawFreeTermoWord(SEED);
-const NEXT_WORD = drawFreeTermoWord(NEXT_SEED);
+const WORD = drawFreeTermoWords(SEED, 1)[0] ?? "";
+const NEXT_WORD = drawFreeTermoWords(NEXT_SEED, 1)[0] ?? "";
 const ACCENTED = "ábaco";
 const START = initTermoPlayState(FREE_PLAY_DATE);
 

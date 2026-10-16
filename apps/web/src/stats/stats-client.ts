@@ -1,6 +1,8 @@
 import {
+  fullDaysResponseSchema,
   statsCalendarResponseSchema,
   statsResponseSchema,
+  type FullDaysResponse,
   type StatsCalendarResponse,
   type StatsResponse,
 } from "@miolos/core";
@@ -22,5 +24,13 @@ export async function fetchStatsCalendar(): Promise<
     "/stats/calendar",
     statsCalendarResponseSchema,
     "stats calendar fetch skipped, the screen keeps the zero state",
+  );
+}
+
+export async function fetchFullDays(): Promise<FullDaysResponse | undefined> {
+  return await apiGet(
+    "/stats/full-days",
+    fullDaysResponseSchema,
+    "full days fetch skipped, the screen shows no Dias Cheios",
   );
 }

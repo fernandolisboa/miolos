@@ -25,6 +25,8 @@ import { cellStateOf } from "./engine";
 import styles from "./nonogram-board.module.css";
 import type { NonogramCellValue, NonogramMark } from "./state";
 
+export { SIZE_CLASS, columnRailId, rowRailId, ruleClasses } from "./board-grid";
+
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
 export const Board = memo(function Board({

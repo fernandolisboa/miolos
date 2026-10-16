@@ -126,7 +126,7 @@ function SudokuFreeBoard({
 
   const edits = useBoardEdits(state, dispatch);
 
-  const choices = [levelChoice(level, onLevelChange)] as const;
+  const choices = [levelChoice(level, onLevelChange)];
   return (
     <EndingStage
       over={state.status === "solved"}

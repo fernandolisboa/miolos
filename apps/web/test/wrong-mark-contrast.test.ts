@@ -57,8 +57,17 @@ describe("the wrong-cell flag reads on every surface it can sit on, in both them
 });
 
 describe("on a painted tone the flag gains an edge in that tone's ink, which clears 3:1 on it (T-WEB-S594)", () => {
-  it("draws an edge stop that is transparent unless the cell sets --wrong-edge", () => {
+  it("draws an edge stop that is transparent unless the cell sets --wrong-edge, which a painted tone sets to its ink", () => {
     expect(MARK).toContain("var(--wrong-edge, transparent) 66% 72%");
+    expect(
+      decl(
+        bodyOf(
+          stylesheet("src/colored-nonogram/colored-board.module.css"),
+          ".cellTone",
+        ),
+        "--wrong-edge",
+      ),
+    ).toBe("var(--cell-ink)");
   });
 
   for (const theme of ["light", "dark"] as const) {

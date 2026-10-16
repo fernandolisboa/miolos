@@ -21,19 +21,21 @@ export interface BrushSegment {
 export function BrushToggle({
   segments,
   affordance,
+  className,
 }: {
   readonly segments: readonly BrushSegment[];
   readonly affordance: string;
+  readonly className?: string;
 }) {
-  const density =
-    segments.length > 4
-      ? ` ${styles.brushToggleCompact}`
-      : segments.length > 2
-        ? ` ${styles.brushToggleNarrow}`
-        : "";
   return (
     <div className={styles.controls}>
-      <div className={`${styles.brushToggle}${density}`}>
+      <div
+        className={
+          className === undefined
+            ? styles.brushToggle
+            : `${styles.brushToggle} ${className}`
+        }
+      >
         {segments.map(({ key, label, pressed, onPress, icon }) => (
           <button
             key={key}

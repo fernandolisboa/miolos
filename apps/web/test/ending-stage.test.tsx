@@ -1,6 +1,6 @@
 import { normalizeWord } from "@miolos/games";
 import { MAX_GUESSES, TERMO_VALIDATION_WORDS } from "@miolos/games/termo";
-import { drawFreeTermoWord } from "@miolos/games/termo-free";
+import { drawFreeTermoWords } from "@miolos/games/termo-free";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createRef, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -291,7 +291,7 @@ describe("the glow starts from the cell the player touched last (T-WEB-S762)", (
 });
 
 const SEED = 20_261_015;
-const WORD = drawFreeTermoWord(SEED);
+const WORD = drawFreeTermoWords(SEED, 1)[0] ?? "";
 const MISSES = TERMO_VALIDATION_WORDS.filter(
   (word) => word !== normalizeWord(WORD),
 ).slice(0, MAX_GUESSES);

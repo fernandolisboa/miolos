@@ -71,6 +71,13 @@ describe("every catalog medal is drawn from its rule (T-WEB-S780)", () => {
           });
           expect(art.stripes).toHaveLength(2);
           break;
+        case "fullDaysReached":
+          expect(art.mark).toEqual({
+            kind: "numeral",
+            text: String(rule.count),
+          });
+          expect(art.ribbon).toBe("var(--accent-app)");
+          break;
         case "termoGuessWins":
           expect(art.mark).toEqual({
             kind: "numeral",
@@ -201,5 +208,23 @@ describe("a tip that would leave the viewport is pulled back inside it (T-WEB-S7
     expect(
       screen.getByRole("tooltip").style.getPropertyValue("--tip-shift"),
     ).toBe("50px");
+  });
+});
+
+describe("the Dias Cheios medals wear a stripe set no other family uses (T-WEB-S853)", () => {
+  it("full-* stripes are ink then paper and differ from every other rule kind's", () => {
+    const key = (stripes: readonly string[]) => stripes.join("|");
+    const full = MEDAL_DEFINITIONS.filter(
+      ({ rule }) => rule.kind === "fullDaysReached",
+    ).map(({ rule }) => key(artOf(rule).stripes));
+    expect(new Set(full)).toEqual(
+      new Set([key(["var(--ink)", "var(--paper-card)"])]),
+    );
+
+    for (const { rule } of MEDAL_DEFINITIONS) {
+      if (rule.kind !== "fullDaysReached") {
+        expect(full, rule.kind).not.toContain(key(artOf(rule).stripes));
+      }
+    }
   });
 });

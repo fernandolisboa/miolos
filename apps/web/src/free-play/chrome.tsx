@@ -9,16 +9,10 @@ import {
 } from "../play/screen-chrome";
 import screen from "../play/screen.module.css";
 import { FREE_PLAY_BACK } from "./back";
-import {
-  ChoicePicker,
-  choiceLabel,
-  type FreePlayChoice,
-  type FreePlayChoices,
-} from "./choice-picker";
+import { choiceLabel, type Choice } from "./choice";
+import { ChoicePicker } from "./choice-picker";
 
-function choiceStat<T extends string | number>(
-  choice: FreePlayChoice<T>,
-): PlayChromeStat {
+function choiceStat(choice: Choice): PlayChromeStat {
   return {
     label: choice.label,
     value: choiceLabel(choice),
@@ -26,10 +20,7 @@ function choiceStat<T extends string | number>(
   };
 }
 
-export function FreePlayChrome<
-  A extends string | number,
-  B extends string | number = never,
->({
+export function FreePlayChrome({
   game,
   pageModifier,
   choices,
@@ -38,11 +29,11 @@ export function FreePlayChrome<
 }: {
   readonly game: ChromeGame;
   readonly pageModifier: string;
-  readonly choices?: FreePlayChoices<A, B>;
+  readonly choices?: readonly Choice[];
   readonly state: PlayChromeState;
   readonly children: ReactNode;
 }): ReactElement {
-  const [first, second] = choices ?? [];
+  const first = choices?.[0];
   return (
     <PlayScreenChrome
       game={game}
@@ -54,8 +45,9 @@ export function FreePlayChrome<
       clock="none"
       extraStat={first === undefined ? null : choiceStat(first)}
     >
-      {first !== undefined && <ChoicePicker {...first} />}
-      {second !== undefined && <ChoicePicker {...second} />}
+      {choices?.map((choice) => (
+        <ChoicePicker key={choice.label} {...choice} />
+      ))}
       {children}
     </PlayScreenChrome>
   );

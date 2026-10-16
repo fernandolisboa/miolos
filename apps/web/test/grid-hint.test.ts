@@ -179,6 +179,14 @@ describe("nextBinaryHint: a wrong cell first, then a 1 before a 0 (T-WEB-S458)",
   it("returns null on a finished board", () => {
     expect(nextBinaryHint(solution, [0, 0, 1, 0, 1, 0])).toBeNull();
   });
+
+  it("skips an empty cross for a painted cell of any tone", () => {
+    expect(nextBinaryHint([0, 1, 2], [null, 1, null])).toEqual({
+      index: 2,
+      value: 2,
+      kind: "fill",
+    });
+  });
 });
 
 describe("nextLogicalHint: a correction, then a checked step, then the first empty (T-WEB-S563)", () => {

@@ -8,30 +8,27 @@ import { accentVars } from "../play/accent";
 import { EndingFlourish } from "../play/ending-flourish";
 import { JustEnded } from "../play/just-ended";
 import type { FreePlayGame } from "./catalog";
-import { choiceLabel, type FreePlayChoices } from "./choice-picker";
+import { choiceLabel, type Choice } from "./choice";
 import styles from "./free-play.module.css";
 
-export function FreePlaySolvedCard<
-  A extends string | number,
-  B extends string | number = never,
->({
+export function FreePlaySolvedCard({
   game,
   choices,
   picture,
-  word,
+  words,
+  lost = false,
   onAgain,
   children,
 }: {
   readonly game: FreePlayGame;
-  readonly choices?: FreePlayChoices<A, B>;
+  readonly choices?: readonly Choice[];
   readonly picture?: ReactNode;
-  readonly word?: { readonly canonical: string; readonly won: boolean };
+  readonly words?: readonly string[];
+  readonly lost?: boolean;
   readonly onAgain: () => void;
   readonly children?: ReactNode;
 }) {
-  const lost = word?.won === false;
   const copy = messages.freePlay.solved;
-  const [first, second] = choices ?? [];
 
   return (
     <main
@@ -53,17 +50,22 @@ export function FreePlaySolvedCard<
             {copy.modeLine(
               messages.freePlay.modeTag,
               messages.games[game].name,
-              ...(first === undefined ? [] : [choiceLabel(first)]),
-              ...(second === undefined ? [] : [choiceLabel(second)]),
+              ...(choices ?? []).map(choiceLabel),
             )}
           </p>
           {children !== undefined && (
             <div className={styles.boardRow}>{children}</div>
           )}
-          {word !== undefined && (
+          {words !== undefined && (
             <p className={styles.wordLine}>
-              <span className={styles.wordLead}>{copy.wordLead}</span>
-              <span className={styles.word}>{word.canonical}</span>
+              <span className={styles.wordLead}>
+                {words.length === 1 ? copy.wordLead : copy.wordsLead}
+              </span>
+              {words.map((word) => (
+                <span key={word} className={styles.word}>
+                  {word}
+                </span>
+              ))}
             </p>
           )}
           {picture !== undefined && (

@@ -2,7 +2,7 @@ import { CONFUSABLE_TONE_PAIRS } from "@miolos/games/colored-nonogram";
 import { PICTURE_TONES } from "@miolos/games/nonogram-colors";
 import { describe, expect, it } from "vitest";
 
-import { contrast, deltaE76, type Vision } from "./contrast";
+import { contrast, deltaE76, mixHex, type Vision } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 
 const THEMES = ["light", "dark"] as const;
@@ -21,9 +21,11 @@ function hexIn(theme: (typeof THEMES)[number]) {
 const COLORED = stylesheet("src/colored-nonogram/colored-board.module.css");
 const MONO = stylesheet("src/nonogram/nonogram-board.module.css");
 
-describe("every tone carries its label, caret, ring and chip edge in both themes (T-WEB-S875)", () => {
+const HAIRLINE = "1px solid color-mix(in srgb, var(--ink) 50%, transparent)";
+
+describe("every tone carries its label, caret, ring and chip edge, and meets the paper on a hairline, in both themes (T-WEB-S875)", () => {
   for (const theme of THEMES) {
-    it(`${theme}: each --ink-on-tone clears 4.5:1 on its tone, and the --ink hairline clears 3:1 on the card`, () => {
+    it(`${theme}: each --ink-on-tone clears 4.5:1 on its tone, and the --ink chip edge clears 3:1 on the card`, () => {
       const hex = hexIn(theme);
       for (const tone of PICTURE_TONES) {
         expect(
@@ -35,19 +37,38 @@ describe("every tone carries its label, caret, ring and chip edge in both themes
         contrast(hex("--ink"), hex("--paper-card")),
       ).toBeGreaterThanOrEqual(3);
     });
+
+    it(`${theme}: the ruled hairline edges every tone against the paper at 3:1 or more, and stays under 3:1 inside a run`, () => {
+      const hex = hexIn(theme);
+      const desk = hex("--paper-desk");
+      const ink = hex("--ink");
+      expect(contrast(mixHex(ink, desk, 0.5), desk)).toBeGreaterThanOrEqual(3);
+      for (const tone of PICTURE_TONES) {
+        const fill = hex(`--tone-${tone}`);
+        const onTone = mixHex(ink, fill, 0.5);
+        expect(
+          contrast(onTone, desk),
+          `${theme} ${tone}`,
+        ).toBeGreaterThanOrEqual(3);
+        expect(contrast(onTone, fill), `${theme} ${tone}`).toBeLessThan(3);
+      }
+    });
   }
 
-  it("draws the chip numeral, the hint ring and the caret on a tone in that tone's ink", () => {
+  it("leaves a painted cell on the ruled field's hairline, and draws the chip numeral, the hint ring and the caret in the tone's ink", () => {
+    expect(decl(bodyOf(MONO, ".cell"), "border-top")).toBe(HAIRLINE);
+    expect(decl(bodyOf(MONO, ".cell"), "border-left")).toBe(HAIRLINE);
+    expect(decl(bodyOf(COLORED, ".cellTone"), "box-shadow")).toBeUndefined();
+    expect(decl(bodyOf(COLORED, ".cellTone"), "--wrong-edge")).toBe(
+      "var(--cell-ink)",
+    );
+    expect(decl(bodyOf(COLORED, ".cellToneHinted"), "box-shadow")).toBe(
+      "inset 0 0 0 2px var(--cell-ink)",
+    );
     expect(decl(bodyOf(COLORED, ".chip"), "color")).toBe("var(--cell-ink)");
     expect(decl(bodyOf(COLORED, ".chip"), "box-shadow")).toBe(
       "inset 0 0 0 1px var(--ink)",
     );
-    expect(
-      decl(bodyOf(COLORED, ".cellTone"), "box-shadow")?.replace(/\s+/g, " "),
-    ).toBe(
-      "inset 0 0 0 1px var(--ink), inset 0 0 0 var(--tone-ring, 1px) var(--cell-ink)",
-    );
-    expect(decl(bodyOf(COLORED, ".cellToneHinted"), "--tone-ring")).toBe("3px");
     expect(decl(bodyOf(MONO, ".cell:focus-visible"), "outline")).toBe(
       "2px solid var(--cell-ink, var(--ink))",
     );

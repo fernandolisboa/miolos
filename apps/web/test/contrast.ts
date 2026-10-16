@@ -60,3 +60,15 @@ export function deltaE76(
   const [lb, ab, bb] = cieLab(linearRgb(b, vision));
   return Math.hypot(la - lb, aa - ab, ba - bb);
 }
+
+export function mixHex(top: string, bottom: string, alpha: number): string {
+  const mixed = [1, 3, 5].map((index) =>
+    Math.round(
+      parseInt(top.slice(index, index + 2), 16) * alpha +
+        parseInt(bottom.slice(index, index + 2), 16) * (1 - alpha),
+    )
+      .toString(16)
+      .padStart(2, "0"),
+  );
+  return `#${mixed.join("")}`;
+}

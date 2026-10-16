@@ -1,4 +1,3 @@
-import type { NonogramSize } from "@miolos/core";
 import type { ColoredNonogramClues } from "@miolos/games/colored-nonogram";
 
 import { painting, pictureSettled, pictureSnapshot } from "../nonogram/paint";
@@ -21,7 +20,6 @@ export interface ColoredNonogramState extends BinaryGridState<
   ColoredHintReason,
   number
 > {
-  readonly size: NonogramSize;
   readonly clues: ColoredNonogramClues;
   readonly brush: NonogramBrush;
   readonly tone: number;
@@ -36,17 +34,16 @@ export type ColoredNonogramAction =
 
 export interface ColoredNonogramBoard {
   readonly date: string;
-  readonly size: NonogramSize;
   readonly clues: ColoredNonogramClues;
   readonly solution: readonly number[];
 }
 
 export function initColoredNonogramState({
   date,
-  size,
   clues,
   solution,
 }: ColoredNonogramBoard): ColoredNonogramState {
+  const { size } = clues;
   return {
     date,
     size,

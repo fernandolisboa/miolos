@@ -1,6 +1,9 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { createSeededRandom } from "../../src/random";
+import { CLASSIC_LAYOUT, geometryOf } from "../../src/sudoku/board";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
 import {
   SUDOKU_TIER_CRITERIA,
   countSudokuSolutions,
@@ -8,7 +11,13 @@ import {
   getSudokuConflicts,
   isSudokuSolved,
   solveSudoku,
+  type SudokuGrid,
 } from "../../src/sudoku/index";
+import {
+  countSolutionsInternal,
+  fillGrid,
+  fillVariant,
+} from "../../src/sudoku/solve";
 import {
   EMPTY_GRID,
   FULL_GRID,
@@ -16,6 +25,7 @@ import {
   TWO_SOLUTION_GRID,
   UNSOLVABLE_LEGAL_GRID,
 } from "./fixtures";
+import { PINNED_VARIANTS } from "./variant-fixtures";
 
 const FC_SEED = 220_022;
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
@@ -101,5 +111,66 @@ describe("countSudokuSolutions / solveSudoku", () => {
       }),
       { seed: FC_SEED, numRuns: 25 },
     );
+  });
+});
+
+describe("the solver under a variant layout (ADR-0130)", () => {
+  const diagonalRepeats = (grid: SudokuGrid): readonly boolean[] =>
+    DIAGONAL_LAYOUT.extraUnits.map(
+      (unit) => new Set(unit.map((i) => grid[i])).size < 9,
+    );
+  const irregular = geometryOf({
+    regions: PINNED_VARIANTS.irregular.regions,
+    extraUnits: [],
+  });
+  const classicFill = (repeats: readonly boolean[]): number[] => {
+    for (let seed = 0; ; seed += 1) {
+      const grid = fillGrid(createSeededRandom(seed));
+      if (diagonalRepeats(grid).join() === repeats.join()) {
+        return grid;
+      }
+    }
+  };
+
+  it.each([
+    ["main", [true, false]],
+    ["anti", [false, true]],
+  ] as const)(
+    "counts a classic grid that repeats on the %s diagonal 1 classic, 0 diagonal",
+    (_, repeats) => {
+      const grid = classicFill(repeats);
+      expect(countSolutionsInternal(grid, 2)).toBe(1);
+      expect(countSolutionsInternal(grid, 2, geometryOf(DIAGONAL_LAYOUT))).toBe(
+        0,
+      );
+    },
+  );
+
+  it("reads irregular regions, not boxes", () => {
+    const repeatsIn = (grid: SudokuGrid, regions: readonly number[]) =>
+      Array.from({ length: 9 }, (_, id) =>
+        grid.filter((_, i) => regions[i] === id),
+      ).some((digits) => new Set(digits).size < 9);
+    expect(repeatsIn(FULL_GRID, PINNED_VARIANTS.irregular.regions)).toBe(true);
+    expect(countSolutionsInternal(FULL_GRID, 2)).toBe(1);
+    expect(countSolutionsInternal(FULL_GRID, 2, irregular)).toBe(0);
+
+    const { solution } = PINNED_VARIANTS.irregular;
+    expect(repeatsIn(solution, CLASSIC_LAYOUT.regions)).toBe(true);
+    expect(countSolutionsInternal(solution, 2)).toBe(0);
+    expect(countSolutionsInternal(solution, 2, irregular)).toBe(1);
+  });
+
+  it("finds exactly one solution for a pinned irregular puzzle", () => {
+    const { givens } = PINNED_VARIANTS.irregular;
+    expect(countSolutionsInternal(givens, 3, irregular)).toBe(1);
+  });
+
+  it("gives up on a fill past its node budget", () => {
+    expect(fillVariant(irregular, createSeededRandom(5), 10)).toBeNull();
+    const geometry = geometryOf(DIAGONAL_LAYOUT);
+    const filled = fillVariant(geometry, createSeededRandom(5), 100_000);
+    expect(filled).not.toBeNull();
+    expect(countSolutionsInternal(filled!, 2, geometry)).toBe(1);
   });
 });

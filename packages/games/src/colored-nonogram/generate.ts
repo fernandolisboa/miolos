@@ -20,5 +20,6 @@ export function generateColoredNonogram(
     size,
     clues,
     solution: toneGrid(clues.palette, tones),
+    tones,
   };
 }
