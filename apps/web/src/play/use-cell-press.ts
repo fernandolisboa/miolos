@@ -22,6 +22,7 @@ function cellPressOf(event: {
 
 interface ActivePress {
   readonly pointerId: number;
+  readonly pointerType: string;
   readonly kind: CellPress;
   readonly x: number;
   readonly y: number;
@@ -71,7 +72,7 @@ export function useCellPress(input: CellPressInput): CellPressHandlers {
     const index = cellIndexAt(event.clientX, event.clientY);
     if (
       active.current?.pointerId === event.pointerId ||
-      (active.current !== null && event.isPrimary)
+      (event.isPrimary && active.current?.pointerType === event.pointerType)
     ) {
       settle();
     }
@@ -84,6 +85,7 @@ export function useCellPress(input: CellPressInput): CellPressHandlers {
     capturePointer(event);
     const press: ActivePress = {
       pointerId: event.pointerId,
+      pointerType: event.pointerType,
       kind,
       x: event.clientX,
       y: event.clientY,

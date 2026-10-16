@@ -28,6 +28,7 @@ Fernando asked for the classic Windows Minesweeper, "same features, same way to 
 ## Consequences
 
 - Ctrl/⌘+Z does nothing on this screen.
+- `EndingStage` re-arms its glow when a new game starts, so every free-play game glows on each win in a visit, not only the first (ADR-0120 decision 1).
 - The shared chrome costs the daily `/nonogram` route its last headroom: its budget rises 49 → 50 KB (49.5 KB measured), under Fernando's standing approval of budget raises (2026-10-16).
 - Fast times are not comparable between devices or kept anywhere; a server would have to replay moves (ADR-0133).
 - A game that outgrows its well sets `--board-floor-side` and styles its own well; the other games set nothing and render as before.

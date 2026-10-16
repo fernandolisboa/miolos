@@ -245,6 +245,18 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     expect(spies.activate.mock.calls).toStrictEqual([[4]]);
   });
 
+  it("keeps a pen press when a palm touches down beside it", () => {
+    const { spies, board } = mount();
+    const pen = { pointerId: 5, pointerType: "pen", isPrimary: true };
+    const palm = { pointerId: 6, pointerType: "touch", isPrimary: true };
+
+    fireEvent.pointerDown(board, { ...pen, clientX: 1, button: 0 });
+    fireEvent.pointerDown(board, { ...palm, clientX: 4, button: 0 });
+    fireEvent.pointerUp(board, { ...pen, clientX: 1, button: 0 });
+
+    expect(spies.activate.mock.calls).toStrictEqual([[1]]);
+  });
+
   it("gives up when the pointer capture is lost before the release", () => {
     const { spies, board } = mount();
 
