@@ -1,8 +1,4 @@
-import {
-  MINESWEEPER_LEVELS,
-  type MinesweeperLevel,
-  type MinesweeperState,
-} from "@miolos/games/minesweeper";
+import type { MinesweeperState } from "@miolos/games/minesweeper";
 import {
   memo,
   useCallback,
@@ -24,12 +20,6 @@ import { cellView, type CellView } from "./view";
 const copy = minesweeperMessages;
 
 export type TapMode = "open" | "flag";
-
-const LEVEL_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
-  beginner: styles.beginner,
-  intermediate: styles.intermediate,
-  expert: styles.expert,
-};
 
 function labelOf(view: CellView): string {
   if (typeof view === "number") {
@@ -144,18 +134,20 @@ function movedIndex(
 
 export const Minefield = memo(function Minefield({
   game,
+  sizeClass,
   tapMode,
   onActivate,
   onMark,
   onChord,
 }: {
   readonly game: MinesweeperState;
+  readonly sizeClass: string | undefined;
   readonly tapMode: TapMode;
   readonly onActivate: (index: number) => void;
   readonly onMark: (index: number) => void;
   readonly onChord: (index: number) => void;
 }) {
-  const { rows, columns } = MINESWEEPER_LEVELS[game.level];
+  const { rows, columns } = game.size;
   const fieldRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(0);
   const press = useCellPress({
@@ -207,7 +199,7 @@ export const Minefield = memo(function Minefield({
       ref={fieldRef}
       role="group"
       aria-label={copy.boardAria(rows, columns)}
-      className={`${styles.field} ${LEVEL_CLASS[game.level] ?? ""}`}
+      className={`${styles.field} ${sizeClass ?? ""}`}
       onKeyDown={onKeyDown}
       {...press}
     >
@@ -228,14 +220,16 @@ export const Minefield = memo(function Minefield({
 
 export function FinishedMinefield({
   game,
+  sizeClass,
 }: {
   readonly game: MinesweeperState;
+  readonly sizeClass: string | undefined;
 }) {
   return (
     <div
       role="img"
       aria-label={copy.finishedAria(game.status === "won")}
-      className={`${styles.field} ${styles.finished} ${LEVEL_CLASS[game.level] ?? ""}`}
+      className={`${styles.field} ${styles.finished} ${sizeClass ?? ""}`}
     >
       {game.open.map((_open, index) => (
         <span key={index} className={classOf(cellView(game, index))}>

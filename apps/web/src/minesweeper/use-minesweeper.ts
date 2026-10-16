@@ -34,7 +34,7 @@ export function useMinesweeper(deps?: MinesweeperDeps): Minesweeper {
   const [play, dispatch] = useReducer(minesweeperReducer, null, () =>
     initMinesweeper("beginner", draw(), Date.now()),
   );
-  const { level } = play.game;
+  const { level } = play;
   const running = play.timer.runningSince !== null;
 
   useEffect(() => {

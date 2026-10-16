@@ -1,4 +1,5 @@
 import {
+  MINESWEEPER_LEVELS,
   layMines,
   newMinesweeperGame,
   openMinesweeperCell,
@@ -25,14 +26,19 @@ afterEach(() => {
 });
 
 function played(level: MinesweeperLevel, first = 0): MinesweeperState {
-  return openMinesweeperCell(newMinesweeperGame(level, SEED), first);
+  return openMinesweeperCell(
+    newMinesweeperGame(MINESWEEPER_LEVELS[level], SEED),
+    first,
+  );
 }
 
 function lostAt(level: MinesweeperLevel, first: number): MinesweeperState {
   const start = played(level, first);
-  const mine = layMines({ seed: SEED, level, safe: first }).mines.findIndex(
-    Boolean,
-  );
+  const mine = layMines({
+    seed: SEED,
+    size: MINESWEEPER_LEVELS[level],
+    safe: [first],
+  }).mines.findIndex(Boolean);
   return openMinesweeperCell(start, mine);
 }
 
@@ -41,6 +47,7 @@ function mountField(game: MinesweeperState, tapMode: "open" | "flag" = "open") {
   const view = render(
     <Minefield
       game={game}
+      sizeClass={undefined}
       tapMode={tapMode}
       onActivate={spies.activate}
       onMark={spies.mark}
@@ -63,7 +70,7 @@ function cellAt(index: number): HTMLElement {
 
 describe("the minefield draws the engine's state, one button per cell (T-WEB-S885)", () => {
   it("lays out the level's cells under one labelled group with a single tab stop", () => {
-    mountField(newMinesweeperGame("intermediate", SEED));
+    mountField(newMinesweeperGame(MINESWEEPER_LEVELS.intermediate, SEED));
 
     expect(
       screen.getByRole("group", { name: copy.boardAria(16, 16) }),
@@ -171,7 +178,7 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
 
   it("opens with the mouse when the button is released, marks on the right button, chords on both", () => {
     const { container, spies } = mountField(
-      newMinesweeperGame("beginner", SEED),
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED),
     );
     const board = container.firstElementChild as HTMLElement;
 
@@ -219,7 +226,7 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
 
   it("lets Bandeira turn a tap into a mark, but never a keyboard open", () => {
     const { container, spies } = mountField(
-      newMinesweeperGame("beginner", SEED),
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED),
       "flag",
     );
     const board = container.firstElementChild as HTMLElement;
@@ -266,7 +273,9 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
   });
 
   it("does not open twice for one mouse click: the click that follows a pointer press is ignored", () => {
-    const { spies } = mountField(newMinesweeperGame("beginner", SEED));
+    const { spies } = mountField(
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED),
+    );
 
     fireEvent.click(cellAt(1), { detail: 1 });
 
@@ -274,7 +283,9 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
   });
 
   it("marks on F and leaves a browser shortcut alone", () => {
-    const { spies } = mountField(newMinesweeperGame("beginner", SEED));
+    const { spies } = mountField(
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED),
+    );
 
     cellAt(7).focus();
     fireEvent.keyDown(cellAt(7), { key: "f" });
@@ -284,7 +295,7 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
   });
 
   it("moves the one tab stop with the arrows, Home, End, PageUp and PageDown, inside the board", () => {
-    mountField(newMinesweeperGame("beginner", SEED));
+    mountField(newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED));
 
     cellAt(0).focus();
     fireEvent.keyDown(cellAt(0), { key: "ArrowLeft" });
@@ -304,7 +315,9 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
   });
 
   it("blocks the page menu over the board", () => {
-    const { container } = mountField(newMinesweeperGame("beginner", SEED));
+    const { container } = mountField(
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, SEED),
+    );
 
     expect(
       fireEvent.contextMenu(container.firstElementChild as HTMLElement),
@@ -350,7 +363,7 @@ describe("the keyboard moves on the grid as it is drawn, wide or turned (T-WEB-S
 
   it("wide, a 16 by 30 board ends a row at column 29 and a column at row 15", () => {
     turned(false);
-    mountField(newMinesweeperGame("expert", SEED));
+    mountField(newMinesweeperGame(MINESWEEPER_LEVELS.expert, SEED));
 
     cellAt(0).focus();
     fireEvent.keyDown(cellAt(0), { key: "End" });
@@ -361,7 +374,7 @@ describe("the keyboard moves on the grid as it is drawn, wide or turned (T-WEB-S
 
   it("turned, it is 30 rows of 16: End stops at the 16th column, PageDown at the 30th row", () => {
     turned(true);
-    mountField(newMinesweeperGame("expert", SEED));
+    mountField(newMinesweeperGame(MINESWEEPER_LEVELS.expert, SEED));
 
     cellAt(0).focus();
     fireEvent.keyDown(cellAt(0), { key: "End" });
@@ -373,7 +386,7 @@ describe("the keyboard moves on the grid as it is drawn, wide or turned (T-WEB-S
 
   it("turned, an arrow moves along the screen: down is the next board column, right the next board row", () => {
     turned(true);
-    mountField(newMinesweeperGame("expert", SEED));
+    mountField(newMinesweeperGame(MINESWEEPER_LEVELS.expert, SEED));
 
     cellAt(0).focus();
     fireEvent.keyDown(cellAt(0), { key: "ArrowDown" });

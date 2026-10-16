@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-07-31
 **Amended by:** [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md) — #126 narrows layer 3's *"never below 100"* clause in **where** it binds, never in **whether** it binds: the floor moves to a nightly run (`MIOLOS_FULL_PROPERTIES=1`) and the per-pull-request gate takes a reduced 25-run sample of the same pinned draw. **One clause, one annotation, nothing deleted.** Layers 1 and 2 — the construction-level proof and the independent fixture-validated instrument — are untouched, and so is the reservation of the word *"prove"*; the sampled layer is the only one that moved, and it moved sites rather than standards.
 **Amended by:** [ADR-0133](./0133-the-campo-minado-engine-follows-windows.md) — Campo Minado is exempt from "solvable" and "unique": a classic Windows field can force a guess. Determinism still binds.
+**Amended by:** [ADR-0137](./0137-the-daily-campo-minado-field-never-needs-a-guess.md) — the exemption narrows to free play: every daily Campo Minado field is solvable from its start without a guess, re-checked by `validateMinesweeperDaily` and by property.
 
 ## Context
 
