@@ -8,6 +8,7 @@
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decision 4 and [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) decision 2 (free play reads and writes the settings key, and nothing else); [ADR-0078](./0078-the-free-play-wall-is-proved-on-the-runtime-module-graph.md) decision 1 (`T-WEB-S374` allows `localStorage` in `settings.ts` only); [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 3 (its Sudoku premise holds only with *Número fixo* off); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (a second stateful child in the reset area, and the clock gated by a setting).
 **Amended by:** [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md) (#324) — decision 2: the Nonogram also has *Riscar números resolvidos* (on).
 **Amended by:** [ADR-0118](./0118-a-game-that-just-ended-presses-or-runs-the-stamps-ink.md) (#353) — decision 2 gains *Animação no fim do jogo* (on) for every game, Termo included, in the general group, which now shows in every dialog; Termo has no dialog, so its switch is in Ajustes only.
+**Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — decision 2 gains *Limpar rascunho ao preencher* (on); decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 2 gains Campo Minado's *Marcas (?)*, a switch, off by default.
 
 ## Context

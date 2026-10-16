@@ -37,6 +37,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           showErrors: false,
           lockDigit: false,
           highlightSelection: true,
+          cleanNotes: true,
         },
         binairo: { showErrors: false, firstValue: 1 },
         nonogram: {
@@ -66,7 +67,12 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         showClock: "no",
         extra: 1,
         games: {
-          sudoku: { showErrors: true, lockDigit: 3, highlightSelection: false },
+          sudoku: {
+            showErrors: true,
+            lockDigit: 3,
+            highlightSelection: false,
+            cleanNotes: "yes",
+          },
           binairo: "x",
           queens: { showErrors: true, nope: true, autoCross: "yes" },
           nonogram: { showErrors: true, strikePlacedRuns: "no" },
@@ -79,6 +85,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       showErrors: true,
       lockDigit: false,
       highlightSelection: false,
+      cleanNotes: true,
     });
     expect(settings.games.binairo).toEqual({
       showErrors: false,

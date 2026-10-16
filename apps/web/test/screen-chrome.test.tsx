@@ -128,6 +128,8 @@ const SUDOKU_PLAY = {
   selectCell: noop,
   moveSelection: noop,
   enterDigit: noop,
+  toggleNote: noop,
+  toggleNoting: noop,
   clearCell: noop,
   lock: {
     enabled: false,

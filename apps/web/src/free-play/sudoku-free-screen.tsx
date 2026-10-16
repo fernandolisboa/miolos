@@ -7,7 +7,6 @@ import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
 import { countFilled } from "../play/progress";
-import { useBoardEdits } from "../play/undo";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { mergedGrid, playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
@@ -16,10 +15,9 @@ import {
   canHint,
   initSudokuPlayState,
   sudokuPlayReducer,
-  type SudokuDigit,
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
-import { useDigitLock } from "../sudoku/use-digit-lock";
+import { useSudokuInput } from "../sudoku/use-sudoku-input";
 import { EndingStage } from "../play/ending-stage";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
@@ -99,32 +97,24 @@ function SudokuFreeBoard({
   const filled = countFilled(playableGivens(state.givens), state.entries);
   const hintReady = canHint(state, allowance);
 
-  const selectCell = useCallback((index: number) => {
-    dispatch({ type: "select", index });
-  }, []);
-
-  const moveSelection = useCallback((rows: number, columns: number) => {
-    dispatch({ type: "move-selection", rows, columns });
-  }, []);
-
-  const enterDigit = useCallback((digit: SudokuDigit) => {
-    dispatch({ type: "enter-digit", digit });
-  }, []);
-
-  const clearCell = useCallback(() => {
-    dispatch({ type: "clear-cell" });
-  }, []);
+  const {
+    cleanNotes,
+    selectCell,
+    moveSelection,
+    enterDigit,
+    toggleNote,
+    toggleNoting,
+    clearCell,
+    lock,
+    edits,
+  } = useSudokuInput(state, dispatch);
 
   const revealHint = useCallback(() => {
     if (!canHint(stateRef.current, allowance)) {
       return;
     }
-    dispatch({ type: "use-hint", solution: puzzle.solution });
-  }, [puzzle.solution, allowance]);
-
-  const lock = useDigitLock(state, dispatch);
-
-  const edits = useBoardEdits(state, dispatch);
+    dispatch({ type: "use-hint", solution: puzzle.solution, cleanNotes });
+  }, [puzzle.solution, allowance, cleanNotes]);
 
   const choice = levelChoice(level, onLevelChange);
   return (
@@ -165,6 +155,8 @@ function SudokuFreeBoard({
             <Keypad
               lock={lock}
               grid={mergedGrid(state.givens, state.entries)}
+              noting={state.noting}
+              onToggleNoting={toggleNoting}
             />
           }
         >
@@ -172,6 +164,7 @@ function SudokuFreeBoard({
             givens={state.givens}
             solution={puzzle.solution}
             entries={state.entries}
+            notes={state.notes}
             selected={state.selected}
             violating={state.violating}
             hintIndex={state.hint.lastIndex}
@@ -179,6 +172,8 @@ function SudokuFreeBoard({
             onSelect={selectCell}
             onMove={moveSelection}
             onDigit={enterDigit}
+            onNote={toggleNote}
+            onToggleNoting={toggleNoting}
             onClear={clearCell}
             onTapCell={lock.tapCell}
           />

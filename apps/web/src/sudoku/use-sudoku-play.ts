@@ -6,7 +6,7 @@ import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { useBoardEdits, type BoardEdits } from "../play/undo";
+import type { BoardEdits } from "../play/undo";
 import {
   mergedGrid,
   playableGivens,
@@ -20,7 +20,9 @@ import {
   type SudokuDigit,
   type SudokuPlayState,
 } from "./state";
-import { useDigitLock, type DigitLock } from "./use-digit-lock";
+import { hasNote } from "./notes";
+import type { DigitLock } from "./use-digit-lock";
+import { useSudokuInput } from "./use-sudoku-input";
 
 export interface SudokuPlay {
   readonly state: SudokuPlayState;
@@ -36,6 +38,8 @@ export interface SudokuPlay {
   readonly moveSelection: (rows: number, columns: number) => void;
 
   readonly enterDigit: (digit: SudokuDigit) => void;
+  readonly toggleNote: (digit: SudokuDigit) => void;
+  readonly toggleNoting: () => void;
   readonly clearCell: () => void;
   readonly lock: DigitLock;
   readonly revealHint: () => void;
@@ -58,7 +62,7 @@ export function useSudokuPlay(
     stateRef.current = state;
   });
 
-  const { givens, entries, timer } = state;
+  const { givens, entries, notes, timer } = state;
   const hintsUsed = state.hint.used;
   const elapsed = elapsedMs(timer, state.now);
 
@@ -75,34 +79,26 @@ export function useSudokuPlay(
     buildRecord,
     remotelyClaimed,
 
-    persistDeps: [givens, entries, hintsUsed],
+    persistDeps: [givens, entries, notes, hintsUsed],
   });
 
-  const selectCell = useCallback((index: number) => {
-    dispatch({ type: "select", index });
-  }, []);
-
-  const moveSelection = useCallback((rows: number, columns: number) => {
-    dispatch({ type: "move-selection", rows, columns });
-  }, []);
-
-  const enterDigit = useCallback((digit: SudokuDigit) => {
-    dispatch({ type: "enter-digit", digit });
-  }, []);
-
-  const clearCell = useCallback(() => {
-    dispatch({ type: "clear-cell" });
-  }, []);
+  const {
+    cleanNotes,
+    selectCell,
+    moveSelection,
+    enterDigit,
+    toggleNote,
+    toggleNoting,
+    clearCell,
+    lock,
+    edits,
+  } = useSudokuInput(state, dispatch);
 
   const revealHint = useCallback(() => {
     if (solution !== null && canHint(stateRef.current, allowance)) {
-      dispatch({ type: "use-hint", solution });
+      dispatch({ type: "use-hint", solution, cleanNotes });
     }
-  }, [solution, allowance]);
-
-  const lock = useDigitLock(state, dispatch);
-
-  const edits = useBoardEdits(state, dispatch);
+  }, [solution, allowance, cleanNotes]);
 
   return {
     state,
@@ -113,6 +109,8 @@ export function useSudokuPlay(
     selectCell,
     moveSelection,
     enterDigit,
+    toggleNote,
+    toggleNoting,
     clearCell,
     lock,
     revealHint,
@@ -132,6 +130,7 @@ function buildRecord(
     ...recordHeader(state, now, closed, state.hint.used),
     game: "sudoku",
     entries: [...state.entries],
+    notes: !closed && hasNote(state.notes) ? [...state.notes] : undefined,
     grid: solved === null ? undefined : [...solved],
   };
 }
