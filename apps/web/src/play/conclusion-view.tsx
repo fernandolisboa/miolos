@@ -60,7 +60,7 @@ export function ConclusionView({
   date,
   copy,
   result,
-  picture,
+  figure,
   outcome,
   answer,
 }: {
@@ -68,7 +68,7 @@ export function ConclusionView({
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
-  readonly picture?: ConclusionPicture;
+  readonly figure?: ReactNode;
   readonly outcome?: ConclusionOutcome;
   readonly answer?: ConclusionAnswer;
 }) {
@@ -192,18 +192,8 @@ export function ConclusionView({
             <p className={styles.dayWord}>{answer.canonical}</p>
           </div>
         )}
-        {picture !== undefined && (
-          <div className={styles.pictureRow}>
-            <PictureArt picture={picture} className={styles.picture} />
-            {picture.name !== undefined && (
-              <div className={styles.pictureCaption}>
-                {picture.lead !== undefined && (
-                  <p className={styles.pictureLead}>{picture.lead}</p>
-                )}
-                <p className={styles.pictureName}>{picture.name}</p>
-              </div>
-            )}
-          </div>
+        {figure !== undefined && (
+          <div className={styles.pictureRow}>{figure}</div>
         )}
 
         {syncOutcome === "recorded" && (
@@ -227,7 +217,12 @@ export function ConclusionView({
         entryOf={dayEntry}
         next={next}
         share={
-          <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
+          <ShareButton
+            game={game}
+            date={date}
+            stored={stored}
+            stamp={lost ? undefined : stamp}
+          />
         }
         prompt={<PushPromptCard />}
       />
@@ -272,6 +267,8 @@ export function RemoteConclusionView({
               played={played}
               guesses={remoteTermoGuesses(stats, date)}
             />
+          ) : played && copy.played !== undefined ? (
+            <OutcomeStamp outcome={copy.played} />
           ) : (
             <RemoteShippedStamp title={copy.title} claim={claim} />
           )}
@@ -304,6 +301,26 @@ export function RemoteConclusionView({
         next={next}
       />
     </main>
+  );
+}
+
+export function PictureFigure({
+  picture,
+}: {
+  readonly picture: ConclusionPicture;
+}) {
+  return (
+    <>
+      <PictureArt picture={picture} className={styles.picture} />
+      {picture.name !== undefined && (
+        <div className={styles.pictureCaption}>
+          {picture.lead !== undefined && (
+            <p className={styles.pictureLead}>{picture.lead}</p>
+          )}
+          <p className={styles.pictureName}>{picture.name}</p>
+        </div>
+      )}
+    </>
   );
 }
 

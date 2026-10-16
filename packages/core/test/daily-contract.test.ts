@@ -10,6 +10,11 @@ import {
   type Weekday as NonogramWeekday,
 } from "@miolos/games/nonogram";
 import {
+  generateMinesweeperDaily,
+  MINESWEEPER_DAILY_SIZE,
+  type MinesweeperDaily,
+} from "@miolos/games/minesweeper";
+import {
   generateQueens,
   isValidQueensSolution,
   type QueensPuzzle,
@@ -27,14 +32,17 @@ import {
   binairoDailyContentSchema,
   CROSSWORD_SIZES,
   crosswordDailyContentSchema,
+  DAILY_MINESWEEPER_SIZE,
   DailyProjectionUnsupportedError,
   dailyBinairoResponseSchema,
   dailyCrosswordResponseSchema,
+  dailyMinesweeperResponseSchema,
   dailyNonogramResponseSchema,
   dailyPuzzleResponseSchema,
   dailyQueensResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   projectCrossword,
   queensDailyContentSchema,
@@ -43,6 +51,7 @@ import {
   termoDailyContentSchema,
   type CrosswordDailyContent,
   type CrosswordSize,
+  type MinesweeperDailyContent,
   type QueensDailyContent,
 } from "../src/index";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "../src/testing";
@@ -1060,6 +1069,112 @@ describe("stripDailyContent (queens)", () => {
       { ...valid, solution: [] },
     ]) {
       expect(dailyQueensResponseSchema.safeParse(body).success).toBe(false);
+    }
+  });
+});
+
+const minesweeperDailies: readonly MinesweeperDaily[] = WEEKDAYS.map(
+  (weekday) =>
+    generateMinesweeperDaily({ seed: 20_261_016 + weekday, weekday }),
+);
+
+function mutableMinesweeper(): MinesweeperDailyContent {
+  return minesweeperDailyContentSchema.parse(
+    JSON.parse(JSON.stringify(minesweeperDailies[0])),
+  );
+}
+
+describe("minesweeperDailyContentSchema", () => {
+  it("T-CORE-S200: core's daily size is the engine's, and real engine output of every weekday parses and round-trips with exactly the engine's keys", () => {
+    expect(DAILY_MINESWEEPER_SIZE).toEqual(MINESWEEPER_DAILY_SIZE);
+    for (const puzzle of minesweeperDailies) {
+      const parsed: Omit<MinesweeperDaily, "weekday"> =
+        minesweeperDailyContentSchema.parse(puzzle);
+      expect(parsed).toEqual(puzzle);
+      expect(Object.keys(minesweeperDailyContentSchema.shape).sort()).toEqual(
+        Object.keys(puzzle).sort(),
+      );
+    }
+  });
+
+  it("T-CORE-S200: strict and sized — an extra key, a missing key, a wrong size, a non-binary cell or an out-of-range start fails", () => {
+    const withoutStart: Partial<MinesweeperDailyContent> = mutableMinesweeper();
+    delete withoutStart.start;
+    const shortMines = mutableMinesweeper();
+    shortMines.mines.pop();
+
+    for (const drifted of [
+      { ...mutableMinesweeper(), extra: true },
+      withoutStart,
+      { ...mutableMinesweeper(), rows: 9 },
+      { ...mutableMinesweeper(), columns: 16 },
+      shortMines,
+      {
+        ...mutableMinesweeper(),
+        mines: mutableMinesweeper().mines.map(() => 2),
+      },
+      { ...mutableMinesweeper(), start: 160 },
+      { ...mutableMinesweeper(), start: -1 },
+      { ...mutableMinesweeper(), weekday: 8 },
+    ]) {
+      expect(minesweeperDailyContentSchema.safeParse(drifted).success).toBe(
+        false,
+      );
+    }
+  });
+});
+
+describe("stripDailyContent (minesweeper)", () => {
+  it("T-CORE-S198: projects exactly game, date, rows, columns, mines and start, by allowlist, over real engine output of every weekday", () => {
+    for (const puzzle of minesweeperDailies) {
+      const projected = stripDailyContent("minesweeper", "2026-10-16", puzzle);
+      expect(dailyPuzzleResponseSchema.parse(projected)).toEqual(projected);
+      expect(dailyMinesweeperResponseSchema.parse(projected)).toEqual({
+        game: "minesweeper",
+        date: "2026-10-16",
+        rows: puzzle.rows,
+        columns: puzzle.columns,
+        mines: puzzle.mines,
+        start: puzzle.start,
+      });
+
+      const keys = collectKeys(projected);
+      for (const forbidden of FORBIDDEN_DAILY_KEYS) {
+        expect(keys.has(forbidden), forbidden).toBe(false);
+      }
+      expect(keys.has("seed")).toBe(false);
+      expect(keys.has("weekday")).toBe(false);
+    }
+  });
+
+  it("T-CORE-S198: the projection holds rows x columns cells of 0 or 1, and a start in range whose 3x3 holds no mine", () => {
+    const valid = dailyMinesweeperResponseSchema.parse(
+      stripDailyContent("minesweeper", "2026-10-16", minesweeperDailies[0]),
+    );
+    const mined = (cell: number) =>
+      valid.mines.map((mine, index) => (index === cell ? 1 : mine));
+    const below = valid.start + valid.columns;
+    const besideMines =
+      below < valid.mines.length
+        ? mined(below)
+        : mined(valid.start - valid.columns);
+    for (const body of [
+      { ...valid, mines: valid.mines.slice(1) },
+      { ...valid, mines: [...valid.mines, 0] },
+      { ...valid, mines: valid.mines.map(() => 2) },
+      { ...valid, mines: mined(valid.start) },
+      { ...valid, mines: besideMines },
+      { ...valid, start: 160 },
+      { ...valid, start: 1.5 },
+      { ...valid, rows: 9 },
+      { ...valid, columns: 9 },
+      { ...valid, seed: 1 },
+      { ...valid, weekday: 5 },
+    ]) {
+      expect(
+        dailyMinesweeperResponseSchema.safeParse(body).success,
+        JSON.stringify(Object.keys(body)),
+      ).toBe(false);
     }
   });
 });

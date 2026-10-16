@@ -10,6 +10,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
+  type MinesweeperPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type QueensPlayRecord,
@@ -120,6 +121,24 @@ function crosswordRecord(date: string, elapsedMs: number): CrosswordPlayRecord {
   };
 }
 
+function minesweeperRecord(
+  date: string,
+  elapsedMs: number,
+): MinesweeperPlayRecord {
+  return {
+    v: 1,
+    game: "minesweeper",
+    date,
+    entries: Array.from({ length: 160 }, () => 1),
+    hit: null,
+    elapsedMs,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+  };
+}
+
 const BUILDERS: Record<Game, (date: string, elapsedMs: number) => PlayRecord> =
   {
     binairo: binairoRecord,
@@ -128,6 +147,7 @@ const BUILDERS: Record<Game, (date: string, elapsedMs: number) => PlayRecord> =
     termo: termoRecord,
     crossword: crosswordRecord,
     queens: queensRecord,
+    minesweeper: minesweeperRecord,
   };
 
 function elapsedFor(game: Game, date: string): number {
@@ -329,6 +349,7 @@ describe("the snapshot cache is stable at any N (T-WEB-S214)", () => {
     expect(callSiteFiles()).toEqual([
       "app/arquivo/day-card.tsx",
       "src/archive/late-result.tsx",
+      "src/minesweeper/minesweeper-conclusion.tsx",
       "src/nonogram/nonogram-conclusion.tsx",
       "src/play/conclusion-view.tsx",
       "src/termo/termo-conclusion.tsx",

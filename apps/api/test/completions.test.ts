@@ -17,6 +17,7 @@ import { createTestDb } from "@miolos/db/testing";
 import { completions, hasCreditedPastDateToday } from "@miolos/db/user";
 import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
+import { generateMinesweeperDaily } from "@miolos/games/minesweeper";
 import {
   generateCrossword,
   type CrosswordPuzzle,
@@ -315,6 +316,27 @@ function queensCompletionBody(date: string, grid: readonly (0 | 1)[]): string {
     date,
     grid: [...grid],
     elapsedMs: 150_000,
+    hintsUsed: 0,
+  });
+}
+
+async function seedMinesweeperDaily(date: string): Promise<readonly (0 | 1)[]> {
+  const puzzle = generateMinesweeperDaily({ seed: 5, weekday: 7 });
+  await insertDailyPuzzle(ctx.db, {
+    game: "minesweeper",
+    date,
+    seed: puzzle.seed,
+    content: puzzle,
+  });
+  return puzzle.mines;
+}
+
+function minesweeperCompletionBody(date: string, hit: number | null): string {
+  return JSON.stringify({
+    game: "minesweeper",
+    date,
+    hit,
+    elapsedMs: 95_000,
     hintsUsed: 0,
   });
 }
@@ -1581,6 +1603,99 @@ describe("POST /completions — queens", () => {
     );
     expect(ragged.status).toBe(400);
     expect(await errorOf(ragged)).toEqual({ error: "invalid-body" });
+    expect(await completionRows()).toHaveLength(0);
+  }, 30_000);
+});
+
+describe("POST /completions — minesweeper (ADR-0138)", () => {
+  it("T-API-S339: hit null wins ⇒ 200, recorded, on time, contract-parseable", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedMinesweeperDaily(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      completionRequest({
+        token,
+        body: minesweeperCompletionBody(today, null),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(completionResponseSchema.parse(await response.json())).toEqual({
+      game: "minesweeper",
+      date: today,
+      outcome: "won",
+      onTime: true,
+      recorded: true,
+      elapsedMs: 95_000,
+      hintsUsed: 0,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S339: a hit on a stored mine is a loss, written once — a later won replay returns the stored loss, unrecorded", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const mines = await seedMinesweeperDaily(today);
+    const { token } = await createSession();
+
+    const lost = await POST(
+      completionRequest({
+        token,
+        body: minesweeperCompletionBody(today, mines.indexOf(1)),
+      }),
+    );
+    expect(lost.status).toBe(200);
+    expect(completionResponseSchema.parse(await lost.json())).toMatchObject({
+      game: "minesweeper",
+      outcome: "lost",
+      onTime: true,
+      recorded: true,
+    });
+
+    const replay = await POST(
+      completionRequest({
+        token,
+        body: minesweeperCompletionBody(today, null),
+      }),
+    );
+    expect(replay.status).toBe(200);
+    expect(completionResponseSchema.parse(await replay.json())).toMatchObject({
+      outcome: "lost",
+      recorded: false,
+    });
+    expect(await completionRows()).toHaveLength(1);
+  }, 30_000);
+
+  it("T-API-S339: a hit on a safe cell ⇒ 422 hit-mismatch; a grid body or a hint ⇒ 400; nothing recorded", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    const mines = await seedMinesweeperDaily(today);
+    const { token } = await createSession();
+
+    const safe = await POST(
+      completionRequest({
+        token,
+        body: minesweeperCompletionBody(today, mines.indexOf(0)),
+      }),
+    );
+    expect(safe.status).toBe(422);
+    expect(await errorOf(safe)).toEqual({ error: "hit-mismatch" });
+
+    for (const body of [
+      { grid: [...mines] },
+      { hintsUsed: 1 },
+      { hit: mines.length },
+    ]) {
+      const response = await POST(
+        completionRequest({
+          token,
+          body: JSON.stringify({
+            ...JSON.parse(minesweeperCompletionBody(today, null)),
+            ...body,
+          }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    }
     expect(await completionRows()).toHaveLength(0);
   }, 30_000);
 });

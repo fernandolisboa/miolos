@@ -19,6 +19,7 @@ const validBody = {
     binairo: { status: "completed", elapsedMs: 407_000 },
     crossword: { status: "pending" },
     queens: { status: "pending" },
+    minesweeper: { status: "pending" },
   },
 };
 

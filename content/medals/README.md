@@ -35,17 +35,17 @@ union lacks, the candidate is rejected, never the union widened silently
 | Category (rule kind) | Quota | Threshold constraints |
 |---|---|---|
 | `totalWins`, all games (`game: null`) | 4–5 | counts strictly increasing, first = 1 (the first-win medal), last ≤ 1000 |
-| `totalWins`, per-game | 4–6 | every game appears in ≥ 1 medal; counts strictly increasing per game |
+| `totalWins`, per-game | 4–7 | every game appears in ≥ 1 medal; counts strictly increasing per game |
 | `streakReached` | 4–5 | days strictly increasing, 3 ≤ days ≤ 365 |
 | `perfectDaysReached` | 3–4 | counts strictly increasing, first = 1 |
 | `fullDaysReached` | 2–3 | counts strictly increasing, first = 1 (ADR-0129) |
-| `termoGuessWins` | 3–4 | `guesses ∈ {1, 2, 6}` only — win-in-1 and win-in-2 are skill feats, win-in-6 is survival; guess values 3, 4 and 5 are the middle of the distribution — ordinary outcomes the stats screen already reports, not feats — and are inexpressible in the type |
+| `termoGuessWins` | exactly 3 | `guesses ∈ {1, 2, 6}` only — win-in-1 and win-in-2 are skill feats, win-in-6 is survival; guess values 3, 4 and 5 are the middle of the distribution — ordinary outcomes the stats screen already reports, not feats — and are inexpressible in the type |
 | `eachGameWon` | exactly 1 | — |
 | `curated` | 1–2 | no rule; earned only via `medal_grants` rows (`founder` ships; the cheater medal stays unshipped — no cheat detection exists to trigger the judgment) |
 | **Total** | **20–30** | |
 
 **The quota arithmetic, shown:** sum of minima = 4 + 4 + 4 + 3 + 2 + 3 + 1 + 1
-= **22**; sum of maxima = 5 + 6 + 5 + 4 + 3 + 4 + 1 + 2 = **30**. Both sums sit
+= **22**; sum of maxima = 5 + 7 + 5 + 4 + 3 + 3 + 1 + 2 = **30**. Both sums sit
 inside AC 1's [20, 30], so no quota-satisfying catalog can violate the total.
 The total is nonetheless **independently binding**: T-CORE-S70 asserts
 `count ∈ [20, 30]` on its own line, because quotas bound the catalog, they
@@ -124,7 +124,7 @@ trigger the judgment; when it ships, its definition must precede its first
 grant, same reason); the bug-reporter medal. v1 ships 1–2 curated definitions
 from these classes.
 
-## The catalog (28 definitions, curated 2026-08-13; `crossword-30` added 2026-09-28, `queens-30` added 2026-10-11, the three `full-*` added 2026-10-15)
+## The catalog (29 definitions, curated 2026-08-13; `crossword-30` added 2026-09-28, `queens-30` added 2026-10-11, the three `full-*` added 2026-10-15, `minesweeper-30` added 2026-10-16)
 
 Catalog order is display order (no date exists on the wire to sort by —
 ADR-0052). Names and descriptions may be revised; ids are frozen the moment
@@ -142,33 +142,34 @@ they ship (an id is a wire value and a grant key).
 | 8 | `nonogram-30` | Trinta de Nonogram | Venceu o Nonogram diário 30 vezes. | totalWins, nonogram, 30 | Same. |
 | 9 | `termo-30` | Trinta de Termo | Venceu o Termo diário 30 vezes. | totalWins, termo, 30 | Same. |
 | 10 | `crossword-30` | Trinta cruzadas | Venceu a Cruzadinha diária 30 vezes. | totalWins, crossword, 30 | Same mark for the fifth game. The name says *cruzadas*, the handoff's own word for the game, because the name rule forbids an *-inha* ending. |
-| 11 | `queens-30` | Trinta de Rainhas | Venceu as Rainhas diárias 30 vezes. | totalWins, queens, 30 | Same mark for the sixth game, and the sixth per-game medal: the per-game quota is now full. *Rainha* is a word, not a diminutive, so the -inha rule does not touch it. |
-| 12 | `streak-3` | Três dias de tinta | Chegou a uma sequência de 3 dias. | streakReached, 3 | The habit's first foothold; the lower bound the quota table allows. |
-| 13 | `streak-7` | Sequência de sete | Chegou a uma sequência de 7 dias. | streakReached, 7 | The full week — the streak the reminder opt-in anchors on. |
-| 14 | `streak-30` | Um mês inteiro | Chegou a uma sequência de 30 dias. | streakReached, 30 | The month. |
-| 15 | `streak-100` | Centena corrida | Chegou a uma sequência de 100 dias. | streakReached, 100 | The round hundred, uninterrupted. |
-| 16 | `streak-365` | Um ano de caderno | Chegou a uma sequência de 365 dias. | streakReached, 365 | The year — the upper bound; nothing beyond it would be a feat, it would be a lifestyle audit. |
-| 17 | `perfect-1` | Tudo em dia | Concluiu um Dia Perfeito: todos os jogos daquele dia, no próprio dia. | perfectDaysReached, 1 | The product's own defined feat (CONTEXT.md: Dia Perfeito), first occurrence. Count-free, because the day's lineup is not always four games (ADR-0087). |
-| 18 | `perfect-5` | Mão firme | Concluiu 5 Dias Perfeitos. | perfectDaysReached, 5 | Repeatable mastery, not a fluke. |
-| 19 | `perfect-10` | Caderno caprichado | Concluiu 10 Dias Perfeitos. | perfectDaysReached, 10 | Exactly double 5. |
-| 20 | `perfect-30` | Trinta sem borrão | Concluiu 30 Dias Perfeitos. | perfectDaysReached, 30 | The deep mark; stationery register (a notebook with no blot). |
-| 21 | `termo-first-try` | De primeira | Acertou o Termo na primeira tentativa. | termoGuessWins, 1 guess, 1× | The luck-and-vocabulary lightning strike; once is the feat. |
-| 22 | `termo-in-two` | Dez na segunda | Acertou o Termo na segunda tentativa 10 vezes. | termoGuessWins, 2 guesses, 10× | Win-in-2 once is common; ten times is skill. |
-| 23 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
-| 24 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
-| 25 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
-| 26 | `full-1` | Página cheia | Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. "Ou todos" covers a lineup shorter than three. |
-| 27 | `full-10` | Caderno cheio | Concluiu 10 Dias Cheios. | fullDaysReached, 10 | Ten full days; ≥ 2× spacing from 1. A Dia Perfeito counts as a Dia Cheio. |
-| 28 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, appended last so no earlier medal's tilt moves (ADR-0122). |
+| 11 | `queens-30` | Trinta de Rainhas | Venceu as Rainhas diárias 30 vezes. | totalWins, queens, 30 | Same mark for the sixth game. *Rainha* is a word, not a diminutive, so the -inha rule does not touch it. |
+| 12 | `minesweeper-30` | Trinta de Campo Minado | Venceu o Campo Minado diário 30 vezes. | totalWins, minesweeper, 30 | Same mark for the seventh game (ADR-0138). The per-game quota rose to seven and the Termo-feat quota fell to three, so the maxima still sum to 30. A lost field earns nothing. |
+| 13 | `streak-3` | Três dias de tinta | Chegou a uma sequência de 3 dias. | streakReached, 3 | The habit's first foothold; the lower bound the quota table allows. |
+| 14 | `streak-7` | Sequência de sete | Chegou a uma sequência de 7 dias. | streakReached, 7 | The full week — the streak the reminder opt-in anchors on. |
+| 15 | `streak-30` | Um mês inteiro | Chegou a uma sequência de 30 dias. | streakReached, 30 | The month. |
+| 16 | `streak-100` | Centena corrida | Chegou a uma sequência de 100 dias. | streakReached, 100 | The round hundred, uninterrupted. |
+| 17 | `streak-365` | Um ano de caderno | Chegou a uma sequência de 365 dias. | streakReached, 365 | The year — the upper bound; nothing beyond it would be a feat, it would be a lifestyle audit. |
+| 18 | `perfect-1` | Tudo em dia | Concluiu um Dia Perfeito: todos os jogos daquele dia, no próprio dia. | perfectDaysReached, 1 | The product's own defined feat (CONTEXT.md: Dia Perfeito), first occurrence. Count-free, because the day's lineup is not always four games (ADR-0087). |
+| 19 | `perfect-5` | Mão firme | Concluiu 5 Dias Perfeitos. | perfectDaysReached, 5 | Repeatable mastery, not a fluke. |
+| 20 | `perfect-10` | Caderno caprichado | Concluiu 10 Dias Perfeitos. | perfectDaysReached, 10 | Exactly double 5. |
+| 21 | `perfect-30` | Trinta sem borrão | Concluiu 30 Dias Perfeitos. | perfectDaysReached, 30 | The deep mark; stationery register (a notebook with no blot). |
+| 22 | `termo-first-try` | De primeira | Acertou o Termo na primeira tentativa. | termoGuessWins, 1 guess, 1× | The luck-and-vocabulary lightning strike; once is the feat. |
+| 23 | `termo-in-two` | Dez na segunda | Acertou o Termo na segunda tentativa 10 vezes. | termoGuessWins, 2 guesses, 10× | Win-in-2 once is common; ten times is skill. |
+| 24 | `termo-last-guess` | Por um fio | Acertou o Termo na última tentativa. | termoGuessWins, 6 guesses, 1× | Survival — the last-guess save is a story, not a statistic. |
+| 25 | `all-games` | Circuito completo | Venceu Binairo, Sudoku, Nonogram e Termo ao menos uma vez. | eachGameWon | Breadth over the original four games, so the medal is never taken back when a game is added (ADR-0087). |
+| 26 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
+| 27 | `full-1` | Página cheia | Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. "Ou todos" covers a lineup shorter than three. |
+| 28 | `full-10` | Caderno cheio | Concluiu 10 Dias Cheios. | fullDaysReached, 10 | Ten full days; ≥ 2× spacing from 1. A Dia Perfeito counts as a Dia Cheio. |
+| 29 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, appended last so no earlier medal's tilt moves (ADR-0122). |
 
 **Quota check against the table:** all-games totalWins 5 ∈ [4, 5] (1, 10, 50,
 100, 500 — strictly increasing, first 1, last ≤ 1000, each ≥ 2× its
-predecessor); per-game totalWins 6 ∈ [4, 6] (all six games, one mark each);
+predecessor); per-game totalWins 7 ∈ [4, 7] (all seven games, one mark each);
 streakReached 5 ∈ [4, 5] (3, 7, 30, 100, 365 — in [3, 365], each ≥ 2×);
 perfectDaysReached 4 ∈ [3, 4] (1, 5, 10, 30 — first 1, each ≥ 2×);
 fullDaysReached 3 ∈ [2, 3] (1, 10, 50 — first 1, each ≥ 2×);
-termoGuessWins 3 ∈ [3, 4] (guesses 1, 2, 6 — one per guess value);
-eachGameWon 1; curated 1 ∈ [1, 2]. **Total 28 ∈ [20, 30].**
+termoGuessWins 3 ∈ [3, 3] (guesses 1, 2, 6 — one per guess value);
+eachGameWon 1; curated 1 ∈ [1, 2]. **Total 29 ∈ [20, 30].**
 
 ## Rejected candidates (the judgment record, ≥ 10 rows)
 

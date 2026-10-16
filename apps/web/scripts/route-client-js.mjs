@@ -33,6 +33,7 @@ const BUDGETED = [
   "/termo",
   "/cruzadinha",
   "/rainhas",
+  "/campo-minado",
   "/modo-livre",
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
@@ -53,6 +54,7 @@ const BUDGETED = [
   "/arquivo/[data]/termo",
   "/arquivo/[data]/cruzadinha",
   "/arquivo/[data]/rainhas",
+  "/arquivo/[data]/campo-minado",
 
   "/binairo/concluido",
   "/nonogram/concluido",
@@ -60,6 +62,7 @@ const BUDGETED = [
   "/termo/concluido",
   "/cruzadinha/concluido",
   "/rainhas/concluido",
+  "/campo-minado/concluido",
 ];
 
 const FREE_PLAY_PREFIX = "/modo-livre";

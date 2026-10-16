@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S198`    | `S197`         | never used            |
-| `T-DB`   | `S144`    | `S142`         | `T-DB-21`             |
-| `T-API`  | `S338`    | `S337`         | `T-API-16`            |
-| `T-WEB`  | `S920`    | `S915`         | `T-WEB-23`            |
-| `T-LINT` | `S73`     | `S72`          | `T-LINT-10`           |
+| `T-CORE` | `S203`    | `S202`         | never used            |
+| `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
+| `T-API`  | `S342`    | `S341`         | `T-API-16`            |
+| `T-WEB`  | `S931`    | `S929`         | `T-WEB-23`            |
+| `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#389 PR 2 (Campo Minado as the seventh daily, ADR-0138) spent **`T-CORE-S198…S202`**, **`T-DB-S144…S145`**, **`T-API-S338…S341`**, **`T-LINT-S73`** (`eslint-free-play-wall.test.ts`: the daily Campo Minado modules are walled off free play, statically and dynamically) and **`T-WEB-S920…S929`** with the sibling `S923a`. `S920` (`minesweeper-daily-state.test.ts`: the pre-opened board, the clock from hydration, closing on a win or a loss, restore), `S921` and `S922` (`minesweeper-daily-record.test.ts`: the record, the write probe and the `hit` body; `isPlayedRecord` in the archive card, the day state and the share text), `S923` and `S924` (`minesweeper-daily-screen.test.tsx`: no hint, undo or Recomeçar, a loss and a win end to end; the remote played stamp), `S923a` (`minesweeper-page.test.tsx`: the routes and the projection's keys), `S925` (`card-grid-layout.test.ts`, replacing `S459`: any card count, the last row centred), `S926` (`accent-contrast.test.ts`: the teal's ΔE76), `S927` (`day-games.test.ts`: routes, names, the OG hex), `S928` (`minesweeper-free-play.test.tsx`, replacing `S880`: both catalogues) and `S929` (`minesweeper-sizing.test.ts`: the daily size class). `S930` is a sibling thread's reservation, so next free is `S931`. Re-aimed in place: `S14`, `S65a`, `S109`, `S191`, `S195`, `S299`, `S354`, `S374`, `S486`, `S881` and `T-LINT-S7`.
 
 #368 (Sudoku notes, *Rascunho*, ADR-0127) spent **`T-WEB-S830…S839`**, plus the siblings `S832a`, `S833a` and `S836a`. `S830…S835` are reducer and schema tests in `sudoku-notes.test.ts` (writing notes, a value clearing notes, hint/Recomeçar/eraser, Rascunho against *Número fixo*, undo, the record). `S836…S839` and the siblings `S832a` (Recomeçar on a notes-only board) and `S833a` (notes against *Número fixo*, the highlight, *Mostrar erros* and the tally) are in `sudoku-notes-screen.test.tsx`; `S836a` (the completion body is exactly five fields) is in `play-sync.test.ts`. No id is burned. `T-WEB-S34`, `S30`, `S580`, `S593` and `S821` were re-aimed in place.
 

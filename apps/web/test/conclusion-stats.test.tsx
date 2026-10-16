@@ -115,6 +115,7 @@ function statsWith(
     nonogram: zero,
     crossword: zero,
     queens: zero,
+    minesweeper: zero,
     termo: { solved: 5, distribution: [0, 1, 0, 2, 1, 0, 1] },
     perfectDays: 0,
     todayTermoGuesses,
@@ -178,7 +179,7 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
     expect(await screen.findByText("9")).toBeInTheDocument();
     expect(screen.getByText(messages.stats.rows.best)).toBeInTheDocument();
     expect(
-      screen.getByText(messages.stats.rows.solved(messages.games.binairo.name)),
+      screen.getByText(messages.stats.rows.solved.binairo),
     ).toBeInTheDocument();
 
     const today = container.querySelector("[data-today]");

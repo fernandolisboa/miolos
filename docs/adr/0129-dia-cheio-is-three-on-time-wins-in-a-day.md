@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #370)
 **Depends on:** [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0048](./0048-the-streak-is-a-client-fetched-server-computed-value.md), [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md), [ADR-0122](./0122-earned-medals-are-drawn-as-medals-side-by-side.md)
 **Amends:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md) rules 2 and 3 (late completions and a lost Termo never feed Dia Cheio either). [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md) decision 3 (Dia Cheio counts join the sanctioned inputs), decision 7 (the quota table gains `fullDaysReached` 2–3 and three maxima drop by one, so they still sum to 30) and decision 10 (`/estatisticas` makes four reads, not three). [ADR-0087](./0087-dia-perfeito-counts-the-dailies-published-that-day.md) (a second tier measured against the lineup).
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — a lost Campo Minado never feeds Dia Cheio either. `minesweeper-30` sits after `queens-30`, so the `full-*` medals move one place and their tilts shift once.
 
 ## Context
 

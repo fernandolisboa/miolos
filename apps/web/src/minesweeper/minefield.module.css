@@ -31,7 +31,18 @@
   --columns: 30;
 }
 
+.pageDaily,
+.daily {
+  --columns: 10;
+}
+
 .pageBeginner {
+  --board-max: 420px;
+}
+
+.pageDaily {
+  --board-aspect: calc(10 / 16);
+  --board-min: calc(16 * var(--pitch) + var(--chrome));
   --board-max: 420px;
 }
 
@@ -238,6 +249,10 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
+}
+
+.conclusionField {
+  width: min(100%, 220px);
 }
 
 .finishedTime {

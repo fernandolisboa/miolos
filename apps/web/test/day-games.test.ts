@@ -17,7 +17,7 @@ describe("DAY_GAMES is the hub's one ordering, a permutation of @miolos/core's G
     expect([...DAY_GAMES].sort()).toEqual([...GAMES].sort());
   });
 
-  it("puts the Cruzadinha second, beside Termo, and Rainhas last", () => {
+  it("puts the Cruzadinha second, beside Termo, and Campo Minado last", () => {
     expect(DAY_GAMES).toEqual([
       "termo",
       "crossword",
@@ -25,6 +25,7 @@ describe("DAY_GAMES is the hub's one ordering, a permutation of @miolos/core's G
       "nonogram",
       "binairo",
       "queens",
+      "minesweeper",
     ]);
   });
 });
@@ -52,5 +53,26 @@ describe("Rainhas joins every list of games (T-WEB-S448)", () => {
     const light = colorTokens("light").get("--accent-queens");
     expect(ACCENT_SHADOW.queens.slice(0, 7)).toBe(light);
     expect(ACCENT_TAPE.queens.slice(0, 7)).toBe(light);
+  });
+});
+
+describe("Campo Minado joins every list of games (T-WEB-S927)", () => {
+  it("has its daily, conclusion and archive routes and its day-card name", () => {
+    expect(playRoutes.minesweeper).toBe("/campo-minado");
+    expect(archiveGameRoute("2026-10-16", "minesweeper")).toBe(
+      "/arquivo/2026-10-16/campo-minado",
+    );
+    expect(messages.conclusion.dayCard.games.minesweeper).toBe(
+      messages.games.minesweeper.name,
+    );
+    expect(messages.stats.rows.solved.minesweeper).toBe(
+      "Campos Minados resolvidos",
+    );
+  });
+
+  it("paints the OG deck on the same hex as its light accent token", () => {
+    const light = colorTokens("light").get("--accent-minesweeper");
+    expect(ACCENT_SHADOW.minesweeper.slice(0, 7)).toBe(light);
+    expect(ACCENT_TAPE.minesweeper.slice(0, 7)).toBe(light);
   });
 });

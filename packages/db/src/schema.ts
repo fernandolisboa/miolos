@@ -152,7 +152,7 @@ export const dailyPuzzles = pgTable(
     primaryKey({ columns: [t.game, t.date] }),
     check(
       "daily_puzzles_game_check",
-      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens')`,
+      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens', 'minesweeper')`,
     ),
   ],
 );
@@ -178,7 +178,7 @@ export const completions = pgTable(
     primaryKey({ columns: [t.userId, t.game, t.date] }),
     check(
       "completions_game_check",
-      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens')`,
+      sql`${t.game} in ('binairo', 'sudoku', 'nonogram', 'termo', 'crossword', 'queens', 'minesweeper')`,
     ),
     check("completions_outcome_check", sql`${t.outcome} in ('won', 'lost')`),
     check("completions_elapsed_ms_check", sql`${t.elapsedMs} >= 0`),

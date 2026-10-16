@@ -5,15 +5,13 @@
    each game's accent — and every WORD stays --ink/--ink-2 (ADR-0041:
    accents colour shapes, never words). */
 
+/* Block flow, never a flex column: the games section runs far past the fold,
+   and a flex column reads as a row of columns to `impeccable detect`'s
+   first-viewport-column-overflow. */
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
   padding: var(--space-11) 80px var(--space-12);
-  /* The measure is CENTRED, the archive's idiom (plan 037 §7.5, #160):
-     a max-width sheet without `margin-inline: auto` hugs the left edge of
-     every viewport wider than it. */
   max-width: 980px;
   margin-inline: auto;
 }
@@ -97,12 +95,13 @@
 
 .games {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-7);
   margin-top: 40px;
 }
 
 .gameCard {
+  grid-column: span 2;
   position: relative;
   background: var(--paper-card);
   border: 1px solid var(--line);
@@ -111,23 +110,27 @@
   padding: var(--space-11) var(--space-6) var(--space-6);
 }
 
-.gameCard:nth-child(1) {
+.gameCard:nth-child(6n + 1) {
   transform: rotate(-0.4deg);
 }
-.gameCard:nth-child(2) {
+.gameCard:nth-child(6n + 2) {
   transform: rotate(0.4deg);
 }
-.gameCard:nth-child(3) {
+.gameCard:nth-child(6n + 3) {
   transform: rotate(0.3deg);
 }
-.gameCard:nth-child(4) {
+.gameCard:nth-child(6n + 4) {
   transform: rotate(-0.3deg);
 }
-.gameCard:nth-child(5) {
+.gameCard:nth-child(6n + 5) {
   transform: rotate(-0.4deg);
 }
-.gameCard:nth-child(6) {
+.gameCard:nth-child(6n + 6) {
   transform: rotate(0.4deg);
+}
+
+.gameCard:last-child:nth-child(odd) {
+  grid-column: 2 / span 2;
 }
 
 .tape {
@@ -140,22 +143,22 @@
   border-radius: var(--radius-tape);
 }
 
-.gameCard:nth-child(1) .tape {
+.gameCard:nth-child(6n + 1) .tape {
   transform: translateX(-50%) rotate(-4deg);
 }
-.gameCard:nth-child(2) .tape {
+.gameCard:nth-child(6n + 2) .tape {
   transform: translateX(-50%) rotate(3deg);
 }
-.gameCard:nth-child(3) .tape {
+.gameCard:nth-child(6n + 3) .tape {
   transform: translateX(-50%) rotate(-3deg);
 }
-.gameCard:nth-child(4) .tape {
+.gameCard:nth-child(6n + 4) .tape {
   transform: translateX(-50%) rotate(4deg);
 }
-.gameCard:nth-child(5) .tape {
+.gameCard:nth-child(6n + 5) .tape {
   transform: translateX(-50%) rotate(-4deg);
 }
-.gameCard:nth-child(6) .tape {
+.gameCard:nth-child(6n + 6) .tape {
   transform: translateX(-50%) rotate(3deg);
 }
 
@@ -299,18 +302,7 @@
 }
 
 @media (max-width: 768px) {
-  /* SINGLE DOCUMENT COLUMN on mobile (step-6 F1). The desktop shell is a
-     100dvh flex column; kept at one column width on a phone, that
-     composition opens the page with the tiny top bar / summary stamp and
-     the ~4-card games section sharing its first row — one sibling filling
-     5% of the viewport while another runs past 160%, the stretched-hero
-     signature `first-viewport-column-overflow` names (the fold falls deep
-     inside the section). Nothing here needs flex: no child grows, none
-     aligns, and the page is far taller than any viewport, so the honest
-     mobile shape is normal block flow — each section a full-width row in
-     the document, no viewport-height constraint stretching the opening. */
   .page {
-    display: block;
     min-height: auto;
     padding: var(--space-5) var(--space-5) var(--space-6);
   }
@@ -340,6 +332,11 @@
     grid-template-columns: 1fr;
     gap: var(--space-5);
     margin-top: 26px;
+  }
+
+  .gameCard,
+  .gameCard:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 
   .gameCard {

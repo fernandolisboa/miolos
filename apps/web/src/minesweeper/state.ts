@@ -18,14 +18,17 @@ export interface MinesweeperPlay {
   readonly now: number;
 }
 
-export type MinesweeperAction =
+export type MinesweeperMove =
   | { readonly type: "activate"; readonly index: number; readonly now: number }
   | { readonly type: "chord"; readonly index: number; readonly now: number }
   | {
       readonly type: "mark";
       readonly index: number;
       readonly questionMarks: boolean;
-    }
+    };
+
+export type MinesweeperAction =
+  | MinesweeperMove
   | { readonly type: "tick"; readonly now: number }
   | {
       readonly type: "new";
@@ -48,6 +51,22 @@ export function initMinesweeper(
     timer: STOPPED,
     now,
   };
+}
+
+export function moveMinesweeper(
+  game: MinesweeperState,
+  move: MinesweeperMove,
+): MinesweeperState {
+  switch (move.type) {
+    case "activate":
+      return game.open[move.index]
+        ? chordMinesweeper(game, move.index)
+        : openMinesweeperCell(game, move.index);
+    case "chord":
+      return chordMinesweeper(game, move.index);
+    case "mark":
+      return cycleMinesweeperMark(game, move.index, move.questionMarks);
+  }
 }
 
 export function minesLeft(game: MinesweeperState): number {
@@ -88,24 +107,10 @@ export function minesweeperReducer(
 ): MinesweeperPlay {
   switch (action.type) {
     case "activate":
-      return moved(
-        play,
-        play.game.open[action.index]
-          ? chordMinesweeper(play.game, action.index)
-          : openMinesweeperCell(play.game, action.index),
-        action.now,
-      );
     case "chord":
-      return moved(play, chordMinesweeper(play.game, action.index), action.now);
+      return moved(play, moveMinesweeper(play.game, action), action.now);
     case "mark":
-      return {
-        ...play,
-        game: cycleMinesweeperMark(
-          play.game,
-          action.index,
-          action.questionMarks,
-        ),
-      };
+      return { ...play, game: moveMinesweeper(play.game, action) };
     case "tick":
       return { ...play, now: action.now };
     case "new":

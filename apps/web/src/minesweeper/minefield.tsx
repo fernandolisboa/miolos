@@ -239,3 +239,19 @@ export function FinishedMinefield({
     </div>
   );
 }
+
+export function MinefieldSkeleton({
+  cells,
+  sizeClass,
+}: {
+  readonly cells: number;
+  readonly sizeClass: string | undefined;
+}) {
+  return (
+    <div className={`${styles.field} ${sizeClass ?? ""}`}>
+      {Array.from({ length: cells }, (_unused, index) => (
+        <span key={index} className={styles.cell} />
+      ))}
+    </div>
+  );
+}

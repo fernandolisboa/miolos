@@ -1,9 +1,7 @@
-import { GAMES } from "@miolos/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_FREE_PLAY_LEVEL,
-  FREE_PLAY_GAMES,
   FREE_PLAY_LEVELS,
   LEVEL_WEEKDAYS,
   pickSeed,
@@ -14,11 +12,6 @@ afterEach(() => {
 });
 
 describe("the free-play game set and level mapping (T-WEB-S109)", () => {
-  it("FREE_PLAY_GAMES is every game, in the hub's order, then Campo Minado (ADR-0114, ADR-0136)", () => {
-    expect(GAMES).toHaveLength(6);
-    expect(FREE_PLAY_GAMES).toEqual([...GAMES, "minesweeper"]);
-  });
-
   it("maps the three levels onto the ramp's endpoints and middle (D2)", () => {
     expect(FREE_PLAY_LEVELS).toEqual(["leve", "medio", "dificil"]);
     expect(LEVEL_WEEKDAYS).toEqual({ leve: 1, medio: 4, dificil: 7 });

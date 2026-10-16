@@ -9,6 +9,7 @@ export type ShareSubject =
       readonly game: Exclude<Game, "termo">;
       readonly date: string;
       readonly elapsedMs: number;
+      readonly played: boolean;
     };
 
 export function buildShareText(
@@ -35,7 +36,14 @@ export function buildShareText(
           "",
           options.url,
         ]
-      : [header, formatElapsed(subject.elapsedMs), "", options.url];
+      : [
+          header,
+          subject.played
+            ? messages.share.played
+            : formatElapsed(subject.elapsedMs),
+          "",
+          options.url,
+        ];
 
   return lines.join("\n");
 }

@@ -7,6 +7,7 @@ import {
   CROSSWORD_SIZES,
   crosswordLetterSchema,
   isoDateString,
+  minesweeperCellIndexSchema,
   nonogramSizeSchema,
   queensSizeSchema,
   sudokuDigitSchema,
@@ -112,9 +113,22 @@ export type QueensCompletionRequest = z.infer<
   typeof queensCompletionRequestSchema
 >;
 
+export const minesweeperCompletionRequestSchema = z.strictObject({
+  game: z.literal("minesweeper"),
+  date: calendarDateString,
+  hit: minesweeperCellIndexSchema.nullable(),
+  elapsedMs: z.number().int().min(0).max(86_400_000),
+  hintsUsed: z.literal(0),
+});
+
+export type MinesweeperCompletionRequest = z.infer<
+  typeof minesweeperCompletionRequestSchema
+>;
+
 export const completionRequestSchema = z.discriminatedUnion("game", [
   binairoCompletionRequestSchema,
   crosswordCompletionRequestSchema,
+  minesweeperCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,

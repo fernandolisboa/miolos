@@ -4,6 +4,7 @@ import {
   completionResponseSchema,
   crosswordDailyContentSchema,
   isWithinCreditWindow,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   onTimeAtWrite,
   queensDailyContentSchema,
@@ -58,7 +59,10 @@ function completionResponse(
   );
 }
 
-type GridCompletionGame = Exclude<CompletionRequest["game"], "termo">;
+type GridCompletionGame = Exclude<
+  CompletionRequest["game"],
+  "termo" | "minesweeper"
+>;
 
 function storedSolution(
   game: GridCompletionGame,
@@ -110,6 +114,39 @@ function judgeTermo(
     return null;
   }
   return judged.status === "playing" ? null : judged.status;
+}
+
+function judgeMinesweeper(
+  hit: number | null,
+  content: unknown,
+): CompletionOutcome | null {
+  if (hit === null) {
+    return "won";
+  }
+  return minesweeperDailyContentSchema.parse(content).mines[hit] === 1
+    ? "lost"
+    : null;
+}
+
+type Judgement =
+  { readonly outcome: CompletionOutcome } | { readonly mismatch: string };
+
+function judged(
+  outcome: CompletionOutcome | null,
+  mismatch: string,
+): Judgement {
+  return outcome === null ? { mismatch } : { outcome };
+}
+
+function judge(body: CompletionRequest, content: unknown): Judgement {
+  switch (body.game) {
+    case "termo":
+      return judged(judgeTermo(body.guesses, content), "guess-mismatch");
+    case "minesweeper":
+      return judged(judgeMinesweeper(body.hit, content), "hit-mismatch");
+    default:
+      return judged(judgeGrid(body, content), "grid-mismatch");
+  }
 }
 
 export function OPTIONS(): Response {
@@ -171,16 +208,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(404, "no-puzzle");
   }
 
-  const outcome =
-    body.game === "termo"
-      ? judgeTermo(body.guesses, row.content)
-      : judgeGrid(body, row.content);
-  if (outcome === null) {
-    return errorResponse(
-      422,
-      body.game === "termo" ? "guess-mismatch" : "grid-mismatch",
-    );
+  const judgement = judge(body, row.content);
+  if ("mismatch" in judgement) {
+    return errorResponse(422, judgement.mismatch);
   }
+  const { outcome } = judgement;
 
   const seen = isWithinCreditWindow(body.date, today)
     ? await wasSeenOn(db, userId, body.date)

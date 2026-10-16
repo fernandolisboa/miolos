@@ -30,6 +30,7 @@ const validStats: StatsResponse = {
   nonogram: timedZero,
   crossword: timedZero,
   queens: timedZero,
+  minesweeper: timedZero,
   termo: { solved: 5, distribution: [1, 0, 0, 2, 0, 0, 2] },
   perfectDays: 1,
   todayTermoGuesses: 4,

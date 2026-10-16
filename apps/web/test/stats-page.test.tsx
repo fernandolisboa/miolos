@@ -64,6 +64,13 @@ const STATS = statsResponseSchema.parse({
     averageSampleCount: 0,
     histogram: [0, 0, 0, 0, 0, 0],
   },
+  minesweeper: {
+    solved: 0,
+    bestMs: null,
+    averageMs: null,
+    averageSampleCount: 0,
+    histogram: [0, 0, 0, 0, 0, 0],
+  },
   termo: { solved: 12, distribution: [0, 1, 4, 5, 2, 0, 3] },
   perfectDays: 2,
   todayTermoGuesses: null,
@@ -111,7 +118,7 @@ describe("the stats screen's honest zero (T-WEB-S153)", () => {
       TIMED_GAMES.length,
     );
     expect(
-      screen.getByText(messages.stats.rows.solved(messages.games.termo.name)),
+      screen.getByText(messages.stats.rows.solved.termo),
     ).toBeInTheDocument();
     expect(screen.getByText(messages.stats.termo.fail)).toBeInTheDocument();
 
@@ -136,11 +143,11 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
     expect(await screen.findByText(formatElapsed(238_000))).toBeInTheDocument();
     expect(screen.getByText(formatElapsed(391_000))).toBeInTheDocument();
     expect(
-      screen.getByText(messages.stats.rows.solved(messages.games.sudoku.name)),
+      screen.getByText(messages.stats.rows.solved.sudoku),
     ).toBeInTheDocument();
 
-    // binairo, crossword and queens are zero in STATS: best + average each.
-    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(6);
+    // binairo, crossword, queens and minesweeper are zero: best + average each.
+    expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(8);
 
     expect(
       screen.getByLabelText(

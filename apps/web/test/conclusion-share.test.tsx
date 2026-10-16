@@ -9,6 +9,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
+  type MinesweeperPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type QueensPlayRecord,
@@ -169,6 +170,19 @@ const crossword = (): CrosswordPlayRecord => ({
   syncOutcome: "recorded",
 });
 
+const minesweeper = (): MinesweeperPlayRecord => ({
+  v: 1,
+  game: "minesweeper",
+  date: DATE,
+  entries: Array.from({ length: 160 }, () => 1),
+  hit: null,
+  elapsedMs: 95_000,
+  hintsUsed: 0,
+  concluded: true,
+  pendingSync: false,
+  syncOutcome: "recorded",
+});
+
 const RECORDS: Readonly<Record<Game, () => PlayRecord>> = {
   binairo,
   sudoku,
@@ -176,6 +190,7 @@ const RECORDS: Readonly<Record<Game, () => PlayRecord>> = {
   termo,
   crossword,
   queens,
+  minesweeper,
 };
 
 const LOST = {
@@ -295,6 +310,7 @@ describe("the button is disabled until the concluded record hydrates (T-WEB-S195
         game,
         date: DATE,
         elapsedMs,
+        played: false,
       });
       const text = (shareMock.mock.calls[0]?.[0] as { text: string }).text;
       expect(text, game).toContain(messages.games[game].name);

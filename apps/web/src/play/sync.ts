@@ -12,13 +12,7 @@ import {
   ELAPSED_CAP_MS,
   listPendingRecords,
   writePlayRecord,
-  type BinairoPlayRecord,
-  type CrosswordPlayRecord,
-  type NonogramPlayRecord,
   type PlayRecord,
-  type QueensPlayRecord,
-  type SudokuPlayRecord,
-  type TermoPlayRecord,
 } from "./play-record";
 
 import { apiBaseUrl, postJson } from "../api/client";
@@ -202,9 +196,15 @@ function buildBody(record: PlayRecord): string | undefined {
     case "nonogram":
     case "queens":
     case "sudoku":
-      return gridBody(record);
+      return record.grid === undefined
+        ? undefined
+        : bodyOf(record, { grid: record.grid });
     case "termo":
-      return termoBody(record);
+      return bodyOf(record, {
+        guesses: record.guesses.map((row) => row.guess),
+      });
+    case "minesweeper":
+      return bodyOf(record, { hit: record.hit });
     default: {
       const unhandled: never = record;
       throw new Error(
@@ -214,34 +214,14 @@ function buildBody(record: PlayRecord): string | undefined {
   }
 }
 
-function gridBody(
-  record:
-    | BinairoPlayRecord
-    | CrosswordPlayRecord
-    | NonogramPlayRecord
-    | QueensPlayRecord
-    | SudokuPlayRecord,
+function bodyOf(
+  record: PlayRecord,
+  result: Readonly<Record<string, unknown>>,
 ): string | undefined {
-  if (record.grid === undefined) {
-    return undefined;
-  }
   const parsed = completionRequestSchema.safeParse({
     game: record.game,
     date: record.date,
-    grid: record.grid,
-
-    elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
-    hintsUsed: record.hintsUsed,
-  });
-  return parsed.success ? JSON.stringify(parsed.data) : undefined;
-}
-
-function termoBody(record: TermoPlayRecord): string | undefined {
-  const parsed = completionRequestSchema.safeParse({
-    game: "termo",
-    date: record.date,
-    guesses: record.guesses.map((row) => row.guess),
-
+    ...result,
     elapsedMs: Math.min(Math.max(record.elapsedMs, 0), ELAPSED_CAP_MS),
     hintsUsed: record.hintsUsed,
   });

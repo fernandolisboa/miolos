@@ -567,7 +567,6 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
   });
 
   it("every member of GAMES has a route in each family and an alt string", () => {
-    expect(GAMES).toHaveLength(6);
     for (const game of GAMES) {
       expect.soft(existsSync(dailyCardFile(game)), game).toBe(true);
       expect.soft(existsSync(archiveCardFile(game)), game).toBe(true);
@@ -835,7 +834,7 @@ describe("the archive cards' trace shape cannot be simplified back (T-WEB-S336)"
         "opengraph-image.tsx",
       ),
     ).filter((path) => existsSync(path));
-    expect(playRouteModules).toHaveLength(6);
+    expect(playRouteModules).toHaveLength(GAMES.length);
 
     expect(existsSync(`${SHELL_STEMS[0]}.png`)).toBe(true);
   });

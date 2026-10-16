@@ -1,7 +1,5 @@
 import type { Game } from "@miolos/core";
 
-import type { FreePlayGame } from "../free-play/catalog";
-
 export const routeSlugs = {
   archive: "arquivo",
   month: "mes",
@@ -39,6 +37,8 @@ export const routes = {
   crosswordConclusion: `/${routeSlugs.crossword}/${routeSlugs.conclusion}`,
   queens: `/${routeSlugs.queens}`,
   queensConclusion: `/${routeSlugs.queens}/${routeSlugs.conclusion}`,
+  minesweeper: `/${routeSlugs.minesweeper}`,
+  minesweeperConclusion: `/${routeSlugs.minesweeper}/${routeSlugs.conclusion}`,
   freePlay: `/${routeSlugs.freePlay}`,
   freePlayBinairo: `/${routeSlugs.freePlay}/${routeSlugs.binairo}`,
   freePlaySudoku: `/${routeSlugs.freePlay}/${routeSlugs.sudoku}`,
@@ -87,9 +87,10 @@ export const playRoutes: Readonly<Record<Game, Route>> = {
   termo: routes.termo,
   crossword: routes.crossword,
   queens: routes.queens,
+  minesweeper: routes.minesweeper,
 };
 
-export const freePlayRoutes: Readonly<Record<FreePlayGame, Route>> = {
+export const freePlayRoutes: Readonly<Record<Game, Route>> = {
   binairo: routes.freePlayBinairo,
   sudoku: routes.freePlaySudoku,
   nonogram: routes.freePlayNonogram,

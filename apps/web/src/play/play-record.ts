@@ -2,8 +2,10 @@ import {
   completionOutcomeSchema,
   CROSSWORD_SIZES,
   crosswordCellsSchema,
+  DAILY_MINESWEEPER_SIZE,
   hintsUsedSchema,
   isoDateString,
+  minesweeperCellIndexSchema,
   nonogramSizeSchema,
   queensSizeSchema,
   sudokuDigitSchema,
@@ -274,9 +276,26 @@ export const crosswordPlayRecordSchema = z
 
 export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;
 
+export const minesweeperPlayRecordSchema = z
+  .strictObject({
+    ...recordHeaderShape,
+    game: z.literal("minesweeper"),
+    entries: z
+      .array(z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]))
+      .length(DAILY_MINESWEEPER_SIZE.rows * DAILY_MINESWEEPER_SIZE.columns),
+    hit: minesweeperCellIndexSchema.nullable().optional(),
+  })
+  .refine((record) => record.concluded === (record.hit !== undefined), {
+    message: "hit is written exactly when the board closes",
+    path: ["hit"],
+  });
+
+export type MinesweeperPlayRecord = z.infer<typeof minesweeperPlayRecordSchema>;
+
 export const playRecordSchema = z.discriminatedUnion("game", [
   binairoPlayRecordSchema,
   crosswordPlayRecordSchema,
+  minesweeperPlayRecordSchema,
   nonogramPlayRecordSchema,
   queensPlayRecordSchema,
   sudokuPlayRecordSchema,
@@ -284,6 +303,20 @@ export const playRecordSchema = z.discriminatedUnion("game", [
 ]);
 
 export type PlayRecord = z.infer<typeof playRecordSchema>;
+
+export function isPlayedRecord(record: PlayRecord): boolean {
+  if (!record.concluded) {
+    return false;
+  }
+  switch (record.game) {
+    case "termo":
+      return record.outcome === "lost";
+    case "minesweeper":
+      return record.hit !== null && record.hit !== undefined;
+    default:
+      return false;
+  }
+}
 
 function storage(): Storage | undefined {
   try {

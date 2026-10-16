@@ -4,8 +4,10 @@ import {
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
   GAMES,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
+  recordFor,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
   type CronPublishGameResult,
@@ -21,6 +23,7 @@ import { createTestDb } from "@miolos/db/testing";
 import { isWeekday } from "@miolos/games";
 import { validateBinairo } from "@miolos/games/binairo";
 import { validateCrossword } from "@miolos/games/crossword";
+import { validateMinesweeperDaily } from "@miolos/games/minesweeper";
 import { validateNonogram } from "@miolos/games/nonogram";
 import { validateQueens } from "@miolos/games/queens";
 import { sudokuCriteriaForWeekday, validateSudoku } from "@miolos/games/sudoku";
@@ -168,14 +171,12 @@ describe("GET /cron/publish top-up", () => {
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      games: {
-        binairo: { generated: 7, depth: 7, failures: [], error: null },
-        sudoku: { generated: 7, depth: 7, failures: [], error: null },
-        nonogram: { generated: 7, depth: 7, failures: [], error: null },
-        termo: { generated: 7, depth: 7, failures: [], error: null },
-        crossword: { generated: 7, depth: 7, failures: [], error: null },
-        queens: { generated: 7, depth: 7, failures: [], error: null },
-      },
+      games: recordFor(GAMES, () => ({
+        generated: 7,
+        depth: 7,
+        failures: [],
+        error: null,
+      })),
     });
 
     const today = await todaySaoPaulo(ctx.db);
@@ -267,6 +268,21 @@ describe("GET /cron/publish top-up", () => {
       expect(validateQueens({ ...content, weekday }).ok).toBe(true);
       expect(row.seed).toBe(content.seed);
     }
+
+    const minesweeperRows = await rowsFor("minesweeper");
+    expect(minesweeperRows.map((row) => row.date).sort()).toEqual(
+      expectedDates,
+    );
+    for (const row of minesweeperRows) {
+      const content = minesweeperDailyContentSchema.parse(row.content);
+      const weekday = isoWeekdayOf(row.date);
+      expect(content.weekday).toBe(weekday);
+      if (!isWeekday(weekday)) {
+        throw new Error(`unreachable: bad weekday for ${row.date}`);
+      }
+      expect(validateMinesweeperDaily({ ...content, weekday }).ok).toBe(true);
+      expect(row.seed).toBe(content.seed);
+    }
   }, 30_000);
 
   it("T-API-S2: a second run generates nothing for any game (idempotent reconciliation)", async () => {
@@ -274,19 +290,12 @@ describe("GET /cron/publish top-up", () => {
     const response = await authorizedRun();
     expect(response.status).toBe(200);
     const body = cronPublishResponseSchema.parse(await response.json());
-    expect(body.games.binairo.generated).toBe(0);
-    expect(body.games.binairo.depth).toBe(7);
-    expect(body.games.nonogram.generated).toBe(0);
-    expect(body.games.nonogram.depth).toBe(7);
-    expect(body.games.sudoku.generated).toBe(0);
-    expect(body.games.sudoku.depth).toBe(7);
-    expect(body.games.termo.generated).toBe(0);
-    expect(body.games.termo.depth).toBe(7);
-    expect(body.games.crossword.generated).toBe(0);
-    expect(body.games.crossword.depth).toBe(7);
-    expect(body.games.queens.generated).toBe(0);
-    expect(body.games.queens.depth).toBe(7);
-    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(42);
+    for (const game of GAMES) {
+      expect(body.games[game], game).toMatchObject({ generated: 0, depth: 7 });
+    }
+    expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(
+      7 * GAMES.length,
+    );
   }, 30_000);
 
   it("T-API-S3: tops up a partial buffer of every game, existing rows untouched (D14)", async () => {
@@ -305,21 +314,12 @@ describe("GET /cron/publish top-up", () => {
 
     const response = await authorizedRun();
     const body = cronPublishResponseSchema.parse(await response.json());
-    expect(body.games.binairo.generated).toBe(2);
-    expect(body.games.binairo.depth).toBe(7);
-    expect(body.games.nonogram.generated).toBe(2);
-    expect(body.games.nonogram.depth).toBe(7);
-    expect(body.games.sudoku.generated).toBe(2);
-    expect(body.games.sudoku.depth).toBe(7);
-    expect(body.games.termo.generated).toBe(2);
-    expect(body.games.termo.depth).toBe(7);
-    expect(body.games.crossword.generated).toBe(2);
-    expect(body.games.crossword.depth).toBe(7);
-    expect(body.games.queens.generated).toBe(2);
-    expect(body.games.queens.depth).toBe(7);
+    for (const game of GAMES) {
+      expect(body.games[game], game).toMatchObject({ generated: 2, depth: 7 });
+    }
 
     const after = await ctx.db.select().from(dailyPuzzles);
-    expect(after).toHaveLength(42);
+    expect(after).toHaveLength(7 * GAMES.length);
     for (const row of after) {
       const snapshot = before.get(`${row.game}:${row.date}`);
       if (snapshot !== undefined) {
@@ -674,7 +674,7 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       logged.push(parsed);
     }
-    expect(logged).toHaveLength(6);
+    expect(logged).toHaveLength(GAMES.length);
 
     const order = logged.map((entry) => (entry as { game: string }).game);
     expect([...order].sort()).toEqual([...GAMES].sort());
@@ -690,7 +690,7 @@ describe("GET /cron/publish top-up", () => {
 });
 
 describe("GET /cron/publish order", () => {
-  it("T-API-S245: games top up cost-ascending, Rainhas between the crossword and sudoku", async () => {
+  it("T-API-S245: games top up cost-ascending, Campo Minado after Binairo and Rainhas between the crossword and sudoku", async () => {
     await authorizedRun();
 
     const order = logLines.map(
@@ -699,6 +699,7 @@ describe("GET /cron/publish order", () => {
     expect(order).toEqual([
       "termo",
       "binairo",
+      "minesweeper",
       "nonogram",
       "crossword",
       "queens",
