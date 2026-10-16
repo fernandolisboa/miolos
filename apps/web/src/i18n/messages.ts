@@ -827,11 +827,11 @@ export const messages = {
         },
         lockDigit: {
           label: "Número fixo com toque duplo",
-          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células para escrevê-lo. Toque no número de novo para soltar.",
+          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células para escrevê-lo, ou anotá-lo com o rascunho ligado. Toque no número de novo para soltar.",
         },
         highlightSelection: {
           label: "Destacar linha, coluna e bloco",
-          hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela.",
+          hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela. O rascunho com esse número ganha um tom mais leve.",
         },
         cleanNotes: {
           label: "Limpar rascunho ao preencher",

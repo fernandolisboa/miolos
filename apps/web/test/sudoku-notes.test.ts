@@ -251,24 +251,78 @@ describe("a hint, Recomeçar and the eraser (T-WEB-S832)", () => {
   });
 });
 
-describe("Rascunho and Número fixo exclude each other (T-WEB-S833)", () => {
-  it("turning Rascunho on releases the lock", () => {
-    const locked = play(blank(), { type: "lock-digit", digit: 3, undo: null });
-    expect(locked.locked).toBe(3);
-    const next = play(locked, noting);
-    expect(next.locked).toBeNull();
-    expect(next.noting).toBe(true);
+describe("Número fixo works in Rascunho (T-WEB-S930)", () => {
+  const lock = (digit: SudokuDigit): SudokuPlayAction => ({
+    type: "lock-digit",
+    digit,
+    undo: null,
+  });
+  const tap = (index: number): SudokuPlayAction => ({
+    type: "tap-cell",
+    index,
+    cleanNotes: true,
   });
 
-  it("ignores lock-digit while Rascunho is on", () => {
-    const next = play(blank(), noting, {
+  it("with Rascunho on and 4 fixed, a tap on an empty cell toggles note 4 and writes nothing", () => {
+    const start = play(blank(), noting, lock(4));
+    const once = play(start, tap(7));
+    expect(once.selected).toBe(7);
+    expect(noteDigits(once.notes[7] ?? 0)).toEqual([4]);
+    expect(once.entries).toEqual(start.entries);
+
+    const twice = play(once, tap(7));
+    expect(twice.notes[7]).toBe(0);
+  });
+
+  it("keeps the fixed digit when Rascunho turns on or off", () => {
+    const locked = play(blank(), lock(3));
+    const on = play(locked, noting);
+    expect(on.locked).toBe(3);
+    expect(on.noting).toBe(true);
+    expect(play(on, noting).locked).toBe(3);
+  });
+
+  it("locks a digit while Rascunho is on", () => {
+    expect(play(blank(), noting, lock(3)).locked).toBe(3);
+  });
+
+  it("leaves a given or an entered cell alone, only selecting it", () => {
+    const given = PUZZLE.givens.findIndex((cell) => cell !== 0);
+    const onGiven = play(puzzle(), noting, lock(4), tap(given));
+    expect(onGiven.selected).toBe(given);
+    expect(onGiven.notes[given]).toBe(0);
+
+    const entered = play(blank(), select(2), write(6), noting, lock(4));
+    const onEntry = play(entered, tap(2));
+    expect(onEntry.entries[2]).toBe(6);
+    expect(onEntry.notes).toBe(entered.notes);
+  });
+
+  it("makes each noted tap one undo step", () => {
+    const start = play(blank(), noting, lock(4), tap(7), tap(8));
+    expect(start.history.steps).toHaveLength(2);
+    const undone = play(start, UNDO);
+    expect(undone.notes[8]).toBe(0);
+    expect(noteDigits(undone.notes[7] ?? 0)).toEqual([4]);
+  });
+
+  it("puts the notes back when a double tap on the keypad fixes the digit in Rascunho", () => {
+    const before = play(blank(), noting, select(0));
+    const first = play(before, write(8));
+    expect(noteDigits(first.notes[0] ?? 0)).toEqual([8]);
+
+    const second = play(first, {
       type: "lock-digit",
-      digit: 3,
-      undo: null,
+      digit: 8,
+      undo: { index: 0, value: null, notes: before.notes },
     });
-    expect(next.locked).toBeNull();
+    expect(second.notes).toEqual(before.notes);
+    expect(second.locked).toBe(8);
+    expect(second.noting).toBe(true);
   });
+});
 
+describe("Número fixo's double tap and notes (T-WEB-S833)", () => {
   it("brings the peer notes back when the double tap puts a cell back", () => {
     const before = play(withEveryNote(blank()), select(0));
     const first = play(before, write(8));

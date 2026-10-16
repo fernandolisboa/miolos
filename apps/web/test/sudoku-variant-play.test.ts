@@ -12,7 +12,8 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { UndoAction } from "../src/play/undo";
-import { selectionHighlights } from "../src/sudoku/engine";
+import { selectionHighlights } from "../src/sudoku/highlights";
+import { NO_NOTES } from "../src/sudoku/notes";
 import {
   initSudokuPlayState,
   sudokuPlayReducer,
@@ -201,9 +202,9 @@ describe("a value clears notes across the variant's units (T-WEB-S864)", () => {
 
 describe("the selection tint follows the variant's units (T-WEB-S865)", () => {
   const tinted = (selected: number, layout: SudokuLayout) =>
-    [...selectionHighlights(BLANK, selected, layout).keys()].sort(
-      (a, b) => a - b,
-    );
+    [
+      ...selectionHighlights(BLANK, NO_NOTES, selected, null, layout).keys(),
+    ].sort((a, b) => a - b);
 
   it("in Diagonal, (1,1) tints (9,9)", () => {
     expect(tinted(0, DIAGONAL_LAYOUT)).toContain(80);

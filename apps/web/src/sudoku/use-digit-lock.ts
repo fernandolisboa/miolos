@@ -70,7 +70,7 @@ export function useDigitLock(
   const pressDigit = useCallback(
     (digit: SudokuDigit, pointer: boolean) => {
       const current = stateRef.current;
-      if (!enabled || !pointer || current.noting) {
+      if (!enabled || !pointer) {
         dispatch({ type: "enter-digit", digit, cleanNotes });
         return;
       }
@@ -121,10 +121,10 @@ export function useDigitLock(
   const tapCell = useCallback(
     (index: number) => {
       lastTap.current = null;
-      const current = stateRef.current;
-      if (!enabled || current.noting) {
+      if (!enabled) {
         return;
       }
+      const current = stateRef.current;
       const previous = lastCellTap.current;
       const now = performance.now();
 

@@ -13,11 +13,12 @@ import {
   mergedGrid,
   placedCount,
   playableGivens,
-  selectionHighlights,
   solutionDigits,
   solvedDigits,
   track,
 } from "../src/sudoku/engine";
+import { selectionHighlights } from "../src/sudoku/highlights";
+import { NO_NOTES } from "../src/sudoku/notes";
 import type { SudokuCellValue, SudokuDigit } from "../src/sudoku/state";
 
 const PUZZLE = generateDailySudoku({ seed: 20_260_801, weekday: 1 });
@@ -164,11 +165,19 @@ describe("the selection's reach (T-WEB-S495)", () => {
   const BLANK: readonly number[] = Array.from({ length: 81 }, () => 0);
 
   const reaches = (selected: number, index: number) =>
-    selectionHighlights(BLANK, selected, CLASSIC_LAYOUT).has(index);
+    selectionHighlights(BLANK, NO_NOTES, selected, null, CLASSIC_LAYOUT).has(
+      index,
+    );
 
   it("tints the row, the column and the 3×3 box, and nowhere else", () => {
     const peers = [
-      ...selectionHighlights(BLANK, CENTRE, CLASSIC_LAYOUT).keys(),
+      ...selectionHighlights(
+        BLANK,
+        NO_NOTES,
+        CENTRE,
+        null,
+        CLASSIC_LAYOUT,
+      ).keys(),
     ].sort((a, b) => a - b);
 
     expect(peers).toEqual([
@@ -178,16 +187,19 @@ describe("the selection's reach (T-WEB-S495)", () => {
   });
 
   it("is empty with nothing selected", () => {
-    expect(selectionHighlights(PUZZLE.givens, null, CLASSIC_LAYOUT).size).toBe(
-      0,
-    );
+    expect(
+      selectionHighlights(PUZZLE.givens, NO_NOTES, null, null, CLASSIC_LAYOUT)
+        .size,
+    ).toBe(0);
   });
 
   it("tints only the unit when the selected cell is empty", () => {
     const empty = firstPlayable();
     const highlights = selectionHighlights(
       PUZZLE.givens,
+      NO_NOTES,
       empty,
+      null,
       CLASSIC_LAYOUT,
     );
 
@@ -211,7 +223,13 @@ describe("the selection's reach (T-WEB-S495)", () => {
     }
     const grid = mergedGrid(PUZZLE.givens, entriesWith(empty, digit));
 
-    const highlights = selectionHighlights(grid, given, CLASSIC_LAYOUT);
+    const highlights = selectionHighlights(
+      grid,
+      NO_NOTES,
+      given,
+      null,
+      CLASSIC_LAYOUT,
+    );
     const copies = grid.flatMap((cell, index) =>
       cell === digit ? [index] : [],
     );

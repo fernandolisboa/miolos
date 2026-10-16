@@ -22,13 +22,10 @@ import { DailyUnavailable } from "../src/components/daily-unavailable";
 import { formatElapsed, messages } from "../src/i18n";
 import { playRecordKey, type SudokuPlayRecord } from "../src/play/play-record";
 import sharedStyles from "../src/play/screen.module.css";
-import {
-  mergedGrid,
-  selectionHighlights,
-  solutionDigits,
-  track,
-} from "../src/sudoku/engine";
+import { mergedGrid, solutionDigits, track } from "../src/sudoku/engine";
+import { selectionHighlights } from "../src/sudoku/highlights";
 import { sudokuHintExplanation } from "../src/sudoku/hint";
+import { NO_NOTES } from "../src/sudoku/notes";
 import type { SudokuDigit } from "../src/sudoku/state";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
@@ -522,7 +519,9 @@ describe("the hint names its step and lights the cells it reasons about (T-WEB-S
     );
     const reach = selectionHighlights(
       mergedGrid(PUZZLE.givens, entries),
+      NO_NOTES,
       FIRST_GIVEN,
+      null,
       CLASSIC_LAYOUT,
     );
     expect(tinted(container)).toEqual(
@@ -582,7 +581,13 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
       { length: TOTAL_CELLS },
       (_unused, index) => index,
     ).filter((index) =>
-      selectionHighlights(BLANK, FIRST_EMPTY, CLASSIC_LAYOUT).has(index),
+      selectionHighlights(
+        BLANK,
+        NO_NOTES,
+        FIRST_EMPTY,
+        null,
+        CLASSIC_LAYOUT,
+      ).has(index),
     );
     expect(cellsWith(container, "cellUnit")).toEqual(unit);
     expect(cellsWith(container, "cellSameDigit")).toEqual([]);
@@ -632,7 +637,9 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
       if (
         !selectionHighlights(
           BLANK,
+          NO_NOTES,
           Number(hinted.dataset.cellIndex),
+          null,
           CLASSIC_LAYOUT,
         ).has(selected)
       ) {

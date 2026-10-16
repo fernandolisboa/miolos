@@ -1,9 +1,4 @@
-import {
-  solveSudoku,
-  sudokuPeers,
-  type SudokuGrid,
-  type SudokuLayout,
-} from "@miolos/games/sudoku";
+import { solveSudoku, type SudokuGrid } from "@miolos/games/sudoku";
 
 import type { SudokuCellValue, SudokuDigit } from "./state";
 
@@ -15,8 +10,6 @@ const COPIES = 9;
 
 export const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export type CellHighlight = "unit" | "same-digit";
-
 export const track = (index: number): number =>
   index + 1 + (index >= 3 ? 1 : 0) + (index >= 6 ? 1 : 0);
 
@@ -27,33 +20,6 @@ export function mergedGrid(
   return givens.map((given, index) =>
     given !== EMPTY ? given : (entries[index] ?? EMPTY),
   );
-}
-
-export function selectionHighlights(
-  grid: SudokuGrid,
-  selected: number | null,
-  layout: SudokuLayout,
-): ReadonlyMap<number, CellHighlight> {
-  const highlights = new Map<number, CellHighlight>();
-  if (selected === null) {
-    return highlights;
-  }
-  const digit = grid[selected] ?? EMPTY;
-  const reach = new Set([selected, ...sudokuPeers(selected, layout)]);
-  for (const [index, cell] of grid.entries()) {
-    if (digit !== EMPTY && cell === digit) {
-      highlights.set(index, "same-digit");
-    } else if (reach.has(index)) {
-      highlights.set(index, "unit");
-    }
-  }
-  return highlights;
-}
-
-export function spotlightHighlights(
-  cells: readonly number[],
-): ReadonlyMap<number, CellHighlight> {
-  return new Map(cells.map((index) => [index, "unit"]));
 }
 
 export type DigitTally = "open" | "complete" | "over";

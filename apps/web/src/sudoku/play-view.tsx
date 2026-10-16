@@ -73,6 +73,7 @@ export function PlayView({
           mistakes={state.mistakes}
           notes={state.notes}
           selected={state.selected}
+          locked={play.lock.locked}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
           spotlight={state.hint.spotlight}

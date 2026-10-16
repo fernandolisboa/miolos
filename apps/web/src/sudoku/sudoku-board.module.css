@@ -173,6 +173,18 @@
   color: var(--ink-on-accent);
 }
 
+.cellNoteDigit {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--accent) 20%, transparent)
+  );
+}
+
+.noteMatch {
+  color: var(--accent-sudoku-text);
+  font-weight: 700;
+}
+
 /* ── the caret ───────────────────────────────────────────────────────── */
 
 /* One block for the selection and the focus ring, so they can never disagree
