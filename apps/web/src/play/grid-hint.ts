@@ -31,19 +31,48 @@ function contradicts<T>(
   return entry !== null && target != null && entry !== target;
 }
 
+export function isWrongAt<T>(
+  solution: readonly (T | null)[],
+  givens: readonly unknown[] | null,
+  index: number,
+  entry: T | null,
+): boolean {
+  return (
+    (givens?.[index] ?? null) === null && contradicts(solution[index], entry)
+  );
+}
+
 export function wrongCells<T>(
   solution: readonly (T | null)[],
   givens: readonly unknown[] | null,
   entries: readonly (T | null)[],
 ): ReadonlySet<number> {
   const wrong = new Set<number>();
-  for (const [index, target] of solution.entries()) {
-    const given = givens?.[index] ?? null;
-    if (given === null && contradicts(target, entries[index] ?? null)) {
+  for (const index of solution.keys()) {
+    if (isWrongAt(solution, givens, index, entries[index] ?? null)) {
       wrong.add(index);
     }
   }
   return wrong;
+}
+
+export function wrongWrite<T>(
+  solution: readonly (T | null)[],
+  givens: readonly unknown[] | null,
+  before: readonly (T | null)[],
+  after: readonly (T | null)[],
+  cross: T | undefined,
+): number | null {
+  for (const [index, entry] of after.entries()) {
+    if (
+      entry !== before[index] &&
+      entry !== cross &&
+      isWrongAt(solution, givens, index, entry)
+    ) {
+      return index;
+    }
+  }
+  return null;
 }
 
 export function nextHint<T>(

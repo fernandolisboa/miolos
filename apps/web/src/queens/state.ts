@@ -23,7 +23,19 @@ import {
   type BinaryMark,
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
-import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
+import {
+  judgedBySolution,
+  NO_MISTAKES,
+  type CellPress,
+  type MistakeRules,
+  type MistakeState,
+} from "../play/mistakes";
+import {
+  NO_HISTORY,
+  undoable,
+  type UndoAction,
+  type UndoHistory,
+} from "../play/undo";
 import { nextQueensHint, type QueensHintReason } from "./hint";
 
 export type QueensMark = BinaryMark;
@@ -38,6 +50,7 @@ export interface QueensPlayState extends BinaryGridState<QueensHintReason> {
   readonly conflicts: ReadonlySet<number>;
   readonly autoCrossed: AutoCrosses;
   readonly history: UndoHistory<QueensSnapshot>;
+  readonly mistakes: MistakeState;
 }
 
 type QueensSnapshot = Pick<
@@ -74,7 +87,31 @@ export function initQueensPlayState(
     now: 0,
     hydrated: false,
     history: NO_HISTORY,
+    mistakes: NO_MISTAKES,
   };
+}
+
+export const QUEENS_MISTAKES: MistakeRules<
+  QueensPlayState,
+  QueensPlayAction | UndoAction
+> = { judge: judgedBySolution, cross: 0, press: queensPress };
+
+function queensPress(
+  { selected }: QueensPlayState,
+  action: QueensPlayAction | UndoAction,
+): CellPress | null {
+  switch (action.type) {
+    case "tap":
+      return { index: action.index, held: action.press !== "right" };
+    case "stroke-start":
+    case "paint-over":
+      return { index: action.index, held: false };
+    case "enter-value":
+    case "clear-cell":
+      return selected === null ? null : { index: selected, held: false };
+    default:
+      return null;
+  }
 }
 
 const QUEENS_RULES: BinaryGridRules<QueensPlayState, QueensHintReason> = {

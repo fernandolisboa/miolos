@@ -1,14 +1,16 @@
 import type { DailyBinairoResponse } from "@miolos/core";
 import { solveBinairo, type BinairoSolvedGrid } from "@miolos/games/binairo";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { mistakeRecord, usePlayReducer } from "../play/mistakes";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import { useBoardEdits, type BoardEdits } from "../play/undo";
 import {
+  binairoMistakes,
   canHint,
   initPlayState,
   isSolvedGrid,
@@ -38,7 +40,17 @@ export function useBinairoPlay(
   daily: DailyBinairoResponse,
   remotelyClaimed = false,
 ): BinairoPlay {
-  const [state, dispatch] = useReducer(playReducer, daily, initPlayState);
+  const solution = useMemo(() => solveBinairo(daily.givens), [daily.givens]);
+  const rules = useMemo(
+    () => binairoMistakes(solution, daily.givens),
+    [solution, daily.givens],
+  );
+  const [state, dispatch] = usePlayReducer(
+    playReducer,
+    daily,
+    initPlayState,
+    rules,
+  );
   const allowance = useFreeHintsPerPuzzle();
   const controls = useBinairoControls(dispatch);
 
@@ -52,8 +64,6 @@ export function useBinairoPlay(
   const elapsed = elapsedMs(timer, state.now);
   const filled = countFilled(givens, entries);
 
-  const solution = useMemo(() => solveBinairo(givens), [givens]);
-
   usePlayLifecycle({
     game: "binairo",
     state,
@@ -62,14 +72,14 @@ export function useBinairoPlay(
     buildRecord,
     remotelyClaimed,
 
-    persistDeps: [givens, entries, hintsUsed],
+    persistDeps: [givens, entries, hintsUsed, state.mistakes.cells],
   });
 
   const revealHint = useCallback(() => {
     if (solution !== null && canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint", solution });
     }
-  }, [solution, allowance]);
+  }, [dispatch, solution, allowance]);
 
   const edits = useBoardEdits(state, dispatch);
 
@@ -96,5 +106,6 @@ function buildRecord(
     game: "binairo",
     entries: [...state.entries],
     grid: closed && isSolvedGrid(merged) ? [...merged] : undefined,
+    mistakes: mistakeRecord(state, closed),
   };
 }

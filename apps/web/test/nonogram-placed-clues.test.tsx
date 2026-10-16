@@ -6,6 +6,7 @@ import { messages } from "../src/i18n";
 import { Board } from "../src/nonogram/board";
 import styles from "../src/nonogram/nonogram-board.module.css";
 import type { NonogramCellValue } from "../src/nonogram/state";
+import { NO_MISTAKES } from "../src/play/mistakes";
 import { contrast } from "./contrast";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 
@@ -31,6 +32,7 @@ function renderBoard() {
       clues={CLUES}
       solution={null}
       entries={ENTRIES}
+      mistakes={NO_MISTAKES}
       selected={null}
       hintIndex={null}
       spotlight={[]}

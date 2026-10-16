@@ -1,18 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { Controls, ControlsSkeleton } from "../binairo/controls";
 import { Grid } from "../binairo/grid";
 import { binairoHintExplanation } from "../binairo/hint";
-import { canHint, initPlayState, playReducer } from "../binairo/state";
+import {
+  binairoMistakes,
+  canHint,
+  initPlayState,
+  playReducer,
+} from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
 import { EndingStage } from "../play/ending-stage";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
+import { usePlayReducer } from "../play/mistakes";
 import { countFilled } from "../play/progress";
 import { useBoardEdits } from "../play/undo";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
@@ -78,10 +84,15 @@ function BinairoFreeBoard({
   readonly puzzle: FreeBinairoPuzzle;
   readonly onNext: () => void;
 }) {
-  const [state, dispatch] = useReducer(
+  const rules = useMemo(
+    () => binairoMistakes(puzzle.solution, puzzle.daily.givens),
+    [puzzle],
+  );
+  const [state, dispatch] = usePlayReducer(
     playReducer,
     puzzle.daily,
     initPlayState,
+    rules,
   );
   const { tapCell, strokeStart, paintOver, toggleMode } =
     useBinairoControls(dispatch);
@@ -94,7 +105,7 @@ function BinairoFreeBoard({
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
-  }, []);
+  }, [dispatch]);
 
   const filled = countFilled(state.givens, state.entries);
   const hintReady = canHint(state, allowance);
@@ -103,7 +114,7 @@ function BinairoFreeBoard({
     if (canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint", solution: puzzle.solution });
     }
-  }, [puzzle.solution, allowance]);
+  }, [dispatch, puzzle.solution, allowance]);
 
   const edits = useBoardEdits(state, dispatch);
 
@@ -144,6 +155,7 @@ function BinairoFreeBoard({
             givens={state.givens}
             solution={puzzle.solution}
             entries={state.entries}
+            mistakes={state.mistakes}
             violating={state.violating}
             hintIndex={state.hint.lastIndex}
             spotlight={state.hint.spotlight}

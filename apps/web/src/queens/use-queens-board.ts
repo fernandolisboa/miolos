@@ -1,7 +1,8 @@
 import type { DailyQueensResponse } from "@miolos/core";
-import { useCallback, useReducer, type Dispatch } from "react";
+import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
+import { usePlayReducer } from "../play/mistakes";
 import {
   useBinaryGridControls,
   type BinaryGridControls,
@@ -15,6 +16,7 @@ import {
   countQueens,
   autoCrossingReducer,
   initQueensPlayState,
+  QUEENS_MISTAKES,
   queensPlayReducer,
   type QueensPlayAction,
   type QueensPlayState,
@@ -29,17 +31,21 @@ export interface QueensBoardState extends BinaryGridControls, StrokeControls {
 
 export function useQueensBoard(daily: DailyQueensResponse): QueensBoardState {
   const { autoCross } = useSettings().games.queens;
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = usePlayReducer(
     autoCross ? autoCrossingReducer : queensPlayReducer,
     daily,
     initQueensPlayState,
+    QUEENS_MISTAKES,
   );
   const controls = useBinaryGridControls(state, dispatch);
   const strokes = useStrokeControls(dispatch);
 
-  const tapCell = useCallback((index: number, press: Press) => {
-    dispatch({ type: "tap", index, press });
-  }, []);
+  const tapCell = useCallback(
+    (index: number, press: Press) => {
+      dispatch({ type: "tap", index, press });
+    },
+    [dispatch],
+  );
 
   return {
     ...controls,

@@ -11,6 +11,7 @@
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — decision 2 gains *Limpar rascunho ao preencher* (on); decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes.
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: the *Mostrar erros* flag gains an edge stop in the label ink, so it reads on a tone fill (`T-WEB-S594`).
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 2 gains Campo Minado's *Marcas (?)*, a switch, off by default.
+**Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — decision 2 gains *Limite de 3 erros* (off), top-level, in the general group of every grid game's dialog and hidden where no game counts; decision 3: a counted mistake shows the wrong mark without *Mostrar erros*, and the held cell never does.
 
 ## Context
 

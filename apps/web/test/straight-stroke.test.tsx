@@ -9,6 +9,7 @@ import {
   projectOnLine,
   strokeAxis,
 } from "../src/play/straight-stroke";
+import { NO_MISTAKES } from "../src/play/mistakes";
 import { installPointerStubs } from "./pointer";
 
 installPointerStubs();
@@ -70,6 +71,7 @@ function renderBoard(straightDrag: boolean) {
       clues={CLUES}
       solution={null}
       entries={EMPTY}
+      mistakes={NO_MISTAKES}
       selected={null}
       hintIndex={null}
       spotlight={[]}

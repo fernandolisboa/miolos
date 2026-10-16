@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
+import { usePlayReducer } from "../play/mistakes";
 import { countFilled } from "../play/progress";
 import { Board, BoardSkeleton } from "../sudoku/board";
 import { mergedGrid, playableGivens } from "../sudoku/engine";
@@ -14,6 +15,7 @@ import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
   canHint,
   initSudokuPlayState,
+  sudokuMistakes,
   sudokuPlayReducer,
 } from "../sudoku/state";
 import boardStyles from "../sudoku/sudoku-board.module.css";
@@ -78,10 +80,15 @@ function SudokuFreeBoard({
   readonly puzzle: FreeSudokuPuzzle;
   readonly onNext: () => void;
 }) {
-  const [state, dispatch] = useReducer(
+  const rules = useMemo(
+    () => sudokuMistakes(puzzle.solution, puzzle.daily.givens),
+    [puzzle],
+  );
+  const [state, dispatch] = usePlayReducer(
     sudokuPlayReducer,
     puzzle.daily,
     initSudokuPlayState,
+    rules,
   );
   const allowance = useFreeHintsPerPuzzle();
 
@@ -92,7 +99,7 @@ function SudokuFreeBoard({
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
-  }, []);
+  }, [dispatch]);
 
   const filled = countFilled(playableGivens(state.givens), state.entries);
   const hintReady = canHint(state, allowance);
@@ -114,7 +121,7 @@ function SudokuFreeBoard({
       return;
     }
     dispatch({ type: "use-hint", solution: puzzle.solution, cleanNotes });
-  }, [puzzle.solution, allowance, cleanNotes]);
+  }, [dispatch, puzzle.solution, allowance, cleanNotes]);
 
   const choices = [levelChoice(level, onLevelChange)];
   return (
@@ -164,6 +171,7 @@ function SudokuFreeBoard({
             givens={state.givens}
             solution={puzzle.solution}
             entries={state.entries}
+            mistakes={state.mistakes}
             notes={state.notes}
             selected={state.selected}
             violating={state.violating}

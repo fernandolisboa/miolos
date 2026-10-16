@@ -12,6 +12,7 @@
 **Superseded in part by:** [ADR-0115](./0115-the-bundle-check-runs-in-the-ci-gate.md) — the attribution check is in CI now, so it no longer has to be run by hand around edits to this module.
 **Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — the reset row holds a third stateful child, `UndoControl`, first in the row; `PlayChromeReadouts` carries `onUndo` beside `onReset`.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — the chrome's game widens to `PlayChromeGame` (`DailyChromeGame` stays closed to Campo Minado); the hint is optional and `onUndo` may be absent; the reset confirm's words are per game.
+**Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the readouts gain `mistakes` (`{ left }` or null): the marks in the stats card and beside the phone title, and at zero the frozen line in the hint slot. No new stateful child.
 
 ## Context
 

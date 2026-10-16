@@ -54,6 +54,7 @@ export function PlayView({
           givens={state.givens}
           solution={play.solution}
           entries={state.entries}
+          mistakes={state.mistakes}
           violating={state.violating}
           hintIndex={state.hint.lastIndex}
           spotlight={state.hint.spotlight}

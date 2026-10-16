@@ -253,6 +253,15 @@ export const messages = {
       short: "Dica",
     },
     undo: "Desfazer",
+    mistakes: {
+      label: "Erros",
+      aria: (left: number) =>
+        left === 0
+          ? "Limite de erros: nenhum restante"
+          : `Limite de erros: ${left} de 3 ${left === 1 ? "restante" : "restantes"}`,
+      frozen: "Três erros. Recomece para jogar de novo.",
+      frozenShort: "3 erros",
+    },
     reset: {
       label: "Recomeçar",
       question: "Recomeçar o puzzle? Suas jogadas serão apagadas.",
@@ -746,6 +755,10 @@ export const messages = {
         endAnimation: {
           label: "Animação no fim do jogo",
           hint: "Ao vencer, o tabuleiro brilha a partir da última casa e o carimbo bate; ao perder, o carimbo cai pesado. Dura um instante.",
+        },
+        mistakeLimit: {
+          label: "Limite de 3 erros",
+          hint: "No terceiro erro, o tabuleiro trava até você recomeçar. Conta só o que não bate com a solução, nunca um ✕. Não vale no Termo nem no Campo Minado e não mexe na sequência.",
         },
         showErrors: {
           label: "Mostrar erros",

@@ -11,7 +11,7 @@ import type { ResetAction } from "./reset-board";
 import {
   useBoardEdits,
   type BoardEdits,
-  type Undoable,
+  type Editable,
   type UndoAction,
 } from "./undo";
 
@@ -26,7 +26,7 @@ export interface BinaryGridControls {
 }
 
 export function useBinaryGridControls(
-  state: BinaryGridState<unknown, number> & Undoable<unknown>,
+  state: BinaryGridState<unknown, number> & Editable,
   dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
 ): BinaryGridControls {
   const allowance = useFreeHintsPerPuzzle();

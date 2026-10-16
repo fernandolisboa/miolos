@@ -10,14 +10,25 @@ import {
 } from "@miolos/games/sudoku";
 
 import { movedSelection } from "../play/grid-selection";
+import {
+  NO_MISTAKES,
+  type CellPress,
+  type MistakeRules,
+  type MistakeState,
+} from "../play/mistakes";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
 import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
-import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
-import { mergedGrid } from "./engine";
+import {
+  NO_HISTORY,
+  undoable,
+  type UndoAction,
+  type UndoHistory,
+} from "../play/undo";
+import { mergedGrid, playableGivens } from "./engine";
 import { nextSudokuHint, type SudokuHintReason } from "./hint";
 import {
   clearNotes,
@@ -52,6 +63,7 @@ export interface SudokuPlayState extends PlayCore {
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
   readonly history: UndoHistory<SudokuSnapshot>;
+  readonly mistakes: MistakeState;
 }
 
 type SudokuSnapshot = Pick<
@@ -78,6 +90,7 @@ export type SudokuPlayAction =
       readonly type: "enter-digit";
       readonly digit: SudokuDigit;
       readonly cleanNotes: boolean;
+      readonly pointer?: true;
     }
   | { readonly type: "toggle-note"; readonly digit: SudokuDigit }
   | { readonly type: "toggle-noting" }
@@ -123,7 +136,41 @@ export function initSudokuPlayState(
     now: 0,
     hydrated: false,
     history: NO_HISTORY,
+    mistakes: NO_MISTAKES,
   };
+}
+
+export function sudokuMistakes(
+  solution: readonly SudokuDigit[] | null,
+  givens: SudokuGrid,
+): MistakeRules<SudokuPlayState, SudokuPlayAction | UndoAction> {
+  const judged =
+    solution === null ? null : { solution, givens: playableGivens(givens) };
+  return { judge: () => judged, press: sudokuPress };
+}
+
+function sudokuPress(
+  { selected }: SudokuPlayState,
+  action: SudokuPlayAction | UndoAction,
+): CellPress | null {
+  switch (action.type) {
+    case "enter-digit":
+    case "clear-cell":
+      return selected === null
+        ? null
+        : {
+            index: selected,
+            held: action.type === "enter-digit" && action.pointer === true,
+          };
+    case "tap-cell":
+      return { index: action.index, held: true };
+    case "lock-digit":
+      return action.undo === null
+        ? null
+        : { index: action.undo.index, held: true };
+    default:
+      return null;
+  }
 }
 
 export const sudokuPlayReducer = undoable(

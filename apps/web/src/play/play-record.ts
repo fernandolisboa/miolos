@@ -1,5 +1,6 @@
 import {
   completionOutcomeSchema,
+  CROSSWORD_SIZES,
   crosswordCellsSchema,
   hintsUsedSchema,
   isoDateString,
@@ -14,6 +15,7 @@ import {
 } from "@miolos/core";
 import { z } from "zod";
 
+import { MISTAKE_LIMIT } from "./mistakes";
 import { elapsedMs } from "./timer";
 import type { PlayCore } from "./types";
 
@@ -33,6 +35,34 @@ const recordHeaderShape = {
   pendingSync: z.boolean(),
   syncOutcome: z.enum(["pending", "recorded", "rejected"]),
 };
+
+const mistakeCells = (cells: number) =>
+  z
+    .array(
+      z
+        .int()
+        .min(0)
+        .max(cells - 1),
+    )
+    .min(1)
+    .max(MISTAKE_LIMIT)
+    .optional();
+
+function insideBoard(
+  record: {
+    readonly entries: readonly unknown[];
+    readonly mistakes?: readonly number[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (record.mistakes?.some((cell) => cell >= record.entries.length)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "mistakes must index the cells of the board",
+      path: ["mistakes"],
+    });
+  }
+}
 
 type RecordHeader = z.infer<z.ZodObject<typeof recordHeaderShape>>;
 
@@ -57,6 +87,7 @@ export const binairoPlayRecordSchema = z.strictObject({
   ...recordHeaderShape,
   game: z.literal("binairo"),
   entries: z.array(z.union([z.literal(0), z.literal(1), z.null()])).length(64),
+  mistakes: mistakeCells(64),
 
   grid: z
     .array(z.union([z.literal(0), z.literal(1)]))
@@ -72,6 +103,7 @@ export const sudokuPlayRecordSchema = z.strictObject({
   entries: z.array(z.union([sudokuDigitSchema, z.null()])).length(81),
 
   notes: z.array(z.int().min(0).max(511)).length(81).optional(),
+  mistakes: mistakeCells(81),
 
   grid: z.array(sudokuDigitSchema).length(81).optional(),
 });
@@ -99,8 +131,10 @@ function sizedBinaryRecordSchema<const G extends Game, S extends number>(
         .array(z.union([z.literal(0), z.literal(1)]))
         .max(maxCells)
         .optional(),
+      mistakes: mistakeCells(maxCells),
     })
     .superRefine((record, ctx) => {
+      insideBoard(record, ctx);
       const size = record.size;
       const cells = size ** 2;
       if (record.entries.length !== cells) {
@@ -229,12 +263,14 @@ export const crosswordPlayRecordSchema = z
     game: z.literal("crossword"),
     entries: crosswordCellsSchema,
     grid: crosswordCellsSchema.optional(),
+    mistakes: mistakeCells(Math.max(...CROSSWORD_SIZES) ** 2),
   })
   .refine(
     (record) =>
       record.grid === undefined || record.grid.length === record.entries.length,
     { message: "a solved grid has as many cells as the entries" },
-  );
+  )
+  .superRefine(insideBoard);
 
 export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;
 

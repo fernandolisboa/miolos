@@ -1,6 +1,8 @@
 import { useCallback, type Dispatch } from "react";
 
+import { useSettings } from "../settings/settings";
 import { unlit } from "./hint-state";
+import { isFrozen, MISTAKE_LIMIT, type MistakeState } from "./mistakes";
 import { hasDecidedCell, type ResetAction } from "./reset-board";
 import type { HintState, PlayCore } from "./types";
 
@@ -21,16 +23,27 @@ export interface Undoable<T> extends PlayCore {
   readonly history: UndoHistory<T>;
 }
 
+export type Editable = Undoable<unknown> & {
+  readonly mistakes: MistakeState;
+};
+
+export interface MistakeReadout {
+  readonly left: number;
+}
+
 export interface BoardEdits {
   readonly onReset: (() => void) | null;
   readonly onUndo: (() => void) | null;
+  readonly mistakes: MistakeReadout | null;
 }
 
 export function useBoardEdits(
-  state: Undoable<unknown>,
+  state: Editable,
   dispatch: Dispatch<ResetAction | UndoAction>,
   resettable = hasDecidedCell(state.entries),
 ): BoardEdits {
+  const limit = useSettings().mistakeLimit;
+  const spent = state.mistakes.cells.length;
   const reset = useCallback(() => {
     dispatch({ type: "reset" });
   }, [dispatch]);
@@ -40,11 +53,14 @@ export function useBoardEdits(
   }, [dispatch]);
 
   return {
-    onReset: resettable ? reset : null,
+    onReset: resettable || (limit && spent > 0) ? reset : null,
     onUndo:
-      state.status === "playing" && state.history.steps.length > 0
+      state.status === "playing" &&
+      state.history.steps.length > 0 &&
+      !isFrozen(state.mistakes, limit)
         ? undo
         : null,
+    mistakes: limit ? { left: Math.max(MISTAKE_LIMIT - spent, 0) } : null,
   };
 }
 

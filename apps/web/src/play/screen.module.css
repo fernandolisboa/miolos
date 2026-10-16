@@ -59,7 +59,8 @@
 
 .barKicker,
 .timerBar,
-.progressBar {
+.progressBar,
+.mistakesBar {
   display: none;
 }
 
@@ -211,6 +212,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mistakesCard {
+  display: inline-flex;
+  align-self: center;
+}
+
 /* ── reset ───────────────────────────────────────────────────────────── */
 
 /* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
@@ -278,6 +284,26 @@
 .hint:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+.frozen,
+.frozen:active {
+  margin-block: 0;
+  background: var(--paper-card);
+  border: 1.5px dashed var(--accent-app);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
+  cursor: default;
+}
+
+/* Writes are already refused by the reducer; the fade only says so. */
+.page[data-frozen] .board > :not(.hintLive) {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  transition:
+    opacity var(--duration-base) var(--ease-settle),
+    filter var(--duration-base) var(--ease-settle);
 }
 
 /* ── board ───────────────────────────────────────────────────────────── */
@@ -367,7 +393,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hint {
+  .hint,
+  .page[data-frozen] .board > :not(.hintLive) {
     transition: none;
   }
 }
@@ -403,6 +430,11 @@
   .timerBar,
   .progressBar {
     display: block;
+  }
+
+  .mistakesBar {
+    display: inline-flex;
+    align-self: center;
   }
 
   .titleBlock {
@@ -475,6 +507,10 @@
     font-variant-numeric: tabular-nums;
     line-height: 22px;
     text-align: center;
+  }
+
+  .frozen::after {
+    content: none;
   }
 }
 

@@ -1,19 +1,14 @@
 import type { DailyCrosswordResponse } from "@miolos/core";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useReducer,
-  type Dispatch,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, type Dispatch } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { usePlayReducer } from "../play/mistakes";
 import { useBoardEdits, type BoardEdits } from "../play/undo";
 import { useSettings } from "../settings/settings";
 import { countAnswered } from "./grid";
 import {
   canHint,
+  CROSSWORD_MISTAKES,
   crosswordPlayReducer,
   initCrosswordPlayState,
   type CrosswordDirection,
@@ -43,10 +38,11 @@ export interface CrosswordBoard {
 export function useCrosswordBoard(
   daily: DailyCrosswordResponse,
 ): CrosswordBoard & { readonly dispatch: Dispatch<CrosswordPlayAction> } {
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = usePlayReducer(
     crosswordPlayReducer,
     daily,
     initCrosswordPlayState,
+    CROSSWORD_MISTAKES,
   );
   const allowance = useFreeHintsPerPuzzle();
   const { skipFilled } = useSettings().games.crossword;
@@ -64,41 +60,47 @@ export function useCrosswordBoard(
   );
   const filled = countAnswered(solution, entries);
 
-  const selectCell = useCallback((index: number) => {
-    dispatch({ type: "select", index });
-  }, []);
+  const selectCell = useCallback(
+    (index: number) => {
+      dispatch({ type: "select", index });
+    },
+    [dispatch],
+  );
 
   const selectEntry = useCallback(
     (index: number, direction: CrosswordDirection) => {
       dispatch({ type: "select-entry", index, direction });
     },
-    [],
+    [dispatch],
   );
 
   const toggleDirection = useCallback(() => {
     dispatch({ type: "toggle-direction" });
-  }, []);
+  }, [dispatch]);
 
-  const moveSelection = useCallback((rows: number, columns: number) => {
-    dispatch({ type: "move-selection", rows, columns });
-  }, []);
+  const moveSelection = useCallback(
+    (rows: number, columns: number) => {
+      dispatch({ type: "move-selection", rows, columns });
+    },
+    [dispatch],
+  );
 
   const typeLetter = useCallback(
     (letter: string) => {
       dispatch({ type: "type-letter", letter, skipFilled });
     },
-    [skipFilled],
+    [dispatch, skipFilled],
   );
 
   const backspace = useCallback(() => {
     dispatch({ type: "backspace" });
-  }, []);
+  }, [dispatch]);
 
   const revealHint = useCallback(() => {
     if (canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint" });
     }
-  }, [allowance]);
+  }, [dispatch, allowance]);
 
   const edits = useBoardEdits(state, dispatch);
 

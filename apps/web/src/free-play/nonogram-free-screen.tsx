@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useState } from "react";
+import { useState } from "react";
 
 import { lazyChunk } from "../components/lazy-chunk";
 import { Board } from "../nonogram/board";
@@ -8,8 +8,13 @@ import { Controls } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
 import { nonogramHintExplanation } from "../nonogram/hint";
 import { nonogramPageModifier } from "../nonogram/page-class";
-import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
+import {
+  initNonogramPlayState,
+  NONOGRAM_MISTAKES,
+  nonogramPlayReducer,
+} from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
+import { usePlayReducer } from "../play/mistakes";
 import {
   DEFAULT_FREE_PLAY_LEVEL,
   NONOGRAM_VARIANTS,
@@ -115,10 +120,11 @@ function ClassicFreeBoard({
   readonly puzzle: FreeNonogramPuzzle;
   readonly onNext: () => void;
 }) {
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = usePlayReducer(
     nonogramPlayReducer,
     puzzle.daily,
     initNonogramPlayState,
+    NONOGRAM_MISTAKES,
   );
   const controls = useNonogramControls(state, dispatch);
 
@@ -148,6 +154,7 @@ function ClassicFreeBoard({
         clues={state.clues}
         solution={state.solution}
         entries={state.entries}
+        mistakes={state.mistakes}
         selected={state.selected}
         hintIndex={state.hint.lastIndex}
         spotlight={state.hint.spotlight}

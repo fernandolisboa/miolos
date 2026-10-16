@@ -5,6 +5,7 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
+import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
@@ -23,6 +24,7 @@ export const Board = memo(function Board({
   regions,
   solution,
   entries,
+  mistakes,
   conflicts,
   selected,
   hintIndex,
@@ -39,6 +41,7 @@ export const Board = memo(function Board({
   readonly regions: readonly number[];
   readonly solution: readonly QueensMark[] | null;
   readonly entries: readonly QueensCellValue[];
+  readonly mistakes: MistakeState;
   readonly conflicts: ReadonlySet<number>;
   readonly selected: number | null;
   readonly hintIndex: number | null;
@@ -51,7 +54,7 @@ export const Board = memo(function Board({
   readonly onEnterValue: (value: QueensMark) => void;
   readonly onClear: () => void;
 }) {
-  const wrong = useWrongCells("queens", solution, null, entries);
+  const wrong = useWrongCells("queens", solution, null, entries, mistakes);
   const { highlightRegion, fadeQueenLines } = useSettings().games.queens;
   const puzzle = useMemo(() => ({ size, regions }), [size, regions]);
   const reach = useMemo(

@@ -1,5 +1,6 @@
 import type { DailyQueensResponse } from "@miolos/core";
 
+import { mistakeRecord } from "../play/mistakes";
 import { recordHeader, type QueensPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -24,7 +25,7 @@ export function useQueensPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    persistDeps: [state.entries, state.hint.used],
+    persistDeps: [state.entries, state.hint.used, state.mistakes.cells],
   });
 
   return { ...board, elapsed: elapsedMs(state.timer, state.now) };
@@ -45,5 +46,6 @@ function buildRecord(
       state.autoCrossed.size === 0
         ? undefined
         : [...state.autoCrossed].map(([cell, by]) => ({ cell, by: [...by] })),
+    mistakes: mistakeRecord(state, closed),
   };
 }

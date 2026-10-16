@@ -1,19 +1,21 @@
 "use client";
 
 import type { NonogramSize } from "@miolos/core";
-import { useCallback, useReducer } from "react";
+import { useCallback } from "react";
 
 import { ColoredBoard } from "../colored-nonogram/board";
 import styles from "../colored-nonogram/colored-board.module.css";
 import { ColoredControls } from "../colored-nonogram/controls";
 import { coloredHintExplanation } from "../colored-nonogram/hint";
 import {
+  COLORED_MISTAKES,
   coloredNonogramReducer,
   initColoredNonogramState,
 } from "../colored-nonogram/state";
 import { countFilledCells } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
+import { usePlayReducer } from "../play/mistakes";
 import { NONOGRAM_LEVEL_SIZES, type FreePlayLevel } from "./catalog";
 import type { Choice } from "./choice";
 import { PictureFreeFrame, PictureFreeScreen } from "./picture-free-frame";
@@ -68,15 +70,19 @@ function ColoredFreeBoard({
   readonly puzzle: FreeColoredNonogramPuzzle;
   readonly onNext: () => void;
 }) {
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = usePlayReducer(
     coloredNonogramReducer,
     puzzle,
     initColoredNonogramState,
+    COLORED_MISTAKES,
   );
   const controls = useNonogramControls(state, dispatch);
-  const setTone = useCallback((tone: number) => {
-    dispatch({ type: "set-tone", tone });
-  }, []);
+  const setTone = useCallback(
+    (tone: number) => {
+      dispatch({ type: "set-tone", tone });
+    },
+    [dispatch],
+  );
 
   const { clues, solution } = puzzle;
   return (
@@ -123,6 +129,7 @@ function ColoredFreeBoard({
         clues={clues}
         solution={state.solution}
         entries={state.entries}
+        mistakes={state.mistakes}
         selected={state.selected}
         hintIndex={state.hint.lastIndex}
         spotlight={state.hint.spotlight}

@@ -20,7 +20,7 @@ const copy = messages.settings.games;
 type GameSetting = {
   [G in SettingsGame]: keyof Settings["games"][G];
 }[SettingsGame];
-type Setting = GameSetting | "showClock" | "endAnimation";
+type Setting = GameSetting | "showClock" | "endAnimation" | "mistakeLimit";
 type FirstValue = (typeof BINAIRO_FIRST_VALUES)[number];
 
 function SettingText({
@@ -151,6 +151,15 @@ export function GameSettings({
               writeSettings({ ...readSettings(), endAnimation: value });
             }}
           />
+          {games.some((game) => game !== "minesweeper") ? (
+            <SettingSwitch
+              flag="mistakeLimit"
+              checked={settings.mistakeLimit}
+              onChange={(value) => {
+                writeSettings({ ...readSettings(), mistakeLimit: value });
+              }}
+            />
+          ) : null}
         </fieldset>
         {games.map((game) => (
           <fieldset key={game} className={styles.group}>

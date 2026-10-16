@@ -21,11 +21,22 @@ import {
 } from "../play/brush";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
+import {
+  NO_MISTAKES,
+  type CellPress,
+  type MistakeRules,
+  type MistakeState,
+} from "../play/mistakes";
 import type { BinairoPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
-import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
+import {
+  NO_HISTORY,
+  undoable,
+  type UndoAction,
+  type UndoHistory,
+} from "../play/undo";
 import { mergeGrid } from "./engine";
 import { nextBinairoHint, type BinairoHintReason } from "./hint";
 
@@ -46,6 +57,7 @@ export interface PlayState extends PlayCore {
   readonly violating: ReadonlySet<number>;
   readonly status: "playing" | "solved";
   readonly history: UndoHistory<BinairoSnapshot>;
+  readonly mistakes: MistakeState;
 }
 
 type BinairoSnapshot = Pick<PlayState, "entries" | "violating" | "hint">;
@@ -87,7 +99,34 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     now: 0,
     hydrated: false,
     history: NO_HISTORY,
+    mistakes: NO_MISTAKES,
   };
+}
+
+export function binairoMistakes(
+  solution: BinairoSolvedGrid | null,
+  givens: BinairoGrid,
+): MistakeRules<PlayState, PlayAction | UndoAction> {
+  const judged = solution === null ? null : { solution, givens };
+  return { judge: () => judged, press: binairoPress };
+}
+
+function binairoPress(
+  state: PlayState,
+  action: PlayAction | UndoAction,
+): CellPress | null {
+  switch (action.type) {
+    case "tap":
+      return {
+        index: action.index,
+        held: state.paint.kind === "cycle" && action.press === "tap",
+      };
+    case "stroke-start":
+    case "paint-over":
+      return { index: action.index, held: false };
+    default:
+      return null;
+  }
 }
 
 export const playReducer = undoable(

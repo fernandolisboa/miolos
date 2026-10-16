@@ -45,6 +45,7 @@ export function BoardPanel({ board }: { readonly board: QueensBoardState }) {
         regions={state.regions}
         solution={state.solution}
         entries={state.entries}
+        mistakes={state.mistakes}
         conflicts={state.conflicts}
         selected={state.selected}
         hintIndex={state.hint.lastIndex}

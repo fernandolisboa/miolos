@@ -100,7 +100,7 @@ export function useDigitLock(
         undo: undoAt(current, current.selected),
         release: false,
       };
-      dispatch({ type: "enter-digit", digit, cleanNotes });
+      dispatch({ type: "enter-digit", digit, cleanNotes, pointer: true });
       dispatch({ type: "unlock" });
     },
     [enabled, cleanNotes, dispatch],

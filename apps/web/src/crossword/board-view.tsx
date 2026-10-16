@@ -77,6 +77,7 @@ export function CrosswordBoardView({
             solution={state.solution}
             clues={state.clues}
             entries={state.entries}
+            mistakes={state.mistakes}
             selected={state.selected}
             direction={state.direction}
             hintIndex={state.hint.lastIndex}
