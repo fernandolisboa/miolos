@@ -24,6 +24,21 @@ function fieldOf(puzzle: MinesweeperDaily) {
   );
 }
 
+function closedSafe(puzzle: MinesweeperDaily): number {
+  const field = fieldOf(puzzle);
+  const opened = startMinesweeper(field, puzzle.start).open;
+  return field.mines.filter((mine, cell) => !mine && !opened[cell]).length;
+}
+
+function minesAt(start: number, cells: readonly number[]): MinesweeperDaily {
+  return withMines({ ...MONDAY, start }, (mines) => {
+    mines.fill(0);
+    cells.forEach((cell) => {
+      mines[cell] = 1;
+    });
+  });
+}
+
 function withMines(
   puzzle: MinesweeperDaily,
   move: (mines: (0 | 1)[]) => void,
@@ -69,8 +84,17 @@ describe("generateMinesweeperDaily", () => {
           expect(puzzle.mines[cell]).toBe(0);
         }
         expect(validateMinesweeperDaily(puzzle)).toEqual({ ok: true });
-        expect(solveMinesweeper(field, puzzle.start).status).toBe("won");
         expect(startMinesweeper(field, puzzle.start).status).toBe("playing");
+        expect(closedSafe(puzzle)).toBeGreaterThanOrEqual(40);
+
+        const solved = solveMinesweeper(field, puzzle.start);
+        expect(solved.status).toBe("won");
+        expect(solved.open).toEqual(field.mines.map((mine) => !mine));
+        expect(
+          solved.marks.every(
+            (mark, cell) => mark !== "flag" || field.mines[cell],
+          ),
+        ).toBe(true);
       }),
       { seed: FC_SEED, numRuns: 200 },
     );
@@ -81,6 +105,23 @@ describe("generateMinesweeperDaily", () => {
 
     expect(MONDAY.mines.filter((mine) => mine === 1)).toHaveLength(20);
     expect(sunday.mines.filter((mine) => mine === 1)).toHaveLength(32);
+  });
+
+  it("pins a Monday and a Sunday field", () => {
+    const sunday = generateMinesweeperDaily({ seed: 20_261_025, weekday: 7 });
+    const minesOf = (puzzle: MinesweeperDaily) =>
+      puzzle.mines.flatMap((mine, cell) => (mine === 1 ? [cell] : []));
+
+    expect(MONDAY.start).toBe(99);
+    expect(minesOf(MONDAY)).toEqual([
+      21, 28, 38, 47, 64, 84, 87, 94, 97, 104, 111, 112, 122, 126, 128, 129,
+      132, 140, 142, 157,
+    ]);
+    expect(sunday.start).toBe(152);
+    expect(minesOf(sunday)).toEqual([
+      7, 13, 15, 17, 23, 26, 34, 37, 40, 52, 53, 55, 56, 63, 73, 75, 84, 86, 91,
+      92, 93, 100, 103, 114, 118, 119, 122, 133, 145, 147, 155, 159,
+    ]);
   });
 
   it("P2 — determinism: same (seed, weekday) yields a deep-equal field", () => {
@@ -178,17 +219,51 @@ describe("validateMinesweeperDaily", () => {
     });
   });
 
-  it("rejects a field whose start flood leaves under 40 safe cells to open", () => {
-    const corner = withMines({ ...MONDAY, start: 155 }, (mines) => {
-      mines.fill(0);
-      for (let cell = 0; cell < 20; cell += 1) {
-        mines[cell] = 1;
-      }
-    });
+  it("rejects a field whose start flood leaves 39 safe cells closed: a stepped wall under rows 0–4", () => {
+    const stepped = minesAt(155, [
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8],
+      ...[48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
+      129,
+    ]);
+    expect(closedSafe(stepped)).toBe(39);
 
-    expect(validateMinesweeperDaily(corner)).toEqual({
+    expect(validateMinesweeperDaily(stepped)).toEqual({
       ok: false,
       failures: ["opens-too-much"],
     });
+  });
+
+  it("accepts the flood leaving 40 safe cells closed: a full wall on row 5 and row 0 mined", () => {
+    const walled = minesAt(155, [
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      ...[50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+    ]);
+    expect(closedSafe(walled)).toBe(40);
+
+    expect(validateMinesweeperDaily(walled)).toEqual({
+      ok: false,
+      failures: ["needs-a-guess"],
+    });
+  });
+
+  it("does not run the solver from a start next to a mine", () => {
+    const blocked = minesAt(155, [
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9],
+      ...[80, 81, 82, 83, 84, 85, 86, 87, 88, 89],
+      154,
+    ]);
+
+    expect(validateMinesweeperDaily(blocked)).toEqual({
+      ok: false,
+      failures: ["start-not-clear"],
+    });
+  });
+
+  it("rejects a weekday outside 1..7 as malformed", () => {
+    for (const weekday of [0, 8, 1.5]) {
+      expect(
+        validateMinesweeperDaily({ ...MONDAY, weekday: weekday as 1 }),
+      ).toEqual({ ok: false, failures: ["malformed"] });
+    }
   });
 });

@@ -1,5 +1,5 @@
 import { createSeededRandom } from "../random";
-import { assertWeekday, type Weekday } from "../weekday";
+import { assertWeekday, isWeekday, type Weekday } from "../weekday";
 import { layMines, minesweeperField } from "./field";
 import { neighbours } from "./internal";
 import { startMinesweeper } from "./play";
@@ -34,6 +34,7 @@ function clearing(start: number): number[] {
 function isMalformed(puzzle: MinesweeperDaily): boolean {
   const { rows, columns } = MINESWEEPER_DAILY_SIZE;
   return (
+    !isWeekday(puzzle.weekday) ||
     !Array.isArray(puzzle.mines) ||
     puzzle.mines.length !== rows * columns ||
     !puzzle.mines.every((mine) => mine === 0 || mine === 1) ||
@@ -46,7 +47,6 @@ function isMalformed(puzzle: MinesweeperDaily): boolean {
 export function validateMinesweeperDaily(
   puzzle: MinesweeperDaily,
 ): MinesweeperValidationResult {
-  const weekday = assertWeekday(puzzle.weekday);
   const { rows, columns } = MINESWEEPER_DAILY_SIZE;
   if (puzzle.rows !== rows || puzzle.columns !== columns) {
     return { ok: false, failures: ["size-mismatch"] };
@@ -62,11 +62,12 @@ export function validateMinesweeperDaily(
   const failures: MinesweeperRejectionReason[] = [];
   if (
     puzzle.mines.filter((mine) => mine === 1).length !==
-    MINESWEEPER_WEEKDAY_MINES[weekday]
+    MINESWEEPER_WEEKDAY_MINES[puzzle.weekday]
   ) {
     failures.push("mine-count");
   }
-  if (clearing(puzzle.start).some((cell) => field.mines[cell])) {
+  const startClear = clearing(puzzle.start).every((cell) => !field.mines[cell]);
+  if (!startClear) {
     failures.push("start-not-clear");
   }
   const opened = startMinesweeper(field, puzzle.start).open;
@@ -76,7 +77,7 @@ export function validateMinesweeperDaily(
   if (closedSafe < MIN_CLOSED_SAFE_CELLS) {
     failures.push("opens-too-much");
   }
-  if (solveMinesweeper(field, puzzle.start).status !== "won") {
+  if (startClear && solveMinesweeper(field, puzzle.start).status !== "won") {
     failures.push("needs-a-guess");
   }
   return failures.length === 0 ? { ok: true } : { ok: false, failures };

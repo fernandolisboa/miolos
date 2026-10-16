@@ -2,11 +2,11 @@
 
 **Status:** Accepted — 2026-10-16 (issue #389)
 **Depends on:** [ADR-0133](./0133-the-campo-minado-engine-follows-windows.md), [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0090](./0090-rainhas-is-a-planted-grown-region-map-graded-by-a-deduction-ladder.md)
-**Amends:** [ADR-0133](./0133-the-campo-minado-engine-follows-windows.md) decision 3 — the waiver now covers free play only; [ADR-0023](./0023-proved-not-sampled-property-testing.md) — "every puzzle solvable" binds again for the daily field, proved from the start cell by an independent solver. Uniqueness follows: a field the solver clears by deduction has one mine layout consistent with what the player sees.
+**Amends:** [ADR-0133](./0133-the-campo-minado-engine-follows-windows.md) decisions 1–3 — the state carries `size` instead of `level`, `layMines` takes a set of safe cells, and decision 3's waiver covers free play only; [ADR-0023](./0023-proved-not-sampled-property-testing.md) — "every puzzle solvable" binds again for the daily field, checked from the start cell by a solver separate from the generator, proved sound by property. Uniqueness follows: a field the solver clears by deduction has one mine layout consistent with what the player sees.
 
 ## Context
 
-Campo Minado becomes a daily (#389): one field a day, the same for everyone, feeding the streak. A field that forces a guess makes the streak a coin toss, so the daily cannot reuse free play's Windows fields. A no-guess proof starts from a known cell, so the daily field comes with its first cell fixed. Whether the game joins the catalogue is the next ADR; this one covers the engine only.
+Campo Minado becomes a daily (#389): one field a day, the same for everyone, feeding the streak. A field that forces a guess makes the streak a coin toss, so the daily cannot reuse free play's Windows fields. A no-guess proof starts from a known cell, so the daily field comes with its first cell fixed. Whether the game joins the catalogue is the catalogue ADR (#389 PR 2); this one covers the engine only.
 
 ## Decision
 
@@ -16,9 +16,9 @@ Campo Minado becomes a daily (#389): one field a day, the same for everyone, fee
 4. **The solver is local:** the single-number rule, plus the subset rule between two numbers at most two cells apart. It reads only what a player sees, and plays through the engine's own `openMinesweeperCell` and `cycleMinesweeperMark`.
 5. **The state carries `size`, not `level`**, and `seed` only while the mines are not laid. `minesweeperField` is the one routine that numbers a field.
 
-## Measured (Node 24, 20,000 attempts per weekday; 10,000 seeds per weekday for times)
+## Measured (Node 24, 20,000 attempts per weekday; seeds 0..9999 per weekday for attempts and times)
 
-- Attempt success, Monday → Sunday: 72.2, 66.8, 57.9, 46.8, 34.7, 22.9, 13.8 %. Mean attempts 1.4 → 7.1; worst 8, 10, 12, 17, 20, 36, 51. P(128 Sunday failures) ≈ 5·10⁻⁹.
+- Attempt success, Monday → Sunday: 72.2, 66.8, 57.9, 46.8, 34.7, 22.9, 13.8 %. Mean attempts 1.4 → 7.1; worst 8, 10, 12, 17, 20, 36, and ≈ 50–56 on Sunday. P(128 Sunday failures) ≈ 5·10⁻⁹.
 - Warm worst per generated daily: 4.6, 2.9, 4.1, 7.3, 7.2, 12.5, 16.8 ms (means 0.4 → 2.1 ms). Cold, the worst Sunday seed in a fresh process: 49 ms.
 - The 40-cell floor costs 5.5 % of Monday's attempts and 0.005 % of Sunday's; a solved Monday field leaves a median 84 safe cells closed.
 
@@ -30,5 +30,5 @@ Campo Minado becomes a daily (#389): one field a day, the same for everyone, fee
 
 ## Consequences
 
-- `GAMES` does not change here. The catalogue (projection, completion, the *played* loss, the medal) is ADR-0138 in the next PR.
+- `GAMES` does not change here. The catalogue (projection, completion, the *played* loss, the medal) is the catalogue ADR (#389 PR 2).
 - Free play keeps Windows' fields and can still force a guess.

@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { FC_SEED } from "../daily-arbitraries";
 import { layMines, startMinesweeper } from "../../src/minesweeper/index";
 import { solveMinesweeper } from "../../src/minesweeper/solve";
 import type {
@@ -46,6 +47,16 @@ describe("solveMinesweeper", () => {
     expect(state.marks.slice(0, 2)).toEqual([null, null]);
   });
 
+  it("solves two mines in the top corner of a 4×3 field by the single-number rule", () => {
+    const field = fieldFrom(4, 3, [0, 1]);
+    expect(singleRuleMoves(startMinesweeper(field, 10))).toBeGreaterThan(0);
+
+    const state = solveMinesweeper(field, 10);
+
+    expect(state.status).toBe("won");
+    expect(state.open[2]).toBe(true);
+  });
+
   it("solves a 1-2-1 against the walls, which no single number can start", () => {
     const field = fieldFrom(4, 3, [0, 2]);
     expect(singleRuleMoves(startMinesweeper(field, 10))).toBe(0);
@@ -54,6 +65,12 @@ describe("solveMinesweeper", () => {
 
     expect(state.status).toBe("won");
     expect(state.open[1]).toBe(true);
+  });
+
+  it("solves a 4×6 field with mines at 6, 9 and 17, which stalls without a subset step between numbers two cells apart", () => {
+    const state = solveMinesweeper(fieldFrom(4, 6, [6, 9, 17]), 19);
+
+    expect(state.status).toBe("won");
   });
 
   it("is sound: every cell it opens is safe and every cell it flags is a mine", () => {
@@ -88,7 +105,7 @@ describe("solveMinesweeper", () => {
 
         expectSound(field, solveMinesweeper(field, start));
       }),
-      { numRuns: 500 },
+      { seed: FC_SEED, numRuns: 500 },
     );
   });
 });

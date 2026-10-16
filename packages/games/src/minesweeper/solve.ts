@@ -45,6 +45,33 @@ function settle(
   }
 }
 
+function nearby(
+  known: ReadonlyMap<number, Constraint>,
+  field: MinesweeperField,
+  cell: number,
+): Constraint[] {
+  const row = Math.floor(cell / field.columns);
+  const column = cell % field.columns;
+  const result: Constraint[] = [];
+  for (
+    let r = Math.max(0, row - 2);
+    r <= Math.min(field.rows - 1, row + 2);
+    r += 1
+  ) {
+    for (
+      let c = Math.max(0, column - 2);
+      c <= Math.min(field.columns - 1, column + 2);
+      c += 1
+    ) {
+      const constraint = known.get(r * field.columns + c);
+      if (constraint !== undefined) {
+        result.push(constraint);
+      }
+    }
+  }
+  return result;
+}
+
 function deduce(
   state: MinesweeperState,
   field: MinesweeperField,
@@ -54,22 +81,13 @@ function deduce(
   const known = constraints(state, field);
   for (const [cell, a] of known) {
     settle(a.cells, a.mines, safe, flagged);
-    const row = Math.floor(cell / field.columns);
-    const column = cell % field.columns;
-    for (let r = row - 2; r <= row + 2; r += 1) {
-      for (let c = column - 2; c <= column + 2; c += 1) {
-        const b =
-          r >= 0 && r < field.rows && c >= 0 && c < field.columns
-            ? known.get(r * field.columns + c)
-            : undefined;
-        if (
-          b !== undefined &&
-          b.cells.length > a.cells.length &&
-          a.cells.every((n) => b.cells.includes(n))
-        ) {
-          const rest = b.cells.filter((n) => !a.cells.includes(n));
-          settle(rest, b.mines - a.mines, safe, flagged);
-        }
+    for (const b of nearby(known, field, cell)) {
+      if (
+        b.cells.length > a.cells.length &&
+        a.cells.every((n) => b.cells.includes(n))
+      ) {
+        const rest = b.cells.filter((n) => !a.cells.includes(n));
+        settle(rest, b.mines - a.mines, safe, flagged);
       }
     }
   }
