@@ -2,7 +2,7 @@ import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "./brush";
 
-type StrokeAction =
+export type StrokeAction =
   | {
       readonly type: "stroke-start";
       readonly index: number;

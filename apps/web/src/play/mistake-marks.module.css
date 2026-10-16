@@ -16,8 +16,7 @@
   box-shadow: 1.5px 1.5px 0 color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* Spent marks take the wrong-cell corner's colour and cut, half filled, so
-   the count still reads in grayscale. */
+/* Half filled, so the spent count still reads in grayscale. */
 .spent {
   border: 1.5px solid var(--accent-app);
   background: linear-gradient(

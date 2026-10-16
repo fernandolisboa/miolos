@@ -13,18 +13,8 @@ import {
 } from "../play/binary-grid";
 import { pressedMark, type Press, type StrokeEffect } from "../play/brush";
 import { idleHint } from "../play/hint-state";
-import {
-  judgedBySolution,
-  NO_MISTAKES,
-  type MistakeRules,
-  type MistakeState,
-} from "../play/mistakes";
-import {
-  NO_HISTORY,
-  undoable,
-  type UndoAction,
-  type UndoHistory,
-} from "../play/undo";
+import { NO_MISTAKES, type MistakeState } from "../play/mistakes";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { nextColoredHint, type ColoredHintReason } from "./hint";
 
 export interface ColoredNonogramState extends BinaryGridState<
@@ -76,11 +66,6 @@ export function initColoredNonogramState({
     mistakes: NO_MISTAKES,
   };
 }
-
-export const COLORED_MISTAKES: MistakeRules<
-  ColoredNonogramState,
-  ColoredNonogramAction | UndoAction
-> = { judge: judgedBySolution, cross: 0 };
 
 const COLORED_RULES: BinaryGridRules<
   ColoredNonogramState,

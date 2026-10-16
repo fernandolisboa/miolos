@@ -24,7 +24,7 @@ import {
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
 import { UndoControl, UndoPlaceholder } from "./undo-control";
-import type { BoardEdits, MistakeReadout } from "./undo";
+import type { BoardEdits } from "./undo";
 
 export type DailyChromeGame = Exclude<Game, "termo">;
 export type PlayChromeGame = Exclude<FreePlayGame, "termo">;
@@ -48,7 +48,7 @@ export interface PlayChromeReadouts {
   readonly progressLong: string;
   readonly onReset: BoardEdits["onReset"];
   readonly onUndo?: BoardEdits["onUndo"];
-  readonly mistakes?: MistakeReadout | null;
+  readonly mistakesLeft?: BoardEdits["mistakesLeft"];
   readonly resetCopy?: ResetCopy;
   readonly hint: {
     readonly ready: boolean;
@@ -142,8 +142,8 @@ export function PlayScreenChrome({
   const left = Math.max(allowance - (hint?.used ?? 0), 0);
   const label = hintLabel(left);
   const { kicker, play } = messages.games[game];
-  const mistakes = readouts?.mistakes ?? null;
-  const frozen = mistakes?.left === 0;
+  const mistakesLeft = readouts?.mistakesLeft ?? null;
+  const frozen = mistakesLeft === 0;
 
   return (
     <main
@@ -173,8 +173,8 @@ export function PlayScreenChrome({
         note={note}
         inert={skeleton}
       >
-        {mistakes === null ? null : (
-          <MistakeMarks left={mistakes.left} className={screen.mistakesBar} />
+        {mistakesLeft === null ? null : (
+          <MistakeMarks left={mistakesLeft} className={screen.mistakesBar} />
         )}
         <span
           aria-hidden={readouts === null ? true : undefined}
@@ -206,15 +206,12 @@ export function PlayScreenChrome({
             {readouts === null ? BLANK_READOUT : readouts.progressLong}
           </span>
         </div>
-        {mistakes === null ? null : (
+        {mistakesLeft === null ? null : (
           <div className={screen.statRow}>
             <span className={screen.statLabel}>
               {messages.play.mistakes.label}
             </span>
-            <MistakeMarks
-              left={mistakes.left}
-              className={screen.mistakesCard}
-            />
+            <MistakeMarks left={mistakesLeft} className={screen.mistakesCard} />
           </div>
         )}
         {extraStat === null ? null : (

@@ -26,12 +26,7 @@ import {
   type PlayChromeReadouts,
 } from "../src/play/screen-chrome";
 import chrome from "../src/play/screen.module.css";
-import {
-  NO_HISTORY,
-  useBoardEdits,
-  type Editable,
-  type MistakeReadout,
-} from "../src/play/undo";
+import { NO_HISTORY, useBoardEdits, type Editable } from "../src/play/undo";
 import { useWrongCells } from "../src/play/use-wrong-cells";
 import { GameSettings } from "../src/settings/game-settings";
 import { readSettings, writeSettings } from "../src/settings/settings";
@@ -97,13 +92,13 @@ describe("Limite de 3 erros is a device setting, off by default, switchable wher
   });
 });
 
-function chromeWith(mistakes: MistakeReadout | null) {
+function chromeWith(mistakesLeft: number | null) {
   const readouts: PlayChromeReadouts = {
     progressShort: "1/2",
     progressLong: "1 de 2",
     onReset: vi.fn(),
     onUndo: vi.fn(),
-    mistakes,
+    mistakesLeft,
     hint: {
       ready: true,
       used: 0,
@@ -130,7 +125,7 @@ function chromeWith(mistakes: MistakeReadout | null) {
 
 describe("the chrome draws the marks left and the frozen board (T-WEB-S846)", () => {
   it("draws three marks with the ones spent cut, in the stats card and the phone title", () => {
-    chromeWith({ left: 2 });
+    chromeWith(2);
     const drawn = screen.getAllByRole("img", { name: copy.aria(2) });
     expect(drawn).toHaveLength(2);
     expect(drawn.map((node) => node.className)).toEqual([
@@ -150,7 +145,7 @@ describe("the chrome draws the marks left and the frozen board (T-WEB-S846)", ()
   });
 
   it("puts the frozen line where the hint was and marks the page frozen", () => {
-    chromeWith({ left: 0 });
+    chromeWith(0);
     const status = screen.getByRole("status", { name: copy.frozen });
     expect(status).toHaveAttribute("data-short", copy.frozenShort);
     expect(
@@ -190,14 +185,14 @@ const counted = (cells: number[]): MistakeState => ({
   cells,
 });
 
-describe("useBoardEdits offers Recomeçar for a count alone and no undo while frozen (T-WEB-S846)", () => {
+describe("useBoardEdits offers Recomeçar for a count alone and no undo while frozen (T-WEB-S846a)", () => {
   it("with the limit on", () => {
     setLimit(true);
     const empty = renderHook(() =>
       useBoardEdits(board({ mistakes: counted([1]) }), vi.fn()),
     );
     expect(empty.result.current.onReset).not.toBeNull();
-    expect(empty.result.current.mistakes).toEqual({ left: 2 });
+    expect(empty.result.current.mistakesLeft).toBe(2);
 
     const frozen = renderHook(() =>
       useBoardEdits(
@@ -211,7 +206,7 @@ describe("useBoardEdits offers Recomeçar for a count alone and no undo while fr
     );
     expect(frozen.result.current.onUndo).toBeNull();
     expect(frozen.result.current.onReset).not.toBeNull();
-    expect(frozen.result.current.mistakes).toEqual({ left: 0 });
+    expect(frozen.result.current.mistakesLeft).toBe(0);
   });
 
   it("with the limit off", () => {
@@ -227,7 +222,7 @@ describe("useBoardEdits offers Recomeçar for a count alone and no undo while fr
     );
     expect(result.current.onReset).toBeNull();
     expect(result.current.onUndo).toBeTypeOf("function");
-    expect(result.current.mistakes).toBeNull();
+    expect(result.current.mistakesLeft).toBeNull();
   });
 });
 
@@ -266,7 +261,7 @@ describe("with only the limit on, a wrong mark sits on counted cells still wrong
   });
 });
 
-describe("a daily played under the limit (T-WEB-S848)", () => {
+describe("a daily played under the limit (T-WEB-S848a)", () => {
   const PUZZLE = generateDailySudoku({ seed: 20_261_016, weekday: 1 });
   const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({
     game: "sudoku",
@@ -329,14 +324,14 @@ describe("a daily played under the limit (T-WEB-S848)", () => {
     expect(stored()).toMatchObject({ mistakes: [a] });
     enter(result.current, b, wrong(b));
     enter(result.current, c, wrong(c));
-    expect(result.current.edits.mistakes).toEqual({ left: 0 });
+    expect(result.current.edits.mistakesLeft).toBe(0);
     expect(result.current.edits.onUndo).toBeNull();
     expect(result.current.hintReady).toBe(true);
 
     act(() => {
       result.current.edits.onReset?.();
     });
-    expect(result.current.edits.mistakes).toEqual({ left: 3 });
+    expect(result.current.edits.mistakesLeft).toBe(3);
     expect("mistakes" in stored()).toBe(false);
 
     for (const index of OPEN) {
@@ -357,7 +352,7 @@ describe("a daily played under the limit (T-WEB-S848)", () => {
 
 describe("the frozen page fades the board but not the live region (T-WEB-S846)", () => {
   it("is anchored on the page's data-frozen", () => {
-    chromeWith({ left: 0 });
+    chromeWith(0);
     const main = document.querySelector("main");
     expect(main).not.toBeNull();
     expect(

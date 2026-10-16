@@ -20,7 +20,6 @@ import {
   type PlayState,
 } from "../src/binairo/state";
 import {
-  COLORED_MISTAKES,
   coloredNonogramReducer,
   initColoredNonogramState,
 } from "../src/colored-nonogram/state";
@@ -31,7 +30,6 @@ import {
 } from "../src/crossword/state";
 import {
   initNonogramPlayState,
-  NONOGRAM_MISTAKES,
   nonogramPlayReducer,
   type NonogramPlayAction,
 } from "../src/nonogram/state";
@@ -39,8 +37,8 @@ import { wrongWrite } from "../src/play/grid-hint";
 import {
   mistakeRecord,
   NO_MISTAKES,
+  SOLUTION_MISTAKES,
   withMistakes,
-  type Countable,
   type MistakeRules,
 } from "../src/play/mistakes";
 import {
@@ -51,7 +49,7 @@ import {
   sudokuPlayRecordSchema,
   type PlayRecord,
 } from "../src/play/play-record";
-import type { UndoAction } from "../src/play/undo";
+import type { Editable, UndoAction } from "../src/play/undo";
 import {
   autoCrossingReducer,
   initQueensPlayState,
@@ -75,7 +73,7 @@ const UNDO: UndoAction = { type: "undo" };
 const RESET = { type: "reset" } as const;
 const RESTORE = { type: "restore", record: undefined, now: 0 } as const;
 
-function limited<S extends Countable, A extends { readonly type: string }>(
+function limited<S extends Editable, A extends { readonly type: string }>(
   reduce: (state: S, action: A) => S,
   rules: MistakeRules<S, A>,
   enabled = true,
@@ -155,7 +153,7 @@ const NONOGRAM_DAILY = dailyNonogramResponseSchema.parse({
   size: NONOGRAM.size,
   clues: NONOGRAM.clues,
 });
-const nonogram = limited(nonogramPlayReducer, NONOGRAM_MISTAKES);
+const nonogram = limited(nonogramPlayReducer, SOLUTION_MISTAKES);
 const nonogramBoard = () =>
   nonogram(initNonogramPlayState(NONOGRAM_DAILY), RESTORE);
 const NONOGRAM_SOLUTION = defined(
@@ -319,6 +317,21 @@ describe("a gesture counts at most one mistake, and undo, restore, hints and not
     expect(tapped.mistakes.cells).toEqual([a, b]);
   });
 
+  it("counts one drag once even when the clock ticks inside it", () => {
+    const [a = 0, b = 0, c = 0, d = 0] = NONOGRAM_EMPTY;
+    const ticked = nonogram(
+      nonogramBoard(),
+      { type: "stroke-start", index: a, press: "tap" },
+      { type: "paint-over", index: b },
+      { type: "tick", now: 1_000 },
+      { type: "paint-over", index: c },
+      { type: "pause", now: 2_000 },
+      { type: "resume", now: 3_000 },
+      { type: "paint-over", index: d },
+    );
+    expect(ticked.mistakes.cells).toEqual([a]);
+  });
+
   it("counts a later drag after a counted one", () => {
     const [a = 0, b = 0, c = 0] = NONOGRAM_EMPTY;
     const twice = nonogram(
@@ -363,7 +376,7 @@ describe("a gesture counts at most one mistake, and undo, restore, hints and not
     );
     expect(noted.mistakes).toBe(NO_MISTAKES);
 
-    expect(sudoku(wrong, RESTORE).mistakes).toEqual(NO_MISTAKES);
+    expect(sudoku(wrong, RESTORE).mistakes).toBe(wrong.mistakes);
   });
 });
 
@@ -412,7 +425,7 @@ describe("a held tap is judged when the player leaves its cell (T-WEB-S842)", ()
     ).toEqual([B0]);
   });
 
-  it("counts nothing when Auto-X is on and a ✕ is tapped twice back to empty", () => {
+  it("counts nothing when the automatic ✕ is on and a ✕ is tapped twice back to empty", () => {
     const cell = defined(NOT_QUEEN[0], "a non-queen cell");
     const crossed = crossing(queensBoard(), {
       type: "stroke-start",
@@ -447,6 +460,14 @@ describe("a held tap is judged when the player leaves its cell (T-WEB-S842)", ()
       ...write(S1, rightDigit(S1)),
     );
     expect(leftWrong.mistakes.cells).toEqual([S0]);
+
+    const notedElsewhere = sudoku(
+      sudokuBoard(),
+      ...write(S0, wrongDigit(S0), true),
+      { type: "select", index: S1 },
+      { type: "toggle-note", digit: wrongDigit(S1) },
+    );
+    expect(notedElsewhere.mistakes.cells).toEqual([S0]);
   });
 
   it("replaces the hold, uncounted, when a direct write lands on the held cell", () => {
@@ -609,6 +630,21 @@ describe("the play record keeps one to three counted cells, never on a closed bo
       now: 0,
     });
     expect(restored.mistakes.cells).toEqual([S0, S0]);
+
+    const otherSize = NONOGRAM.size === 5 ? 10 : 5;
+    const misfit = nonogramPlayRecordSchema.parse({
+      ...header,
+      game: "nonogram",
+      size: otherSize,
+      entries: Array.from({ length: otherSize ** 2 }, () => null),
+      mistakes: [0],
+    });
+    const refused = nonogram(initNonogramPlayState(NONOGRAM_DAILY), {
+      type: "restore",
+      record: misfit,
+      now: 0,
+    });
+    expect(refused.mistakes).toBe(NO_MISTAKES);
   });
 
   it("omits the field with no mistake and on a closed board", () => {
@@ -663,7 +699,7 @@ describe("one wrong write takes one mark in every limited game, daily and free (
     [
       "Cores",
       () =>
-        limited(coloredNonogramReducer, COLORED_MISTAKES)(
+        limited(coloredNonogramReducer, SOLUTION_MISTAKES)(
           initColoredNonogramState({ date: DATE, ...COLORED }),
           RESTORE,
           { type: "set-brush", brush: "cross" },

@@ -70,7 +70,7 @@ describe("useBoardEdits offers Recomeçar and undo only when they can act (T-WEB
     expect(result.current).toEqual({
       onReset: null,
       onUndo: null,
-      mistakes: null,
+      mistakesLeft: null,
     });
   });
 

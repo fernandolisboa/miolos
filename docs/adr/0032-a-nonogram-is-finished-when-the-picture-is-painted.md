@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-08-01
 **Superseded in part by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 5's clause *"forbidden under any framing that arrives at it"*, for the opt-in *Mostrar erros* only. The progress meter still counts fills.
+**Superseded in part by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the same clause, for a cell counted under the opt-in *Limite de 3 erros*; a cross still never counts.
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md)
 
 ## Context

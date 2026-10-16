@@ -27,14 +27,10 @@ export type Editable = Undoable<unknown> & {
   readonly mistakes: MistakeState;
 };
 
-export interface MistakeReadout {
-  readonly left: number;
-}
-
 export interface BoardEdits {
   readonly onReset: (() => void) | null;
   readonly onUndo: (() => void) | null;
-  readonly mistakes: MistakeReadout | null;
+  readonly mistakesLeft: number | null;
 }
 
 export function useBoardEdits(
@@ -60,7 +56,7 @@ export function useBoardEdits(
       !isFrozen(state.mistakes, limit)
         ? undo
         : null,
-    mistakes: limit ? { left: Math.max(MISTAKE_LIMIT - spent, 0) } : null,
+    mistakesLeft: limit ? Math.max(MISTAKE_LIMIT - spent, 0) : null,
   };
 }
 

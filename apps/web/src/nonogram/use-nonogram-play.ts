@@ -1,14 +1,17 @@
 import type { DailyNonogramResponse } from "@miolos/core";
 import { useMemo } from "react";
 
-import { mistakeRecord, usePlayReducer } from "../play/mistakes";
+import {
+  mistakeRecord,
+  SOLUTION_MISTAKES,
+  usePlayReducer,
+} from "../play/mistakes";
 import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
 import { countFilledCells, filledTarget, submittedCells } from "./engine";
 import {
   initNonogramPlayState,
-  NONOGRAM_MISTAKES,
   nonogramPlayReducer,
   type NonogramPlayState,
 } from "./state";
@@ -32,7 +35,7 @@ export function useNonogramPlay(
     nonogramPlayReducer,
     daily,
     initNonogramPlayState,
-    NONOGRAM_MISTAKES,
+    SOLUTION_MISTAKES,
   );
   const controls = useNonogramControls(state, dispatch);
 

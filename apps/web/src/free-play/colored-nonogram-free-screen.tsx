@@ -8,14 +8,13 @@ import styles from "../colored-nonogram/colored-board.module.css";
 import { ColoredControls } from "../colored-nonogram/controls";
 import { coloredHintExplanation } from "../colored-nonogram/hint";
 import {
-  COLORED_MISTAKES,
   coloredNonogramReducer,
   initColoredNonogramState,
 } from "../colored-nonogram/state";
 import { countFilledCells } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
-import { usePlayReducer } from "../play/mistakes";
+import { SOLUTION_MISTAKES, usePlayReducer } from "../play/mistakes";
 import { NONOGRAM_LEVEL_SIZES, type FreePlayLevel } from "./catalog";
 import type { Choice } from "./choice";
 import { PictureFreeFrame, PictureFreeScreen } from "./picture-free-frame";
@@ -74,7 +73,7 @@ function ColoredFreeBoard({
     coloredNonogramReducer,
     puzzle,
     initColoredNonogramState,
-    COLORED_MISTAKES,
+    SOLUTION_MISTAKES,
   );
   const controls = useNonogramControls(state, dispatch);
   const setTone = useCallback(

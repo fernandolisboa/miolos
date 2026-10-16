@@ -297,7 +297,6 @@
   cursor: default;
 }
 
-/* Writes are already refused by the reducer; the fade only says so. */
 .page[data-frozen] .board > :not(.hintLive) {
   opacity: 0.55;
   filter: grayscale(0.6);

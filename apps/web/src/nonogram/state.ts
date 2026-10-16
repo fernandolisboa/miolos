@@ -12,18 +12,8 @@ import {
   type BinaryMark,
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
-import {
-  judgedBySolution,
-  NO_MISTAKES,
-  type MistakeRules,
-  type MistakeState,
-} from "../play/mistakes";
-import {
-  NO_HISTORY,
-  undoable,
-  type UndoAction,
-  type UndoHistory,
-} from "../play/undo";
+import { NO_MISTAKES, type MistakeState } from "../play/mistakes";
+import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { solutionMarks } from "./engine";
 import { nextNonogramHint, type NonogramHintReason } from "./hint";
 import {
@@ -81,11 +71,6 @@ export function initNonogramPlayState(
     mistakes: NO_MISTAKES,
   };
 }
-
-export const NONOGRAM_MISTAKES: MistakeRules<
-  NonogramPlayState,
-  NonogramPlayAction | UndoAction
-> = { judge: judgedBySolution, cross: 0 };
 
 const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState, NonogramHintReason> = {
   derive: pictureSettled,
