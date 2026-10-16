@@ -223,6 +223,7 @@ function SudokuFreeBoard({
             mistakes={state.mistakes}
             notes={state.notes}
             selected={state.selected}
+            locked={lock.locked}
             violating={state.violating}
             hintIndex={state.hint.lastIndex}
             spotlight={state.hint.spotlight}

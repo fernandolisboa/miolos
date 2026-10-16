@@ -380,3 +380,22 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
     }
   });
 });
+
+describe("a note holding the focus digit is a readable chip (T-WEB-S936)", () => {
+  const chip = bodyOf(
+    stylesheet("src/sudoku/sudoku-board.module.css"),
+    ".noteMatch",
+  );
+
+  it("fills the chip with the accent and writes the numeral in its ink, >= 4.5:1 in both themes", () => {
+    expect(decl(chip, "background")).toBe("var(--accent)");
+    expect(decl(chip, "color")).toBe("var(--ink-on-accent)");
+    for (const [theme, tools] of [
+      ["light", LIGHT],
+      ["dark", DARK],
+    ] as const) {
+      const { accent, ink } = tools.pair("sudoku");
+      expect(contrast(ink, accent), theme).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

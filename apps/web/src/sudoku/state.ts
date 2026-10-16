@@ -230,7 +230,7 @@ function playSudoku(
       return noted(unlit(state), action.digit);
 
     case "toggle-noting":
-      return { ...state, noting: !state.noting, locked: null };
+      return { ...state, noting: !state.noting };
 
     case "clear-cell": {
       const current = playableValue(state, state.selected);
@@ -243,7 +243,7 @@ function playSudoku(
     }
 
     case "lock-digit": {
-      if (state.status !== "playing" || state.noting) {
+      if (state.status !== "playing") {
         return state;
       }
       const { undo } = action;
@@ -265,6 +265,9 @@ function playSudoku(
         return state;
       }
       const tapped = unlit({ ...state, selected: action.index });
+      if (state.noting) {
+        return noted(tapped, state.locked);
+      }
       const current = playableValue(state, action.index);
       return current === undefined
         ? tapped

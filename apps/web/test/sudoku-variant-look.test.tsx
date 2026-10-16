@@ -76,6 +76,7 @@ function renderBoard(layout: SudokuLayout, look: BoardLook | undefined) {
       entries={BLANK.map(() => null)}
       notes={BLANK}
       selected={null}
+      locked={null}
       violating={new Set()}
       hintIndex={null}
       spotlight={[]}

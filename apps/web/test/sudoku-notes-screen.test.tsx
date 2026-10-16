@@ -18,7 +18,7 @@ import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
 import { messages } from "../src/i18n";
 import { playRecordKey, playRecordSchema } from "../src/play/play-record";
 import { readSettings, writeSettings } from "../src/settings/settings";
-import { solutionDigits } from "../src/sudoku/engine";
+import { asDigit, solutionDigits } from "../src/sudoku/engine";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
@@ -69,6 +69,9 @@ const press = (key: string, init: KeyboardEventInit = {}) =>
   fireEvent.keyDown(board(), { key, ...init });
 const tap = (name: string) =>
   fireEvent.click(screen.getByLabelText(name), { detail: 1 });
+
+const chipIn = (index: number) =>
+  cell(index).querySelector(`.${styles.noteMatch ?? "-"}`)?.textContent;
 
 function notesIn(index: number): HTMLElement | null {
   return cell(index).querySelector<HTMLElement>(`.${styles.notes ?? ""}`);
@@ -308,28 +311,80 @@ describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
   });
 });
 
-describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-S833a)", () => {
+describe("Número fixo notes in Rascunho, daily and free (T-WEB-S931, T-WEB-S935)", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["performance"] });
     setSudoku({ lockDigit: true });
   });
 
-  it("releases a fixed number when Rascunho turns on, and fixes none while on", () => {
+  const tapCell = (index: number) =>
+    fireEvent.click(cell(index), { detail: 1 });
+  const SECOND = EMPTIES[1] ?? 0;
+
+  it("locks a digit by a double tap in Rascunho and notes it in each tapped cell", () => {
     render(<SudokuScreen daily={DAILY} />);
-    tap(keypad.digitAria(4));
-    tap(keypad.digitAria(4));
-    expect(screen.getByLabelText(keypad.digitAria(4))).toHaveAttribute(
+    fireEvent.click(pencil());
+    tap(keypad.noteDigitAria(4));
+    tap(keypad.noteDigitAria(4));
+    expect(screen.getByLabelText(keypad.noteDigitAria(4))).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
-    fireEvent.click(pencil());
-    const noted = screen.getByLabelText(keypad.noteDigitAria(4));
-    expect(noted).toHaveAttribute("aria-pressed", "false");
+    tapCell(FIRST);
+    tapCell(SECOND);
+    expect(cell(FIRST).getAttribute("aria-label")).toContain("rascunho 4");
+    expect(cell(SECOND).getAttribute("aria-label")).toContain("rascunho 4");
+    expect(chipIn(FIRST)).toBe("4");
+  });
 
-    fireEvent.click(noted, { detail: 1 });
-    fireEvent.click(noted, { detail: 1 });
-    expect(noted).toHaveAttribute("aria-pressed", "false");
+  it("keeps the locked digit across Rascunho and locks a given's digit by a double tap in it", () => {
+    render(<SudokuScreen daily={DAILY} />);
+    tap(keypad.digitAria(4));
+    tap(keypad.digitAria(4));
+    fireEvent.click(pencil());
+    expect(screen.getByLabelText(keypad.noteDigitAria(4))).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    const shown = asDigit(PUZZLE.givens[GIVEN]) ?? 1;
+    tapCell(GIVEN);
+    tapCell(GIVEN);
+    expect(screen.getByLabelText(keypad.noteDigitAria(shown))).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("notes the locked digit in free play too", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { container } = render(
+      <SudokuFreeScreen deps={{ pickSeed: () => 42 }} />,
+    );
+    await flushGeneration();
+    const open = [
+      ...container.querySelectorAll<HTMLElement>("[data-cell-index]"),
+    ].find((found) => found.getAttribute("aria-disabled") === "false");
+    if (open === undefined) {
+      throw new Error("the free board has an open cell");
+    }
+    fireEvent.click(pencil());
+    tap(keypad.noteDigitAria(6));
+    tap(keypad.noteDigitAria(6));
+    fireEvent.click(open, { detail: 1 });
+
+    expect(open.querySelector(`.${styles.notes ?? ""}`)?.textContent).toBe("6");
+    expect(open.querySelector(`.${styles.noteMatch ?? "-"}`)?.textContent).toBe(
+      "6",
+    );
+  });
+});
+
+describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-S833a)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["performance"] });
+    setSudoku({ lockDigit: true });
   });
 
   it("brings the peer notes back when a double tap fixes the digit", () => {
@@ -354,7 +409,7 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
     expect(cell(peer).getAttribute("aria-label")).toBe(before);
   });
 
-  it("is not seen by the same-digit highlight, Mostrar erros or the tally", () => {
+  it("is not seen by the same-digit highlight, Mostrar erros or the tally, only by its own lighter one", () => {
     setSudoku({ showErrors: true });
     render(<SudokuScreen daily={DAILY} />);
     const wrong = SOLUTION[FIRST] === 1 ? 2 : 1;
@@ -378,6 +433,7 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
     expect(sameDigit).not.toBe("");
     expect(cell(GIVEN).className).toContain(sameDigit);
     expect(cell(FIRST).className).not.toContain(sameDigit);
+    expect(chipIn(FIRST)).toBe(String(shown));
   });
 
   it("leaves a digit's tally at eight when its ninth copy is only a note", () => {

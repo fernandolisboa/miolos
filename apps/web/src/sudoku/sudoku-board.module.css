@@ -173,6 +173,14 @@
   color: var(--ink-on-accent);
 }
 
+.noteMatch {
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-weight: 700;
+}
+
 /* ── the caret ───────────────────────────────────────────────────────── */
 
 /* One block for the selection and the focus ring, so they can never disagree

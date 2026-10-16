@@ -1,6 +1,10 @@
-import { sudokuPeers, type SudokuLayout } from "@miolos/games/sudoku";
+import {
+  sudokuPeers,
+  type SudokuGrid,
+  type SudokuLayout,
+} from "@miolos/games/sudoku";
 
-import { DIGITS } from "./engine";
+import { asDigit, DIGITS } from "./engine";
 import type { SudokuDigit } from "./state";
 
 export const NO_NOTES: readonly number[] = Array.from({ length: 81 }, () => 0);
@@ -9,6 +13,14 @@ const bitOf = (digit: number): number => 1 << (digit - 1);
 
 export function hasNote(notes: readonly number[]): boolean {
   return notes.some((mask) => mask !== 0);
+}
+
+export function noteFocus(
+  grid: SudokuGrid,
+  selected: number | null,
+  locked: SudokuDigit | null,
+): SudokuDigit | null {
+  return (selected === null ? null : asDigit(grid[selected])) ?? locked;
 }
 
 const NONE: readonly SudokuDigit[] = [];

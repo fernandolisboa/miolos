@@ -16,7 +16,7 @@ import {
   track,
   type CellHighlight,
 } from "./engine";
-import { noteDigits } from "./notes";
+import { noteDigits, noteFocus } from "./notes";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 
@@ -43,6 +43,7 @@ export function Board({
   mistakes,
   notes,
   selected,
+  locked,
   violating,
   hintIndex,
   spotlight,
@@ -63,6 +64,7 @@ export function Board({
   readonly notes: readonly number[];
 
   readonly selected: number | null;
+  readonly locked: SudokuDigit | null;
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
   readonly spotlight: readonly number[];
@@ -80,12 +82,15 @@ export function Board({
   const { highlightSelection } = useSettings().games.sudoku;
   const playable = useMemo(() => playableGivens(givens), [givens]);
   const wrong = useWrongCells("sudoku", solution, playable, entries, mistakes);
+  const grid = mergedGrid(givens, entries);
+  const highlighting = spotlight.length === 0 && highlightSelection;
   const highlights =
     spotlight.length > 0
       ? spotlightHighlights(spotlight)
-      : highlightSelection
-        ? selectionHighlights(mergedGrid(givens, entries), selected, layout)
+      : highlighting
+        ? selectionHighlights(grid, selected, layout)
         : NO_HIGHLIGHTS;
+  const focus = highlighting ? noteFocus(grid, selected, locked) : null;
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -200,11 +205,18 @@ export function Board({
             {value}
             {value === null && cellNotes.length > 0 ? (
               <span aria-hidden className={styles.notes}>
-                {DIGITS.map((digit) => (
-                  <span key={digit}>
-                    {cellNotes.includes(digit) ? digit : null}
-                  </span>
-                ))}
+                {DIGITS.map((digit) =>
+                  cellNotes.includes(digit) ? (
+                    <span
+                      key={digit}
+                      className={digit === focus ? styles.noteMatch : undefined}
+                    >
+                      {digit}
+                    </span>
+                  ) : (
+                    <span key={digit} />
+                  ),
+                )}
               </span>
             ) : null}
             {isWrong ? <WrongMark /> : null}
