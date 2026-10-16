@@ -41,7 +41,7 @@ function undoAt(
   if (index === null || state.givens[index] !== 0) {
     return null;
   }
-  return { index, value: state.entries[index] ?? null };
+  return { index, value: state.entries[index] ?? null, notes: state.notes };
 }
 
 function shownAt(state: SudokuPlayState, index: number): SudokuDigit | null {
@@ -51,6 +51,7 @@ function shownAt(state: SudokuPlayState, index: number): SudokuDigit | null {
 export function useDigitLock(
   state: SudokuPlayState,
   dispatch: Dispatch<SudokuPlayAction>,
+  cleanNotes: boolean,
 ): DigitLock {
   const enabled = useSettings().games.sudoku.lockDigit;
   const stateRef = useRef(state);
@@ -68,11 +69,11 @@ export function useDigitLock(
 
   const pressDigit = useCallback(
     (digit: SudokuDigit, pointer: boolean) => {
-      if (!enabled || !pointer) {
-        dispatch({ type: "enter-digit", digit });
+      const current = stateRef.current;
+      if (!enabled || !pointer || current.noting) {
+        dispatch({ type: "enter-digit", digit, cleanNotes });
         return;
       }
-      const current = stateRef.current;
       const previous = lastTap.current;
       lastTap.current = null;
       lastCellTap.current = null;
@@ -99,10 +100,10 @@ export function useDigitLock(
         undo: undoAt(current, current.selected),
         release: false,
       };
-      dispatch({ type: "enter-digit", digit });
+      dispatch({ type: "enter-digit", digit, cleanNotes });
       dispatch({ type: "unlock" });
     },
-    [enabled, dispatch],
+    [enabled, cleanNotes, dispatch],
   );
 
   const pressErase = useCallback(
@@ -120,10 +121,10 @@ export function useDigitLock(
   const tapCell = useCallback(
     (index: number) => {
       lastTap.current = null;
-      if (!enabled) {
+      const current = stateRef.current;
+      if (!enabled || current.noting) {
         return;
       }
-      const current = stateRef.current;
       const previous = lastCellTap.current;
       const now = performance.now();
 
@@ -154,9 +155,9 @@ export function useDigitLock(
         undo: undoAt(current, index),
         settled: false,
       };
-      dispatch({ type: "tap-cell", index });
+      dispatch({ type: "tap-cell", index, cleanNotes });
     },
-    [enabled, dispatch],
+    [enabled, cleanNotes, dispatch],
   );
 
   return {

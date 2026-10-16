@@ -1,11 +1,7 @@
 /* Layered on nonogram-board.module.css, which loads from another chunk, so
    their order is not guaranteed: never redeclare a property a Clássico class sets
    on the same element at the same specificity. A painted cell's fill and a
-   chip's tone come inline from `toneStyle`, which also sets --cell-ink.
-
-   Recorded design-system deviation (ADR-0035, ADR-0132): a palette segment is
-   36px wide (48px tall), below the 44px target in width only, so ✕ plus five
-   tones fit the 280px board floor. */
+   chip's tone come inline from `toneStyle`, which also sets --cell-ink. */
 
 .pageColored.overhang5 {
   --board-overhang: 34px;
@@ -41,6 +37,7 @@
   text-align: center;
 }
 
+/* see ADR-0132 decision 7 */
 .dense > button {
   width: 36px;
   height: 48px;

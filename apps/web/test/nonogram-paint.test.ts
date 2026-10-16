@@ -47,7 +47,7 @@ const PRESSES: readonly (readonly [NonogramBrush, Press, 0 | 1])[] = [
 
 const STARTS: readonly Start[] = [null, 0, 1];
 
-describe("the Clássico Nonogram paints exactly as before the coloured variant shared its brush (T-WEB-S871)", () => {
+describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB-S871)", () => {
   it.each(
     PRESSES.flatMap(([brush, press, mark]) =>
       STARTS.map((start) => [brush, press, start, mark] as const),

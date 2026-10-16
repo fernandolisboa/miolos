@@ -19,7 +19,7 @@ function hexIn(theme: (typeof THEMES)[number]) {
 }
 
 const COLORED = stylesheet("src/colored-nonogram/colored-board.module.css");
-const MONO = stylesheet("src/nonogram/nonogram-board.module.css");
+const NONOGRAM_SHEET = stylesheet("src/nonogram/nonogram-board.module.css");
 
 const HAIRLINE = "1px solid color-mix(in srgb, var(--ink) 50%, transparent)";
 
@@ -56,8 +56,8 @@ describe("every tone carries its label, caret, ring and chip edge, and meets the
   }
 
   it("leaves a painted cell on the ruled field's hairline, and draws the chip numeral, the hint ring and the caret in the tone's ink", () => {
-    expect(decl(bodyOf(MONO, ".cell"), "border-top")).toBe(HAIRLINE);
-    expect(decl(bodyOf(MONO, ".cell"), "border-left")).toBe(HAIRLINE);
+    expect(decl(bodyOf(NONOGRAM_SHEET, ".cell"), "border-top")).toBe(HAIRLINE);
+    expect(decl(bodyOf(NONOGRAM_SHEET, ".cell"), "border-left")).toBe(HAIRLINE);
     expect(decl(bodyOf(COLORED, ".cellTone"), "box-shadow")).toBeUndefined();
     expect(decl(bodyOf(COLORED, ".cellTone"), "--wrong-edge")).toBe(
       "var(--cell-ink)",
@@ -69,7 +69,7 @@ describe("every tone carries its label, caret, ring and chip edge, and meets the
     expect(decl(bodyOf(COLORED, ".chip"), "box-shadow")).toBe(
       "inset 0 0 0 1px var(--ink)",
     );
-    expect(decl(bodyOf(MONO, ".cell:focus-visible"), "outline")).toBe(
+    expect(decl(bodyOf(NONOGRAM_SHEET, ".cell:focus-visible"), "outline")).toBe(
       "2px solid var(--cell-ink, var(--ink))",
     );
   });

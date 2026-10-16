@@ -76,9 +76,50 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function solveMedio(): number {
+  const medio = generateNonogram(SEED, LEVEL_WEEKDAYS.medio);
+  medio.reveal.solution.forEach((row, y) => {
+    row.forEach((filled, x) => {
+      if (filled) {
+        fireEvent.click(cellAt(y * medio.size + x));
+      }
+    });
+  });
+  return medio.size;
+}
+
 describe("Variante picks Clássico or Cores, Cores loads on demand at the current level (T-WEB-S877)", () => {
+  it("shows the error card when the solved card fails to load, and its retry deals a fresh board", async () => {
+    card.failures = 3;
+    vi.stubGlobal("fetch", vi.fn());
+    render(<NonogramFreeScreen deps={seeds()} />);
+    await flushGeneration();
+
+    const size = solveMedio();
+    expect(
+      await screen.findByText(messages.freePlay.error.title),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.freePlay.error.retry }),
+    );
+    await flushGeneration();
+    expect(screen.queryByText(messages.freePlay.error.title)).toBeNull();
+    expect(screen.queryByText(messages.freePlay.solved.stamp)).toBeNull();
+    expect(cells().map((cell) => cell.getAttribute("aria-label"))).toEqual(
+      Array.from({ length: size ** 2 }, (_unused, index) =>
+        messages.games.nonogram.play.cellAria(
+          Math.floor(index / size) + 1,
+          (index % size) + 1,
+          null,
+        ),
+      ),
+    );
+  });
+
   it("loads the lazy solved card again when it mounts, after the board's preload failed", async () => {
     card.failures = 1;
+    card.loads = 0;
     vi.stubGlobal("fetch", vi.fn());
     render(<NonogramFreeScreen deps={seeds()} />);
     await flushGeneration();
@@ -86,14 +127,7 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
       expect(card.loads).toBe(1);
     });
 
-    const medio = generateNonogram(SEED, LEVEL_WEEKDAYS.medio);
-    medio.reveal.solution.forEach((row, y) => {
-      row.forEach((filled, x) => {
-        if (filled) {
-          fireEvent.click(cellAt(y * medio.size + x));
-        }
-      });
-    });
+    solveMedio();
 
     expect(
       await screen.findByText(messages.freePlay.solved.stamp),

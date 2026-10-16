@@ -71,6 +71,8 @@ export const sudokuPlayRecordSchema = z.strictObject({
   game: z.literal("sudoku"),
   entries: z.array(z.union([sudokuDigitSchema, z.null()])).length(81),
 
+  notes: z.array(z.int().min(0).max(511)).length(81).optional(),
+
   grid: z.array(sudokuDigitSchema).length(81).optional(),
 });
 

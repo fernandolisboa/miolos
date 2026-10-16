@@ -3,12 +3,10 @@ import type { SudokuGrid } from "@miolos/games/sudoku";
 import { messages } from "../i18n";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import { KeyGlyph } from "../play/key-glyph";
-import { digitTally, placedCount, type DigitTally } from "./engine";
+import { DIGITS, digitTally, placedCount, type DigitTally } from "./engine";
 import type { SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 import type { DigitLock } from "./use-digit-lock";
-
-const DIGITS: readonly SudokuDigit[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const TALLY_CLASS: Readonly<Record<DigitTally, string | undefined>> = {
   open: undefined,
@@ -19,9 +17,13 @@ const TALLY_CLASS: Readonly<Record<DigitTally, string | undefined>> = {
 export function Keypad({
   lock,
   grid,
+  noting,
+  onToggleNoting,
 }: {
   readonly lock: DigitLock;
   readonly grid: SudokuGrid;
+  readonly noting: boolean;
+  readonly onToggleNoting: () => void;
 }) {
   const copy = messages.games.sudoku.play.keypad;
 
@@ -37,7 +39,11 @@ export function Keypad({
             className={[styles.keypadDigit, TALLY_CLASS[tally]]
               .filter((name) => name !== undefined)
               .join(" ")}
-            aria-label={digitAria(digit, tally, count)}
+            aria-label={
+              noting
+                ? copy.noteDigitAria(digit)
+                : digitAria(digit, tally, count)
+            }
             aria-pressed={lock.enabled ? lock.locked === digit : undefined}
             onClick={(event) => {
               lock.pressDigit(digit, event.detail > 0);
@@ -57,7 +63,16 @@ export function Keypad({
       </span>
       <button
         type="button"
-        className={styles.keypadErase}
+        className={`${styles.keypadTool} ${styles.keypadPencil}`}
+        aria-label={copy.notingAria}
+        aria-pressed={noting}
+        onClick={onToggleNoting}
+      >
+        <KeyGlyph name="pencil" />
+      </button>
+      <button
+        type="button"
+        className={`${styles.keypadTool} ${styles.keypadErase}`}
         aria-label={copy.eraseAria}
         onClick={(event) => {
           lock.pressErase(event.detail > 0);
@@ -95,7 +110,14 @@ export function KeypadSkeleton() {
       <span className={styles.affordance}>
         <InfoTipSkeleton />
       </span>
-      <div className={`${styles.keypadErase} ${styles.placeholder}`}>
+      <div
+        className={`${styles.keypadTool} ${styles.keypadPencil} ${styles.placeholder}`}
+      >
+        <KeyGlyph name="pencil" />
+      </div>
+      <div
+        className={`${styles.keypadTool} ${styles.keypadErase} ${styles.placeholder}`}
+      >
         <KeyGlyph name="backspace" />
       </div>
     </div>

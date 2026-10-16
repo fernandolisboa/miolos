@@ -11,7 +11,7 @@ import {
 } from "./css-source";
 
 const COLORED = stylesheet("src/colored-nonogram/colored-board.module.css");
-const MONO = stylesheet("src/nonogram/nonogram-board.module.css");
+const NONOGRAM_SHEET = stylesheet("src/nonogram/nonogram-board.module.css");
 const SHARED_MOBILE = bodyOf(
   stylesheet("src/play/screen.module.css"),
   "@media (max-width: 768px)",
@@ -34,13 +34,15 @@ const CHIP_HEIGHT = CHIP_FONT + 2 * CHIP_PAD_BLOCK;
 const chipWidth = (length: number) =>
   String(length).length * DIGIT + 2 * CHIP_PAD_INLINE;
 
-const ROW_GAP = pixels(decl(bodyOf(MONO, ".clueCol"), "row-gap"));
+const ROW_GAP = pixels(decl(bodyOf(NONOGRAM_SHEET, ".clueCol"), "row-gap"));
 const COL_RAIL_PAD = pixels(
-  decl(bodyOf(MONO, ".clueCol"), "padding-block-end"),
+  decl(bodyOf(NONOGRAM_SHEET, ".clueCol"), "padding-block-end"),
 );
-const COLUMN_GAP = pixels(decl(bodyOf(MONO, ".clueRow"), "column-gap"));
+const COLUMN_GAP = pixels(
+  decl(bodyOf(NONOGRAM_SHEET, ".clueRow"), "column-gap"),
+);
 const ROW_RAIL_PAD = pixels(
-  decl(bodyOf(MONO, ".clueRow"), "padding-inline-end"),
+  decl(bodyOf(NONOGRAM_SHEET, ".clueRow"), "padding-inline-end"),
 );
 
 function rails(size: number) {
@@ -74,7 +76,10 @@ function rails(size: number) {
 
 const TOGGLE_CHROME =
   2 * token("--space-1") +
-  2 * pixels(decl(bodyOf(MONO, ".brushToggle"), "border")?.split(" ")[0]);
+  2 *
+    pixels(
+      decl(bodyOf(NONOGRAM_SHEET, ".brushToggle"), "border")?.split(" ")[0],
+    );
 
 describe("the coloured board fits: overhang, chips and palette at the 280px floor (T-WEB-S879)", () => {
   for (const size of [5, 10, 15] as const) {

@@ -83,7 +83,13 @@ function ColoredFreeBoard({
     <PictureFreeFrame
       choices={choices}
       size={size}
-      pageModifier={`${nonogramPageModifier(size)} ${styles.pageColored ?? ""} ${OVERHANG[size] ?? ""}`}
+      pageModifier={[
+        nonogramPageModifier(size),
+        styles.pageColored,
+        OVERHANG[size],
+      ]
+        .filter((name) => name !== undefined)
+        .join(" ")}
       picture={
         state.status === "solved"
           ? {

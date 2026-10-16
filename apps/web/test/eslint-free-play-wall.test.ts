@@ -1055,7 +1055,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
   });
 });
 
-describe("the coloured Nonogram engine is walled to its chunk, statically and dynamically (T-WEB-S878)", () => {
+describe("the coloured Nonogram engine is walled to its chunk, statically and dynamically (T-LINT-S72)", () => {
   const STATIC =
     'import { generateColoredNonogram } from "@miolos/games/colored-nonogram";\n\nexport const make = generateColoredNonogram;\n';
   const DYNAMIC =
