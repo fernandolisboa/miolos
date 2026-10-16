@@ -55,14 +55,17 @@ function moved(
   if (game === play.game) {
     return { ...play, now };
   }
-  const ended = game.status === "won" || game.status === "lost";
-  const started = play.game.status === "ready" && game.status !== "ready";
-  const timer = ended
-    ? applyTimerAction(play.timer, { type: "pause", now })
-    : started
-      ? { accumulatedMs: 0, runningSince: now }
-      : play.timer;
-  return { game, timer, now };
+  if (game.status === "won" || game.status === "lost") {
+    return {
+      game,
+      timer: applyTimerAction(play.timer, { type: "pause", now }),
+      now,
+    };
+  }
+  if (play.game.status === "ready" && game.status !== "ready") {
+    return { game, timer: { accumulatedMs: 0, runningSince: now }, now };
+  }
+  return { game, timer: play.timer, now };
 }
 
 export function minesweeperReducer(

@@ -121,24 +121,8 @@ const Cell = memo(function Cell({
 
 // Turned, the grid draws board columns as rows, so a key moves on the screen
 // while the index stays the board's.
-function toViewIndex(
-  index: number,
-  rows: number,
-  columns: number,
-  turned: boolean,
-): number {
-  return turned
-    ? (index % columns) * rows + Math.floor(index / columns)
-    : index;
-}
-
-function fromViewIndex(
-  index: number,
-  rows: number,
-  columns: number,
-  turned: boolean,
-): number {
-  return turned ? (index % rows) * columns + Math.floor(index / rows) : index;
+function transpose(index: number, rows: number, columns: number): number {
+  return (index % columns) * rows + Math.floor(index / columns);
 }
 
 function movedIndex(
@@ -153,13 +137,9 @@ function movedIndex(
   if (move === null) {
     return null;
   }
-  const at = toViewIndex(index, rows, columns, turned);
-  return fromViewIndex(
-    movedSelection(at, move, viewRows, viewColumns),
-    rows,
-    columns,
-    turned,
-  );
+  const at = turned ? transpose(index, rows, columns) : index;
+  const next = movedSelection(at, move, viewRows, viewColumns);
+  return turned ? transpose(next, columns, rows) : next;
 }
 
 export const Minefield = memo(function Minefield({

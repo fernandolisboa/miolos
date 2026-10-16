@@ -7,6 +7,7 @@
   --board-floor-side: var(--floor);
   --board-min: var(--floor);
   --grid-card-rot: 0deg;
+  --grid-card-pad: var(--space-4);
 }
 
 .pageMinefield :has(> [data-board-card]) {
@@ -57,7 +58,7 @@
 }
 
 /* 30 × 25px + card chrome − 1px: the well is too narrow for 30 columns */
-@media (max-width: 1279px) {
+@media (width < 1280px) {
   @container (max-width: 785px) {
     .expert:not(.finished) {
       --columns: 16;
@@ -72,7 +73,7 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (width >= 1280px) {
   .pageExpert :has(> [data-board-card]) {
     overflow-x: visible;
     align-items: center;

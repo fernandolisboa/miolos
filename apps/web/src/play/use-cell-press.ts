@@ -69,7 +69,10 @@ export function useCellPress(input: CellPressInput): CellPressHandlers {
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     const kind = cellPressOf(event);
     const index = cellIndexAt(event.clientX, event.clientY);
-    if (active.current?.pointerId === event.pointerId) {
+    if (
+      active.current?.pointerId === event.pointerId ||
+      (active.current !== null && event.isPrimary)
+    ) {
       settle();
     }
     if (kind === null || index === null || active.current !== null) {

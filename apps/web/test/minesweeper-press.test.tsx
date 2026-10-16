@@ -233,6 +233,18 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     expect(spies.activate.mock.calls).toStrictEqual([[4]]);
   });
 
+  it("lets a new primary pointer replace a press whose pointer never reported its release", () => {
+    const { spies, board } = mount();
+    const stale = { pointerId: 5, pointerType: "touch", isPrimary: true };
+    const fresh = { pointerId: 6, pointerType: "touch", isPrimary: true };
+
+    fireEvent.pointerDown(board, { ...stale, clientX: 1, button: 0 });
+    fireEvent.pointerDown(board, { ...fresh, clientX: 4, button: 0 });
+    fireEvent.pointerUp(board, { ...fresh, clientX: 4, button: 0 });
+
+    expect(spies.activate.mock.calls).toStrictEqual([[4]]);
+  });
+
   it("gives up when the pointer capture is lost before the release", () => {
     const { spies, board } = mount();
 

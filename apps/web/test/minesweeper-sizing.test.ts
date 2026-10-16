@@ -61,7 +61,7 @@ describe("the board well can hold a board that outgrows it, and no other game no
     );
   });
 
-  it("is left alone by the six daily games' sheets", () => {
+  it("is left alone by every daily game's sheet", () => {
     for (const sheet of [
       "src/sudoku/sudoku-board.module.css",
       "src/binairo/binairo-screen.module.css",
@@ -98,6 +98,7 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
     expect(decl(well, "align-items")).toBe("safe center");
     expect(pixels(decl(well, "padding-inline-end"))).toBe(SHADOW);
     expect(decl(PAGE, "--grid-card-rot")).toBe("0deg");
+    expect(decl(PAGE, "--grid-card-pad")).toBe("var(--space-4)");
     expect(pixels(decl(PAGE, "--board-below"))).toBe(SHADOW);
   });
 
@@ -124,7 +125,7 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
   });
 
   it("turns Especialista into 16 columns of 30 rows when 30 cells no longer fit a laptop-narrow well", () => {
-    const media = bodyOf(MINE_CSS, "@media (max-width: 1279px)");
+    const media = bodyOf(MINE_CSS, "@media (width < 1280px)");
     const query = bodyOf(media, "@container (max-width: 785px)");
 
     expect(785).toBe(30 * PITCH + CHROME - 1);
@@ -145,7 +146,7 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
   });
 
   it("keeps Especialista landscape from 1280px, overhanging its column instead of scrolling it", () => {
-    const media = bodyOf(MINE_CSS, "@media (min-width: 1280px)");
+    const media = bodyOf(MINE_CSS, "@media (width >= 1280px)");
     const well = bodyOf(media, ".pageExpert :has(> [data-board-card])");
 
     expect(decl(well, "overflow-x")).toBe("visible");

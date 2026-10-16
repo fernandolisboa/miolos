@@ -144,6 +144,24 @@ describe("the Campo Minado screen is a static page that plays and records nothin
       81,
     );
     expect(screen.getAllByRole("timer")[0]).toHaveTextContent("00:00");
+    expect(
+      screen.getByRole("button", { name: copy.reset.label }),
+    ).toHaveFocus();
+  });
+
+  it("keeps focus on the level chip through two arrow presses", () => {
+    mount();
+    const checked = () => screen.getByRole("radio", { checked: true });
+
+    checked().focus();
+    fireEvent.keyDown(checked(), { key: "ArrowRight" });
+    expect(checked()).toHaveAccessibleName(/Intermediário/);
+    expect(checked()).toHaveFocus();
+    fireEvent.keyDown(document.activeElement as HTMLElement, {
+      key: "ArrowRight",
+    });
+    expect(checked()).toHaveAccessibleName(/Especialista/);
+    expect(checked()).toHaveFocus();
   });
 
   it("changes level by dealing a new board of that size", () => {

@@ -65,7 +65,6 @@ export function MinesweeperFreeScreen({
 
   return (
     <EndingStage
-      key={`${game.level}:${String(game.seed)}`}
       over={game.status === "won" || game.status === "lost"}
       won={game.status === "won"}
       ending={() => (

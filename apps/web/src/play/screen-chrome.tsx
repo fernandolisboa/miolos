@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
@@ -27,15 +27,6 @@ import type { BoardEdits } from "./undo";
 
 export type DailyChromeGame = Exclude<Game, "termo">;
 export type PlayChromeGame = Exclude<FreePlayGame, "termo">;
-
-const ACCENTS: Readonly<Record<PlayChromeGame, CSSProperties>> = {
-  sudoku: accentVars("sudoku"),
-  nonogram: accentVars("nonogram"),
-  binairo: accentVars("binairo"),
-  crossword: accentVars("crossword"),
-  queens: accentVars("queens"),
-  minesweeper: accentVars("minesweeper"),
-};
 
 const BLANK_READOUT = "\u00a0";
 
@@ -156,7 +147,7 @@ export function PlayScreenChrome({
   return (
     <main
       className={`${screen.page} ${pageModifier}`}
-      style={ACCENTS[game]}
+      style={accentVars(game)}
       data-play-state={state.kind}
     >
       <header className={screen.topBar}>
