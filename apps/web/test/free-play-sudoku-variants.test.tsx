@@ -1,16 +1,19 @@
-import { SUDOKU_VARIANTS } from "@miolos/games/sudoku";
+import { FREE_HINTS_PER_PUZZLE } from "@miolos/core";
 import { generateSudokuVariant } from "@miolos/games/sudoku-variants";
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { levelChoice, variantChoice } from "../src/free-play/choice-picker";
-import { FreePlaySolvedCard } from "../src/free-play/solved-card";
 import { SudokuFreeScreen } from "../src/free-play/sudoku-free-screen";
+import lookStyles from "../src/free-play/sudoku-look.module.css";
 import { useFreeSudoku } from "../src/free-play/use-free-sudoku";
 import { messages } from "../src/i18n";
+import boardStyles from "../src/sudoku/sudoku-board.module.css";
 import { flushGeneration } from "./free-generation";
 
 const SEED = 20_261_016;
+
+// see ADR-0055: slowest solve alone, 3866 ms (3 runs) x 4 = 15464, rounded up to 5000
+const SOLVE_TIMEOUT = 20_000;
 
 const variant = messages.freePlay.sudokuVariant;
 
@@ -23,16 +26,52 @@ function spiedDeps(generate: Generate = generateSudokuVariant) {
   return { deps: { pickSeed: () => SEED, generate: spy }, spy };
 }
 
+function pickVariant(name: string): void {
+  fireEvent.click(
+    screen.getByRole("radio", {
+      name: messages.freePlay.variant.aria(name),
+      hidden: true,
+    }),
+  );
+}
+
 async function choose(aria: string): Promise<void> {
   fireEvent.click(screen.getByRole("radio", { name: aria, hidden: true }));
   await flushGeneration();
 }
 
-const chooseVariant = (name: string) =>
-  choose(messages.freePlay.variant.aria(name));
+async function chooseVariant(name: string): Promise<void> {
+  pickVariant(name);
+  await flushGeneration();
+}
 
 const chooseLevel = (name: string) =>
   choose(messages.freePlay.level.aria(name));
+
+function solve(container: HTMLElement, puzzle: ReturnType<Generate>): void {
+  for (const [index, given] of puzzle.givens.entries()) {
+    const cell = container.querySelector<HTMLElement>(
+      `[data-cell-index="${index}"]`,
+    );
+    if (given !== 0 || cell === null) {
+      continue;
+    }
+    fireEvent.click(cell);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: keypad.digitAria(puzzle.solution[index] ?? 0),
+      }),
+    );
+  }
+}
+
+const cardLine = (container: HTMLElement) =>
+  [...container.querySelectorAll("p")]
+    .map((p) => p.textContent)
+    .find((text) => text?.startsWith("Modo livre ·"));
+
+const ruleCount = (container: HTMLElement) =>
+  container.querySelectorAll(`.${boardStyles.rule ?? "rule"}`).length;
 
 function playState(container: HTMLElement): string | null | undefined {
   return container.querySelector("main")?.getAttribute("data-play-state");
@@ -101,9 +140,58 @@ describe("free Sudoku offers a Variante (T-WEB-S861)", () => {
     expect(screen.queryByText(variant.rules.classic)).not.toBeInTheDocument();
   });
 
+  it("draws a Formas board with region edges, names its cells and hints by região, and keeps the daily's box rules off", async () => {
+    const { deps } = spiedDeps();
+    const { container } = render(<SudokuFreeScreen deps={deps} />);
+    await flushGeneration();
+    await chooseLevel(messages.freePlay.level.leve);
+    await chooseVariant(variant.irregular);
+
+    expect(
+      container
+        .querySelector("[data-cell-index='0']")
+        ?.getAttribute("aria-label"),
+    ).toContain("região");
+    expect(
+      container.querySelector(`.${lookStyles.edgeRight ?? "edgeRight"}`),
+    ).not.toBeNull();
+    expect(ruleCount(container)).toBe(0);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: messages.play.hint.available(FREE_HINTS_PER_PUZZLE),
+      }),
+    );
+    const readout = container.querySelector("[aria-live='polite'] p");
+
+    expect(readout?.textContent).toContain("região");
+    expect(readout?.textContent).not.toContain("bloco");
+  });
+
+  it("holds the place of a Formas board with a gridded skeleton that has no box rules, and Diagonal's with them", async () => {
+    const { deps } = spiedDeps();
+    const { container } = render(<SudokuFreeScreen deps={deps} />);
+    const grid = () =>
+      container.querySelector(`.${boardStyles.grid ?? "grid"}`);
+
+    expect([ruleCount(container), grid()?.children.length]).toEqual([4, 85]);
+    await flushGeneration();
+
+    pickVariant(variant.irregular);
+    expect(playState(container)).toBe("generating");
+    expect([ruleCount(container), grid()?.children.length]).toEqual([0, 81]);
+    expect(grid()?.classList).toContain(lookStyles.formas);
+    await flushGeneration();
+
+    pickVariant(variant.diagonal);
+    expect(playState(container)).toBe("generating");
+    expect([ruleCount(container), grid()?.children.length]).toEqual([4, 85]);
+    expect(grid()?.classList).not.toContain(lookStyles.formas);
+  });
+
   it(
-    "ends a Formas board on a card that names the variant, and Mais um keeps both choices",
-    { timeout: 20_000 },
+    "Mais um after a solved Formas board keeps both choices",
+    { timeout: SOLVE_TIMEOUT },
     async () => {
       const { deps, spy } = spiedDeps();
       const { container } = render(<SudokuFreeScreen deps={deps} />);
@@ -112,31 +200,7 @@ describe("free Sudoku offers a Variante (T-WEB-S861)", () => {
       await chooseVariant(variant.irregular);
       const puzzle = spy.mock.results.at(-1)?.value as ReturnType<Generate>;
 
-      for (const [index, given] of puzzle.givens.entries()) {
-        const cell = container.querySelector<HTMLElement>(
-          `[data-cell-index="${index}"]`,
-        );
-        if (given !== 0 || cell === null) {
-          continue;
-        }
-        fireEvent.click(cell);
-        fireEvent.click(
-          screen.getByRole("button", {
-            name: keypad.digitAria(puzzle.solution[index] ?? 0),
-          }),
-        );
-      }
-
-      expect(
-        screen.getByText(
-          messages.freePlay.solved.modeLine(
-            messages.freePlay.modeTag,
-            messages.games.sudoku.name,
-            variant.irregular,
-            messages.freePlay.level.leve,
-          ),
-        ),
-      ).toBeInTheDocument();
+      solve(container, puzzle);
 
       fireEvent.click(
         screen.getByRole("button", {
@@ -197,52 +261,23 @@ describe("the free Sudoku layout is parsed at the boundary (T-WEB-S862)", () => 
   });
 });
 
-describe("the free-play card line names the variant before the level (T-WEB-S868)", () => {
-  it("reads Formas · Médio for Sudoku and leaves Clássico and Termo as they were", () => {
-    const medio = levelChoice("medio", () => undefined);
-    const lines = [
-      <FreePlaySolvedCard
-        key="formas"
-        game="sudoku"
-        choices={[
-          variantChoice(SUDOKU_VARIANTS, variant, "irregular", () => undefined),
-          medio,
-        ]}
-        onAgain={() => undefined}
-      />,
-      <FreePlaySolvedCard
-        key="classic"
-        game="sudoku"
-        choices={[medio]}
-        onAgain={() => undefined}
-      />,
-      <FreePlaySolvedCard
-        key="termo"
-        game="termo"
-        choices={[
-          variantChoice(
-            ["dueto"],
-            messages.freePlay.variant,
-            "dueto",
-            () => undefined,
-          ),
-        ]}
-        words={["ARDOR", "CASCO"]}
-        onAgain={() => undefined}
-      />,
-    ].map((card) => {
-      const { container, unmount } = render(card);
-      const text = [...container.querySelectorAll("p")]
-        .map((p) => p.textContent)
-        .find((content) => content?.startsWith("Modo livre ·"));
-      unmount();
-      return text;
-    });
+describe("the free-play card line reads level, then variant (T-WEB-S868)", () => {
+  it.each([
+    ["Clássico", variant.classic, "Modo livre · Sudoku · Leve · Clássico"],
+    ["Formas", variant.irregular, "Modo livre · Sudoku · Leve · Formas"],
+  ])(
+    "ends a %s board on that line",
+    { timeout: SOLVE_TIMEOUT },
+    async (_name, pick, line) => {
+      const { deps, spy } = spiedDeps();
+      const { container } = render(<SudokuFreeScreen deps={deps} />);
+      await flushGeneration();
+      await chooseLevel(messages.freePlay.level.leve);
+      await chooseVariant(pick);
 
-    expect(lines).toEqual([
-      "Modo livre · Sudoku · Formas · Médio",
-      "Modo livre · Sudoku · Médio",
-      "Modo livre · Termo · Dueto",
-    ]);
-  });
+      solve(container, spy.mock.results.at(-1)?.value as ReturnType<Generate>);
+
+      expect(cardLine(container)).toBe(line);
+    },
+  );
 });

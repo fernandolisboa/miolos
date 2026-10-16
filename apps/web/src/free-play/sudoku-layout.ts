@@ -13,7 +13,7 @@ const SIDE = 9;
 
 const copy = messages.freePlay.sudokuVariant;
 
-export function isBoxLayout(layout: SudokuLayout): boolean {
+function isBoxLayout(layout: SudokuLayout): boolean {
   return layout.regions.every(
     (region, index) => region === CLASSIC_LAYOUT.regions[index],
   );
@@ -23,9 +23,10 @@ function extraUnitsThrough(layout: SudokuLayout, index: number): number {
   return layout.extraUnits.filter((unit) => unit.includes(index)).length;
 }
 
+const PLAIN_GRID = styles.formas ?? "";
+
 export const PLAIN_LOOK: BoardLook = {
-  grid: styles.formas ?? "",
-  boxes: false,
+  plainGrid: PLAIN_GRID,
   cells: [],
   where: [],
 };
@@ -60,7 +61,7 @@ export function sudokuLook(layout: SudokuLayout): BoardLook | undefined {
     const diagonals = extraUnitsThrough(layout, index);
     return diagonals === 0 ? undefined : copy.diagonals(diagonals);
   });
-  return { grid: boxes ? "" : (styles.formas ?? ""), boxes, cells, where };
+  return boxes ? { cells, where } : { plainGrid: PLAIN_GRID, cells, where };
 }
 
 function unitNamesAt(
@@ -82,20 +83,23 @@ function unitNamesAt(
 export function namedHint(
   reason: SudokuHintReason | null,
   layout: SudokuLayout,
-): Parameters<typeof sudokuHintExplanation> {
+): {
+  readonly reason: Parameters<typeof sudokuHintExplanation>[0];
+  readonly units: readonly SudokuUnitName[] | undefined;
+} {
   if (reason?.kind !== "step") {
-    return [reason];
+    return { reason, units: undefined };
   }
   const { step } = reason;
   const region = isBoxLayout(layout) ? "box" : "region";
-  return [
-    {
+  return {
+    reason: {
       kind: "step",
       step: {
         ...step,
         unit: step.unit?.kind === "box" ? { kind: region } : step.unit,
       },
     },
-    unitNamesAt(layout, step.index),
-  ];
+    units: unitNamesAt(layout, step.index),
+  };
 }

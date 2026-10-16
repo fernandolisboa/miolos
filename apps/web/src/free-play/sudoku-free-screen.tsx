@@ -30,6 +30,7 @@ import boardStyles from "../sudoku/sudoku-board.module.css";
 import { useSudokuInput } from "../sudoku/use-sudoku-input";
 import { EndingStage } from "../play/ending-stage";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
+import type { Choice } from "./choice";
 import { levelChoice, variantChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
@@ -56,19 +57,18 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   const input = useMemo(() => ({ level, variant }), [level, variant]);
   const { phase, regenerate } = useFreeSudoku(input, deps);
   const menuId = useId();
+  const variantPick = variantChoice(
+    SUDOKU_VARIANTS,
+    variantCopy,
+    variant,
+    setVariant,
+  );
+  const choices = [levelChoice(level, setLevel)];
+  const rules = variantCopy.rules[variant];
   const picker = (
     <>
       <VariantTrigger name={variantCopy[variant]} menuId={menuId} />
-      <VariantMenu
-        id={menuId}
-        choice={variantChoice(
-          SUDOKU_VARIANTS,
-          variantCopy,
-          variant,
-          setVariant,
-        )}
-        rules={variantCopy.rules[variant]}
-      />
+      <VariantMenu id={menuId} choice={variantPick} rules={rules} />
     </>
   );
 
@@ -77,10 +77,10 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
       <SudokuFreeBoard
         key={`${String(phase.puzzle.seed)}:${variant}:${level}:${String(phase.run)}`}
         level={level}
-        variant={variant}
+        choices={choices}
+        variantPick={variantPick}
         picker={picker}
-        onLevelChange={setLevel}
-        onVariantChange={setVariant}
+        rules={rules}
         puzzle={phase.puzzle}
         onNext={regenerate}
       />
@@ -91,9 +91,9 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      choices={[levelChoice(level, setLevel)]}
+      choices={choices}
       picker={picker}
-      rules={variantCopy.rules[variant]}
+      rules={rules}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -107,18 +107,18 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
 
 function SudokuFreeBoard({
   level,
-  variant,
+  choices,
+  variantPick,
   picker,
-  onLevelChange,
-  onVariantChange,
+  rules,
   puzzle,
   onNext,
 }: {
   readonly level: FreePlayLevel;
-  readonly variant: SudokuVariant;
+  readonly choices: readonly Choice[];
+  readonly variantPick: Choice;
   readonly picker: ReactNode;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
-  readonly onVariantChange: (variant: SudokuVariant) => void;
+  readonly rules: string;
   readonly puzzle: FreeSudokuPuzzle;
   readonly onNext: () => void;
 }) {
@@ -137,6 +137,7 @@ function SudokuFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
 
+  const { reason, units } = namedHint(state.hint.reason, puzzle.layout);
   const filled = countFilled(playableGivens(state.givens), state.entries);
   const hintReady = canHint(state, allowance);
 
@@ -159,7 +160,6 @@ function SudokuFreeBoard({
     dispatch({ type: "use-hint", solution: puzzle.solution, cleanNotes });
   }, [puzzle.solution, allowance, cleanNotes]);
 
-  const choices = [levelChoice(level, onLevelChange)];
   return (
     <EndingStage
       over={state.status === "solved"}
@@ -167,19 +167,7 @@ function SudokuFreeBoard({
       ending={() => (
         <FreePlaySolvedCard
           game="sudoku"
-          choices={
-            variant === "classic"
-              ? choices
-              : [
-                  variantChoice(
-                    SUDOKU_VARIANTS,
-                    variantCopy,
-                    variant,
-                    onVariantChange,
-                  ),
-                  ...choices,
-                ]
-          }
+          choices={[...choices, variantPick]}
           onAgain={onNext}
         />
       )}
@@ -189,7 +177,7 @@ function SudokuFreeBoard({
         pageModifier={boardStyles.pageSudoku ?? ""}
         choices={choices}
         picker={picker}
-        rules={variantCopy.rules[variant]}
+        rules={rules}
         state={{
           kind: "playing",
           readouts: {
@@ -200,12 +188,7 @@ function SudokuFreeBoard({
             ),
             progressLong: copy.progressLong(filled, TOTAL_CELLS),
             hint: {
-              ...hintReadout(
-                state.hint,
-                sudokuHintExplanation(
-                  ...namedHint(state.hint.reason, puzzle.layout),
-                ),
-              ),
+              ...hintReadout(state.hint, sudokuHintExplanation(reason, units)),
               ready: hintReady,
               onReveal: revealHint,
             },

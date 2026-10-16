@@ -28,8 +28,7 @@ const CODE_DIGIT = /^(?:Digit|Numpad)(\d)$/;
 const NO_HIGHLIGHTS: ReadonlyMap<number, CellHighlight> = new Map();
 
 export interface BoardLook {
-  readonly grid: string;
-  readonly boxes: boolean;
+  readonly plainGrid?: string;
   readonly cells: readonly string[];
   readonly where: readonly (string | undefined)[];
 }
@@ -147,7 +146,7 @@ export function Board({
       aria-label={messages.games.sudoku.play.boardAria}
       onKeyDown={onKeyDown}
     >
-      {look?.boxes === false ? null : <BoxRules />}
+      {look?.plainGrid === undefined ? <BoxRules /> : null}
 
       {givens.map((given, index) => {
         const row = Math.floor(index / SIDE);
@@ -228,13 +227,13 @@ function BoxRules() {
 }
 
 function gridClassName(look: BoardLook | undefined): string {
-  return [styles.grid, look?.grid].filter(Boolean).join(" ");
+  return [styles.grid, look?.plainGrid].filter(Boolean).join(" ");
 }
 
 export function BoardSkeleton({ look }: { readonly look?: BoardLook }) {
   return (
     <div aria-hidden className={gridClassName(look)}>
-      {look?.boxes === false ? null : <BoxRules />}
+      {look?.plainGrid === undefined ? <BoxRules /> : null}
       {Array.from({ length: SIDE * SIDE }, (_unused, index) => (
         <div
           key={index}

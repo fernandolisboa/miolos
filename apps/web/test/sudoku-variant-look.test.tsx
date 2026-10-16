@@ -11,11 +11,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import lookStyles from "../src/free-play/sudoku-look.module.css";
-import {
-  isBoxLayout,
-  sudokuLook,
-  namedHint,
-} from "../src/free-play/sudoku-layout";
+import { sudokuLook, namedHint } from "../src/free-play/sudoku-layout";
 import { messages } from "../src/i18n";
 import { Board, type BoardLook } from "../src/sudoku/board";
 import {
@@ -30,10 +26,15 @@ const FORMAS = generateSudokuVariant({
   variant: "irregular",
 }).layout;
 
-const explain = (reason: SudokuHintReason, layout: SudokuLayout) =>
-  sudokuHintExplanation(...namedHint(reason, layout));
+function explain(reason: SudokuHintReason, layout: SudokuLayout) {
+  const named = namedHint(reason, layout);
+  return sudokuHintExplanation(named.reason, named.units);
+}
 
-const PARSED_CLASSIC: SudokuLayout = structuredClone(CLASSIC_LAYOUT);
+const PARSED_CLASSIC: SudokuLayout = Object.freeze({
+  regions: Object.freeze([...CLASSIC_LAYOUT.regions]),
+  extraUnits: Object.freeze([]),
+});
 
 const BLANK: readonly number[] = Array.from({ length: 81 }, () => 0);
 
@@ -135,9 +136,6 @@ describe("the hint names the variant's units (T-WEB-S866)", () => {
       step({ index: 23, after: "hiddenPair" }),
     ];
 
-    expect(PARSED_CLASSIC).not.toBe(CLASSIC_LAYOUT);
-    expect(isBoxLayout(PARSED_CLASSIC)).toBe(true);
-    expect(isBoxLayout(FORMAS)).toBe(false);
     expect(reasons.map((reason) => explain(reason, PARSED_CLASSIC))).toEqual(
       reasons.map((reason) => sudokuHintExplanation(reason)),
     );

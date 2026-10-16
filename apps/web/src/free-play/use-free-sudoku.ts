@@ -8,7 +8,10 @@ import {
   type SudokuVariant,
   type SudokuVariantPuzzle,
 } from "@miolos/games/sudoku";
-import { generateSudokuVariant } from "@miolos/games/sudoku-variants";
+import {
+  assertSudokuLayout,
+  generateSudokuVariant,
+} from "@miolos/games/sudoku-variants";
 import { z } from "zod";
 
 import type { SudokuDigit } from "../sudoku/state";
@@ -24,26 +27,20 @@ export const FREE_PLAY_SUDOKU_SEED_ATTEMPTS = 3;
 
 const solutionSchema = z.array(sudokuDigitSchema).length(81);
 
-const unitSchema = z
-  .array(z.number().int().min(0).max(80))
-  .length(9)
-  .refine((cells) => new Set(cells).size === 9)
-  .readonly();
-
 const layoutSchema = z
   .strictObject({
-    regions: z
-      .array(z.number().int().min(0).max(8))
-      .length(81)
-      .refine((regions) =>
-        Array.from({ length: 9 }, (_, id) => id).every(
-          (id) => regions.filter((region) => region === id).length === 9,
-        ),
-      )
-      .readonly(),
-    extraUnits: z.array(unitSchema).max(2).readonly(),
+    regions: z.array(z.number()).readonly(),
+    extraUnits: z.array(z.array(z.number()).readonly()).readonly(),
   })
-  .readonly();
+  .readonly()
+  .refine((layout) => {
+    try {
+      assertSudokuLayout(layout);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
 export interface FreeSudokuInput {
   readonly level: FreePlayLevel;

@@ -19,6 +19,8 @@ import type {
 } from "../sudoku/types";
 import { drawIrregularLayout } from "./irregular";
 
+export { assertSudokuLayout } from "../sudoku/board";
+
 const FILL_BUDGET = 1000;
 
 const FAILURES_PER_MAP = 8;
