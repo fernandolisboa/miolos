@@ -1,7 +1,7 @@
 # ADR-0127 — Sudoku notes are a local per-cell mask
 
 **Status:** Accepted — 2026-10-15 (issue #368)
-**Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (decision 2 gains *Limpar rascunho ao preencher*, on; decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (decision 1 and the `onReset` rule of decision 3: a Sudoku board that holds only notes can be reset); [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (decision 2: Sudoku's step fields are `entries` and `notes`).
+**Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (decision 2 gains *Limpar rascunho ao preencher*, on; decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (decision 1 and the `onReset` rule of decision 3: a Sudoku board that holds only notes can be reset); [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (decision 2: Sudoku's step fields are `entries` and `notes`); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/sudoku` gets its own 51 KB budget).
 **Depends on:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md)
 
 ## Context
@@ -21,7 +21,7 @@ Fernando asked for a notes mode (*Rascunho*) in Sudoku: several small numbers in
 
 - A client from before this change parses records with `strictObject`, so a Sudoku record that carries `notes` is rejected by it. On a rollback an in-progress board with notes looks missing and is overwritten. Solved records never carry notes, so no completion is lost.
 - A note never counts: not in the tally, not in *Mostrar erros*, not in the same-digit highlight, not in progress.
-- `/sudoku` measured 49.9 KB over `/` (the notes add about 3 KB), over the shared 48 KB. With Fernando's yes it gets its own 51 KB budget. This contradicts ADR-0112's Rejected per-route entry for `/sudoku` and the handoff's "split `playRecordSchema` first"; the split stays the next relief for every daily route.
+- `/sudoku` measured 49.9 KB over `/` (the notes add about 3 KB), over the shared 48 KB. Fernando said yes on 2026-10-16, so it has its own 51 KB budget. This contradicts ADR-0112's Rejected per-route entry for `/sudoku` and the handoff's "split `playRecordSchema` first"; the split stays the next relief for every daily route.
 - The keypad gains a pencil key; the phone keypad is six columns (digits 1 to 5 and the pencil, then 6 to 9 and a double-width erase).
 
 ## Rejected
