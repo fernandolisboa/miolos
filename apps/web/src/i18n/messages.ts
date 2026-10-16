@@ -32,22 +32,30 @@ interface SudokuCellCopy {
   readonly column: number;
 }
 
-type SudokuUnitKind = "row" | "column" | "box";
+type SudokuUnitKind = "row" | "column" | "box" | "diagonal";
 
 const sudokuCell = ({ row, column }: SudokuCellCopy) =>
   `linha ${row}, coluna ${column}`;
 
-const sudokuLine = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
+const sudokuLine = (kind: "row" | "column", cell: SudokuCellCopy) =>
   kind === "row" ? `linha ${cell.row}` : `coluna ${cell.column}`;
 
 const inSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box" ? "Neste bloco" : `Na ${sudokuLine(kind, cell)}`;
+  kind === "box"
+    ? "Neste bloco"
+    : kind === "diagonal"
+      ? "Nesta diagonal"
+      : `Na ${sudokuLine(kind, cell)}`;
 
 const ofSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box" ? "deste bloco" : `da ${sudokuLine(kind, cell)}`;
+  kind === "box"
+    ? "deste bloco"
+    : kind === "diagonal"
+      ? "desta diagonal"
+      : `da ${sudokuLine(kind, cell)}`;
 
 const sudokuSpot = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box"
+  kind === "box" || kind === "diagonal"
     ? sudokuCell(cell)
     : sudokuLine(kind === "row" ? "column" : "row", cell);
 
@@ -192,6 +200,7 @@ export const messages = {
     taglineSentence: `${taglineCapitalised}.`,
     signOff,
   },
+  dayMark: { full: "Dia Cheio", perfect: "Dia Perfeito" },
   hoje: {
     completedOfTotal: (done: number, total: number) =>
       `${done} de ${total} concluídos`,
@@ -317,6 +326,10 @@ export const messages = {
   },
   stats: {
     title: "Estatísticas",
+    fullDays: {
+      label: "Dias Cheios",
+      aria: (n: number) => `${n} ${n === 1 ? "dia cheio" : "dias cheios"}`,
+    },
     perfectDays: {
       label: "Dias Perfeitos",
       aria: (n: number) =>
@@ -355,8 +368,8 @@ export const messages = {
       legend: { onTime: "no dia", late: "mais tarde", missed: "sem conclusão" },
       dayAria: {
         onTime: (date: string) => `${date}: concluído no dia`,
-        onTimePerfect: (date: string) =>
-          `${date}: concluído no dia — Dia Perfeito`,
+        onTimeMarked: (date: string, mark: string) =>
+          `${date}: concluído no dia — ${mark}`,
         late: (date: string) => `${date}: concluído mais tarde`,
         missed: (date: string) => `${date}: sem conclusão`,
       },
@@ -461,6 +474,35 @@ export const messages = {
       option: (size: number) => `${size}×${size}`,
       aria: (size: number) => `Tamanho: ${size} por ${size}`,
     },
+    variant: {
+      label: "Variante",
+      classico: "Clássico",
+      dueto: "Dueto",
+      quarteto: "Quarteto",
+      aria: (name: string) => `Variante: ${name}`,
+      triggerAria: (name: string) => `Variante: ${name}. Trocar a variante`,
+      rules: {
+        classico: "Uma palavra em seis tentativas.",
+        dueto:
+          "Descubra duas palavras de cinco letras ao mesmo tempo, em até sete tentativas. Cada tentativa vale para as duas; digite sem acentos.",
+        quarteto:
+          "Descubra quatro palavras de cinco letras ao mesmo tempo, em até nove tentativas. Cada tentativa vale para todas; digite sem acentos.",
+      },
+      boardAria: (board: number, boards: number) =>
+        `palavra ${board} de ${boards}`,
+      foundAria: (board: number) => `palavra ${board} encontrada`,
+      letterAria: (
+        letter: string,
+        marks: readonly (keyof typeof TERMO_TILE | undefined | null)[],
+      ) => {
+        const parts = marks.flatMap((mark, index) =>
+          mark == null ? [] : [`${index + 1}ª palavra, ${TERMO_TILE[mark]}`],
+        );
+        return parts.length === 0
+          ? letterAria(letter)
+          : `letra ${letter}: ${parts.join("; ")}`;
+      },
+    },
     level: {
       label: "Nível",
       leve: "Leve",
@@ -478,6 +520,7 @@ export const messages = {
       stamp: "Resolvido!",
       lostStamp: "Não deu!",
       wordLead: "A palavra era",
+      wordsLead: "As palavras eram",
       modeLine: (mode: string, game: string, level?: string) =>
         [mode, game, level].filter((part) => part !== undefined).join(" · "),
       again: {

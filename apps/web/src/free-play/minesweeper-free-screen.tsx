@@ -70,7 +70,7 @@ export function MinesweeperFreeScreen({
         <FreePlaySolvedCard
           game="minesweeper"
           choice={choice}
-          won={game.status === "won"}
+          lost={game.status === "lost"}
           onAgain={mines.newGame}
           picture={
             <div className={minefield.finishedField}>

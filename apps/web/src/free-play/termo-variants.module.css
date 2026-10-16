@@ -1,0 +1,150 @@
+/* Card geometry (ADR-0135), tile t, board gaps g (row) and h (column), card padding p,
+   tile gap s: width a·(5t + 4s) + (a−1)·h + 2p for a boards across, height
+   n·(r·t + (r−1)·s) + (n−1)·g + 2p for n board rows of r tiles. Each
+   --board-aspect is the ratio's limit for large t, so the card never
+   outgrows the well; --board-min × --board-aspect is the width at t = 24.
+   Quarteto goes four across only where its column holds that width. */
+
+.page.dueto {
+  --board-max: 640px;
+  --board-aspect: 1.39;
+  --board-min: 235px;
+  --boards-across: 2;
+}
+
+.page.quarteto {
+  --board-max: 880px;
+  --board-aspect: 2.2;
+  --board-min: 290px;
+  --boards-across: 4;
+}
+
+.boards {
+  display: grid;
+  grid-template-columns: repeat(var(--boards-across), minmax(0, 1fr));
+  gap: var(--space-4) var(--space-5);
+}
+
+.finished {
+  --boards-across: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--boards-across), minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* ── the split key ───────────────────────────────────────────────────── */
+
+/* One segment per board, laid out as the boards are; each mark reads
+   without colour, as on the classic key. */
+.splitKey {
+  position: relative;
+  overflow: hidden;
+}
+
+.segments {
+  position: absolute;
+  inset: 3px;
+  display: grid;
+  grid-template-columns: repeat(var(--boards-across), 1fr);
+  gap: 2px;
+}
+
+.segments > * {
+  border-radius: 2px;
+}
+
+.segmentCorrect {
+  background: var(--accent);
+}
+
+.segmentPresent {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.segmentAbsent {
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 0.6px),
+      var(--ink-2) calc(50% - 0.6px),
+      var(--ink-2) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    ),
+    var(--paper-tint);
+}
+
+/* The paper halo keeps the ink glyph legible over the accent and the
+   slash. */
+.glyph {
+  position: relative;
+  text-shadow:
+    0 0 2px var(--paper-card),
+    0 0 2px var(--paper-card),
+    0 0 1px var(--paper-card);
+}
+
+/* ── the variant menu ────────────────────────────────────────────────── */
+
+.menu {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(40ch, calc(100vw - var(--space-6)));
+  padding: var(--space-5);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md)
+    color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--ink);
+}
+
+.menuTitle {
+  margin: 0 0 var(--space-3);
+  font: var(--text-kicker);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.menuLine {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ── one column ──────────────────────────────────────────────────────── */
+
+@media (max-width: 1119px) {
+  .page.quarteto {
+    --boards-across: 2;
+    --board-aspect: 0.555;
+    --board-min: 588px;
+  }
+}
+
+/* A phone fits Quarteto's four boards of nine rows above the keyboard by
+   dropping the title block (the variant menu carries the rules, ADR-0135),
+   a 2px tile gap, and a tighter notice row, which never holds a retry in
+   free play. */
+@media (max-width: 768px) {
+  .page {
+    --grid-card-pad: 6px;
+  }
+
+  .page.quarteto {
+    --board-min: 505px;
+    --title-display: none;
+    --notice-min: 28px;
+    --tile-gap: 2px;
+    --keyboard-gap: 0px;
+  }
+
+  .boards {
+    gap: 6px 10px;
+  }
+
+  .menu {
+    padding: var(--space-3);
+  }
+}

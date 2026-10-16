@@ -1,7 +1,12 @@
 "use client";
 
-import { deriveBoardStatus, evaluateGuess } from "@miolos/games/termo";
-import { drawFreeTermoWord } from "@miolos/games/termo-free";
+import {
+  deriveBoardStatus,
+  evaluateGuess,
+  TERMO_VARIANTS,
+  type TermoVariant,
+} from "@miolos/games/termo";
+import { drawFreeTermoWords } from "@miolos/games/termo-free";
 import { useCallback } from "react";
 
 import type {
@@ -21,23 +26,28 @@ import {
 
 export interface FreeTermoPuzzle {
   readonly seed: number;
-  readonly canonical: string;
+  readonly words: readonly string[];
 }
 
-export type FreeTermoDeps = FreeGenerationDeps<typeof drawFreeTermoWord>;
+export type FreeTermoDeps = FreeGenerationDeps<typeof drawFreeTermoWords>;
 
-const FREE_TERMO: FreeGame<typeof drawFreeTermoWord, FreeTermoPuzzle, null> = {
-  generate: drawFreeTermoWord,
-  build: (generate, draw) => {
+const FREE_TERMO: FreeGame<
+  typeof drawFreeTermoWords,
+  FreeTermoPuzzle,
+  TermoVariant
+> = {
+  generate: drawFreeTermoWords,
+  build: (generate, draw, variant) => {
     const seed = draw();
-    return { seed, canonical: generate(seed) };
+    return { seed, words: generate(seed, TERMO_VARIANTS[variant].boards) };
   },
 };
 
 export function useFreeTermo(
+  variant: TermoVariant,
   deps?: FreeTermoDeps,
 ): FreeGeneration<FreeTermoPuzzle> {
-  return useFreeGeneration(null, FREE_TERMO, deps);
+  return useFreeGeneration(variant, FREE_TERMO, deps);
 }
 
 export function judgeFreeGuess(

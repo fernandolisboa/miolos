@@ -57,3 +57,8 @@ export const statsCalendarResponseSchema = z.strictObject({
     .min(1),
 });
 export type StatsCalendarResponse = z.infer<typeof statsCalendarResponseSchema>;
+
+export const fullDaysResponseSchema = z.strictObject({
+  dates: z.array(calendarDateString),
+});
+export type FullDaysResponse = z.infer<typeof fullDaysResponseSchema>;

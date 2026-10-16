@@ -6,6 +6,7 @@ import {
   computeStats,
   epochDay,
   dateFromEpochDay,
+  fullDays,
   perfectDays,
   COMPLETION_OUTCOMES,
   GAMES,
@@ -266,6 +267,50 @@ describe("stats derivations — properties (ADR-0023)", () => {
         },
       ),
       { numRuns: 100, seed: 20_260_814 },
+    );
+  });
+
+  it("T-CORE-S194: perfectDays ⊆ fullDays ⊆ on-time dates; more rows under a fixed lineup never remove a full day; row order never matters", () => {
+    fc.assert(
+      fc.property(
+        inputArb,
+        fc.infiniteStream(fc.nat()),
+        ({ rows, published }, indices) => {
+          const full = fullDays(rows, published);
+          expect([...full]).toEqual([...new Set(full)].sort());
+
+          const onTimeDates = new Set(
+            rows
+              .filter((row) => row.outcome === "won" && row.onTime)
+              .map((row) => row.date),
+          );
+          for (const date of perfectDays(rows, published)) {
+            expect(full).toContain(date);
+          }
+          for (const date of full) {
+            expect(onTimeDates.has(date)).toBe(true);
+          }
+
+          const half = rows.slice(0, Math.floor(rows.length / 2));
+          for (const date of fullDays(half, published)) {
+            expect(full).toContain(date);
+          }
+
+          const shuffled = [...rows];
+          for (let i = shuffled.length - 1; i > 0; i -= 1) {
+            const next = indices.next();
+            const j = (next.done ? 0 : next.value) % (i + 1);
+            const a = shuffled[i];
+            const b = shuffled[j];
+            if (a !== undefined && b !== undefined) {
+              shuffled[i] = b;
+              shuffled[j] = a;
+            }
+          }
+          expect(fullDays(shuffled, published)).toEqual(full);
+        },
+      ),
+      { numRuns: 100, seed: 20_261_015 },
     );
   });
 });

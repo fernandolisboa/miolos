@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #375)
 **Amends:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) decision 6 (in one column the confirm opens upward, over the controls above the row); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (the title block is a shared `PlayTitle`, also used by Termo); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (its named *Ajustes* relief is spent).
 **Depends on:** [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md)
+**Amended by:** [ADR-0135](./0135-termo-free-play-offers-dueto-and-quarteto.md) (#374) — decision 1: on a phone free-play Quarteto drops the whole title block, (i) included, to keep its tiles at the 24px floor; its variant menu carries the full rules instead.
 
 ## Context
 

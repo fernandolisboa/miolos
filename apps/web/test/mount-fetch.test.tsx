@@ -110,6 +110,7 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
       "src/medals/use-medals.ts",
       "src/onboarding/use-onboarding-state.ts",
       "src/push/use-push-state.ts",
+      "src/stats/use-full-days.ts",
       "src/stats/use-stats-calendar.ts",
       "src/stats/use-stats.ts",
       "src/streak/use-streak.ts",

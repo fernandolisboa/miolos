@@ -157,7 +157,11 @@
   border-radius: var(--radius-cell);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(14px, calc(var(--board-side) * 0.105), 34px);
+  font-size: clamp(
+    14px,
+    calc(var(--board-side) * 0.105 / var(--boards-across, 1)),
+    34px
+  );
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
@@ -307,7 +311,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--notice-min, 36px);
   margin-top: var(--space-2);
 }
 
@@ -410,7 +414,7 @@
   gap: var(--space-2);
   width: 608px;
   max-width: 100%;
-  margin-top: var(--space-5);
+  margin-top: var(--keyboard-gap, var(--space-5));
   touch-action: manipulation;
 }
 
@@ -539,11 +543,11 @@
   }
 
   .grid {
-    gap: 3px;
+    gap: var(--tile-gap, 3px);
   }
 
   .row {
-    gap: 3px;
+    gap: var(--tile-gap, 3px);
   }
 }
 

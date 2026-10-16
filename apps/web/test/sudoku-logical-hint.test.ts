@@ -173,7 +173,7 @@ function step(overrides: Partial<SudokuStep>): SudokuReasonStep {
 
 describe("every hint sentence (T-WEB-S552)", () => {
   const hidden = (
-    kind: "row" | "column" | "box",
+    kind: "row" | "column" | "box" | "diagonal",
     unit: number,
     index: number,
   ) =>
@@ -222,5 +222,23 @@ describe("every hint sentence (T-WEB-S552)", () => {
       xWingRows: "X-Wing",
       xWingCols: "X-Wing",
     });
+  });
+});
+
+describe("the hint names a diagonal (T-WEB-S860)", () => {
+  it("says a digit fits one cell of a diagonal, with or without an elimination", () => {
+    const diagonal = {
+      index: 40,
+      technique: "hiddenSingle",
+      unit: { kind: "diagonal", index: 0 },
+    } as const;
+    expect(
+      [step(diagonal), step({ ...diagonal, after: "pointing" })].map(
+        sudokuHintExplanation,
+      ),
+    ).toEqual([
+      "Nesta diagonal, o 4 só cabe na linha 5, coluna 5.",
+      "Com uma técnica avançada (candidato travado), o 4 só cabe na linha 5, coluna 5 desta diagonal.",
+    ]);
   });
 });

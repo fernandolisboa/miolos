@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-14 (issue #327)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0042](./0042-the-termo-board-is-read-only-output.md), [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
 **Supersedes in part:** [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 1 for the active row (its five cells are focusable and named; the row's name no longer carries the draft) decision 5's caret rationale (the focused cell is the caret), and decision 10's announcer copy (positional). **Amends:** ADR-0042 decision 4 (the active row carries its own key listener beside the window one).
+**Amended by:** [ADR-0135](./0135-termo-free-play-offers-dueto-and-quarteto.md) (#374) — decision 5: on a Dueto or Quarteto page only the first open board's row is editable; the other open boards mirror the draft as typed tiles.
 
 ## Context
 

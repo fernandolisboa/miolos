@@ -39,7 +39,7 @@
   font: var(--text-screen-title);
 }
 
-/* ——— summary: Dias Perfeitos ————————————————————————————————————————
+/* ——— summaries: Dias Cheios, Dias Perfeitos ———————————————————————————
    The streak stamp's register (DESIGN.md "Streak stamp card"): desk paper,
    1.5px app-accent border, hard sealing-wax shadow, a subtle static
    rotation. The accent stays on the border and shadow — SHAPES — and both
@@ -48,11 +48,17 @@
    Sans + tabular-nums, NOT Fraunces: it sits beside the per-game counts
    it must read consistently with (ADR-0036). */
 
+.summaries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-top: var(--space-8);
+}
+
 .summary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-4);
-  margin-top: var(--space-8);
   width: fit-content;
   background: var(--paper-desk);
   border: 1.5px solid var(--accent-app);
@@ -61,6 +67,10 @@
     color-mix(in srgb, var(--accent-app) 25%, transparent);
   padding: var(--space-4) var(--space-6);
   transform: rotate(-0.6deg);
+}
+
+.summary + .summary {
+  transform: rotate(0.5deg);
 }
 
 .summaryNumeral {
@@ -313,13 +323,12 @@
     font-size: 34px;
   }
 
-  .summary {
-    /* Block-level, not the desktop's atomic inline: in the page's mobile
-       block flow an inline-flex stamp would ride a text line box (strut
-       leading, baseline quirks); `flex` + the shared `width: fit-content`
-       keeps the card's box exactly as it was as a flex item. */
-    display: flex;
+  .summaries {
+    gap: var(--space-4);
     margin-top: var(--space-6);
+  }
+
+  .summary {
     padding: var(--space-3) var(--space-4);
   }
 

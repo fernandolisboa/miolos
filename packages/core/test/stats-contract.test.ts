@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fullDaysResponseSchema,
   statsCalendarResponseSchema,
   statsResponseSchema,
   TIMED_GAMES,
@@ -164,5 +165,21 @@ describe("statsResponseSchema / statsCalendarResponseSchema (plan 033 §3.3)", (
       statsResponseSchema.safeParse({ ...validStats, date: "0000-00-00" })
         .success,
     ).toBe(true);
+  });
+
+  it("T-CORE-S197: the full-days contract is { dates } of real days, strict on missing and extra keys", () => {
+    expect(
+      fullDaysResponseSchema.safeParse({ dates: ["2026-08-12", "2026-08-13"] })
+        .success,
+    ).toBe(true);
+    expect(fullDaysResponseSchema.safeParse({ dates: [] }).success).toBe(true);
+
+    expect(fullDaysResponseSchema.safeParse({}).success).toBe(false);
+    expect(
+      fullDaysResponseSchema.safeParse({ dates: [], count: 0 }).success,
+    ).toBe(false);
+    expect(
+      fullDaysResponseSchema.safeParse({ dates: ["2026-02-30"] }).success,
+    ).toBe(false);
   });
 });

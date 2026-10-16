@@ -1,5 +1,9 @@
 "use client";
 
+import { type TermoVariant } from "@miolos/games/termo";
+import { useId, useState } from "react";
+
+import { lazyChunk } from "../components/lazy-chunk";
 import { messages } from "../i18n";
 import { accentVars } from "../play/accent";
 import { FinishedBoard } from "../termo/board";
@@ -15,8 +19,14 @@ import {
   useFreeTermo,
   useFreeTermoBoard,
   type FreeTermoDeps,
-  type FreeTermoPuzzle,
 } from "./use-free-termo";
+
+let loadedVariants: typeof import("./termo-variants") | null = null;
+const useVariantsLoaded = lazyChunk(() =>
+  import("./termo-variants").then((module) => {
+    loadedVariants = module;
+  }),
+);
 
 const CHROME: TermoChrome = {
   back: FREE_PLAY_BACK,
@@ -24,17 +34,60 @@ const CHROME: TermoChrome = {
 };
 
 export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
-  const { phase, regenerate } = useFreeTermo(deps);
+  const [variant, setVariant] = useState<TermoVariant>("classico");
+  const { phase, regenerate } = useFreeTermo(variant, deps);
+  const [asks, setAsks] = useState(0);
+  const variants = useVariantsLoaded(asks) ? loadedVariants : null;
+  const menuId = useId();
+
+  const name = messages.freePlay.variant[variant];
+  const chrome: TermoChrome = {
+    ...CHROME,
+    picker: (
+      <>
+        <button
+          type="button"
+          className={styles.variantTrigger}
+          aria-label={messages.freePlay.variant.triggerAria(name)}
+          popoverTarget={variants === null ? undefined : menuId}
+          onClick={() => {
+            if (variants === null) setAsks(asks + 1);
+          }}
+        >
+          {name}
+        </button>
+        {variants !== null && (
+          <variants.VariantMenu
+            id={menuId}
+            value={variant}
+            onChange={setVariant}
+          />
+        )}
+      </>
+    ),
+  };
 
   switch (phase.kind) {
-    case "ready":
-      return (
+    case "ready": {
+      const key = `${String(phase.puzzle.seed)}:${variant}:${String(phase.run)}`;
+      return variants !== null && variant !== "classico" ? (
+        <variants.TermoVariants
+          key={key}
+          variant={variant}
+          words={phase.puzzle.words}
+          chrome={chrome}
+          onVariant={setVariant}
+          onNext={regenerate}
+        />
+      ) : (
         <TermoFreeBoard
-          key={`${String(phase.puzzle.seed)}:${String(phase.run)}`}
-          puzzle={phase.puzzle}
+          key={key}
+          canonical={phase.puzzle.words[0] ?? ""}
+          chrome={chrome}
           onNext={regenerate}
         />
       );
+    }
     case "failed":
       return (
         <main
@@ -46,18 +99,20 @@ export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
         </main>
       );
     case "generating":
-      return <PlaySkeleton date={FREE_PLAY_DATE} chrome={CHROME} />;
+      return <PlaySkeleton date={FREE_PLAY_DATE} chrome={chrome} />;
   }
 }
 
 function TermoFreeBoard({
-  puzzle,
+  canonical,
+  chrome,
   onNext,
 }: {
-  readonly puzzle: FreeTermoPuzzle;
+  readonly canonical: string;
+  readonly chrome: TermoChrome;
   readonly onNext: () => void;
 }) {
-  const play = useFreeTermoBoard(puzzle.canonical);
+  const play = useFreeTermoBoard(canonical);
   const { status } = play.state;
 
   return (
@@ -67,15 +122,15 @@ function TermoFreeBoard({
       ending={() => (
         <FreePlaySolvedCard
           game="termo"
-          word={puzzle.canonical}
-          won={status === "solved"}
+          words={[canonical]}
+          lost={status === "lost"}
           onAgain={onNext}
         >
           <FinishedBoard guesses={play.state.guesses} />
         </FreePlaySolvedCard>
       )}
     >
-      <PlayView play={play} chrome={CHROME} />
+      <PlayView play={play} chrome={chrome} />
     </EndingStage>
   );
 }

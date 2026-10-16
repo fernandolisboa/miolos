@@ -62,6 +62,18 @@ describe("deriveBoardStatus", () => {
     ).toThrow(RangeError);
   });
 
+  it("takes a variant's guess count, six by default", () => {
+    expect(deriveBoardStatus(Array<TileStates>(6).fill(LOSE_ROW), 9)).toBe(
+      "playing",
+    );
+    expect(deriveBoardStatus(Array<TileStates>(9).fill(LOSE_ROW), 9)).toBe(
+      "lost",
+    );
+    expect(() =>
+      deriveBoardStatus(Array<TileStates>(8).fill(LOSE_ROW), 7),
+    ).toThrow(RangeError);
+  });
+
   it("throws RangeError for a row after a win (guessing past a win is a caller bug)", () => {
     expect(() => deriveBoardStatus([WIN_ROW, LOSE_ROW])).toThrow(RangeError);
   });

@@ -41,7 +41,9 @@ export function decl(body: string, property: string): string | undefined {
 }
 
 export function pixels(value: string | undefined): number {
-  const match = /^(-?[\d.]+)px$/.exec(value?.trim() ?? "");
+  const match = /^(?:var\(--[\w-]+,\s*)?(-?[\d.]+)px\)?$/.exec(
+    value?.trim() ?? "",
+  );
   if (match === null) {
     throw new Error(`\`${String(value)}\` is not a px length`);
   }

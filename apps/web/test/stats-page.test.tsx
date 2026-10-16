@@ -13,10 +13,12 @@ import {
   formatMonth,
   messages,
 } from "../src/i18n";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 const clients = vi.hoisted(() => ({
   fetchStats: vi.fn(),
   fetchStatsCalendar: vi.fn(),
+  fetchFullDays: vi.fn(),
 }));
 vi.mock("../src/stats/stats-client", () => clients);
 
@@ -79,6 +81,7 @@ const CALENDAR: StatsCalendarResponse = {
 
 beforeEach(() => {
   medalsClient.fetchMedals.mockReturnValue(new Promise(() => undefined));
+  clients.fetchFullDays.mockReset();
 });
 
 afterEach(() => {
@@ -174,8 +177,9 @@ describe("the calendar renders the three states honestly (T-WEB-S155)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText(
-        messages.stats.calendar.dayAria.onTimePerfect(
+        messages.stats.calendar.dayAria.onTimeMarked(
           formatLongDate("2026-07-31"),
+          messages.dayMark.perfect,
         ),
       ),
     ).toBeInTheDocument();
@@ -193,7 +197,9 @@ describe("the calendar renders the three states honestly (T-WEB-S155)", () => {
     ).toBeGreaterThan(0);
 
     expect(container.querySelectorAll('[data-state="missed"]')).toHaveLength(3);
-    expect(container.querySelectorAll("[data-perfect]")).toHaveLength(1);
+    expect(
+      container.querySelectorAll('[role="img"][data-mark="perfect"]'),
+    ).toHaveLength(1);
 
     const titles = [...container.querySelectorAll("h3")].map(
       (heading) => heading.textContent,
@@ -233,5 +239,117 @@ describe("the calendar renders the three states honestly (T-WEB-S155)", () => {
 
     const summary = screen.getByLabelText(messages.stats.perfectDays.aria(0));
     expect(summary).toHaveTextContent("0");
+  });
+});
+
+describe("the Dias Cheios numeral (T-WEB-S850)", () => {
+  it("is a blank skeleton while loading, the calendar waits for it, then it counts the dates, first of the two summaries", async () => {
+    clients.fetchStats.mockResolvedValue(STATS);
+    clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
+    let resolveFull: (value: { dates: string[] }) => void = () => undefined;
+    clients.fetchFullDays.mockReturnValue(
+      new Promise((resolve) => {
+        resolveFull = resolve;
+      }),
+    );
+
+    render(<StatsPage />);
+    await screen.findByLabelText(messages.stats.perfectDays.aria(2));
+    expect(
+      screen.getByText(messages.stats.fullDays.label).closest("section"),
+    ).toHaveAttribute("aria-hidden", "true");
+    expect(
+      screen.queryByText(messages.stats.calendar.legend.onTime),
+    ).not.toBeInTheDocument();
+
+    resolveFull({ dates: ["2026-07-31", "2026-08-01", "2026-08-02"] });
+    const full = await screen.findByLabelText(messages.stats.fullDays.aria(3));
+    expect(full).toHaveTextContent("3");
+    expect(
+      screen.getByText(messages.stats.calendar.legend.onTime),
+    ).toBeInTheDocument();
+
+    const labels = [
+      ...document.querySelectorAll('section[data-stats-state="value"]'),
+    ]
+      .slice(0, 2)
+      .map((section) => section.getAttribute("aria-label"));
+    expect(labels).toEqual([
+      messages.stats.fullDays.aria(3),
+      messages.stats.perfectDays.aria(2),
+    ]);
+  });
+
+  it("is absent when the read fails, while Dias Perfeitos keeps its zero", async () => {
+    clients.fetchStats.mockResolvedValue(undefined);
+    clients.fetchStatsCalendar.mockResolvedValue(undefined);
+    clients.fetchFullDays.mockResolvedValue(undefined);
+
+    render(<StatsPage />);
+    await screen.findByLabelText(messages.stats.perfectDays.aria(0));
+    await waitFor(() => {
+      expect(
+        screen.queryByText(messages.stats.fullDays.label),
+      ).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe("the calendar rings a Dia Cheio apart from the Dia Perfeito diamond (T-WEB-S851)", () => {
+  it("marks a full on-time day, never a missed one, keeps the perfect day perfect, names both in aria and in the legend", async () => {
+    clients.fetchStats.mockResolvedValue(STATS);
+    clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
+    clients.fetchFullDays.mockResolvedValue({
+      dates: ["2026-07-31", "2026-08-01", "2026-08-02"],
+    });
+
+    const { container } = render(<StatsPage />);
+
+    expect(
+      await screen.findByLabelText(
+        messages.stats.calendar.dayAria.onTimeMarked(
+          formatLongDate("2026-08-01"),
+          messages.dayMark.full,
+        ),
+      ),
+    ).toHaveAttribute("data-mark", "full");
+    expect(
+      screen.getByLabelText(
+        messages.stats.calendar.dayAria.onTimeMarked(
+          formatLongDate("2026-07-31"),
+          messages.dayMark.perfect,
+        ),
+      ),
+    ).toHaveAttribute("data-mark", "perfect");
+    expect(container.querySelectorAll('[role="img"][data-mark]')).toHaveLength(
+      2,
+    );
+
+    expect(screen.getByText(messages.dayMark.full)).toBeInTheDocument();
+    expect(screen.getByText(messages.dayMark.perfect)).toBeInTheDocument();
+
+    const css = stylesheet("app/estatisticas/stats-calendar.module.css");
+    expect(decl(bodyOf(css, '.mark[data-mark="full"]'), "border-radius")).toBe(
+      "50%",
+    );
+    expect(decl(bodyOf(css, '.mark[data-mark="perfect"]'), "transform")).toBe(
+      "rotate(45deg)",
+    );
+  });
+
+  it("shows no mark and no mark legend when there is neither", async () => {
+    clients.fetchStats.mockResolvedValue(STATS);
+    clients.fetchStatsCalendar.mockResolvedValue({
+      days: CALENDAR.days.map((day) => ({ ...day, perfect: false })),
+    });
+    clients.fetchFullDays.mockResolvedValue({ dates: [] });
+
+    const { container } = render(<StatsPage />);
+    await screen.findByText(messages.stats.calendar.legend.onTime);
+    expect(container.querySelectorAll("[data-mark]")).toHaveLength(0);
+    expect(screen.queryByText(messages.dayMark.full)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.dayMark.perfect),
+    ).not.toBeInTheDocument();
   });
 });
