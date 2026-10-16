@@ -120,6 +120,8 @@ export function PlayScreenChrome({
   note,
   clock: clockSetting,
   extraStat,
+  picker,
+  rules,
   children,
 }: {
   readonly game: PlayChromeGame;
@@ -130,6 +132,8 @@ export function PlayScreenChrome({
   readonly note: PlayTitleNote | null;
   readonly clock: PlayChromeClock;
   readonly extraStat: PlayChromeStat | null;
+  readonly picker?: ReactNode;
+  readonly rules?: string;
   readonly children: ReactNode;
 }): ReactElement {
   const allowance = useFreeHintsPerPuzzle() ?? FREE_HINTS_PER_PUZZLE;
@@ -161,7 +165,7 @@ export function PlayScreenChrome({
           {back.label}
         </Link>
         <Wordmark className={screen.wordmark} />
-        <span className={screen.barKicker}>{kicker}</span>
+        {picker ?? <span className={screen.barKicker}>{kicker}</span>}
         <span className={screen.topDate}>{topDate}</span>
         {clockBar(clock)}
       </header>
@@ -169,7 +173,7 @@ export function PlayScreenChrome({
       <PlayTitle
         kicker={kicker}
         title={play.title}
-        rules={play.rules}
+        rules={rules ?? play.rules}
         note={note}
         inert={skeleton}
       >

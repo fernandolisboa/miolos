@@ -1,4 +1,4 @@
-import { sudokuPeers } from "@miolos/games/sudoku";
+import { sudokuPeers, type SudokuLayout } from "@miolos/games/sudoku";
 
 import { DIGITS } from "./engine";
 import type { SudokuDigit } from "./state";
@@ -50,8 +50,9 @@ export function withoutPeerNote(
   notes: readonly number[],
   index: number,
   digit: SudokuDigit,
+  layout: SudokuLayout,
 ): readonly number[] {
-  const peers = new Set(sudokuPeers(index));
+  const peers = new Set(sudokuPeers(index, layout));
   return notes.some((mask, at) => peers.has(at) && (mask & bitOf(digit)) !== 0)
     ? notes.map((mask, at) => (peers.has(at) ? mask & ~bitOf(digit) : mask))
     : notes;

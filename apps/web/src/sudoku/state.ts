@@ -3,9 +3,11 @@ import {
   type DailySudokuResponse,
 } from "@miolos/core";
 import {
+  CLASSIC_LAYOUT,
   getSudokuConflicts,
   isSudokuSolved,
   type SudokuGrid,
+  type SudokuLayout,
   type SudokuTier,
 } from "@miolos/games/sudoku";
 
@@ -46,6 +48,8 @@ export type SudokuCellValue = SudokuDigit | null;
 
 export interface SudokuPlayState extends PlayCore {
   readonly givens: SudokuGrid;
+
+  readonly layout: SudokuLayout;
 
   readonly entries: readonly SudokuCellValue[];
 
@@ -115,13 +119,15 @@ export type SudokuPlayAction =
 
 export function initSudokuPlayState(
   daily: DailySudokuResponse,
+  layout: SudokuLayout = CLASSIC_LAYOUT,
 ): SudokuPlayState {
   const givens: SudokuGrid = daily.givens;
   const entries: readonly SudokuCellValue[] = givens.map(() => null);
-  const derived = derive(givens, entries);
+  const derived = derive(givens, layout, entries);
   return {
     date: daily.date,
     givens,
+    layout,
     entries: derived.entries,
     notes: NO_NOTES,
     selected: null,
@@ -274,7 +280,12 @@ function playSudoku(
       if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
-      const hint = nextSudokuHint(action.solution, state.givens, state.entries);
+      const hint = nextSudokuHint(
+        action.solution,
+        state.givens,
+        state.entries,
+        state.layout,
+      );
       if (hint === null) {
         return state;
       }
@@ -297,7 +308,7 @@ function playSudoku(
         : state;
       return resetBoard(unnoted, (entries) => ({
         ...unnoted,
-        ...derive(state.givens, entries),
+        ...derive(state.givens, state.layout, entries),
       }));
     }
 
@@ -337,13 +348,14 @@ interface DerivedEntries {
 
 function derive(
   givens: SudokuGrid,
+  layout: SudokuLayout,
   entries: readonly SudokuCellValue[],
 ): DerivedEntries {
   const merged = mergedGrid(givens, entries);
   return {
     entries,
-    violating: new Set(getSudokuConflicts(merged)),
-    status: isSudokuSolved(merged) ? "solved" : "playing",
+    violating: new Set(getSudokuConflicts(merged, layout)),
+    status: isSudokuSolved(merged, layout) ? "solved" : "playing",
   };
 }
 
@@ -366,13 +378,15 @@ function withEntry(
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
-  const derived = derive(state.givens, entries);
+  const derived = derive(state.givens, state.layout, entries);
   const own = clearNotes(state.notes, index);
   return {
     ...state,
     ...derived,
     notes:
-      value !== null && cleanNotes ? withoutPeerNote(own, index, value) : own,
+      value !== null && cleanNotes
+        ? withoutPeerNote(own, index, value, state.layout)
+        : own,
     pendingSync: derived.status === "solved" ? true : state.pendingSync,
   };
 }
@@ -385,7 +399,7 @@ function restore(
   if (!isSudokuRecord(record)) {
     return { ...state, now, hydrated: true };
   }
-  const derived = derive(state.givens, record.entries);
+  const derived = derive(state.givens, state.layout, record.entries);
   const notes = (record.notes ?? NO_NOTES).map((mask, index) =>
     state.givens[index] !== 0 || record.entries[index] !== null ? 0 : mask,
   );

@@ -9,8 +9,8 @@ import {
   geometryFor,
   geometryOf,
 } from "../../src/sudoku/board";
-import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
-import { drawIrregularLayout } from "../../src/sudoku/irregular";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku-variants/index";
+import { drawIrregularLayout } from "../../src/sudoku-variants/irregular";
 import type { SudokuLayout } from "../../src/sudoku/index";
 import { FC_SEED, seedArb } from "../daily-arbitraries";
 

@@ -1,4 +1,5 @@
 import {
+  CLASSIC_LAYOUT,
   generateDailySudoku,
   getSudokuConflicts,
   isSudokuSolved,
@@ -163,12 +164,12 @@ describe("the selection's reach (T-WEB-S495)", () => {
   const BLANK: readonly number[] = Array.from({ length: 81 }, () => 0);
 
   const reaches = (selected: number, index: number) =>
-    selectionHighlights(BLANK, selected).has(index);
+    selectionHighlights(BLANK, selected, CLASSIC_LAYOUT).has(index);
 
   it("tints the row, the column and the 3×3 box, and nowhere else", () => {
-    const peers = [...selectionHighlights(BLANK, CENTRE).keys()].sort(
-      (a, b) => a - b,
-    );
+    const peers = [
+      ...selectionHighlights(BLANK, CENTRE, CLASSIC_LAYOUT).keys(),
+    ].sort((a, b) => a - b);
 
     expect(peers).toEqual([
       4, 13, 22, 30, 31, 32, 36, 37, 38, 39, 40, 41, 42, 43, 44, 48, 49, 50, 58,
@@ -177,12 +178,18 @@ describe("the selection's reach (T-WEB-S495)", () => {
   });
 
   it("is empty with nothing selected", () => {
-    expect(selectionHighlights(PUZZLE.givens, null).size).toBe(0);
+    expect(selectionHighlights(PUZZLE.givens, null, CLASSIC_LAYOUT).size).toBe(
+      0,
+    );
   });
 
   it("tints only the unit when the selected cell is empty", () => {
     const empty = firstPlayable();
-    const highlights = selectionHighlights(PUZZLE.givens, empty);
+    const highlights = selectionHighlights(
+      PUZZLE.givens,
+      empty,
+      CLASSIC_LAYOUT,
+    );
 
     expect([...highlights.values()].every((kind) => kind === "unit")).toBe(
       true,
@@ -204,7 +211,7 @@ describe("the selection's reach (T-WEB-S495)", () => {
     }
     const grid = mergedGrid(PUZZLE.givens, entriesWith(empty, digit));
 
-    const highlights = selectionHighlights(grid, given);
+    const highlights = selectionHighlights(grid, given, CLASSIC_LAYOUT);
     const copies = grid.flatMap((cell, index) =>
       cell === digit ? [index] : [],
     );

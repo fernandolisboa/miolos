@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { geometryOf } from "../../src/sudoku/board";
-import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku-variants/index";
 import { gradeInternal } from "../../src/sudoku/grade";
 import {
   generateDailySudoku,

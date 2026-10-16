@@ -22,10 +22,9 @@ export function levelChoice(
   });
 }
 
-type VariantName = "classico" | "cores" | "dueto" | "quarteto";
-
-export function variantChoice<V extends VariantName>(
+export function variantChoice<V extends string>(
   options: readonly V[],
+  names: Readonly<Record<V, string>>,
   variant: V,
   onSelect: (variant: V) => void,
 ): Choice {
@@ -34,8 +33,8 @@ export function variantChoice<V extends VariantName>(
     label: copy.label,
     options,
     selected: variant,
-    optionLabel: (option) => copy[option],
-    optionAria: (option) => copy.aria(copy[option]),
+    optionLabel: (option) => names[option],
+    optionAria: (option) => copy.aria(names[option]),
     onSelect,
   });
 }

@@ -26,6 +26,8 @@ export function FreePlayChrome({
   pageModifier,
   choices,
   clock = "none",
+  picker,
+  rules,
   state,
   children,
 }: {
@@ -33,6 +35,8 @@ export function FreePlayChrome({
   readonly pageModifier: string;
   readonly choices?: readonly Choice[];
   readonly clock?: PlayChromeClock;
+  readonly picker?: ReactNode;
+  readonly rules?: string;
   readonly state: PlayChromeState;
   readonly children: ReactNode;
 }): ReactElement {
@@ -47,6 +51,8 @@ export function FreePlayChrome({
       note={null}
       clock={clock}
       extraStat={first === undefined ? null : choiceStat(first)}
+      picker={picker}
+      rules={rules}
     >
       {choices?.map((choice) => (
         <ChoicePicker key={choice.label} {...choice} />

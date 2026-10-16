@@ -1,4 +1,5 @@
 import {
+  CLASSIC_LAYOUT,
   generateDailySudoku,
   nextSudokuStep,
   type SudokuPuzzle,
@@ -71,7 +72,9 @@ describe("a wrong entry is corrected before any step (T-WEB-S547)", () => {
           index === wrongAt ? (correct === 9 ? 1 : 9) : cell,
         );
 
-        expect(nextSudokuHint(solution, puzzle.givens, entries)).toEqual({
+        expect(
+          nextSudokuHint(solution, puzzle.givens, entries, CLASSIC_LAYOUT),
+        ).toEqual({
           index: wrongAt,
           value: correct,
           reason: { kind: "correction" },
@@ -96,7 +99,9 @@ describe("the hint reveals the next logical step (T-WEB-S548)", () => {
             throw new Error(`no step on weekday ${String(weekday)}`);
           }
 
-          expect(nextSudokuHint(solution, puzzle.givens, entries)).toEqual({
+          expect(
+            nextSudokuHint(solution, puzzle.givens, entries, CLASSIC_LAYOUT),
+          ).toEqual({
             index: step.index,
             value: solution[step.index],
             reason: { kind: "step", step },
@@ -117,7 +122,9 @@ describe("the hint reveals the next logical step (T-WEB-S548)", () => {
       puzzle.givens[index] === 0 ? digit : null,
     );
 
-    expect(nextSudokuHint(solution, puzzle.givens, entries)).toBeNull();
+    expect(
+      nextSudokuHint(solution, puzzle.givens, entries, CLASSIC_LAYOUT),
+    ).toBeNull();
   });
 });
 
@@ -127,7 +134,7 @@ describe("the hint falls back to the first empty cell (T-WEB-S549)", () => {
     const blank = Array.from({ length: 81 }, () => 0);
 
     expect(nextSudokuStep(blank)).toBeNull();
-    expect(nextSudokuHint(solution, blank, EMPTY)).toEqual({
+    expect(nextSudokuHint(solution, blank, EMPTY, CLASSIC_LAYOUT)).toEqual({
       index: 0,
       value: solution[0],
       reason: { kind: "fill" },
@@ -145,7 +152,9 @@ describe("the hint falls back to the first empty cell (T-WEB-S549)", () => {
     }
     const first = puzzle.givens.indexOf(0);
 
-    expect(nextSudokuHint(relabelled, puzzle.givens, EMPTY)).toEqual({
+    expect(
+      nextSudokuHint(relabelled, puzzle.givens, EMPTY, CLASSIC_LAYOUT),
+    ).toEqual({
       index: first,
       value: relabelled[first],
       reason: { kind: "fill" },
@@ -196,7 +205,7 @@ describe("every hint sentence (T-WEB-S552)", () => {
         step({ ...hidden("row", 2, 23), after: "pointing" }),
         step({ ...hidden("column", 0, 45), after: "xWingCols" }),
         step({ ...hidden("box", 0, 19), after: "nakedTriple" }),
-      ].map(sudokuHintExplanation),
+      ].map((reason) => sudokuHintExplanation(reason)),
     ).toEqual([
       "Corrigimos um número que não fecha com as regras.",
       "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
@@ -233,8 +242,8 @@ describe("the hint names a diagonal (T-WEB-S860)", () => {
       unit: { kind: "diagonal", index: 0 },
     } as const;
     expect(
-      [step(diagonal), step({ ...diagonal, after: "pointing" })].map(
-        sudokuHintExplanation,
+      [step(diagonal), step({ ...diagonal, after: "pointing" })].map((reason) =>
+        sudokuHintExplanation(reason),
       ),
     ).toEqual([
       "Nesta diagonal, o 4 só cabe na linha 5, coluna 5.",

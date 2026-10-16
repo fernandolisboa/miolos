@@ -24,40 +24,86 @@ const played = "Jogado";
 const cellAria = (row: number, column: number, value: 0 | 1 | null) =>
   `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
 
-const cellAriaSudoku = (row: number, column: number, value: number | null) =>
-  `linha ${row}, coluna ${column}: ${value === null ? "vazia" : value}`;
-
 interface SudokuCellCopy {
   readonly row: number;
   readonly column: number;
 }
 
-type SudokuUnitKind = "row" | "column" | "box" | "diagonal";
+type SudokuUnitKind = "row" | "column" | "box" | "region" | "diagonal";
+
+type SudokuArea = Exclude<SudokuUnitKind, "row" | "column">;
 
 const sudokuCell = ({ row, column }: SudokuCellCopy) =>
   `linha ${row}, coluna ${column}`;
 
+const sudokuPlace = (row: number, column: number, where?: string) =>
+  where === undefined
+    ? sudokuCell({ row, column })
+    : `${sudokuCell({ row, column })}, ${where}`;
+
+const cellAriaSudoku = (
+  row: number,
+  column: number,
+  value: number | null,
+  where?: string,
+) => `${sudokuPlace(row, column, where)}: ${value === null ? "vazia" : value}`;
+
 const sudokuLine = (kind: "row" | "column", cell: SudokuCellCopy) =>
   kind === "row" ? `linha ${cell.row}` : `coluna ${cell.column}`;
 
+const isSudokuLine = (kind: SudokuUnitKind): kind is "row" | "column" =>
+  kind === "row" || kind === "column";
+
+const IN_SUDOKU_AREA: Record<SudokuArea, string> = {
+  box: "Neste bloco",
+  region: "Nesta região",
+  diagonal: "Nesta diagonal",
+};
+
+const OF_SUDOKU_AREA: Record<SudokuArea, string> = {
+  box: "deste bloco",
+  region: "desta região",
+  diagonal: "desta diagonal",
+};
+
 const inSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box"
-    ? "Neste bloco"
-    : kind === "diagonal"
-      ? "Nesta diagonal"
-      : `Na ${sudokuLine(kind, cell)}`;
+  isSudokuLine(kind) ? `Na ${sudokuLine(kind, cell)}` : IN_SUDOKU_AREA[kind];
 
 const ofSudokuUnit = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box"
-    ? "deste bloco"
-    : kind === "diagonal"
-      ? "desta diagonal"
-      : `da ${sudokuLine(kind, cell)}`;
+  isSudokuLine(kind) ? `da ${sudokuLine(kind, cell)}` : OF_SUDOKU_AREA[kind];
 
 const sudokuSpot = (kind: SudokuUnitKind, cell: SudokuCellCopy) =>
-  kind === "box" || kind === "diagonal"
-    ? sudokuCell(cell)
-    : sudokuLine(kind === "row" ? "column" : "row", cell);
+  isSudokuLine(kind)
+    ? sudokuLine(kind === "row" ? "column" : "row", cell)
+    : sudokuCell(cell);
+
+const SUDOKU_UNIT_NAME: Record<Exclude<SudokuUnitKind, "diagonal">, string> = {
+  row: "a linha",
+  column: "a coluna",
+  box: "o bloco",
+  region: "a região",
+};
+
+const sudokuUnitList = (units: readonly SudokuUnitKind[]) => {
+  const names = units.flatMap((kind) =>
+    kind === "diagonal" ? [] : [SUDOKU_UNIT_NAME[kind]],
+  );
+  const diagonals = units.length - names.length;
+  const all =
+    diagonals === 0
+      ? names
+      : [...names, diagonals === 1 ? "a diagonal" : "as duas diagonais"];
+  return `${all.slice(0, -1).join(", ")} e ${all.at(-1) ?? ""}`;
+};
+
+const CLASSIC_SUDOKU_UNITS: readonly SudokuUnitKind[] = [
+  "row",
+  "column",
+  "box",
+];
+
+const sudokuRules =
+  "Preencha a grade de 1 a 9. Cada linha, cada coluna e cada bloco de 3×3 tem os nove dígitos, sem repetir nenhum.";
 
 const hintsUsed = (used: number) =>
   used === 0 ? "sem dicas" : used === 1 ? "com 1 dica" : `com ${used} dicas`;
@@ -515,6 +561,21 @@ export const messages = {
           ? letterAria(letter)
           : `letra ${letter}: ${parts.join("; ")}`;
       },
+    },
+    sudokuVariant: {
+      classic: "Clássico",
+      diagonal: "Diagonal",
+      irregular: "Formas",
+      rules: {
+        classic: sudokuRules,
+        diagonal:
+          "Preencha a grade de 1 a 9. Cada linha, cada coluna, cada bloco de 3×3 e as duas diagonais têm os nove dígitos, sem repetir nenhum.",
+        irregular:
+          "Preencha a grade de 1 a 9. Cada linha, cada coluna e cada região tem os nove dígitos, sem repetir nenhum. As regiões têm formas diferentes, de nove células cada.",
+      },
+      region: (region: number) => `região ${region}`,
+      diagonals: (count: number) =>
+        count === 2 ? "nas duas diagonais" : "na diagonal",
     },
     level: {
       label: "Nível",
@@ -1028,8 +1089,7 @@ export const messages = {
       play: {
         title: "Sudoku",
 
-        rules:
-          "Preencha a grade de 1 a 9. Cada linha, cada coluna e cada bloco de 3×3 tem os nove dígitos, sem repetir nenhum.",
+        rules: sudokuRules,
         progressLong: (filled: number, total: number) =>
           `${filled} de ${total} células`,
         progressShort: (level: string, filled: number, total: number) =>
@@ -1041,10 +1101,19 @@ export const messages = {
           ],
         boardAria: "grade do Sudoku, 9 por 9",
         cellAria: cellAriaSudoku,
-        cellGivenAria: (row: number, column: number, value: number) =>
-          `linha ${row}, coluna ${column}: ${value}, célula fixa`,
-        cellInvalidAria: (row: number, column: number, value: number | null) =>
-          `${cellAriaSudoku(row, column, value)} — esta célula repete um número`,
+        cellGivenAria: (
+          row: number,
+          column: number,
+          value: number,
+          where?: string,
+        ) => `${sudokuPlace(row, column, where)}: ${value}, célula fixa`,
+        cellInvalidAria: (
+          row: number,
+          column: number,
+          value: number | null,
+          where?: string,
+        ) =>
+          `${cellAriaSudoku(row, column, value, where)} — esta célula repete um número`,
         cellNotesAria: (label: string, digits: readonly number[]) =>
           `${label}, rascunho ${digits.join(", ")}`,
         keypad: {
@@ -1062,8 +1131,12 @@ export const messages = {
         hint: {
           correction: "Corrigimos um número que não fecha com as regras.",
           fill: "Não achamos um passo lógico simples aqui, então preenchemos uma célula para você.",
-          nakedSingle: (digit: number, cell: SudokuCellCopy) =>
-            `Na ${sudokuCell(cell)}, só o ${digit} cabe: a linha, a coluna e o bloco já têm os outros números.`,
+          nakedSingle: (
+            digit: number,
+            cell: SudokuCellCopy,
+            units: readonly SudokuUnitKind[] = CLASSIC_SUDOKU_UNITS,
+          ) =>
+            `Na ${sudokuCell(cell)}, só o ${digit} cabe: ${sudokuUnitList(units)} já têm os outros números.`,
           hiddenSingle: (
             kind: SudokuUnitKind,
             digit: number,

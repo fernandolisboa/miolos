@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createSeededRandom } from "../../src/random";
 import { CLASSIC_LAYOUT, geometryOf } from "../../src/sudoku/board";
-import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku-variants/index";
 import {
   SUDOKU_TIER_CRITERIA,
   countSudokuSolutions,
@@ -13,11 +13,8 @@ import {
   solveSudoku,
   type SudokuGrid,
 } from "../../src/sudoku/index";
-import {
-  countSolutionsInternal,
-  fillGrid,
-  fillVariant,
-} from "../../src/sudoku/solve";
+import { countSolutionsInternal, fillGrid } from "../../src/sudoku/solve";
+import { fillVariant } from "../../src/sudoku-variants/index";
 import {
   EMPTY_GRID,
   FULL_GRID,

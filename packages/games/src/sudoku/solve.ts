@@ -20,7 +20,7 @@ interface Masks {
   toggleExtras(i: number, bit: number): void;
 }
 
-function masksFor({ units, extraBits }: SudokuGeometry): Masks {
+export function masksFor({ units, extraBits }: SudokuGeometry): Masks {
   const extras = new Array<number>(units.length - EXTRA_UNITS).fill(0);
   return {
     rows: new Array<number>(9).fill(0),
@@ -43,7 +43,11 @@ function masksFor({ units, extraBits }: SudokuGeometry): Masks {
   };
 }
 
-function takenAt(masks: Masks, regionOf: readonly number[], i: number): number {
+export function takenAt(
+  masks: Masks,
+  regionOf: readonly number[],
+  i: number,
+): number {
   const taken =
     masks.rows[rowOf(i)]! |
     masks.cols[colOf(i)]! |
@@ -51,7 +55,7 @@ function takenAt(masks: Masks, regionOf: readonly number[], i: number): number {
   return masks.hasExtras ? taken | masks.extrasTaken(i) : taken;
 }
 
-function toggle(
+export function toggle(
   masks: Masks,
   regionOf: readonly number[],
   i: number,
@@ -187,105 +191,6 @@ export function solveSudoku(givens: SudokuGrid): SudokuGrid | null {
   const record = new Array<number>(81).fill(0);
   const found = search([...givens], 1, record, CLASSIC_GEOMETRY);
   return found === 0 ? null : Object.freeze(record);
-}
-
-// see ADR-0130 decision 2
-export function fillVariant(
-  geometry: SudokuGeometry,
-  rng: SeededRandom,
-  budget: number,
-): number[] | null {
-  const { units, regionOf } = geometry;
-  const grid = new Array<number>(81).fill(0);
-  const masks = masksFor(geometry);
-  const free = new Array<number>(81).fill(0);
-  const places = new Array<number>(9).fill(0);
-  let nodes = budget;
-
-  const movesAt = (): (readonly [number, number])[] | "solved" | "dead" => {
-    let best = -1;
-    let fewest = 10;
-    for (let i = 0; i < 81; i += 1) {
-      free[i] = grid[i]! === 0 ? ~takenAt(masks, regionOf, i) & 0x1ff : 0;
-      const count = POPCOUNT[free[i]!]!;
-      if (grid[i]! === 0 && count < fewest) {
-        fewest = count;
-        best = i;
-      }
-    }
-    if (best === -1) {
-      return "solved";
-    }
-    if (fewest === 0) {
-      return "dead";
-    }
-    let scarceUnit = -1;
-    let scarceBit = 0;
-    for (let u = 0; u < units.length && fewest > 1; u += 1) {
-      places.fill(0);
-      let placed = 0;
-      for (const i of units[u]!) {
-        placed |= grid[i]! === 0 ? 0 : 1 << (grid[i]! - 1);
-        for (let m = free[i]!; m !== 0; m &= m - 1) {
-          const d = 31 - Math.clz32(m & -m);
-          places[d] = places[d]! + 1;
-        }
-      }
-      for (let m = ~placed & 0x1ff; m !== 0; m &= m - 1) {
-        const d = 31 - Math.clz32(m & -m);
-        if (places[d]! === 0) {
-          return "dead";
-        }
-        if (places[d]! < fewest) {
-          fewest = places[d]!;
-          scarceUnit = u;
-          scarceBit = 1 << d;
-        }
-      }
-    }
-    const moves: (readonly [number, number])[] = [];
-    if (scarceUnit === -1) {
-      for (let m = free[best]!; m !== 0; m &= m - 1) {
-        moves.push([best, m & -m]);
-      }
-    } else {
-      for (const i of units[scarceUnit]!) {
-        if ((free[i]! & scarceBit) !== 0) {
-          moves.push([i, scarceBit]);
-        }
-      }
-    }
-    shuffleInPlace(moves, rng);
-    return moves;
-  };
-
-  const recurse = (): boolean => {
-    if ((nodes -= 1) < 0) {
-      return false;
-    }
-    const moves = movesAt();
-    if (moves === "dead") {
-      return false;
-    }
-    if (moves === "solved") {
-      return true;
-    }
-    for (const [cell, bit] of moves) {
-      grid[cell] = 32 - Math.clz32(bit);
-      toggle(masks, regionOf, cell, bit);
-      if (recurse()) {
-        return true;
-      }
-      grid[cell] = 0;
-      toggle(masks, regionOf, cell, bit);
-      if (nodes < 0) {
-        return false;
-      }
-    }
-    return false;
-  };
-
-  return recurse() ? grid : null;
 }
 
 export function fillGrid(rng: SeededRandom): number[] {
