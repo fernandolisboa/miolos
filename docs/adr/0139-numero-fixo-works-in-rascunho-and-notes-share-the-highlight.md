@@ -1,7 +1,7 @@
 # ADR-0139 — Número fixo works in Rascunho, and notes holding the digit get a lighter highlight
 
 **Status:** Accepted — 2026-10-16 (issue #390)
-**Amends:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) decision 3 (Rascunho no longer releases or blocks *Número fixo*) and its consequence that a note is never highlighted (a note now has its own highlight, still never the same-digit one); [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 4 (a locked digit notes instead of writing while Rascunho is on).
+**Amends:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) decision 3 (Rascunho no longer releases or blocks *Número fixo*); [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 4 (a locked digit notes instead of writing while Rascunho is on).
 
 ## Context
 

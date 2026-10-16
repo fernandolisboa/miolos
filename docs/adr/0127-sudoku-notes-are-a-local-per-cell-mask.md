@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-10-15 (issue #368)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (decision 2 gains *Limpar rascunho ao preencher*, on; decision 4: *Rascunho* releases the locked digit, and the double-tap restore also brings back notes); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (decision 1 and the `onReset` rule of decision 3: a Sudoku board that holds only notes can be reset); [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (decision 2: Sudoku's step fields are `entries` and `notes`); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/sudoku` gets its own 51 KB budget).
 **Amended by:** [ADR-0131](./0131-sudoku-free-play-offers-diagonal-and-formas.md) (#371) — decision 2: the cleanup runs over the board layout's units, so a Diagonal or Formas value also clears its diagonal or region.
-**Amended by:** [ADR-0139](./0139-numero-fixo-works-in-rascunho-and-notes-share-the-highlight.md) (#390) — decision 3: *Número fixo* works in Rascunho, where a fixed digit notes; notes holding the focus digit get their own lighter highlight.
+**Amended by:** [ADR-0139](./0139-numero-fixo-works-in-rascunho-and-notes-share-the-highlight.md) (#390) — decision 3: *Número fixo* works in Rascunho, where a locked digit notes; the note holding the focus digit is drawn as a small accent chip.
 **Depends on:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md)
 
 ## Context
