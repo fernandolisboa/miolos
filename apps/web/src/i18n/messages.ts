@@ -831,7 +831,7 @@ export const messages = {
         },
         highlightSelection: {
           label: "Destacar linha, coluna e bloco",
-          hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela. O rascunho com esse número ganha um tom mais leve.",
+          hint: "Pinta a linha, a coluna e o bloco da célula selecionada, e os números iguais a ela; no rascunho, o mesmo número ganha um destaque menor.",
         },
         cleanNotes: {
           label: "Limpar rascunho ao preencher",

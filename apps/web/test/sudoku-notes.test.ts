@@ -263,7 +263,7 @@ describe("Número fixo works in Rascunho (T-WEB-S930)", () => {
     cleanNotes: true,
   });
 
-  it("with Rascunho on and 4 fixed, a tap on an empty cell toggles note 4 and writes nothing", () => {
+  it("with Rascunho on and 4 locked, a tap on an empty cell toggles note 4 and writes nothing", () => {
     const start = play(blank(), noting, lock(4));
     const once = play(start, tap(7));
     expect(once.selected).toBe(7);
@@ -274,7 +274,7 @@ describe("Número fixo works in Rascunho (T-WEB-S930)", () => {
     expect(twice.notes[7]).toBe(0);
   });
 
-  it("keeps the fixed digit when Rascunho turns on or off", () => {
+  it("keeps the locked digit when Rascunho turns on or off", () => {
     const locked = play(blank(), lock(3));
     const on = play(locked, noting);
     expect(on.locked).toBe(3);

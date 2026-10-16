@@ -7,14 +7,16 @@ import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
-import { DIGITS, mergedGrid, playableGivens, track } from "./engine";
 import {
-  noteFocus,
+  DIGITS,
+  mergedGrid,
+  playableGivens,
   selectionHighlights,
   spotlightHighlights,
+  track,
   type CellHighlight,
-} from "./highlights";
-import { noteDigits } from "./notes";
+} from "./engine";
+import { noteDigits, noteFocus } from "./notes";
 import type { SudokuCellValue, SudokuDigit } from "./state";
 import styles from "./sudoku-board.module.css";
 
@@ -81,13 +83,14 @@ export function Board({
   const playable = useMemo(() => playableGivens(givens), [givens]);
   const wrong = useWrongCells("sudoku", solution, playable, entries, mistakes);
   const grid = mergedGrid(givens, entries);
+  const highlighting = spotlight.length === 0 && highlightSelection;
   const highlights =
     spotlight.length > 0
       ? spotlightHighlights(spotlight)
-      : highlightSelection
-        ? selectionHighlights(grid, notes, selected, locked, layout)
+      : highlighting
+        ? selectionHighlights(grid, selected, layout)
         : NO_HIGHLIGHTS;
-  const focus = noteFocus(grid, selected, locked);
+  const focus = highlighting ? noteFocus(grid, selected, locked) : null;
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -160,7 +163,6 @@ export function Board({
         const invalid = violating.has(index);
         const isWrong = wrong.has(index);
         const cellNotes = noteDigits(notes[index] ?? 0);
-        const highlight = highlights.get(index) ?? null;
         return (
           <button
             key={index}
@@ -171,7 +173,7 @@ export function Board({
               entered: given === EMPTY && value !== null,
               hinted: hintIndex === index,
               invalid,
-              highlight,
+              highlight: highlights.get(index) ?? null,
               selected: selected === index,
             })}
             style={cellPlacement(row, column)}
@@ -203,18 +205,18 @@ export function Board({
             {value}
             {value === null && cellNotes.length > 0 ? (
               <span aria-hidden className={styles.notes}>
-                {DIGITS.map((digit) => (
-                  <span
-                    key={digit}
-                    className={
-                      highlight === "note-digit" && digit === focus
-                        ? styles.noteMatch
-                        : undefined
-                    }
-                  >
-                    {cellNotes.includes(digit) ? digit : null}
-                  </span>
-                ))}
+                {DIGITS.map((digit) =>
+                  cellNotes.includes(digit) ? (
+                    <span
+                      key={digit}
+                      className={digit === focus ? styles.noteMatch : undefined}
+                    >
+                      {digit}
+                    </span>
+                  ) : (
+                    <span key={digit} />
+                  ),
+                )}
               </span>
             ) : null}
             {isWrong ? <WrongMark /> : null}
@@ -304,8 +306,6 @@ function highlightClassName(
       return styles.cellUnit;
     case "same-digit":
       return styles.cellSameDigit;
-    case "note-digit":
-      return styles.cellNoteDigit;
     case null:
       return undefined;
   }

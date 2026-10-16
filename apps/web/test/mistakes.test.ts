@@ -561,20 +561,24 @@ describe("a Número fixo note tap in Rascunho counts nothing itself (T-WEB-S934)
   const notedTap = (index: number): SudokuPlayAction[] => [
     { type: "tap-cell", index, cleanNotes: true },
   ];
-  const fixedInRascunho = (digit: SudokuDigit): SudokuPlayAction[] => [
+  const lockedInRascunho = (digit: SudokuDigit): SudokuPlayAction[] => [
     { type: "toggle-noting" },
     { type: "lock-digit", digit, undo: null },
   ];
 
   it("notes uncounted, and settles a pointer digit left wrong elsewhere", () => {
-    const clean = sudoku(sudokuBoard(), ...fixedInRascunho(1), ...notedTap(S0));
+    const clean = sudoku(
+      sudokuBoard(),
+      ...lockedInRascunho(1),
+      ...notedTap(S0),
+    );
     expect(clean.notes[S0]).not.toBe(0);
     expect(clean.mistakes.cells).toEqual([]);
 
     const leftWrong = sudoku(
       sudokuBoard(),
       ...write(S0, wrongDigit(S0), true),
-      ...fixedInRascunho(1),
+      ...lockedInRascunho(1),
       ...notedTap(S1),
     );
     expect(leftWrong.mistakes.cells).toEqual([S0]);
@@ -589,7 +593,7 @@ describe("a Número fixo note tap in Rascunho counts nothing itself (T-WEB-S934)
       ...write(S2, wrongDigit(S2), true),
     );
     expect(two.mistakes.cells).toEqual([S0, S1]);
-    const third = sudoku(two, ...fixedInRascunho(1), ...notedTap(S3));
+    const third = sudoku(two, ...lockedInRascunho(1), ...notedTap(S3));
     expect(third.mistakes.cells).toEqual([S0, S1, S2]);
     expect(third.notes[S3]).toBe(0);
   });

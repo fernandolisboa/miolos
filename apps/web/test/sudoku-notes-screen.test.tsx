@@ -70,6 +70,9 @@ const press = (key: string, init: KeyboardEventInit = {}) =>
 const tap = (name: string) =>
   fireEvent.click(screen.getByLabelText(name), { detail: 1 });
 
+const chipIn = (index: number) =>
+  cell(index).querySelector(`.${styles.noteMatch ?? "-"}`)?.textContent;
+
 function notesIn(index: number): HTMLElement | null {
   return cell(index).querySelector<HTMLElement>(`.${styles.notes ?? ""}`);
 }
@@ -318,7 +321,7 @@ describe("Número fixo notes in Rascunho, daily and free (T-WEB-S931, T-WEB-S935
     fireEvent.click(cell(index), { detail: 1 });
   const SECOND = EMPTIES[1] ?? 0;
 
-  it("fixes a digit by a double tap in Rascunho and notes it in each tapped cell", () => {
+  it("locks a digit by a double tap in Rascunho and notes it in each tapped cell", () => {
     render(<SudokuScreen daily={DAILY} />);
     fireEvent.click(pencil());
     tap(keypad.noteDigitAria(4));
@@ -332,10 +335,10 @@ describe("Número fixo notes in Rascunho, daily and free (T-WEB-S931, T-WEB-S935
     tapCell(SECOND);
     expect(cell(FIRST).getAttribute("aria-label")).toContain("rascunho 4");
     expect(cell(SECOND).getAttribute("aria-label")).toContain("rascunho 4");
-    expect(cell(FIRST).className).toContain(styles.cellNoteDigit ?? "-");
+    expect(chipIn(FIRST)).toBe("4");
   });
 
-  it("keeps the fixed digit across Rascunho and fixes a given's digit by a double tap in it", () => {
+  it("keeps the locked digit across Rascunho and locks a given's digit by a double tap in it", () => {
     render(<SudokuScreen daily={DAILY} />);
     tap(keypad.digitAria(4));
     tap(keypad.digitAria(4));
@@ -354,7 +357,7 @@ describe("Número fixo notes in Rascunho, daily and free (T-WEB-S931, T-WEB-S935
     );
   });
 
-  it("notes the fixed digit in free play too", async () => {
+  it("notes the locked digit in free play too", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const { container } = render(
       <SudokuFreeScreen deps={{ pickSeed: () => 42 }} />,
@@ -372,7 +375,9 @@ describe("Número fixo notes in Rascunho, daily and free (T-WEB-S931, T-WEB-S935
     fireEvent.click(open, { detail: 1 });
 
     expect(open.querySelector(`.${styles.notes ?? ""}`)?.textContent).toBe("6");
-    expect(open.className).toContain(styles.cellNoteDigit ?? "-");
+    expect(open.querySelector(`.${styles.noteMatch ?? "-"}`)?.textContent).toBe(
+      "6",
+    );
   });
 });
 
@@ -428,7 +433,7 @@ describe("notes and Número fixo, Mostrar erros and the tally stay apart (T-WEB-
     expect(sameDigit).not.toBe("");
     expect(cell(GIVEN).className).toContain(sameDigit);
     expect(cell(FIRST).className).not.toContain(sameDigit);
-    expect(cell(FIRST).className).toContain(styles.cellNoteDigit ?? "-");
+    expect(chipIn(FIRST)).toBe(String(shown));
   });
 
   it("leaves a digit's tally at eight when its ninth copy is only a note", () => {

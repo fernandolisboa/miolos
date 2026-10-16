@@ -60,7 +60,6 @@ function cellAt(container: HTMLElement, index: number): HTMLElement {
   return found;
 }
 
-const NOTE_DIGIT = styles.cellNoteDigit ?? "";
 const NOTE_MATCH = styles.noteMatch ?? "";
 
 const matches = (container: HTMLElement) =>
@@ -68,31 +67,26 @@ const matches = (container: HTMLElement) =>
     (slot) => slot.textContent,
   );
 
-describe("the board draws the note highlight on the cell and its digit (T-WEB-S933)", () => {
+describe("the board draws the matching note as a chip (T-WEB-S933)", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it("tints the noted cell lighter than a copy and marks only the matching note", () => {
-    expect(NOTE_DIGIT).not.toBe("");
+  it("draws only the matching note as a chip, leaving the cell's own look alone", () => {
     expect(NOTE_MATCH).not.toBe("");
     const container = renderBoard({});
     const noted = cellAt(container, NOTED);
-    expect(noted.className).toContain(NOTE_DIGIT);
     expect(noted.className).not.toContain(styles.cellSameDigit ?? "-");
+    expect(noted.className).not.toContain(styles.cellUnit ?? "-");
     expect(matches(container)).toEqual(["5"]);
   });
 
-  it("follows the fixed digit with no digit selected", () => {
-    const container = renderBoard({ locked: 2, selected: null });
-    expect(cellAt(container, NOTED).className).toContain(NOTE_DIGIT);
-    expect(matches(container)).toEqual(["2"]);
+  it("follows the locked digit with no digit selected", () => {
+    expect(matches(renderBoard({ locked: 2, selected: null }))).toEqual(["2"]);
   });
 
   it("gives way to the hint spotlight", () => {
-    const container = renderBoard({ spotlight: [1, 2] });
-    expect(cellAt(container, NOTED).className).not.toContain(NOTE_DIGIT);
-    expect(matches(container)).toEqual([]);
+    expect(matches(renderBoard({ spotlight: [1, 2] }))).toEqual([]);
   });
 
   it("is off with Destacar linha, coluna e bloco", () => {
@@ -104,8 +98,6 @@ describe("the board draws the note highlight on the cell and its digit (T-WEB-S9
         sudoku: { ...current.games.sudoku, highlightSelection: false },
       },
     });
-    const container = renderBoard({});
-    expect(cellAt(container, NOTED).className).not.toContain(NOTE_DIGIT);
-    expect(matches(container)).toEqual([]);
+    expect(matches(renderBoard({}))).toEqual([]);
   });
 });

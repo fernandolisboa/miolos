@@ -173,15 +173,11 @@
   color: var(--ink-on-accent);
 }
 
-.cellNoteDigit {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--accent) 20%, transparent),
-    color-mix(in srgb, var(--accent) 20%, transparent)
-  );
-}
-
 .noteMatch {
-  color: var(--accent-sudoku-text);
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--ink-on-accent);
   font-weight: 700;
 }
 
