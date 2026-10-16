@@ -50,7 +50,7 @@
 
 - **Do:** tap one option on the decision card in the "Rascunho no Sudoku" thread. **Sim, 51 KB** (recommended): `/sudoku` gets its own 51 KB budget and the notes ship now; the `playRecordSchema` split stays the next relief. **Dividir antes**: an agent first splits the play-record validator in its own PR, and #368 waits for it.
 - **Verify:** `/sudoku` has its own entry in `apps/web/scripts/route-client-js.mjs` and CI's `bundle-check` is green on the #368 PR.
-- **Blocks:** #368 only. `/sudoku` measured 50.6 KB after #368 (47.4 on main); the shared budget is 48 KB.
+- **Blocks:** #368 only. `/sudoku` measured 49.9 KB after #368 (the notes add about 3 KB); the shared budget is 48 KB.
 - **Source:** #368's PR; ADR-0112 (its Rejected list names per-route entries for `/sudoku`, so a yes contradicts it and ADR-0127 says so).
 
 

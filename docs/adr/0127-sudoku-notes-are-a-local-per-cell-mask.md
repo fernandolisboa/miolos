@@ -21,7 +21,7 @@ Fernando asked for a notes mode (*Rascunho*) in Sudoku: several small numbers in
 
 - A client from before this change parses records with `strictObject`, so a Sudoku record that carries `notes` is rejected by it. On a rollback an in-progress board with notes looks missing and is overwritten. Solved records never carry notes, so no completion is lost.
 - A note never counts: not in the tally, not in *Mostrar erros*, not in the same-digit highlight, not in progress.
-- `/sudoku` measured 50.6 KB over `/` (47.4 before), over the shared 48 KB. With Fernando's yes it gets its own 51 KB budget. This contradicts ADR-0112's Rejected per-route entry for `/sudoku` and the handoff's "split `playRecordSchema` first"; the split stays the next relief for every daily route.
+- `/sudoku` measured 49.9 KB over `/` (the notes add about 3 KB), over the shared 48 KB. With Fernando's yes it gets its own 51 KB budget. This contradicts ADR-0112's Rejected per-route entry for `/sudoku` and the handoff's "split `playRecordSchema` first"; the split stays the next relief for every daily route.
 - The keypad gains a pencil key; the phone keypad is six columns (digits 1 to 5 and the pencil, then 6 to 9 and a double-width erase).
 
 ## Rejected
