@@ -17,6 +17,7 @@
   --accent-binairo: #4E6B52;
   --accent-crossword: #6B4560;
   --accent-queens: #7A569C;
+  --accent-minesweeper: #1E6F7C;
   --queens-region-1: #EECFAE;
   --queens-region-2: #F8C8D0;
   --queens-region-3: #C1DCBF;
@@ -26,6 +27,16 @@
   --queens-region-7: #B3DDD4;
   --queens-region-8: #D8D6B0;
   --queens-region-9: #CDD4EC;
+  --mine-1: #2B4FA3;
+  --mine-2: #2F6B2F;
+  --mine-3: #B3261E;
+  --mine-4: #1F2D6B;
+  --mine-5: #7A2A1E;
+  --mine-6: #1F6B6B;
+  --mine-7: #211D19;
+  --mine-8: #5B5448;
+  --cell-cover: #FBF7EF;
+  --cell-open: #E4DBC8;
 
   --tone-k: #2B2622;
   --tone-e: #8C857C;
@@ -114,6 +125,7 @@
     --accent-binairo: #658B6A;
     --accent-crossword: #BD7F9D;
     --accent-queens: #B48AD8;
+    --accent-minesweeper: #3FA0B0;
     --queens-region-1: #3F301D;
     --queens-region-2: #462B32;
     --queens-region-3: #253727;
@@ -123,6 +135,16 @@
     --queens-region-7: #1A3734;
     --queens-region-8: #33341E;
     --queens-region-9: #2C3242;
+    --mine-1: #7FA0F0;
+    --mine-2: #6FBF6F;
+    --mine-3: #F07A70;
+    --mine-4: #9FA8E8;
+    --mine-5: #D9917F;
+    --mine-6: #5FC0C0;
+    --mine-7: #EAE3D5;
+    --mine-8: #A29A8A;
+    --cell-cover: #3A332A;
+    --cell-open: #0F0D0A;
 
     --tone-k: #5C544B;
     --tone-e: #9A938A;
@@ -179,6 +201,7 @@
   --accent-binairo: #658B6A;
   --accent-crossword: #BD7F9D;
   --accent-queens: #B48AD8;
+  --accent-minesweeper: #3FA0B0;
   --queens-region-1: #3F301D;
   --queens-region-2: #462B32;
   --queens-region-3: #253727;
@@ -188,6 +211,16 @@
   --queens-region-7: #1A3734;
   --queens-region-8: #33341E;
   --queens-region-9: #2C3242;
+  --mine-1: #7FA0F0;
+  --mine-2: #6FBF6F;
+  --mine-3: #F07A70;
+  --mine-4: #9FA8E8;
+  --mine-5: #D9917F;
+  --mine-6: #5FC0C0;
+  --mine-7: #EAE3D5;
+  --mine-8: #A29A8A;
+  --cell-cover: #3A332A;
+  --cell-open: #0F0D0A;
 
   --tone-k: #5C544B;
   --tone-e: #9A938A;

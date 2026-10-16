@@ -5,6 +5,7 @@
 **Amended at #325:** decision 4's Binairo cycle mode. The *Primeiro valor* setting (1 by default) now decides both inputs: a tap cycles empty → first → other → empty, left writes the first value and right the other. Touch used to start at 0 while left wrote 1. The digit brush and the keys are unchanged.
 **Amends:** ADR-0037 decision 1 (all inputs) and its consequence (a) (the hook's surface: `Press`, `clickPress`, required `onStrokeStart`, `onContextMenu`); ADR-0092 decision 1 (the secondary button).
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decisions 4 and 5 in Cores: a right press writes ✕ or the current tone, and the brush has one segment per tone beside ✕.
+**Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 1: on the Campo Minado board the middle button, and both buttons together, chord; right cycles the mark; a long press flags.
 
 ## Context
 

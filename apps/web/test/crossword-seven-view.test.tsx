@@ -24,8 +24,8 @@ function Harness() {
   return (
     <>
       <CrosswordBoardView board={board} />
-      <p data-testid="explain">{hint.explain}</p>
-      <button type="button" onClick={hint.onReveal}>
+      <p data-testid="explain">{hint?.explain}</p>
+      <button type="button" onClick={hint?.onReveal}>
         revelar
       </button>
     </>

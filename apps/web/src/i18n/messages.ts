@@ -1,16 +1,17 @@
 import {
   FREE_HINTS_PER_PUZZLE,
   type AdminMemberRole,
-  type Game,
   type RemoteConfigKey,
 } from "@miolos/core";
+
+import type { FreePlayGame } from "../free-play/catalog";
 
 const wordmark = "Miolos";
 const tagline = "jogos de raciocínio por dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
 
-const freePlayDescriptions: Partial<Record<Game, string>> = {
+const freePlayDescriptions: Partial<Record<FreePlayGame, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
 };
 
@@ -532,6 +533,7 @@ export const messages = {
         termo: "Mais uma",
         crossword: "Mais uma",
         queens: "Mais uma",
+        minesweeper: "Mais um",
       },
       backToIndex: "Voltar ao Modo livre",
       backHome: "Voltar para Hoje",
@@ -784,6 +786,10 @@ export const messages = {
         firstValue: {
           label: "Primeiro valor",
           hint: "O primeiro toque e o botão esquerdo do mouse põem este número; o segundo toque e o botão direito põem o outro.",
+        },
+        questionMarks: {
+          label: "Marcas (?)",
+          hint: "Entre a bandeira e a casa limpa, o botão direito (ou a tecla F) passa por uma marca de interrogação.",
         },
         skipFilled: {
           label: "Pular letras já preenchidas",
@@ -1305,6 +1311,24 @@ export const messages = {
         notYet: {
           title: "Você ainda não concluiu as Rainhas de hoje.",
           cta: "Jogar as Rainhas de hoje",
+        },
+      },
+    },
+    minesweeper: {
+      kicker: "Minas",
+      name: "Campo Minado",
+      description:
+        "Abra as casas sem pisar em nenhuma mina. O clássico, em três níveis.",
+      play: {
+        title: "Campo Minado",
+
+        rules:
+          "Abra todas as casas sem mina. Cada número conta as minas em volta. Toque para abrir e segure para pôr a bandeira. No mouse, o botão direito põe a bandeira e os dois botões juntos abrem em volta de um número. Teclado: setas, Espaço e F.",
+
+        reset: {
+          label: "Novo jogo",
+          question: "Começar um novo jogo? Este será perdido.",
+          cancel: "Cancelar",
         },
       },
     },

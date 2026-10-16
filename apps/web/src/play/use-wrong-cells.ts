@@ -6,7 +6,7 @@ import { wrongCells } from "./grid-hint";
 const NONE: ReadonlySet<number> = new Set();
 
 export function useWrongCells<T>(
-  game: SettingsGame,
+  game: Exclude<SettingsGame, "minesweeper">,
   solution: readonly (T | null)[] | null,
   givens: readonly unknown[] | null,
   entries: readonly (T | null)[],

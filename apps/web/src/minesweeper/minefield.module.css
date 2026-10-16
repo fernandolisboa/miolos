@@ -1,0 +1,249 @@
+/* floor = columns × (24px cell + 1px gap) + card chrome; see ADR-0136 */
+.pageMinefield {
+  --pitch: 25px;
+  --chrome: calc(2 * var(--space-4) + 4px);
+  --floor: calc(var(--columns) * var(--pitch) + var(--chrome));
+  --board-below: 6px;
+  --board-floor-side: var(--floor);
+  --board-min: var(--floor);
+  --grid-card-rot: 0deg;
+  --grid-card-pad: var(--space-4);
+}
+
+.pageMinefield :has(> [data-board-card]) {
+  overflow-x: auto;
+  padding-inline-end: 6px;
+  align-items: safe center;
+}
+
+.pageBeginner,
+.beginner {
+  --columns: 9;
+}
+
+.pageIntermediate,
+.intermediate {
+  --columns: 16;
+}
+
+.pageExpert,
+.expert {
+  --columns: 30;
+}
+
+.pageBeginner {
+  --board-max: 420px;
+}
+
+.pageIntermediate {
+  --board-max: 620px;
+}
+
+.pageExpert {
+  --board-max: var(--floor);
+}
+
+.field {
+  --cell: calc(100cqi / var(--columns));
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+  container-type: inline-size;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* 30 × 25px + card chrome − 1px: the well is too narrow for 30 columns */
+@media (width < 1280px) {
+  @container (max-width: 785px) {
+    .expert:not(.finished) {
+      --columns: 16;
+
+      grid-template-rows: repeat(30, auto);
+      grid-auto-flow: column;
+    }
+
+    .pageExpert [data-board-card] {
+      width: calc(16 * var(--pitch) + var(--chrome));
+    }
+  }
+}
+
+@media (width >= 1280px) {
+  .pageExpert :has(> [data-board-card]) {
+    overflow-x: visible;
+    align-items: center;
+  }
+
+  .pageExpert {
+    --board-min: calc(16 * var(--pitch) + var(--chrome));
+  }
+}
+
+@container (max-width: 390px) {
+  .expert.finished {
+    --columns: 16;
+
+    grid-template-rows: repeat(30, auto);
+    grid-auto-flow: column;
+  }
+}
+
+.finished {
+  width: 100%;
+  max-width: calc(var(--columns) * 28px);
+}
+
+.finished .cell {
+  font-size: calc(var(--cell) * 0.7);
+}
+
+.cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 0;
+  background: var(--cell-cover);
+  box-shadow:
+    inset 2px 2px 0 color-mix(in srgb, white 40%, transparent),
+    inset -3px -3px 0 color-mix(in srgb, black 28%, transparent);
+  color: var(--ink-2);
+  font: 700 clamp(14px, calc(var(--cell) * 0.6), 24px) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.open {
+  background: var(--cell-open);
+  box-shadow: inset 1px 1px 0 color-mix(in srgb, black 16%, transparent);
+  cursor: default;
+}
+
+.hit {
+  background: color-mix(in srgb, var(--accent-app) 30%, var(--cell-open));
+}
+
+.glyph {
+  display: block;
+  width: 72%;
+  height: 72%;
+  color: var(--ink);
+}
+
+.count1 {
+  color: var(--mine-1);
+}
+
+.count2 {
+  color: var(--mine-2);
+}
+
+.count3 {
+  color: var(--mine-3);
+}
+
+.count4 {
+  color: var(--mine-4);
+}
+
+.count5 {
+  color: var(--mine-5);
+}
+
+.count6 {
+  color: var(--mine-6);
+}
+
+.count7 {
+  color: var(--mine-7);
+}
+
+.count8 {
+  color: var(--mine-8);
+}
+
+.tapMode {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding: var(--space-1);
+  background: var(--paper-tint);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tapButton {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: var(--touch-target-min);
+  padding: 0;
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.tapButton:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tapButtonOn {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.tapIcon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.tapIcon .glyph {
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+
+.finishedField {
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: min(
+    calc(460px - 2 * var(--space-7) - 2px),
+    calc(100vw - 2 * var(--space-5) - 2 * var(--space-7) - 2px)
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.finishedTime {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}

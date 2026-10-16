@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { formatLongDate, messages, routes } from "../i18n";
 import {
   PlayScreenChrome,
-  type ChromeGame,
+  type DailyChromeGame,
   type PlayChromeBack,
   type PlayChromeClock,
   type PlayChromeStat,
@@ -27,7 +27,7 @@ export function DailyPlayChrome({
   state,
   children,
 }: {
-  readonly game: ChromeGame;
+  readonly game: DailyChromeGame;
   readonly pageModifier: string;
   readonly date: string;
   readonly archive?: ArchivePlayChrome;

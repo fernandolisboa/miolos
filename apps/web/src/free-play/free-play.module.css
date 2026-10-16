@@ -11,6 +11,7 @@
 
 .choicePicker {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
@@ -35,6 +36,17 @@
   color: var(--ink-2);
   font: var(--text-button);
   cursor: pointer;
+}
+
+@media (max-width: 400px) {
+  .choicePicker {
+    gap: var(--space-1);
+  }
+
+  .choiceChip {
+    min-width: 0;
+    padding-inline: var(--space-3);
+  }
 }
 
 /* The active chip is carried by GEOMETRY and INK, never by accent-as-text

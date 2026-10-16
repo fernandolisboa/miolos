@@ -22,6 +22,9 @@ export function EndingStage({
 }) {
   const { endAnimation } = useSettings();
   const [glowed, setGlowed] = useState(false);
+  if (glowed && !over) {
+    setGlowed(false);
+  }
   const glowing = over && won && endAnimation && !glowed && motionAllowed();
   const frameRef = useRef<HTMLDivElement>(null);
   const lastCell = useRef<string | null>(null);

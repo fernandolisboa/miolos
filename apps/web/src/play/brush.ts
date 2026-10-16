@@ -2,6 +2,19 @@ import type { BinaryCellValue, BinaryMark } from "./binary-grid";
 
 export type Press = "tap" | "left" | "right";
 
+export function pressOf(event: {
+  readonly button: number;
+  readonly pointerType: string;
+}): Press | null {
+  if (event.button === 2) {
+    return "right";
+  }
+  if (event.button !== 0) {
+    return null;
+  }
+  return event.pointerType === "mouse" ? "left" : "tap";
+}
+
 export interface StrokeEffect<M extends number = BinaryMark> {
   readonly value: M;
   readonly clears: boolean;

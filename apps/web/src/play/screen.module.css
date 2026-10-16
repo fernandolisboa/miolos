@@ -295,12 +295,16 @@
 /* --board-below is the height of what the game draws under the card inside the
    well, --board-aspect the card's width over its height where it is not
    square. --board-side is not registered: its cq units must resolve where it
-   is read, inside the container, not on the container itself. */
+   is read, inside the container, not on the container itself.
+   --board-floor-side lets a card outgrow its well; see ADR-0136. */
 .boardWell {
-  --board-side: min(
-    100cqi,
-    (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1),
-    var(--board-max)
+  --board-side: max(
+    min(
+      100cqi,
+      (100cqb - var(--board-below, 0px)) * var(--board-aspect, 1),
+      var(--board-max)
+    ),
+    var(--board-floor-side, 0px)
   );
 
   position: relative;

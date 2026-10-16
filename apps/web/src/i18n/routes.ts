@@ -19,6 +19,7 @@ export const routeSlugs = {
   termo: "termo",
   crossword: "cruzadinha",
   queens: "rainhas",
+  minesweeper: "campo-minado",
   conclusion: "concluido",
 } as const;
 
@@ -45,6 +46,7 @@ export const routes = {
   freePlayTermo: `/${routeSlugs.freePlay}/${routeSlugs.termo}`,
   freePlayCrossword: `/${routeSlugs.freePlay}/${routeSlugs.crossword}`,
   freePlayQueens: `/${routeSlugs.freePlay}/${routeSlugs.queens}`,
+  freePlayMinesweeper: `/${routeSlugs.freePlay}/${routeSlugs.minesweeper}`,
   stats: `/${routeSlugs.stats}`,
   attach: `/${routeSlugs.attach}`,
   privacy: `/${routeSlugs.privacy}`,
@@ -94,4 +96,5 @@ export const freePlayRoutes: Readonly<Record<FreePlayGame, Route>> = {
   termo: routes.freePlayTermo,
   crossword: routes.freePlayCrossword,
   queens: routes.freePlayQueens,
+  minesweeper: routes.freePlayMinesweeper,
 };

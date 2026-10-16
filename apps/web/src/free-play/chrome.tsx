@@ -3,7 +3,8 @@ import type { ReactElement, ReactNode } from "react";
 import { messages } from "../i18n";
 import {
   PlayScreenChrome,
-  type ChromeGame,
+  type PlayChromeClock,
+  type PlayChromeGame,
   type PlayChromeStat,
   type PlayChromeState,
 } from "../play/screen-chrome";
@@ -24,12 +25,14 @@ export function FreePlayChrome({
   game,
   pageModifier,
   choices,
+  clock = "none",
   state,
   children,
 }: {
-  readonly game: ChromeGame;
+  readonly game: PlayChromeGame;
   readonly pageModifier: string;
   readonly choices?: readonly Choice[];
+  readonly clock?: PlayChromeClock;
   readonly state: PlayChromeState;
   readonly children: ReactNode;
 }): ReactElement {
@@ -42,7 +45,7 @@ export function FreePlayChrome({
       back={FREE_PLAY_BACK}
       topDate={messages.freePlay.modeTag}
       note={null}
-      clock="none"
+      clock={clock}
       extraStat={first === undefined ? null : choiceStat(first)}
     >
       {choices?.map((choice) => (

@@ -52,6 +52,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
           autoCross: false,
         },
         crossword: { showErrors: false, skipFilled: true },
+        minesweeper: { questionMarks: false },
       },
     });
   });
