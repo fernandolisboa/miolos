@@ -38,6 +38,17 @@
   cursor: pointer;
 }
 
+@media (max-width: 400px) {
+  .choicePicker {
+    gap: var(--space-1);
+  }
+
+  .choiceChip {
+    min-width: 0;
+    padding-inline: var(--space-3);
+  }
+}
+
 /* The active chip is carried by GEOMETRY and INK, never by accent-as-text
    (ADR-0041): the ink border doubles, the accent hard shadow appears, and
    the chip sits slightly crooked — a stamp, pressed. */

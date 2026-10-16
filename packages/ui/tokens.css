@@ -35,6 +35,8 @@
   --mine-6: #1F6B6B;
   --mine-7: #211D19;
   --mine-8: #5B5448;
+  --cell-cover: #FBF7EF;
+  --cell-open: #E4DBC8;
 
   --tone-k: #2B2622;
   --tone-e: #8C857C;
@@ -126,6 +128,8 @@
     --mine-6: #5FC0C0;
     --mine-7: #EAE3D5;
     --mine-8: #A29A8A;
+    --cell-cover: #3A332A;
+    --cell-open: #0F0D0A;
 
     --tone-k: #5C544B;
     --tone-e: #9A938A;
@@ -185,6 +189,8 @@
   --mine-6: #5FC0C0;
   --mine-7: #EAE3D5;
   --mine-8: #A29A8A;
+  --cell-cover: #3A332A;
+  --cell-open: #0F0D0A;
 
   --tone-k: #5C544B;
   --tone-e: #9A938A;

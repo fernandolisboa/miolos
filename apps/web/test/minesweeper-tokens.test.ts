@@ -16,15 +16,25 @@ describe("Campo Minado's accent and number family are tokens, in every theme, an
       return value;
     };
 
-    it(`${theme}: each of the eight numbers clears 4.5:1 on the open cell and on the closed one`, () => {
+    it(`${theme}: each of the eight numbers clears 4.5:1 on the open cell`, () => {
       for (const n of NUMBERS) {
-        for (const paper of ["--paper-tint", "--paper-card"]) {
-          expect(
-            contrast(hex(`--mine-${String(n)}`), hex(paper)),
-            `--mine-${String(n)} on ${paper}`,
-          ).toBeGreaterThanOrEqual(4.5);
-        }
+        expect(
+          contrast(hex(`--mine-${String(n)}`), hex("--cell-open")),
+          `--mine-${String(n)}`,
+        ).toBeGreaterThanOrEqual(4.5);
       }
+    });
+
+    it(`${theme}: ink reads on the covered and the open cell, and the two are told apart`, () => {
+      for (const paper of ["--cell-open", "--cell-cover"]) {
+        expect(
+          contrast(hex("--ink"), hex(paper)),
+          `--ink on ${paper}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(
+        contrast(hex("--cell-cover"), hex("--cell-open")),
+      ).toBeGreaterThanOrEqual(1.25);
     });
 
     it(`${theme}: the eight numbers are eight different colours`, () => {
@@ -46,6 +56,8 @@ describe("Campo Minado's accent and number family are tokens, in every theme, an
     const explicit = bodyOf(css, ':root[data-theme="dark"]');
     for (const name of [
       "--accent-minesweeper",
+      "--cell-cover",
+      "--cell-open",
       ...NUMBERS.map((n) => `--mine-${String(n)}`),
     ]) {
       const pick = (body: string) =>

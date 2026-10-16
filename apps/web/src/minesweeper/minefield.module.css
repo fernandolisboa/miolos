@@ -1,7 +1,8 @@
 /* Page modifiers set custom properties only, on the element that carries
    screen.page; the well, the card and the floor are the shared sheet's.
    A cell never goes below 24px: the board keeps that size and scrolls inside
-   the well (ADR-0136). */
+   the well (ADR-0136). A floor is 25px per cell: 24px plus the gap that
+   follows it, with the card's border and the field's padding in the 4px. */
 .pageMinefield {
   --board-overflow-x: auto;
   --board-shadow-slack: 6px;
@@ -11,22 +12,22 @@
 
 .pageBeginner {
   --board-max: 420px;
-  --board-floor-side: calc(9 * 24px + 2 * var(--space-4) + 2px);
-  --board-min: calc(9 * 24px + 2 * var(--space-4) + 2px);
+  --board-floor-side: calc(9 * 25px + 2 * var(--space-4) + 4px);
+  --board-min: calc(9 * 25px + 2 * var(--space-4) + 4px);
 }
 
 .pageIntermediate {
   --board-max: 620px;
-  --board-floor-side: calc(16 * 24px + 2 * var(--space-4) + 2px);
-  --board-min: calc(16 * 24px + 2 * var(--space-4) + 2px);
+  --board-floor-side: calc(16 * 25px + 2 * var(--space-4) + 4px);
+  --board-min: calc(16 * 25px + 2 * var(--space-4) + 4px);
 }
 
-/* Especialista is 24px cells in both views, so its card is its floor. Turned
+/* Especialista keeps its floor in both views, so its card is its floor. Turned
    (below), it is 30 rows tall, which is what the well must hold. */
 .pageExpert {
-  --board-max: calc(30 * 24px + 2 * var(--space-4) + 2px);
-  --board-floor-side: calc(30 * 24px + 2 * var(--space-4) + 2px);
-  --board-min: calc(30 * 24px + 2 * var(--space-4) + 2px);
+  --board-max: calc(30 * 25px + 2 * var(--space-4) + 4px);
+  --board-floor-side: calc(30 * 25px + 2 * var(--space-4) + 4px);
+  --board-min: calc(30 * 25px + 2 * var(--space-4) + 4px);
 }
 
 .field {
@@ -62,8 +63,8 @@
 
 /* The well is the container. Under 30 cells of 24px plus the card, the board
    turns: 16 columns by 30 rows. The cells keep their order in the markup. */
-@container (max-width: 753px) {
-  .expert {
+@container (max-width: 785px) {
+  .expert:not(.finished) {
     --columns: 16;
 
     grid-template-columns: repeat(16, minmax(0, 1fr));
@@ -72,17 +73,29 @@
   }
 
   .pageExpert [data-board-card] {
-    width: calc(16 * 24px + 2 * var(--space-4) + 2px);
+    width: calc(16 * 25px + 2 * var(--space-4) + 4px);
+  }
+}
+
+/* The finished field's container is the card's picture: under 12px a cell,
+   Especialista turns the same way. */
+@container (max-width: 390px) {
+  .expert.finished {
+    --columns: 16;
+
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    grid-template-rows: repeat(30, auto);
+    grid-auto-flow: column;
   }
 }
 
 .finished {
-  width: min(100%, calc(var(--columns) * 16px));
-  margin-inline: auto;
+  width: 100%;
+  max-width: calc(var(--columns) * 28px);
 }
 
 .finished .cell {
-  font-size: calc(var(--cell) * 0.6);
+  font-size: calc(var(--cell) * 0.7);
 }
 
 .cell {
@@ -96,8 +109,10 @@
   aspect-ratio: 1;
   border: 0;
   border-radius: 0;
-  background: var(--paper-card);
-  box-shadow: inset -3px -3px 0 color-mix(in srgb, var(--ink) 14%, transparent);
+  background: var(--cell-cover);
+  box-shadow:
+    inset 2px 2px 0 color-mix(in srgb, white 40%, transparent),
+    inset -3px -3px 0 color-mix(in srgb, black 28%, transparent);
   color: var(--ink-2);
   font: 700 clamp(14px, calc(var(--cell) * 0.6), 24px) / 1 var(--font-ui);
   font-variant-numeric: tabular-nums;
@@ -111,13 +126,13 @@
 }
 
 .open {
-  background: var(--paper-tint);
-  box-shadow: none;
+  background: var(--cell-open);
+  box-shadow: inset 1px 1px 0 color-mix(in srgb, black 16%, transparent);
   cursor: default;
 }
 
 .hit {
-  background: color-mix(in srgb, var(--accent-app) 30%, var(--paper-tint));
+  background: color-mix(in srgb, var(--accent-app) 30%, var(--cell-open));
 }
 
 .glyph {
@@ -209,11 +224,16 @@
 }
 
 .finishedField {
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: min(
+    calc(460px - 2 * var(--space-7) - 2px),
+    calc(100vw - 2 * var(--space-5) - 2 * var(--space-7) - 2px)
+  );
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
 }
 
 .finishedTime {
