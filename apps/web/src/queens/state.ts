@@ -24,8 +24,8 @@ import {
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
 import {
-  judgedBySolution,
   NO_MISTAKES,
+  SOLUTION_MISTAKES,
   type CellPress,
   type MistakeRules,
   type MistakeState,
@@ -94,7 +94,7 @@ export function initQueensPlayState(
 export const QUEENS_MISTAKES: MistakeRules<
   QueensPlayState,
   QueensPlayAction | UndoAction
-> = { judge: judgedBySolution, cross: 0, press: queensPress };
+> = { ...SOLUTION_MISTAKES, press: queensPress };
 
 function queensPress(
   { selected }: QueensPlayState,
