@@ -2,12 +2,14 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { CLASSIC_LAYOUT, geometryOf } from "../../src/sudoku/board";
-import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
+import {
+  DIAGONAL_LAYOUT,
+  generateSudokuVariant,
+} from "../../src/sudoku-variants/index";
 import { gradeInternal } from "../../src/sudoku/grade";
 import {
   SudokuGenerationError,
   generateDailySudoku,
-  generateSudokuVariant,
   sudokuCriteriaForWeekday,
   type SudokuGrid,
   type SudokuLayout,

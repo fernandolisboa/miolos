@@ -14,6 +14,7 @@
     "./nonogram-colors": "./src/nonogram-colors/index.ts",
     "./queens": "./src/queens/index.ts",
     "./sudoku": "./src/sudoku/index.ts",
+    "./sudoku-variants": "./src/sudoku-variants/index.ts",
     "./termo": "./src/termo/index.ts",
     "./termo-answers": "./src/termo-answers/index.ts",
     "./termo-free": "./src/termo-free/index.ts"

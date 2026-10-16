@@ -9,7 +9,7 @@ import {
   ROW_UNITS,
   geometryOf,
 } from "../../src/sudoku/board";
-import { DIAGONAL_LAYOUT } from "../../src/sudoku/generate";
+import { DIAGONAL_LAYOUT } from "../../src/sudoku-variants/index";
 import {
   generateDailySudoku,
   nextSudokuStep,

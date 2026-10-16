@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { SUDOKU_VARIANTS, type SudokuVariant } from "@miolos/games/sudoku";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
@@ -20,31 +30,57 @@ import boardStyles from "../sudoku/sudoku-board.module.css";
 import { useSudokuInput } from "../sudoku/use-sudoku-input";
 import { EndingStage } from "../play/ending-stage";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
-import { levelChoice } from "./choice-picker";
+import type { Choice } from "./choice";
+import { levelChoice, variantChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
 import { FreePlaySolvedCard } from "./solved-card";
+import { namedHint, PLAIN_LOOK, sudokuLook } from "./sudoku-layout";
 import {
   useFreeSudoku,
   type FreeSudokuDeps,
   type FreeSudokuPuzzle,
 } from "./use-free-sudoku";
+import { VariantMenu } from "./variant-menu";
+import { VariantTrigger } from "./variant-trigger";
 
 const TOTAL_CELLS = 81;
 
 const copy = messages.games.sudoku.play;
 
+const variantCopy = messages.freePlay.sudokuVariant;
+
 export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
-  const { phase, regenerate } = useFreeSudoku(level, deps);
+  const [variant, setVariant] = useState<SudokuVariant>("classic");
+  const input = useMemo(() => ({ level, variant }), [level, variant]);
+  const { phase, regenerate } = useFreeSudoku(input, deps);
+  const menuId = useId();
+  const variantPick = variantChoice(
+    SUDOKU_VARIANTS,
+    variantCopy,
+    variant,
+    setVariant,
+  );
+  const choices = [levelChoice(level, setLevel)];
+  const rules = variantCopy.rules[variant];
+  const picker = (
+    <>
+      <VariantTrigger name={variantCopy[variant]} menuId={menuId} />
+      <VariantMenu id={menuId} choice={variantPick} rules={rules} />
+    </>
+  );
 
   if (phase.kind === "ready") {
     return (
       <SudokuFreeBoard
-        key={`${String(phase.puzzle.seed)}:${level}:${String(phase.run)}`}
+        key={`${String(phase.puzzle.seed)}:${variant}:${level}:${String(phase.run)}`}
         level={level}
-        onLevelChange={setLevel}
+        choices={choices}
+        variantPick={variantPick}
+        picker={picker}
+        rules={rules}
         puzzle={phase.puzzle}
         onNext={regenerate}
       />
@@ -55,13 +91,15 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
     <FreePlayChrome
       game="sudoku"
       pageModifier={boardStyles.pageSudoku ?? ""}
-      choices={[levelChoice(level, setLevel)]}
+      choices={choices}
+      picker={picker}
+      rules={rules}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
         <FreePlayErrorCard onRetry={regenerate} />
       ) : (
-        <GeneratingBoard />
+        <GeneratingBoard plain={variant === "irregular"} />
       )}
     </FreePlayChrome>
   );
@@ -69,20 +107,25 @@ export function SudokuFreeScreen({ deps }: { readonly deps?: FreeSudokuDeps }) {
 
 function SudokuFreeBoard({
   level,
-  onLevelChange,
+  choices,
+  variantPick,
+  picker,
+  rules,
   puzzle,
   onNext,
 }: {
   readonly level: FreePlayLevel;
-  readonly onLevelChange: (level: FreePlayLevel) => void;
+  readonly choices: readonly Choice[];
+  readonly variantPick: Choice;
+  readonly picker: ReactNode;
+  readonly rules: string;
   readonly puzzle: FreeSudokuPuzzle;
   readonly onNext: () => void;
 }) {
-  const [state, dispatch] = useReducer(
-    sudokuPlayReducer,
-    puzzle.daily,
-    initSudokuPlayState,
+  const [state, dispatch] = useReducer(sudokuPlayReducer, puzzle, (start) =>
+    initSudokuPlayState(start.daily, start.layout),
   );
+  const look = useMemo(() => sudokuLook(puzzle.layout), [puzzle.layout]);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -94,6 +137,7 @@ function SudokuFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, []);
 
+  const { reason, units } = namedHint(state.hint.reason, puzzle.layout);
   const filled = countFilled(playableGivens(state.givens), state.entries);
   const hintReady = canHint(state, allowance);
 
@@ -116,19 +160,24 @@ function SudokuFreeBoard({
     dispatch({ type: "use-hint", solution: puzzle.solution, cleanNotes });
   }, [puzzle.solution, allowance, cleanNotes]);
 
-  const choices = [levelChoice(level, onLevelChange)];
   return (
     <EndingStage
       over={state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="sudoku" choices={choices} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="sudoku"
+          choices={[...choices, variantPick]}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome
         game="sudoku"
         pageModifier={boardStyles.pageSudoku ?? ""}
         choices={choices}
+        picker={picker}
+        rules={rules}
         state={{
           kind: "playing",
           readouts: {
@@ -139,10 +188,7 @@ function SudokuFreeBoard({
             ),
             progressLong: copy.progressLong(filled, TOTAL_CELLS),
             hint: {
-              ...hintReadout(
-                state.hint,
-                sudokuHintExplanation(state.hint.reason),
-              ),
+              ...hintReadout(state.hint, sudokuHintExplanation(reason, units)),
               ready: hintReady,
               onReveal: revealHint,
             },
@@ -161,6 +207,8 @@ function SudokuFreeBoard({
           }
         >
           <Board
+            layout={state.layout}
+            look={look}
             givens={state.givens}
             solution={puzzle.solution}
             entries={state.entries}
@@ -183,7 +231,7 @@ function SudokuFreeBoard({
   );
 }
 
-function GeneratingBoard() {
+function GeneratingBoard({ plain }: { readonly plain: boolean }) {
   return (
     <>
       <BoardCard
@@ -191,7 +239,7 @@ function GeneratingBoard() {
         below={<KeypadSkeleton />}
         overlay={<GeneratingNote />}
       >
-        <BoardSkeleton />
+        <BoardSkeleton look={plain ? PLAIN_LOOK : undefined} />
       </BoardCard>
     </>
   );

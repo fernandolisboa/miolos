@@ -2,6 +2,7 @@ import {
   solveSudoku,
   sudokuPeers,
   type SudokuGrid,
+  type SudokuLayout,
 } from "@miolos/games/sudoku";
 
 import type { SudokuCellValue, SudokuDigit } from "./state";
@@ -31,13 +32,14 @@ export function mergedGrid(
 export function selectionHighlights(
   grid: SudokuGrid,
   selected: number | null,
+  layout: SudokuLayout,
 ): ReadonlyMap<number, CellHighlight> {
   const highlights = new Map<number, CellHighlight>();
   if (selected === null) {
     return highlights;
   }
   const digit = grid[selected] ?? EMPTY;
-  const reach = new Set([selected, ...sudokuPeers(selected)]);
+  const reach = new Set([selected, ...sudokuPeers(selected, layout)]);
   for (const [index, cell] of grid.entries()) {
     if (digit !== EMPTY && cell === digit) {
       highlights.set(index, "same-digit");

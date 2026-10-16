@@ -1,4 +1,4 @@
-import type { SudokuGrid } from "@miolos/games/sudoku";
+import type { SudokuGrid, SudokuLayout } from "@miolos/games/sudoku";
 import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
@@ -27,8 +27,16 @@ const CODE_DIGIT = /^(?:Digit|Numpad)(\d)$/;
 
 const NO_HIGHLIGHTS: ReadonlyMap<number, CellHighlight> = new Map();
 
+export interface BoardLook {
+  readonly plainGrid?: string;
+  readonly cells: readonly string[];
+  readonly where: readonly (string | undefined)[];
+}
+
 export function Board({
   givens,
+  layout,
+  look,
   solution,
   entries,
   notes,
@@ -45,6 +53,8 @@ export function Board({
   onTapCell,
 }: {
   readonly givens: SudokuGrid;
+  readonly layout: SudokuLayout;
+  readonly look?: BoardLook;
   readonly solution: readonly SudokuDigit[] | null;
   readonly entries: readonly SudokuCellValue[];
   readonly notes: readonly number[];
@@ -71,7 +81,7 @@ export function Board({
     spotlight.length > 0
       ? spotlightHighlights(spotlight)
       : highlightSelection
-        ? selectionHighlights(mergedGrid(givens, entries), selected)
+        ? selectionHighlights(mergedGrid(givens, entries), selected, layout)
         : NO_HIGHLIGHTS;
 
   useLayoutEffect(() => {
@@ -131,18 +141,12 @@ export function Board({
   return (
     <div
       ref={boardRef}
-      className={styles.grid}
+      className={gridClassName(look)}
       role="group"
       aria-label={messages.games.sudoku.play.boardAria}
       onKeyDown={onKeyDown}
     >
-      <div aria-hidden className={`${styles.rule} ${styles.ruleColumnFirst}`} />
-      <div
-        aria-hidden
-        className={`${styles.rule} ${styles.ruleColumnSecond}`}
-      />
-      <div aria-hidden className={`${styles.rule} ${styles.ruleRowFirst}`} />
-      <div aria-hidden className={`${styles.rule} ${styles.ruleRowSecond}`} />
+      {look?.plainGrid === undefined ? <BoxRules /> : null}
 
       {givens.map((given, index) => {
         const row = Math.floor(index / SIDE);
@@ -156,6 +160,7 @@ export function Board({
             key={index}
             type="button"
             className={cellClassName({
+              look: look?.cells[index],
               given: given !== EMPTY,
               entered: given === EMPTY && value !== null,
               hinted: hintIndex === index,
@@ -172,6 +177,7 @@ export function Board({
             aria-label={cellAria(
               row + 1,
               column + 1,
+              look?.where[index],
               given,
               value,
               invalid,
@@ -206,13 +212,28 @@ export function Board({
   );
 }
 
-export function BoardSkeleton() {
+function BoxRules() {
   return (
-    <div aria-hidden className={styles.grid}>
-      <div className={`${styles.rule} ${styles.ruleColumnFirst}`} />
-      <div className={`${styles.rule} ${styles.ruleColumnSecond}`} />
-      <div className={`${styles.rule} ${styles.ruleRowFirst}`} />
-      <div className={`${styles.rule} ${styles.ruleRowSecond}`} />
+    <>
+      <div aria-hidden className={`${styles.rule} ${styles.ruleColumnFirst}`} />
+      <div
+        aria-hidden
+        className={`${styles.rule} ${styles.ruleColumnSecond}`}
+      />
+      <div aria-hidden className={`${styles.rule} ${styles.ruleRowFirst}`} />
+      <div aria-hidden className={`${styles.rule} ${styles.ruleRowSecond}`} />
+    </>
+  );
+}
+
+function gridClassName(look: BoardLook | undefined): string {
+  return [styles.grid, look?.plainGrid].filter(Boolean).join(" ");
+}
+
+export function BoardSkeleton({ look }: { readonly look?: BoardLook }) {
+  return (
+    <div aria-hidden className={gridClassName(look)}>
+      {look?.plainGrid === undefined ? <BoxRules /> : null}
       {Array.from({ length: SIDE * SIDE }, (_unused, index) => (
         <div
           key={index}
@@ -232,6 +253,7 @@ function cellPlacement(
 }
 
 function cellClassName(state: {
+  readonly look: string | undefined;
   readonly given: boolean;
   readonly entered: boolean;
   readonly hinted: boolean;
@@ -253,10 +275,11 @@ function cellClassName(state: {
         ];
   return [
     styles.cell,
+    state.look,
     ...tone,
     state.selected ? styles.cellSelected : undefined,
   ]
-    .filter((name) => name !== undefined)
+    .filter(Boolean)
     .join(" ");
 }
 
@@ -276,6 +299,7 @@ function highlightClassName(
 function cellAria(
   row: number,
   column: number,
+  where: string | undefined,
   given: number | undefined,
   value: number | null,
   invalid: boolean,
@@ -284,10 +308,10 @@ function cellAria(
 ): string {
   const copy = messages.games.sudoku.play;
   const label = invalid
-    ? copy.cellInvalidAria(row, column, value)
+    ? copy.cellInvalidAria(row, column, value, where)
     : given !== undefined && given !== EMPTY
-      ? copy.cellGivenAria(row, column, given)
-      : copy.cellAria(row, column, value);
+      ? copy.cellGivenAria(row, column, given, where)
+      : copy.cellAria(row, column, value, where);
   const named = notes.length > 0 ? copy.cellNotesAria(label, notes) : label;
   return wrong ? messages.play.wrongCell(named) : named;
 }

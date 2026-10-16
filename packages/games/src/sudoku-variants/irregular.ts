@@ -1,7 +1,7 @@
 import type { SeededRandom } from "../random";
 import { floodRegion, neighbours, relabel } from "../regions";
-import { CLASSIC_LAYOUT } from "./board";
-import type { SudokuLayout } from "./types";
+import { CLASSIC_LAYOUT } from "../sudoku/board";
+import type { SudokuLayout } from "../sudoku/types";
 
 const SWAPS = 100;
 const MAX_TRIES = 4000;

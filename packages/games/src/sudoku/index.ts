@@ -8,8 +8,14 @@ export {
   type SudokuTier,
   type SudokuVariant,
   type SudokuVariantPuzzle,
+  SUDOKU_VARIANTS,
 } from "./types";
-export { getSudokuConflicts, isSudokuSolved, sudokuPeers } from "./board";
+export {
+  CLASSIC_LAYOUT,
+  getSudokuConflicts,
+  isSudokuSolved,
+  sudokuPeers,
+} from "./board";
 export { countSudokuSolutions, solveSudoku } from "./solve";
 export {
   gradeSudoku,
@@ -27,7 +33,6 @@ export {
   SudokuGenerationError,
   generateDailySudoku,
   generateSudoku,
-  generateSudokuVariant,
 } from "./generate";
 export {
   validateSudoku,

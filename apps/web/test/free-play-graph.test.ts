@@ -18,6 +18,7 @@ const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
 const CROSSWORD_IMPORTER = "apps/web/src/free-play/use-free-crossword.ts";
 const TONES_IMPORTER = "apps/web/src/free-play/use-free-nonogram.ts";
+const VARIANTS_IMPORTER = "apps/web/src/free-play/use-free-sudoku.ts";
 const COLORED_IMPORTER = "apps/web/src/free-play/use-free-colored-nonogram.ts";
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
@@ -187,7 +188,7 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
 });
 
 describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S375)", () => {
-  it("at a free-play path, through both wall rules, the crossword engine, the picture tones and the coloured engine only at their own importers", async () => {
+  it("at a free-play path, through both wall rules, the crossword engine, the picture tones, the coloured engine and the Sudoku variant engine only at their own importers", async () => {
     const specifiers = specifiersWrittenBy(valueGraph);
 
     expect({
@@ -196,6 +197,10 @@ describe("every specifier free play's runtime graph writes passes the real wall 
       bannedAtTonesImporter: await wallVerdictOn(TONES_IMPORTER, specifiers),
       bannedAtColoredImporter: await wallVerdictOn(
         COLORED_IMPORTER,
+        specifiers,
+      ),
+      bannedAtVariantsImporter: await wallVerdictOn(
+        VARIANTS_IMPORTER,
         specifiers,
       ),
       reachesStylesheet: specifiers.includes("../play/screen.module.css"),
@@ -211,16 +216,25 @@ describe("every specifier free play's runtime graph writes passes the real wall 
         "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/crossword",
         "no-restricted-imports: @miolos/games/nonogram-colors",
+        "no-restricted-imports: @miolos/games/sudoku-variants",
       ],
       bannedAtImporter: [
         "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/nonogram-colors",
+        "no-restricted-imports: @miolos/games/sudoku-variants",
       ],
       bannedAtTonesImporter: [
         "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/crossword",
+        "no-restricted-imports: @miolos/games/sudoku-variants",
       ],
       bannedAtColoredImporter: [
+        "no-restricted-imports: @miolos/games/crossword",
+        "no-restricted-imports: @miolos/games/nonogram-colors",
+        "no-restricted-imports: @miolos/games/sudoku-variants",
+      ],
+      bannedAtVariantsImporter: [
+        "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/crossword",
         "no-restricted-imports: @miolos/games/nonogram-colors",
       ],
@@ -229,6 +243,7 @@ describe("every specifier free play's runtime graph writes passes the real wall 
       doorsAreCaught: [
         "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/nonogram-colors",
+        "no-restricted-imports: @miolos/games/sudoku-variants",
         "no-restricted-imports: ../termo/termo-screen",
         "no-restricted-imports: ../streak/streak-client",
         "no-restricted-syntax: daily_puzzles",
@@ -250,6 +265,18 @@ describe("of every page and layout, only /modo-livre/nonogram reaches the pictur
     expect(
       routesReaching("packages/games/src/nonogram-colors/tones.generated.ts"),
     ).toEqual(["apps/web/app/modo-livre/nonogram/page.tsx"]);
+  });
+});
+
+describe("of every page and layout, only /modo-livre/sudoku reaches the Sudoku variants (T-WEB-S869)", () => {
+  it("no daily route, archive route or shared layout pulls the variant engine or the board look", () => {
+    expect([
+      routesReaching("packages/games/src/sudoku-variants/index.ts"),
+      routesReaching("apps/web/src/free-play/sudoku-layout.ts"),
+    ]).toEqual([
+      ["apps/web/app/modo-livre/sudoku/page.tsx"],
+      ["apps/web/app/modo-livre/sudoku/page.tsx"],
+    ]);
   });
 });
 

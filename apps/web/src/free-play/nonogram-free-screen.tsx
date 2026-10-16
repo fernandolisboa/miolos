@@ -3,6 +3,7 @@
 import { useReducer, useState } from "react";
 
 import { lazyChunk } from "../components/lazy-chunk";
+import { messages } from "../i18n";
 import { Board } from "../nonogram/board";
 import { Controls } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
@@ -44,7 +45,12 @@ export function NonogramFreeScreen({
   const [variant, setVariant] = useState<NonogramVariant>("classico");
   const choices = [
     levelChoice(level, setLevel),
-    variantChoice(NONOGRAM_VARIANTS, variant, setVariant),
+    variantChoice(
+      NONOGRAM_VARIANTS,
+      messages.freePlay.variant,
+      variant,
+      setVariant,
+    ),
   ];
 
   return variant === "classico" ? (

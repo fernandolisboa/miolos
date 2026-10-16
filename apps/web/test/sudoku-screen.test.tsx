@@ -3,7 +3,11 @@ import {
   FREE_HINTS_PER_PUZZLE,
   type DailySudokuResponse,
 } from "@miolos/core";
-import { generateDailySudoku, nextSudokuStep } from "@miolos/games/sudoku";
+import {
+  CLASSIC_LAYOUT,
+  generateDailySudoku,
+  nextSudokuStep,
+} from "@miolos/games/sudoku";
 import {
   act,
   createEvent,
@@ -519,6 +523,7 @@ describe("the hint names its step and lights the cells it reasons about (T-WEB-S
     const reach = selectionHighlights(
       mergedGrid(PUZZLE.givens, entries),
       FIRST_GIVEN,
+      CLASSIC_LAYOUT,
     );
     expect(tinted(container)).toEqual(
       [...reach]
@@ -576,7 +581,9 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     const unit = Array.from(
       { length: TOTAL_CELLS },
       (_unused, index) => index,
-    ).filter((index) => selectionHighlights(BLANK, FIRST_EMPTY).has(index));
+    ).filter((index) =>
+      selectionHighlights(BLANK, FIRST_EMPTY, CLASSIC_LAYOUT).has(index),
+    );
     expect(cellsWith(container, "cellUnit")).toEqual(unit);
     expect(cellsWith(container, "cellSameDigit")).toEqual([]);
     expect(labels(container)).toEqual(before);
@@ -623,9 +630,11 @@ describe("the selection's reach on the board (T-WEB-S496)", () => {
     for (const selected of [ROW_GIVEN, Number(hinted.dataset.cellIndex)]) {
       fireEvent.click(cellAt(container, selected));
       if (
-        !selectionHighlights(BLANK, Number(hinted.dataset.cellIndex)).has(
-          selected,
-        )
+        !selectionHighlights(
+          BLANK,
+          Number(hinted.dataset.cellIndex),
+          CLASSIC_LAYOUT,
+        ).has(selected)
       ) {
         throw new Error("the fixture's hint is not in the row given's units");
       }

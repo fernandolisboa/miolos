@@ -107,6 +107,7 @@ const FORBIDDEN_DAILY_SCOPE = [
   "clueCount",
   "advancedSteps",
   "heart:mrmr13",
+  "variant must be one of",
 ];
 
 const FORBIDDEN_FREE_PLAY_SCOPE = ["zurro"];
@@ -121,6 +122,7 @@ const EXPECTED_DAILY_SCOPE = [
 ];
 
 const EXPECTED_FREE_PLAY_SCOPE = [
+  "variant must be one of",
   "Escada",
   "givensCount",
   "advancedSteps",

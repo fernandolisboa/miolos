@@ -102,7 +102,9 @@ async function settled<TPhase>(useGeneration: () => { phase: TPhase }) {
   return result.current.phase;
 }
 
-const sudoku = await settled(() => useFreeSudoku("medio", DEPS));
+const SUDOKU_INPUT = { level: "medio", variant: "classic" } as const;
+
+const sudoku = await settled(() => useFreeSudoku(SUDOKU_INPUT, DEPS));
 const binairo = await settled(() => useFreeBinairo("medio", DEPS));
 const nonogram = await settled(() => useFreeNonogram("medio", DEPS));
 const queens = await settled(() => useFreeQueens("medio", DEPS));

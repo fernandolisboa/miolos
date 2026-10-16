@@ -10,17 +10,18 @@ import { Board, FinishedBoard } from "../termo/board";
 import { TermoNotice, TermoPage, useTermoKeys } from "../termo/play-view";
 import type { TermoChrome } from "../termo/types";
 import { FREE_PLAY_DATE } from "./catalog";
-import { ChoicePicker, variantChoice } from "./choice-picker";
+import { variantChoice } from "./choice-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import { SplitKeyboard } from "./split-keyboard";
 import styles from "./termo-variants.module.css";
 import { useTermoVariant } from "./use-termo-variant";
+import { VariantMenu } from "./variant-menu";
 
 const copy = messages.freePlay.variant;
 
 const VARIANTS = Object.keys(TERMO_VARIANTS) as readonly TermoVariant[];
 
-export function VariantMenu({
+export function TermoVariantMenu({
   id,
   value,
   onChange,
@@ -29,27 +30,12 @@ export function VariantMenu({
   readonly value: TermoVariant;
   readonly onChange: (variant: TermoVariant) => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div
-      ref={menuRef}
+    <VariantMenu
       id={id}
-      popover="auto"
-      className={styles.menu}
-      onClick={(event) => {
-        if (
-          event.target instanceof Element &&
-          event.target.closest('[role="radio"]') !== null
-        ) {
-          menuRef.current?.hidePopover();
-        }
-      }}
-    >
-      <p className={styles.menuTitle}>{copy.label}</p>
-      <ChoicePicker {...variantChoice(VARIANTS, value, onChange)} />
-      <p className={styles.menuLine}>{copy.rules[value]}</p>
-    </div>
+      choice={variantChoice(VARIANTS, copy, value, onChange)}
+      rules={copy.rules[value]}
+    />
   );
 }
 
@@ -88,7 +74,7 @@ export function TermoVariants({
       ending={() => (
         <FreePlaySolvedCard
           game="termo"
-          choices={[variantChoice(VARIANTS, variant, onVariant)]}
+          choices={[variantChoice(VARIANTS, copy, variant, onVariant)]}
           words={words}
           lost={judged.status === "lost"}
           onAgain={onNext}
