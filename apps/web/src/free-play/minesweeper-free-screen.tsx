@@ -8,11 +8,8 @@ import { useState } from "react";
 
 import { messages } from "../i18n";
 import { minesweeperMessages } from "../minesweeper/messages";
-import {
-  FinishedMinefield,
-  Minefield,
-  type TapMode,
-} from "../minesweeper/minefield";
+import { FinishedMinefield } from "../minesweeper/finished-minefield";
+import { Minefield, type TapMode } from "../minesweeper/minefield";
 import minefield from "../minesweeper/minefield.module.css";
 import { TapModeToggle } from "../minesweeper/tap-mode";
 import {

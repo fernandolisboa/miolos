@@ -2,12 +2,12 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { GAMES } from "@miolos/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import HojePage from "../app/page";
 import FreePlayIndexPage from "../app/modo-livre/page";
-import { FREE_PLAY_GAMES } from "../src/free-play/catalog";
 import { freePlayRoutes, messages, routes, routeSlugs } from "../src/i18n";
 
 describe("the free-play route literals (T-WEB-S111)", () => {
@@ -37,10 +37,8 @@ describe("the free-play route literals (T-WEB-S111)", () => {
   });
 
   it("freePlayRoutes covers exactly the free-play games", () => {
-    expect(Object.keys(freePlayRoutes).sort()).toEqual(
-      [...FREE_PLAY_GAMES].sort(),
-    );
-    for (const game of FREE_PLAY_GAMES) {
+    expect(Object.keys(freePlayRoutes).sort()).toEqual([...GAMES].sort());
+    for (const game of GAMES) {
       expect(freePlayRoutes[game]).toBe(
         `/${routeSlugs.freePlay}/${routeSlugs[game]}`,
       );
@@ -78,7 +76,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     const main = container.querySelector("main");
     expect(main).toHaveAttribute("data-free-play", "index");
 
-    for (const game of FREE_PLAY_GAMES) {
+    for (const game of GAMES) {
       const title = screen.getByText(messages.games[game].name);
       const card = title.closest("a");
       expect(card).toHaveAttribute("href", freePlayRoutes[game]);
@@ -88,7 +86,7 @@ describe("the Modo livre index (T-WEB-S113)", () => {
     const cardAnchors = anchors.filter((anchor) =>
       anchor.getAttribute("href")?.startsWith(routes.freePlay),
     );
-    expect(cardAnchors).toHaveLength(FREE_PLAY_GAMES.length);
+    expect(cardAnchors).toHaveLength(GAMES.length);
 
     expect(
       screen.getByText(String(messages.freePlay.descriptions.termo)),

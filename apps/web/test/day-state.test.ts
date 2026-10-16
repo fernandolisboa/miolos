@@ -7,6 +7,7 @@ import {
   readDayState,
   useDayState,
 } from "../src/play/day-state";
+import { DAY_GAMES } from "../src/play/day-games";
 import {
   playRecordKey,
   writePlayRecord,
@@ -153,9 +154,7 @@ describe("readDayState (T-WEB-S14)", () => {
   it("reads every game the hub lists, so a missing key cannot be a missing tile", () => {
     const state = readDayState(DATE);
 
-    expect(Object.keys(state).sort()).toEqual(
-      ["binairo", "crossword", "nonogram", "queens", "sudoku", "termo"].sort(),
-    );
+    expect(Object.keys(state).sort()).toEqual([...DAY_GAMES].sort());
   });
 
   it("carries no elapsed time for a game this device has not concluded", () => {
@@ -324,6 +323,7 @@ function dayPayload(
       binairo: { status: "pending" },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
       ...games,
     },
   };

@@ -5,7 +5,6 @@ import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { Wordmark } from "../components/brand-mark";
 import { lazyChunk } from "../components/lazy-chunk";
-import type { FreePlayGame } from "../free-play/catalog";
 import { messages } from "../i18n";
 import { useSettings } from "../settings/settings";
 import {
@@ -26,8 +25,7 @@ import { TimerReadout } from "./timer-readout";
 import { UndoControl, UndoPlaceholder } from "./undo-control";
 import type { BoardEdits } from "./undo";
 
-export type DailyChromeGame = Exclude<Game, "termo">;
-export type PlayChromeGame = Exclude<FreePlayGame, "termo">;
+export type PlayChromeGame = Exclude<Game, "termo">;
 
 const BLANK_READOUT = "\u00a0";
 
@@ -46,7 +44,7 @@ export interface PlayChromeStat {
 export interface PlayChromeReadouts {
   readonly progressShort: string;
   readonly progressLong: string;
-  readonly onReset: BoardEdits["onReset"];
+  readonly onReset?: BoardEdits["onReset"];
   readonly onUndo?: BoardEdits["onUndo"];
   readonly mistakesLeft?: BoardEdits["mistakesLeft"];
   readonly resetCopy?: ResetCopy;
@@ -250,10 +248,12 @@ export function PlayScreenChrome({
             {readouts.onUndo !== undefined && (
               <UndoControl onUndo={readouts.onUndo} />
             )}
-            <ResetControl
-              onReset={readouts.onReset}
-              copy={readouts.resetCopy}
-            />
+            {readouts.onReset !== undefined && (
+              <ResetControl
+                onReset={readouts.onReset}
+                copy={readouts.resetCopy}
+              />
+            )}
             <GameSettingsButton game={game} clock={clockSetting !== "none"} />
           </>
         )}

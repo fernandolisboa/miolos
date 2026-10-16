@@ -1,7 +1,11 @@
 "use client";
 
 import { messages } from "../i18n";
-import { ConclusionView, type ConclusionResult } from "../play/conclusion-view";
+import {
+  ConclusionView,
+  PictureFigure,
+  type ConclusionResult,
+} from "../play/conclusion-view";
 import { useServerDayClaim } from "../play/day-state";
 import type { ConclusionPicture } from "../play/types";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
@@ -49,7 +53,9 @@ export function NonogramConclusion({
       date={date}
       copy={messages.games.nonogram.conclusion}
       result={result}
-      picture={toned}
+      figure={
+        toned === undefined ? undefined : <PictureFigure picture={toned} />
+      }
     />
   );
 }

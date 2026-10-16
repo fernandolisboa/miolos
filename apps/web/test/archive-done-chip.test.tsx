@@ -14,6 +14,7 @@ import {
   writePlayRecord,
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
+  type MinesweeperPlayRecord,
   type NonogramPlayRecord,
   type PlayRecord,
   type QueensPlayRecord,
@@ -24,6 +25,7 @@ import {
 const DATE = "2026-08-01";
 const CROSSWORD_MS = 301_000;
 const QUEENS_MS = 233_000;
+const MINESWEEPER_MS = 95_000;
 
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
@@ -104,6 +106,24 @@ function queensRecord(
   };
 }
 
+function minesweeperRecord(
+  overrides: Partial<MinesweeperPlayRecord> = {},
+): MinesweeperPlayRecord {
+  return {
+    v: 1,
+    game: "minesweeper",
+    date: DATE,
+    entries: Array.from({ length: 160 }, () => 1),
+    hit: null,
+    elapsedMs: MINESWEEPER_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
 function crosswordRecord(
   overrides: Partial<CrosswordPlayRecord> = {},
 ): CrosswordPlayRecord {
@@ -175,6 +195,8 @@ function openRecord(game: Game): PlayRecord {
       return crosswordRecord({ concluded: false });
     case "queens":
       return queensRecord({ concluded: false });
+    case "minesweeper":
+      return { ...minesweeperRecord({ concluded: false }), hit: undefined };
   }
 }
 
@@ -192,6 +214,8 @@ function concludedRecord(game: Game): PlayRecord {
       return crosswordRecord();
     case "queens":
       return queensRecord();
+    case "minesweeper":
+      return minesweeperRecord();
   }
 }
 
@@ -215,6 +239,8 @@ function withSync(
       return crosswordRecord(sync);
     case "queens":
       return queensRecord(sync);
+    case "minesweeper":
+      return minesweeperRecord(sync);
   }
 }
 
@@ -248,6 +274,16 @@ const SHAPES: readonly {
     seed: (game) => {
       writePlayRecord(
         game === "termo" ? lostTermoRecord() : concludedRecord(game),
+      );
+    },
+  },
+  {
+    name: "lost-minesweeper",
+    seed: (game) => {
+      writePlayRecord(
+        game === "minesweeper"
+          ? minesweeperRecord({ hit: 7 })
+          : concludedRecord(game),
       );
     },
   },

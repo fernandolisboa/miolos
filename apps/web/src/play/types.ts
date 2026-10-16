@@ -50,6 +50,7 @@ export interface ConclusionCopy {
     readonly title: string;
     readonly cta: string;
   };
+  readonly played?: ConclusionOutcome;
 }
 
 export interface ConclusionOutcome {

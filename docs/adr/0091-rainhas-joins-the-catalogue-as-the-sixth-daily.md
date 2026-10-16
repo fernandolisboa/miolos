@@ -4,6 +4,7 @@
 **Source:** the recommended option on the decision card in the 2026-10-11 "Next big feature" project thread; Fernando's answer is the Rainhas row in `docs/pending-fernando.md`.
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0027](./0027-the-hint-is-computed-on-the-client.md), [ADR-0087](./0087-dia-perfeito-counts-the-dailies-published-that-day.md), [ADR-0090](./0090-rainhas-is-a-planted-grown-region-map-graded-by-a-deduction-ladder.md)
 **Amends:** the founding handoff's "Catálogo v1" line: the catalogue gains Rainhas (`queens`) as its sixth daily, after the Cruzadinha. It adds a sixth accent under [ADR-0041](./0041-accents-colour-shapes-never-words.md), leaving its consequence (h) alone, and grows counts in [ADR-0087](./0087-dia-perfeito-counts-the-dailies-published-that-day.md) decision 4, [ADR-0051](./0051-statistics-are-read-time-derivations-on-closed-contracts.md) decision 4, [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md) and [ADR-0080](./0080-paper-dark-accents-lighten-under-a-paper-label.md).
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — the consequence *"Six per-game medals is T-CORE-S70's maximum"*: the per-game cap is now seven, and `termoGuessWins` narrows to exactly 3 to keep the maxima at 30.
 
 ## Context
 

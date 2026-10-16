@@ -45,6 +45,10 @@ export const medalCopy = {
     name: "Trinta de Rainhas",
     description: "Venceu as Rainhas diárias 30 vezes.",
   },
+  "minesweeper-30": {
+    name: "Trinta de Campo Minado",
+    description: "Venceu o Campo Minado diário 30 vezes.",
+  },
   "streak-3": {
     name: "Três dias de tinta",
     description: "Chegou a uma sequência de 3 dias.",

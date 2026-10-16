@@ -3,7 +3,9 @@ import {
   dayResponseSchema,
   type DayResponse,
   type Game,
+  GAMES,
   HINTS_PER_PUZZLE_CEILING,
+  recordFor,
 } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sessions, sql, users } from "@miolos/db";
@@ -161,6 +163,8 @@ function seededTones(date: string): string | undefined {
   return motifTones(reveal.motifId, true);
 }
 
+const ALL_PENDING = recordFor(GAMES, () => ({ status: "pending" }));
+
 async function readDay(token: string, search = ""): Promise<DayResponse> {
   const response = await GET(dayRequest(token, search));
   expect(response.status).toBe(200);
@@ -175,14 +179,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
 
     expect(await readDay(token)).toEqual({
       date: today,
-      games: {
-        termo: { status: "pending" },
-        sudoku: { status: "pending" },
-        nonogram: { status: "pending" },
-        binairo: { status: "pending" },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
-      },
+      games: ALL_PENDING,
     });
 
     await insertHistoryRow({
@@ -204,12 +201,9 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
+        ...ALL_PENDING,
         termo: { status: "played" },
         sudoku: { status: "completed", elapsedMs: 61_000, hintsUsed: 0 },
-        nonogram: { status: "pending" },
-        binairo: { status: "pending" },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
       },
     });
   });
@@ -328,12 +322,9 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
+        ...ALL_PENDING,
         termo: { status: "completed" },
-        sudoku: { status: "pending" },
         nonogram: { status: "completed", elapsedMs: 512_000, hintsUsed: 0 },
-        binairo: { status: "pending" },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
       },
     });
   });
@@ -382,12 +373,11 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
+        ...ALL_PENDING,
         termo: { status: "completed" },
         sudoku: { status: "completed", elapsedMs: 512_000, hintsUsed: 1 },
         nonogram: { status: "played" },
         binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
       },
     });
   });
@@ -421,7 +411,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
     expect(await readDay(token)).toEqual({
       date: today,
       games: {
-        termo: { status: "pending" },
+        ...ALL_PENDING,
         sudoku: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
         nonogram: {
           status: "completed",
@@ -430,9 +420,6 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
           motifName: MOTIF_MARKER,
           motifTones: seededTones(today),
         },
-        binairo: { status: "pending" },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
       },
     });
   });
@@ -659,14 +646,7 @@ describe("GET /day — the server day-truth payload (#83, ADR-0060)", () => {
 
     expect(await readDay(token)).toEqual({
       date: today,
-      games: {
-        termo: { status: "pending" },
-        sudoku: { status: "pending" },
-        nonogram: { status: "pending" },
-        binairo: { status: "pending" },
-        crossword: { status: "pending" },
-        queens: { status: "pending" },
-      },
+      games: ALL_PENDING,
     });
   });
 

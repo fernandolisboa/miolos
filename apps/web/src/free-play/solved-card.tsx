@@ -1,5 +1,6 @@
 "use client";
 
+import type { Game } from "@miolos/core";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -7,7 +8,6 @@ import { messages, routes } from "../i18n";
 import { accentVars } from "../play/accent";
 import { EndingFlourish } from "../play/ending-flourish";
 import { JustEnded } from "../play/just-ended";
-import type { FreePlayGame } from "./catalog";
 import { choiceLabel, type Choice } from "./choice";
 import styles from "./free-play.module.css";
 
@@ -20,7 +20,7 @@ export function FreePlaySolvedCard({
   onAgain,
   children,
 }: {
-  readonly game: FreePlayGame;
+  readonly game: Game;
   readonly choices?: readonly Choice[];
   readonly picture?: ReactNode;
   readonly words?: readonly string[];

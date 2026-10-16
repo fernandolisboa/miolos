@@ -27,6 +27,7 @@ export const TIMED_GAMES = [
   "nonogram",
   "crossword",
   "queens",
+  "minesweeper",
 ] as const satisfies readonly Game[];
 export type TimedGame = (typeof TIMED_GAMES)[number];
 

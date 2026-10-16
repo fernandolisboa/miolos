@@ -6,14 +6,13 @@ import {
   useState,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
 } from "react";
 
 import { minesweeperMessages } from "./messages";
 import { isShortcut, keyMove, movedSelection } from "../play/grid-selection";
 import { cellIndexOf } from "../play/cell-index-at";
 import { useCellPress } from "../play/use-cell-press";
-import { FlagGlyph, MineGlyph } from "./glyphs";
+import { classOf, glyphOf } from "./finished-minefield";
 import styles from "./minefield.module.css";
 import { cellView, type CellView } from "./view";
 
@@ -26,42 +25,6 @@ function labelOf(view: CellView): string {
     return view === 0 ? copy.cell.empty : copy.cell.count(view);
   }
   return copy.cell[view];
-}
-
-function glyphOf(view: CellView): ReactNode {
-  switch (view) {
-    case "flag":
-      return <FlagGlyph />;
-    case "wrongFlag":
-      return <FlagGlyph crossed />;
-    case "mine":
-    case "hit":
-      return <MineGlyph />;
-    case "question":
-      return "?";
-    case "hidden":
-      return null;
-    default:
-      return view === 0 ? null : view;
-  }
-}
-
-function classOf(view: CellView): string {
-  const shown =
-    typeof view === "number" ||
-    view === "hit" ||
-    view === "mine" ||
-    view === "wrongFlag";
-  return [
-    styles.cell,
-    shown ? styles.open : undefined,
-    typeof view === "number" && view > 0
-      ? styles[`count${String(view)}`]
-      : undefined,
-    view === "hit" ? styles.hit : undefined,
-  ]
-    .filter((name) => name !== undefined)
-    .join(" ");
 }
 
 function positionLabel(index: number, columns: number, view: CellView): string {
@@ -218,23 +181,17 @@ export const Minefield = memo(function Minefield({
   );
 });
 
-export function FinishedMinefield({
-  game,
+export function MinefieldSkeleton({
+  cells,
   sizeClass,
 }: {
-  readonly game: MinesweeperState;
+  readonly cells: number;
   readonly sizeClass: string | undefined;
 }) {
   return (
-    <div
-      role="img"
-      aria-label={copy.finishedAria(game.status === "won")}
-      className={`${styles.field} ${styles.finished} ${sizeClass ?? ""}`}
-    >
-      {game.open.map((_open, index) => (
-        <span key={index} className={classOf(cellView(game, index))}>
-          {glyphOf(cellView(game, index))}
-        </span>
+    <div className={`${styles.field} ${sizeClass ?? ""}`}>
+      {Array.from({ length: cells }, (_unused, index) => (
+        <span key={index} className={styles.cell} />
       ))}
     </div>
   );

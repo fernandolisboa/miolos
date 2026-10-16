@@ -9,6 +9,7 @@ import {
   crosswordCompletionRequestSchema,
   dayGameStateSchema,
   HINTS_PER_PUZZLE_CEILING,
+  minesweeperCompletionRequestSchema,
   nonogramCompletionRequestSchema,
   queensCompletionRequestSchema,
   sudokuCompletionRequestSchema,
@@ -16,6 +17,7 @@ import {
   type BinairoCompletionRequest,
   type CompletionResponse,
   type CrosswordCompletionRequest,
+  type MinesweeperCompletionRequest,
   type NonogramCompletionRequest,
   type QueensCompletionRequest,
   type SudokuCompletionRequest,
@@ -102,6 +104,14 @@ const validQueens: QueensCompletionRequest = {
   hintsUsed: 1,
 };
 
+const validMinesweeper: MinesweeperCompletionRequest = {
+  game: "minesweeper",
+  date: "2026-10-16",
+  hit: null,
+  elapsedMs: 272_000,
+  hintsUsed: 0,
+};
+
 describe("hintsUsedSchema", () => {
   const validBodies = [
     valid,
@@ -110,6 +120,7 @@ describe("hintsUsedSchema", () => {
     validQueens,
     validSudoku,
     validTermo,
+    validMinesweeper,
   ];
 
   it("T-CORE-S163: every completion member and a completed /day claim accept 0..HINTS_PER_PUZZLE_CEILING hints and nothing else", () => {
@@ -725,6 +736,39 @@ describe("queensCompletionRequestSchema", () => {
       expect(
         completionRequestSchema.safeParse(body).success,
         JSON.stringify(body),
+      ).toBe(false);
+    }
+  });
+});
+
+describe("minesweeperCompletionRequestSchema", () => {
+  it("T-CORE-S199: a won body (hit null) and a lost body (hit a cell) parse and round-trip, through the union too; the key set carries no grid", () => {
+    for (const hit of [null, 0, 159]) {
+      const body = { ...validMinesweeper, hit };
+      expect(minesweeperCompletionRequestSchema.parse(body)).toEqual(body);
+      expect(completionRequestSchema.parse(body)).toEqual(body);
+    }
+    expect(
+      Object.keys(minesweeperCompletionRequestSchema.shape).sort(),
+    ).toEqual(["date", "elapsedMs", "game", "hintsUsed", "hit"]);
+  });
+
+  it("T-CORE-S199: hit is an integer cell in [0, 160) or null, and nothing else rides along", () => {
+    for (const body of [
+      { ...validMinesweeper, hit: 160 },
+      { ...validMinesweeper, hit: -1 },
+      { ...validMinesweeper, hit: 1.5 },
+      { ...validMinesweeper, hit: "3" },
+      { ...validMinesweeper, hit: undefined },
+      { ...validMinesweeper, date: "2026-02-30" },
+      { ...validMinesweeper, elapsedMs: -1 },
+      { ...validMinesweeper, grid: Array.from({ length: 160 }, () => 0) },
+      { ...validMinesweeper, marks: [] },
+      { ...valid, game: "minesweeper" },
+    ]) {
+      expect(
+        completionRequestSchema.safeParse(body).success,
+        JSON.stringify(body).slice(0, 80),
       ).toBe(false);
     }
   });

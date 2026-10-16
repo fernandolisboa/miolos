@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   computeCalendar,
   computeStats,
+  computeStreak,
   dayMarkOf,
+  dayStateFromRows,
   fullDays,
   perfectDays,
   timeBucketIndex,
@@ -661,5 +663,49 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
       5,
     );
     expect(computeStats([nullGuess], TODAY, []).todayTermoGuesses).toBeNull();
+  });
+});
+
+describe("a lost Campo Minado (ADR-0138)", () => {
+  it("T-CORE-S202: is played — no time, no solve, no streak, no Dia Cheio, no Dia Perfeito, a missed calendar day — where a win would have counted", () => {
+    const games: readonly Game[] = ["binairo", "sudoku", "minesweeper"];
+    const published = lineup([TODAY], games);
+    const lost = row({
+      game: "minesweeper",
+      date: TODAY,
+      outcome: "lost",
+      elapsedMs: 42_000,
+    });
+    const won = { ...lost, outcome: "won" as const };
+    const twoWins = [
+      row({ game: "binairo", date: TODAY }),
+      row({ game: "sudoku", date: TODAY }),
+    ];
+
+    expect(dayStateFromRows([lost]).minesweeper).toBe("played");
+    expect(computeStats([lost], TODAY, published).minesweeper).toEqual({
+      solved: 0,
+      bestMs: null,
+      averageMs: null,
+      averageSampleCount: 0,
+      histogram: [0, 0, 0, 0, 0, 0],
+    });
+    expect(computeStreak([lost], TODAY)).toEqual({
+      streak: 0,
+      todayCounts: false,
+    });
+    expect(fullDays([...twoWins, lost], published)).toEqual([]);
+    expect(perfectDays([...twoWins, lost], published)).toEqual([]);
+    expect(computeCalendar([lost], TODAY, TODAY, 0, published)).toEqual([
+      { date: TODAY, state: "missed", perfect: false },
+    ]);
+
+    expect(dayStateFromRows([won]).minesweeper).toBe("completed");
+    expect(computeStats([won], TODAY, published).minesweeper.bestMs).toBe(
+      42_000,
+    );
+    expect(computeStreak([won], TODAY).streak).toBe(1);
+    expect(fullDays([...twoWins, won], published)).toEqual([TODAY]);
+    expect(perfectDays([...twoWins, won], published)).toEqual([TODAY]);
   });
 });

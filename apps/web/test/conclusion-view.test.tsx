@@ -3,16 +3,18 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ConclusionView } from "../src/play/conclusion-view";
+import { ConclusionView, PictureFigure } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
   type CrosswordPlayRecord,
+  type MinesweeperPlayRecord,
   type NonogramPlayRecord,
   type QueensPlayRecord,
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
+import { DAY_GAMES } from "../src/play/day-games";
 import type { ConclusionPicture } from "../src/play/types";
 import { useRecordSnapshot } from "../src/play/use-record-snapshot";
 import { TermoConclusion } from "../src/termo/termo-conclusion";
@@ -139,6 +141,24 @@ function concludedQueens(
     size: 7,
     entries: Array.from({ length: 49 }, () => null),
     grid: Array.from({ length: 49 }, () => 0),
+    elapsedMs: QUEENS_ELAPSED_MS,
+    hintsUsed: 0,
+    concluded: true,
+    pendingSync: false,
+    syncOutcome: "recorded",
+    ...overrides,
+  };
+}
+
+function concludedMinesweeper(
+  overrides: Partial<MinesweeperPlayRecord> = {},
+): MinesweeperPlayRecord {
+  return {
+    v: 1,
+    game: "minesweeper",
+    date: DATE,
+    entries: Array.from({ length: 160 }, () => 1),
+    hit: null,
     elapsedMs: QUEENS_ELAPSED_MS,
     hintsUsed: 0,
     concluded: true,
@@ -345,7 +365,7 @@ describe("the stamp counts up to three hints (T-WEB-S513)", () => {
 });
 
 describe("the day card and the CTA (T-WEB-18)", () => {
-  it("shows Binairo done and the other five honestly missing", () => {
+  it("shows Binairo done and every other game honestly missing", () => {
     writePlayRecord(concluded());
 
     render(
@@ -362,7 +382,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
 
     expect(
       screen.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(5);
+    ).toHaveLength(DAY_GAMES.length - 1);
 
     expect(
       screen.getByText(messages.conclusion.dayCard.games.nonogram),
@@ -377,6 +397,7 @@ describe("the day card and the CTA (T-WEB-18)", () => {
     writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedQueens());
+    writePlayRecord(concludedMinesweeper());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
 
@@ -472,6 +493,7 @@ describe("the CTA chains to the next pending daily (T-WEB-S19)", () => {
     writePlayRecord(concludedCrossword());
     writePlayRecord(concludedNonogram());
     writePlayRecord(concludedQueens());
+    writePlayRecord(concludedMinesweeper());
     writePlayRecord(concludedSudoku());
     writePlayRecord(wonTermo());
 
@@ -552,7 +574,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(5);
+    ).toHaveLength(DAY_GAMES.length - 1);
   });
 
   it("shows each concluded game's OWN time, never the current game's", () => {
@@ -572,7 +594,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(SUDOKU_ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(4);
+    ).toHaveLength(DAY_GAMES.length - 2);
   });
 
   it("counts the game being celebrated as done before its record is written", () => {
@@ -591,7 +613,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(5);
+    ).toHaveLength(DAY_GAMES.length - 1);
   });
 
   it("understates rather than guesses: another device's solve reads falta", () => {
@@ -610,7 +632,7 @@ describe("the day card reads per-game records (T-WEB-S18)", () => {
     expect(chips.queryByText(SUDOKU_ELAPSED)).not.toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(5);
+    ).toHaveLength(DAY_GAMES.length - 1);
   });
 });
 
@@ -864,7 +886,7 @@ describe("the picture reveal (T-WEB-S50)", () => {
         game="nonogram"
         date={DATE}
         copy={messages.games.nonogram.conclusion}
-        picture={PICTURE}
+        figure={<PictureFigure picture={PICTURE} />}
       />,
     );
 
@@ -916,12 +938,16 @@ describe("the picture reveal (T-WEB-S50)", () => {
         game="nonogram"
         date={DATE}
         copy={messages.games.nonogram.conclusion}
-        picture={{
-          ...PICTURE,
-          name: NAME,
-          lead: messages.games.nonogram.reveal.lead,
-          label: messages.games.nonogram.reveal.namedAria(NAME),
-        }}
+        figure={
+          <PictureFigure
+            picture={{
+              ...PICTURE,
+              name: NAME,
+              lead: messages.games.nonogram.reveal.lead,
+              label: messages.games.nonogram.reveal.namedAria(NAME),
+            }}
+          />
+        }
       />,
     );
 
@@ -945,7 +971,7 @@ describe("the picture reveal (T-WEB-S50)", () => {
         game="nonogram"
         date={DATE}
         copy={messages.games.nonogram.conclusion}
-        picture={PICTURE}
+        figure={<PictureFigure picture={PICTURE} />}
       />,
     );
     expect(screen.queryByText(NAME)).not.toBeInTheDocument();
@@ -1081,17 +1107,23 @@ describe("the conclusion's layout (tripwires)", () => {
     }
   });
 
-  it("insets the concluded card's CTA on BOTH axes (T-WEB-S65a)", () => {
-    const padding = decl(bodyOf(CSS, ".cta"), "padding");
-    expect(padding, ".cta declares no padding").toBeDefined();
-    const [block, inline] = (padding ?? "").split(/\s+/);
-    expect(Number.parseFloat(block ?? "0"), "block padding").toBeGreaterThan(0);
-    expect(
-      inline,
-      "inline padding — a zero here is the cramped-padding red",
-    ).toBeDefined();
-    expect(inline).not.toBe("0");
-    expect(inline).not.toBe("0px");
+  it("insets the concluded card's CTA on BOTH axes, at both bands (T-WEB-S65a)", () => {
+    for (const [scope, body] of [
+      ["top level", bodyOf(CSS, ".cta")],
+      [
+        "the mobile band",
+        bodyOf(bodyOf(CSS, "@media (max-width: 768px)"), ".cta"),
+      ],
+    ] as const) {
+      const padding = decl(body, "padding");
+      expect(padding, `${scope}: .cta declares no padding`).toBeDefined();
+      const [block, inline] = (padding ?? "").split(/\s+/);
+      for (const side of [block, inline]) {
+        expect(side, scope).toBeDefined();
+        expect(side, scope).not.toBe("0");
+        expect(side, scope).not.toBe("0px");
+      }
+    }
   });
 
   it("insets the day-card chips on BOTH axes, at both bands (T-WEB-S65b)", () => {
@@ -1290,7 +1322,7 @@ describe("the celebrated game's own chip, on a loss (T-WEB-S80)", () => {
     expect(chips.getByText(ELAPSED)).toBeInTheDocument();
     expect(
       chips.getAllByText(messages.conclusion.dayCard.missing),
-    ).toHaveLength(5);
+    ).toHaveLength(DAY_GAMES.length - 1);
   });
 });
 

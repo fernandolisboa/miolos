@@ -1580,7 +1580,7 @@ describe("the picture reveal's CSS (T-WEB-S52)", () => {
   });
 
   it("is not a card inside a card", () => {
-    for (const local of [".picture", ".pictureRow"]) {
+    for (const local of [".picture", ".figureRow"]) {
       const body = bodyOf(CONCLUSION_CSS, local);
       for (const property of [
         "background",

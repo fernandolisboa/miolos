@@ -3,9 +3,9 @@ import type { ReactElement, ReactNode } from "react";
 import { formatLongDate, messages, routes } from "../i18n";
 import {
   PlayScreenChrome,
-  type DailyChromeGame,
   type PlayChromeBack,
   type PlayChromeClock,
+  type PlayChromeGame,
   type PlayChromeStat,
   type PlayChromeState,
 } from "./screen-chrome";
@@ -27,7 +27,7 @@ export function DailyPlayChrome({
   state,
   children,
 }: {
-  readonly game: DailyChromeGame;
+  readonly game: PlayChromeGame;
   readonly pageModifier: string;
   readonly date: string;
   readonly archive?: ArchivePlayChrome;

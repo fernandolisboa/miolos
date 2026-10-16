@@ -1,6 +1,7 @@
 import {
   binairoDailyContentSchema,
   crosswordDailyContentSchema,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
   sudokuDailyContentSchema,
@@ -27,6 +28,11 @@ import {
   generateCrossword,
   validateCrossword,
 } from "@miolos/games/crossword";
+import {
+  generateMinesweeperDaily,
+  MinesweeperGenerationError,
+  validateMinesweeperDaily,
+} from "@miolos/games/minesweeper";
 import {
   generateNonogram,
   NONOGRAM_WEEKDAY_CRITERIA,
@@ -394,6 +400,30 @@ export function topUpQueensBuffer(db: Db, depth: number): Promise<TopUpResult> {
   );
 }
 
+export const MAX_MINESWEEPER_SEED_RETRIES_PER_DATE = 8;
+
+function attemptMinesweeper(seed: number, weekday: Weekday): Attempt {
+  return seededAttempt(
+    () => generateMinesweeperDaily({ seed, weekday }),
+    MinesweeperGenerationError,
+    (puzzle) => okRejection(validateMinesweeperDaily(puzzle)),
+    minesweeperDailyContentSchema,
+  );
+}
+
+export function topUpMinesweeperBuffer(
+  db: Db,
+  depth: number,
+): Promise<TopUpResult> {
+  return topUpWithSeedRetries(
+    db,
+    "minesweeper",
+    depth,
+    MAX_MINESWEEPER_SEED_RETRIES_PER_DATE,
+    attemptMinesweeper,
+  );
+}
+
 const LOW_ANSWER_LIST_WARNING = 30;
 
 export async function unusedTermoAnswers(db: Db): Promise<TermoAnswer[]> {
@@ -483,4 +513,5 @@ export const TOP_UPS: Record<Game, TopUp> = {
   termo: topUpTermoBuffer,
   crossword: topUpCrosswordBuffer,
   queens: topUpQueensBuffer,
+  minesweeper: topUpMinesweeperBuffer,
 };

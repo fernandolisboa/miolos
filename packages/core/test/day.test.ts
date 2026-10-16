@@ -66,6 +66,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 1 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
       queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 1 },
+      minesweeper: { status: "played" },
     },
   };
 
@@ -200,6 +201,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
         rowOf("binairo", "won", true, 407_000),
         rowOf("crossword", "won", true, 212_000),
         rowOf("queens", "won", true, 150_000),
+        rowOf("minesweeper", "lost", true, 42_000),
       ]),
     ).toEqual({
       termo: { status: "played" },
@@ -208,6 +210,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 0 },
       queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 0 },
+      minesweeper: { status: "played" },
     });
 
     expect(dayGamesFromRows([rowOf("termo", "won", true, 188_000)])).toEqual({
@@ -217,6 +220,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "pending" },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
     });
 
     expect(
@@ -273,6 +277,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "completed", elapsedMs: 407_000, hintsUsed: 0 },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
     });
 
     expect(
@@ -295,6 +300,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "pending" },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
     };
     expect(dayGamesFromRows(rows)).toEqual(expected);
     expect(dayGamesFromRows([...rows].reverse())).toEqual(expected);
@@ -308,6 +314,7 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       rowOf("binairo", "won", true, 99_000, 0),
       rowOf("crossword", "won", true, 212_000, 1),
       rowOf("queens", "won", true, 150_000, 0),
+      rowOf("minesweeper", "won", true, 42_000, 0),
     ];
     const extras = {
       nonogramMotifName: "Âncora",
@@ -326,16 +333,11 @@ describe("dayResponseSchema — the wire contract (#83, ADR-0060 decision 1)", (
       binairo: { status: "completed", elapsedMs: 99_000, hintsUsed: 0 },
       crossword: { status: "completed", elapsedMs: 212_000, hintsUsed: 1 },
       queens: { status: "completed", elapsedMs: 150_000, hintsUsed: 0 },
+      minesweeper: { status: "completed", elapsedMs: 42_000, hintsUsed: 0 },
     });
 
     const named = dayGamesFromRows(rows, extras);
-    for (const game of [
-      "termo",
-      "sudoku",
-      "binairo",
-      "crossword",
-      "queens",
-    ] as const) {
+    for (const game of GAMES.filter((g) => g !== "nonogram")) {
       expect(Object.keys(named[game]), game).not.toContain("motifName");
       expect(Object.keys(named[game]), game).not.toContain("motifTones");
     }

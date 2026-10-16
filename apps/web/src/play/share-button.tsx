@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 
 import { archiveGameRoute, messages } from "../i18n";
 import { absoluteUrl } from "../site-origin";
-import { playRecordsWritable, type PlayRecord } from "./play-record";
+import {
+  isPlayedRecord,
+  playRecordsWritable,
+  type PlayRecord,
+} from "./play-record";
 import styles from "./share-button.module.css";
 import { buildShareText, type ShareSubject } from "./share-text";
 
@@ -53,13 +57,21 @@ function shareSubject(
   stored: PlayRecord | undefined,
   stamp: ShareStamp | undefined,
 ): ShareSubject | undefined {
-  if (stored !== undefined) {
+  if (stored?.game === "termo") {
     return stored;
+  }
+  if (stored !== undefined) {
+    return {
+      game: stored.game,
+      date: stored.date,
+      elapsedMs: stored.elapsedMs,
+      played: isPlayedRecord(stored),
+    };
   }
   if (game === "termo" || stamp === undefined) {
     return undefined;
   }
-  return { game, date, elapsedMs: stamp.elapsedMs };
+  return { game, date, elapsedMs: stamp.elapsedMs, played: false };
 }
 
 export function ShareButton({

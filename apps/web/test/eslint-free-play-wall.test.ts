@@ -1144,3 +1144,55 @@ describe("the coloured Nonogram engine is walled to its chunk, statically and dy
     }
   });
 });
+
+describe("the daily Campo Minado is walled off free play, statically and dynamically (T-LINT-S73)", () => {
+  const DAILY_DOORS = [
+    "../minesweeper/daily-state",
+    "../minesweeper/daily-record",
+    "../minesweeper/use-minesweeper-play",
+    "../minesweeper/minesweeper-screen",
+    "../minesweeper/minesweeper-conclusion",
+  ];
+  const FREE_PLAY_PATHS = [
+    FREE_PATH,
+    "apps/web/src/free-play/minesweeper-free-screen.tsx",
+    "apps/web/app/modo-livre/campo-minado/page.tsx",
+  ];
+
+  it("red from free play by static and dynamic import", async () => {
+    for (const door of DAILY_DOORS) {
+      for (const path of FREE_PLAY_PATHS) {
+        expect
+          .soft(
+            ruleIds(await lintProbe(path, `import "${door}";\n`)),
+            `${path} ${door}`,
+          )
+          .toContain("no-restricted-imports");
+        expect
+          .soft(
+            ruleIds(
+              await lintProbe(
+                path,
+                `export const load = () => import("${door}");\n`,
+              ),
+            ),
+            `${path} ${door}`,
+          )
+          .toContain("no-restricted-syntax");
+      }
+    }
+  });
+
+  it("the shared board and free-play state stay clean for free play", async () => {
+    for (const door of [
+      "../minesweeper/minefield",
+      "../minesweeper/finished-minefield",
+      "../minesweeper/state",
+      "../minesweeper/use-minesweeper",
+    ]) {
+      expect
+        .soft(wallHits(await lintProbe(FREE_PATH, `import "${door}";\n`)), door)
+        .toEqual([]);
+    }
+  });
+});

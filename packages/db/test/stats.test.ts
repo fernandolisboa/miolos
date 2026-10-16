@@ -1,3 +1,4 @@
+import { computeStats } from "@miolos/core";
 import { sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -197,6 +198,46 @@ describe("the game CHECKs admit every daily", () => {
 
   it("T-DB-S101: 'queens' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
     await expectAdmitted("queens", "2026-10-12");
+  });
+
+  it("T-DB-S144: 'minesweeper' inserts into daily_puzzles and completions, and an unknown game is still rejected by name", async () => {
+    await expectAdmitted("minesweeper", "2026-10-16");
+  });
+});
+
+describe("a lost Campo Minado through the stats reader (ADR-0138)", () => {
+  it("T-DB-S145: the stored lost row reads back as lost, and the stats leave its time out", async () => {
+    const userId = await createUser();
+    const today = await todaySaoPaulo(ctx.db);
+    await recordCompletion(ctx.db, {
+      userId,
+      game: "minesweeper",
+      date: today,
+      outcome: "lost",
+      elapsedMs: 42_000,
+      hintsUsed: 0,
+      onTime: true,
+    });
+
+    const rows = await listCompletionsForStats(ctx.db, userId);
+    expect(rows).toEqual([
+      {
+        game: "minesweeper",
+        date: today,
+        outcome: "lost",
+        onTime: true,
+        elapsedMs: 42_000,
+        hintsUsed: 0,
+        guesses: null,
+      },
+    ]);
+    expect(computeStats(rows, today, []).minesweeper).toEqual({
+      solved: 0,
+      bestMs: null,
+      averageMs: null,
+      averageSampleCount: 0,
+      histogram: [0, 0, 0, 0, 0, 0],
+    });
   });
 });
 

@@ -6,6 +6,7 @@ import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
   type BinairoPlayRecord,
+  type MinesweeperPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import { TermoConclusion } from "../src/termo/termo-conclusion";
@@ -115,6 +116,7 @@ function statsWith(
     nonogram: zero,
     crossword: zero,
     queens: zero,
+    minesweeper: zero,
     termo: { solved: 5, distribution: [0, 1, 0, 2, 1, 0, 1] },
     perfectDays: 0,
     todayTermoGuesses,
@@ -178,7 +180,7 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
     expect(await screen.findByText("9")).toBeInTheDocument();
     expect(screen.getByText(messages.stats.rows.best)).toBeInTheDocument();
     expect(
-      screen.getByText(messages.stats.rows.solved(messages.games.binairo.name)),
+      screen.getByText(messages.stats.rows.solved.binairo),
     ).toBeInTheDocument();
 
     const today = container.querySelector("[data-today]");
@@ -318,5 +320,46 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
         screen.queryByText(messages.stats.rows.best),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("a lost timed game decorates nothing as today's (T-WEB-S922c)", () => {
+  it("a lost Campo Minado gets no today bucket and no closing line, over a block that would earn both", async () => {
+    const stats = statsWith(430_000, 3);
+    clients.fetchStats.mockResolvedValue({
+      ...stats,
+      minesweeper: stats.binairo,
+    });
+    const lost: MinesweeperPlayRecord = {
+      v: 1,
+      game: "minesweeper",
+      date: DATE,
+      entries: Array.from({ length: 160 }, () => 0),
+      hit: 3,
+      elapsedMs: ELAPSED_MS,
+      hintsUsed: 0,
+      concluded: true,
+      pendingSync: false,
+      syncOutcome: "recorded",
+    };
+    writePlayRecord(lost);
+
+    const { container } = render(
+      <ConclusionView
+        game="minesweeper"
+        date={DATE}
+        copy={messages.games.minesweeper.conclusion}
+        lost
+      />,
+    );
+
+    expect(await screen.findByText("9")).toBeInTheDocument();
+    expect(container.querySelector("[data-today]")).toBeNull();
+    expect(
+      screen.queryByText(messages.conclusion.closingFaster),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.conclusion.closingSlower),
+    ).not.toBeInTheDocument();
   });
 });

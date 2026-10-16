@@ -60,18 +60,21 @@ export function ConclusionView({
   date,
   copy,
   result,
-  picture,
-  outcome,
+  figure,
+  outcome: given,
+  lost: lostGame = false,
   answer,
 }: {
   readonly game: Game;
   readonly date: string;
   readonly copy: ConclusionCopy;
   readonly result?: ConclusionResult;
-  readonly picture?: ConclusionPicture;
+  readonly figure?: ReactNode;
   readonly outcome?: ConclusionOutcome;
+  readonly lost?: boolean;
   readonly answer?: ConclusionAnswer;
 }) {
+  const outcome = given ?? playedOutcome(copy, lostGame);
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
   const record = snapshot.hydrated ? snapshot.record : undefined;
@@ -192,18 +195,8 @@ export function ConclusionView({
             <p className={styles.dayWord}>{answer.canonical}</p>
           </div>
         )}
-        {picture !== undefined && (
-          <div className={styles.pictureRow}>
-            <PictureArt picture={picture} className={styles.picture} />
-            {picture.name !== undefined && (
-              <div className={styles.pictureCaption}>
-                {picture.lead !== undefined && (
-                  <p className={styles.pictureLead}>{picture.lead}</p>
-                )}
-                <p className={styles.pictureName}>{picture.name}</p>
-              </div>
-            )}
-          </div>
+        {figure !== undefined && (
+          <div className={styles.figureRow}>{figure}</div>
         )}
 
         {syncOutcome === "recorded" && (
@@ -227,7 +220,12 @@ export function ConclusionView({
         entryOf={dayEntry}
         next={next}
         share={
-          <ShareButton game={game} date={date} stored={stored} stamp={stamp} />
+          <ShareButton
+            game={game}
+            date={date}
+            stored={stored}
+            stamp={lost ? undefined : stamp}
+          />
         }
         prompt={<PushPromptCard />}
       />
@@ -250,6 +248,7 @@ export function RemoteConclusionView({
   const stats = useStats();
   const accent = accentVars(game);
   const played = claim.status === "played";
+  const playedStamp = playedOutcome(copy, played);
   const remote = messages.conclusion.remote;
 
   const next = nextPendingDaily((dayGame) => dayState[dayGame]);
@@ -272,6 +271,8 @@ export function RemoteConclusionView({
               played={played}
               guesses={remoteTermoGuesses(stats, date)}
             />
+          ) : playedStamp !== undefined ? (
+            <OutcomeStamp outcome={playedStamp} />
           ) : (
             <RemoteShippedStamp title={copy.title} claim={claim} />
           )}
@@ -304,6 +305,33 @@ export function RemoteConclusionView({
         next={next}
       />
     </main>
+  );
+}
+
+function playedOutcome(
+  copy: ConclusionCopy,
+  played: boolean,
+): ConclusionOutcome | undefined {
+  return played ? copy.played : undefined;
+}
+
+export function PictureFigure({
+  picture,
+}: {
+  readonly picture: ConclusionPicture;
+}) {
+  return (
+    <>
+      <PictureArt picture={picture} className={styles.picture} />
+      {picture.name !== undefined && (
+        <div className={styles.pictureCaption}>
+          {picture.lead !== undefined && (
+            <p className={styles.pictureLead}>{picture.lead}</p>
+          )}
+          <p className={styles.pictureName}>{picture.name}</p>
+        </div>
+      )}
+    </>
   );
 }
 

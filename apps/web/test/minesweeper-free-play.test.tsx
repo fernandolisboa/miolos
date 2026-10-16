@@ -3,7 +3,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import FreePlayIndexPage from "../app/modo-livre/page";
-import { FREE_PLAY_GAMES } from "../src/free-play/catalog";
 import {
   freePlayRoutes,
   messages,
@@ -12,18 +11,22 @@ import {
   routeSlugs,
 } from "../src/i18n";
 import { ACCENTS, accentVars } from "../src/play/accent";
+import { DAY_GAMES } from "../src/play/day-games";
 import { GameSettings } from "../src/settings/game-settings";
 import { readSettings } from "../src/settings/settings";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
-describe("Campo Minado is free play only: the daily games do not grow (T-WEB-S880)", () => {
-  it("leaves the daily game list, routes and hint copy as they were", () => {
-    expect(GAMES).not.toContain("minesweeper");
+describe("Campo Minado sits in both catalogues, the daily and free play (T-WEB-S928)", () => {
+  it("is the last of GAMES and of the hub's lineup, with a daily route", () => {
+    expect(GAMES.at(-1)).toBe("minesweeper");
+    expect(DAY_GAMES.at(-1)).toBe("minesweeper");
+    expect(playRoutes.minesweeper).toBe("/campo-minado");
+    expect(routes.minesweeperConclusion).toBe("/campo-minado/concluido");
     expect(Object.keys(playRoutes).sort()).toEqual([...GAMES].sort());
-    expect(Object.keys(messages.freePlay.descriptions)).toEqual(["termo"]);
+    expect(Object.keys(freePlayRoutes).sort()).toEqual([...GAMES].sort());
   });
 
-  it("gives it a slug, a route, an accent and a hub card", () => {
+  it("gives it a slug, a free-play route, an accent and its own free-play blurb", () => {
     expect(routeSlugs.minesweeper).toBe("campo-minado");
     expect(routes.freePlayMinesweeper).toBe("/modo-livre/campo-minado");
     expect(freePlayRoutes.minesweeper).toBe(routes.freePlayMinesweeper);
@@ -32,16 +35,25 @@ describe("Campo Minado is free play only: the daily games do not grow (T-WEB-S88
       "var(--accent-minesweeper)",
     );
     expect(messages.freePlay.solved.again.minesweeper).toBe("Mais um");
+    expect(Object.keys(messages.freePlay.descriptions).sort()).toEqual([
+      "minesweeper",
+      "termo",
+    ]);
+    expect(messages.freePlay.descriptions.minesweeper).not.toBe(
+      messages.games.minesweeper.description,
+    );
   });
 
-  it("lists it last in the hub, linked to its screen", () => {
-    expect(FREE_PLAY_GAMES.at(-1)).toBe("minesweeper");
+  it("lists it last in the free-play hub with the free-play blurb, linked to its screen", () => {
     render(<FreePlayIndexPage />);
     const card = screen.getByText(messages.games.minesweeper.name).closest("a");
     expect(card).toHaveAttribute("href", "/modo-livre/campo-minado");
     expect(
-      screen.getByText(messages.games.minesweeper.description),
+      screen.getByText(String(messages.freePlay.descriptions.minesweeper)),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(messages.games.minesweeper.description),
+    ).toBeNull();
   });
 
   it("centres a last card that would sit alone on its row, whatever the roster", () => {

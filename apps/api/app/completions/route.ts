@@ -4,6 +4,7 @@ import {
   completionResponseSchema,
   crosswordDailyContentSchema,
   isWithinCreditWindow,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   onTimeAtWrite,
   queensDailyContentSchema,
@@ -58,7 +59,10 @@ function completionResponse(
   );
 }
 
-type GridCompletionGame = Exclude<CompletionRequest["game"], "termo">;
+type GridCompletionGame = Exclude<
+  CompletionRequest["game"],
+  "termo" | "minesweeper"
+>;
 
 function storedSolution(
   game: GridCompletionGame,
@@ -80,36 +84,47 @@ function storedSolution(
   }
 }
 
+type Judgement =
+  { readonly outcome: CompletionOutcome } | { readonly mismatch: string };
+
 function judgeGrid(
   body: Extract<CompletionRequest, { game: GridCompletionGame }>,
   content: unknown,
-): CompletionOutcome | null {
+): Judgement {
   const solution = storedSolution(body.game, content);
-
-  if (body.grid.length !== solution.length) {
-    return null;
-  }
-
-  let mismatches = 0;
-  for (const [index, cell] of solution.entries()) {
-    if (cell !== body.grid[index]) {
-      mismatches += 1;
-    }
-  }
-  return mismatches > 0 ? null : "won";
+  const matches =
+    body.grid.length === solution.length &&
+    solution.every((cell, index) => cell === body.grid[index]);
+  return matches ? { outcome: "won" } : { mismatch: "grid-mismatch" };
 }
 
-function judgeTermo(
-  guesses: readonly string[],
-  content: unknown,
-): CompletionOutcome | null {
+function judgeTermo(guesses: readonly string[], content: unknown): Judgement {
   const answer = termoDailyContentSchema.parse(content).normalized;
 
   const judged = judgeGuessList(guesses, answer);
-  if (!judged) {
-    return null;
+  return judged && judged.status !== "playing"
+    ? { outcome: judged.status }
+    : { mismatch: "guess-mismatch" };
+}
+
+function judgeMinesweeper(hit: number | null, content: unknown): Judgement {
+  if (hit === null) {
+    return { outcome: "won" };
   }
-  return judged.status === "playing" ? null : judged.status;
+  return minesweeperDailyContentSchema.parse(content).mines[hit] === 1
+    ? { outcome: "lost" }
+    : { mismatch: "hit-mismatch" };
+}
+
+function judge(body: CompletionRequest, content: unknown): Judgement {
+  switch (body.game) {
+    case "termo":
+      return judgeTermo(body.guesses, content);
+    case "minesweeper":
+      return judgeMinesweeper(body.hit, content);
+    default:
+      return judgeGrid(body, content);
+  }
 }
 
 export function OPTIONS(): Response {
@@ -171,16 +186,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     return errorResponse(404, "no-puzzle");
   }
 
-  const outcome =
-    body.game === "termo"
-      ? judgeTermo(body.guesses, row.content)
-      : judgeGrid(body, row.content);
-  if (outcome === null) {
-    return errorResponse(
-      422,
-      body.game === "termo" ? "guess-mismatch" : "grid-mismatch",
-    );
+  const judgement = judge(body, row.content);
+  if ("mismatch" in judgement) {
+    return errorResponse(422, judgement.mismatch);
   }
+  const { outcome } = judgement;
 
   const seen = isWithinCreditWindow(body.date, today)
     ? await wasSeenOn(db, userId, body.date)
