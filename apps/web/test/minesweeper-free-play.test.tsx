@@ -44,14 +44,12 @@ describe("Campo Minado is free play only: the daily games do not grow (T-WEB-S88
     ).toBeInTheDocument();
   });
 
-  it("centres the seventh card alone on its row, rotated like its siblings", () => {
+  it("centres a last card that would sit alone on its row, whatever the roster", () => {
     const hub = stylesheet("app/modo-livre/page.module.css");
-    expect(decl(bodyOf(hub, ".card:nth-child(7)"), "grid-column")).toBe(
-      "3 / span 2",
-    );
-    expect(decl(bodyOf(hub, ".card:nth-child(7)"), "transform")).toMatch(
-      /^rotate\(-?\d+(\.\d+)?deg\)$/,
-    );
+    expect(
+      decl(bodyOf(hub, ".card:last-child:nth-child(3n + 1)"), "grid-column"),
+    ).toBe("3 / span 2");
+    expect(hub).not.toMatch(/\.card:nth-child\(7\)\s*\{[^}]*grid-column/);
   });
 });
 

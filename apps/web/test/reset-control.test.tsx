@@ -7,7 +7,7 @@ import { ResetControl, ResetPlaceholder } from "../src/play/reset-control";
 const copy = messages.play.reset;
 
 function mount(onReset: (() => void) | null = () => undefined) {
-  return render(<ResetControl onReset={onReset} copy={copy} />);
+  return render(<ResetControl onReset={onReset} />);
 }
 
 function open(): HTMLElement {
@@ -75,11 +75,11 @@ describe("ResetControl asks before it clears (T-WEB-S515)", () => {
     let onReset: (() => void) | null = () => {
       onReset = null;
     };
-    const { rerender } = render(<ResetControl onReset={onReset} copy={copy} />);
+    const { rerender } = render(<ResetControl onReset={onReset} />);
     const group = open();
 
     fireEvent.click(within(group).getByRole("button", { name: copy.label }));
-    rerender(<ResetControl onReset={onReset} copy={copy} />);
+    rerender(<ResetControl onReset={onReset} />);
 
     const trigger = screen.getByRole("button", { name: copy.label });
     expect(trigger).toHaveAttribute("aria-disabled", "true");
@@ -92,11 +92,11 @@ describe("ResetControl asks before it clears (T-WEB-S515)", () => {
     open();
     screen.getByRole("button", { name: copy.cancel }).blur();
 
-    rerender(<ResetControl onReset={null} copy={copy} />);
+    rerender(<ResetControl onReset={null} />);
     expect(screen.queryByRole("group")).toBeNull();
     expect(document.body).toHaveFocus();
 
-    rerender(<ResetControl onReset={onReset} copy={copy} />);
+    rerender(<ResetControl onReset={onReset} />);
     expect(screen.queryByRole("group")).toBeNull();
     expect(screen.getByRole("button", { name: copy.label })).toBeVisible();
   });

@@ -55,12 +55,13 @@ function moved(
   if (game === play.game) {
     return { ...play, now };
   }
-  const timer =
-    play.game.status === "ready" && game.status !== "ready"
+  const ended = game.status === "won" || game.status === "lost";
+  const started = play.game.status === "ready" && game.status !== "ready";
+  const timer = ended
+    ? applyTimerAction(play.timer, { type: "pause", now })
+    : started
       ? { accumulatedMs: 0, runningSince: now }
-      : game.status === "won" || game.status === "lost"
-        ? applyTimerAction(play.timer, { type: "pause", now })
-        : play.timer;
+      : play.timer;
   return { game, timer, now };
 }
 

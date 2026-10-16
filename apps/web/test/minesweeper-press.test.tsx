@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pressOf } from "../src/play/brush";
-import { cellPressOf, useCellPress } from "../src/play/use-cell-press";
+import { useCellPress } from "../src/play/use-cell-press";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
 installPointerStubs();
@@ -19,7 +19,7 @@ function Harness({
     readonly chord: (index: number) => void;
   };
 }) {
-  const { handlers } = useCellPress({
+  const handlers = useCellPress({
     onActivate: spies.activate,
     onMark: spies.mark,
     onChord: spies.chord,
@@ -53,14 +53,17 @@ afterEach(() => {
 });
 
 describe("a cell press is read from the button and the pointer, not guessed (T-WEB-S884)", () => {
-  it("reads left, tap, right and middle, and drops the rest", () => {
-    expect(cellPressOf({ button: 0, pointerType: "mouse" })).toBe("left");
-    expect(cellPressOf({ button: 0, pointerType: "touch" })).toBe("tap");
-    expect(cellPressOf({ button: 0, pointerType: "pen" })).toBe("tap");
-    expect(cellPressOf({ button: 2, pointerType: "mouse" })).toBe("right");
-    expect(cellPressOf({ button: 1, pointerType: "mouse" })).toBe("middle");
-    expect(cellPressOf({ button: 3, pointerType: "mouse" })).toBeNull();
-    expect(cellPressOf({ button: 4, pointerType: "mouse" })).toBeNull();
+  it("ignores buttons that are neither primary, middle nor secondary", () => {
+    const { spies, board } = mount();
+
+    for (const button of [3, 4]) {
+      fireEvent.pointerDown(board, { ...MOUSE, clientX: 2, button });
+      fireEvent.pointerUp(board, { ...MOUSE, clientX: 2, button });
+    }
+
+    expect(spies.activate).not.toHaveBeenCalled();
+    expect(spies.chord).not.toHaveBeenCalled();
+    expect(spies.mark).not.toHaveBeenCalled();
   });
 
   it("leaves the stroke games' rule as it was: right is right, a middle is nothing", () => {
@@ -201,6 +204,40 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
 
     fireEvent.pointerDown(board, { ...TOUCH, clientX: 2, button: 0 });
     fireEvent.pointerCancel(board, { ...TOUCH, clientX: 2 });
+    vi.advanceTimersByTime(LONG_PRESS * 2);
+    fireEvent.pointerUp(board, { ...TOUCH, clientX: 2 });
+
+    expect(spies.mark).not.toHaveBeenCalled();
+    expect(spies.activate).not.toHaveBeenCalled();
+  });
+
+  it("refuses the page's autoscroll on a middle press, and nothing else", () => {
+    const { board } = mount();
+
+    expect(
+      fireEvent.pointerDown(board, { ...MOUSE, clientX: 6, button: 1 }),
+    ).toBe(false);
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 6, button: 1 });
+    expect(
+      fireEvent.pointerDown(board, { ...MOUSE, clientX: 6, button: 0 }),
+    ).toBe(true);
+  });
+
+  it("lets a new press from the same pointer replace one whose release was lost", () => {
+    const { spies, board } = mount();
+
+    fireEvent.pointerDown(board, { ...MOUSE, clientX: 1, button: 2 });
+    fireEvent.pointerDown(board, { ...MOUSE, clientX: 4, button: 0 });
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 4, button: 0 });
+
+    expect(spies.activate.mock.calls).toStrictEqual([[4]]);
+  });
+
+  it("gives up when the pointer capture is lost before the release", () => {
+    const { spies, board } = mount();
+
+    fireEvent.pointerDown(board, { ...TOUCH, clientX: 2, button: 0 });
+    fireEvent.lostPointerCapture(board, { ...TOUCH });
     vi.advanceTimersByTime(LONG_PRESS * 2);
     fireEvent.pointerUp(board, { ...TOUCH, clientX: 2 });
 

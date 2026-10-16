@@ -36,6 +36,20 @@ function open(index: number): void {
   fireEvent.click(cell(index));
 }
 
+function win(seed: number): void {
+  open(FIRST);
+  layMines({ seed, level: "beginner", safe: FIRST }).mines.forEach(
+    (isMine, index) => {
+      if (
+        !isMine &&
+        cell(index).getAttribute("aria-label")?.endsWith(copy.cell.hidden)
+      ) {
+        open(index);
+      }
+    },
+  );
+}
+
 function page(): HTMLElement {
   const main = document.querySelector("main");
   if (main === null) {
@@ -80,7 +94,7 @@ describe("the Campo Minado screen is a static page that plays and records nothin
       screen.getByRole("button", { name: copy.reset.label }),
     ).toHaveAttribute("aria-disabled", "true");
     expect(
-      screen.getByRole("button", { name: copy.tap.reveal, pressed: true }),
+      screen.getByRole("button", { name: copy.tap.open, pressed: true }),
     ).toBeInTheDocument();
   });
 
@@ -187,23 +201,7 @@ describe("the Campo Minado screen is a static page that plays and records nothin
 
   it("ends a win on the card, and Mais um deals the same level again", () => {
     mount();
-    open(FIRST);
-    const { mines } = layMines({ seed: SEED, level: "beginner", safe: FIRST });
-    mines.forEach((isMine, index) => {
-      if (
-        !isMine &&
-        !document.querySelector(
-          `[data-cell-index="${String(index)}"][aria-label*="mina"]`,
-        )
-      ) {
-        const el = document.querySelector<HTMLElement>(
-          `[data-cell-index="${String(index)}"]`,
-        );
-        if (el?.getAttribute("aria-label")?.endsWith("fechada")) {
-          open(index);
-        }
-      }
-    });
+    win(SEED);
 
     expect(page()).toHaveAttribute("data-play-state", "solved");
     expect(
@@ -219,6 +217,76 @@ describe("the Campo Minado screen is a static page that plays and records nothin
       }),
     );
     expect(document.querySelectorAll("[data-cell-index]")).toHaveLength(81);
+  });
+
+  it("glows before the card on every win, not only the first", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: false })),
+    );
+    mount();
+    const again = () =>
+      screen.queryByRole("button", {
+        name: messages.freePlay.solved.again.minesweeper,
+      });
+
+    win(SEED);
+    expect(again()).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(again()).toBeInTheDocument();
+
+    fireEvent.click(again() as HTMLElement);
+    win(NEXT_SEED);
+    expect(again()).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(again()).toBeInTheDocument();
+  });
+
+  it("keeps the board when the level already chosen is chosen again, and deals only when it changes", () => {
+    const pick = vi.fn(seeds(SEED, NEXT_SEED));
+    mount(pick);
+    open(FIRST);
+    const closed = () =>
+      document.querySelectorAll('[aria-label$="fechada"]').length;
+    const before = closed();
+    expect(before).toBeLessThan(81);
+
+    fireEvent.click(screen.getByRole("radio", { checked: true }));
+    expect(closed()).toBe(before);
+    expect(pick).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole("radio", {
+        name: copy.levels.aria(copy.levels.intermediate, 16, 16, 40),
+      }),
+    );
+    expect(pick).toHaveBeenCalledTimes(2);
+    expect(closed()).toBe(256);
+  });
+
+  it("cycles a closed cell through bandeira, interrogação and back when Marcas (?) is on", () => {
+    writeSettings({
+      ...readSettings(),
+      games: {
+        ...readSettings().games,
+        minesweeper: { questionMarks: true },
+      },
+    });
+    mount();
+    const name = () => cell(0).getAttribute("aria-label") ?? "";
+
+    cell(0).focus();
+    fireEvent.keyDown(cell(0), { key: "f" });
+    expect(name()).toMatch(new RegExp(`${copy.cell.flag}$`));
+    fireEvent.keyDown(cell(0), { key: "f" });
+    expect(name()).toMatch(new RegExp(`${copy.cell.question}$`));
+    fireEvent.keyDown(cell(0), { key: "f" });
+    expect(name()).toMatch(new RegExp(`${copy.cell.hidden}$`));
   });
 
   it("fetches nothing and writes nothing but the settings, through a whole game", () => {

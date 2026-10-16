@@ -6,7 +6,7 @@ import type { TapMode } from "./minefield";
 const copy = minesweeperMessages.tap;
 
 const MODES = [
-  { mode: "reveal", label: copy.reveal },
+  { mode: "open", label: copy.open },
   { mode: "flag", label: copy.flag },
 ] as const;
 

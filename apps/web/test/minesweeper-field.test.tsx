@@ -36,10 +36,7 @@ function lostAt(level: MinesweeperLevel, first: number): MinesweeperState {
   return openMinesweeperCell(start, mine);
 }
 
-function mountField(
-  game: MinesweeperState,
-  tapMode: "reveal" | "flag" = "reveal",
-) {
+function mountField(game: MinesweeperState, tapMode: "open" | "flag" = "open") {
   const spies = { activate: vi.fn(), mark: vi.fn(), chord: vi.fn() };
   const view = render(
     <Minefield
@@ -244,6 +241,28 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
 
     fireEvent.click(cellAt(3));
     expect(spies.activate.mock.calls).toStrictEqual([[3]]);
+  });
+
+  it("lets a tap on an open number chord in Bandeira, and a tap on a closed cell flag", () => {
+    const game = played("beginner", 40);
+    const number = game.open.findIndex(
+      (isOpen, i) => isOpen && (game.field?.counts[i] ?? 0) > 0,
+    );
+    const closed = game.open.findIndex((isOpen) => !isOpen);
+    const { container, spies } = mountField(game, "flag");
+    const board = container.firstElementChild as HTMLElement;
+    const tap = (clientX: number) => {
+      const touch = { pointerId: 1, pointerType: "touch", button: 0, clientX };
+      fireEvent.pointerDown(board, touch);
+      fireEvent.pointerUp(board, touch);
+    };
+
+    tap(number);
+    expect(spies.activate.mock.calls).toStrictEqual([[number]]);
+    expect(spies.mark).not.toHaveBeenCalled();
+
+    tap(closed);
+    expect(spies.mark.mock.calls).toStrictEqual([[closed]]);
   });
 
   it("does not open twice for one mouse click: the click that follows a pointer press is ignored", () => {

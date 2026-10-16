@@ -86,8 +86,11 @@
   transform: rotate(0.4deg);
 }
 .card:nth-child(7) {
-  grid-column: 3 / span 2;
   transform: rotate(-0.3deg);
+}
+
+.card:last-child:nth-child(3n + 1) {
+  grid-column: 3 / span 2;
 }
 
 /* see ADR-0041 */

@@ -1,10 +1,11 @@
-import { type ReactElement, type ReactNode } from "react";
+import { type CSSProperties, type ReactElement, type ReactNode } from "react";
 import Link from "next/link";
 
 import { FREE_HINTS_PER_PUZZLE, type Game } from "@miolos/core";
 
 import { Wordmark } from "../components/brand-mark";
 import { lazyChunk } from "../components/lazy-chunk";
+import type { FreePlayGame } from "../free-play/catalog";
 import { messages } from "../i18n";
 import { useSettings } from "../settings/settings";
 import {
@@ -14,14 +15,27 @@ import {
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
 import { PlayTitle, type PlayTitleNote } from "./play-title";
-import { ResetControl, ResetPlaceholder } from "./reset-control";
+import {
+  ResetControl,
+  ResetPlaceholder,
+  type ResetCopy,
+} from "./reset-control";
 import screen from "./screen.module.css";
 import { TimerReadout } from "./timer-readout";
 import { UndoControl, UndoPlaceholder } from "./undo-control";
 import type { BoardEdits } from "./undo";
 
 export type DailyChromeGame = Exclude<Game, "termo">;
-export type PlayChromeGame = DailyChromeGame | "minesweeper";
+export type PlayChromeGame = Exclude<FreePlayGame, "termo">;
+
+const ACCENTS: Readonly<Record<PlayChromeGame, CSSProperties>> = {
+  sudoku: accentVars("sudoku"),
+  nonogram: accentVars("nonogram"),
+  binairo: accentVars("binairo"),
+  crossword: accentVars("crossword"),
+  queens: accentVars("queens"),
+  minesweeper: accentVars("minesweeper"),
+};
 
 const BLANK_READOUT = "\u00a0";
 
@@ -42,6 +56,7 @@ export interface PlayChromeReadouts {
   readonly progressLong: string;
   readonly onReset: BoardEdits["onReset"];
   readonly onUndo?: BoardEdits["onUndo"];
+  readonly resetCopy?: ResetCopy;
   readonly hint: {
     readonly ready: boolean;
     readonly used: number;
@@ -141,7 +156,7 @@ export function PlayScreenChrome({
   return (
     <main
       className={`${screen.page} ${pageModifier}`}
-      style={accentVars(game)}
+      style={ACCENTS[game]}
       data-play-state={state.kind}
     >
       <header className={screen.topBar}>
@@ -230,7 +245,7 @@ export function PlayScreenChrome({
             )}
             <ResetControl
               onReset={readouts.onReset}
-              copy={"reset" in play ? play.reset : messages.play.reset}
+              copy={readouts.resetCopy}
             />
             <GameSettingsButton game={game} clock={clockSetting !== "none"} />
           </>

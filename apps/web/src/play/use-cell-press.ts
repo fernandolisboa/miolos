@@ -6,14 +6,14 @@ import {
 } from "react";
 
 import { pressOf, type Press } from "./brush";
-import { cellIndexAt } from "./cell-index-at";
+import { capturePointer, cellIndexAt } from "./cell-index-at";
 
-export type CellPress = Press | "middle";
+type CellPress = Press | "middle";
 
 const LONG_PRESS_MS = 350;
 const TAP_SLOP_PX = 10;
 
-export function cellPressOf(event: {
+function cellPressOf(event: {
   readonly button: number;
   readonly pointerType: string;
 }): CellPress | null {
@@ -23,7 +23,6 @@ export function cellPressOf(event: {
 interface ActivePress {
   readonly pointerId: number;
   readonly kind: CellPress;
-  readonly index: number;
   readonly x: number;
   readonly y: number;
   both: boolean;
@@ -31,7 +30,7 @@ interface ActivePress {
   timer: ReturnType<typeof setTimeout> | undefined;
 }
 
-export interface CellPressInput {
+interface CellPressInput {
   readonly onActivate: (index: number) => void;
   readonly onMark: (index: number) => void;
   readonly onChord: (index: number) => void;
@@ -42,14 +41,13 @@ interface CellPressHandlers {
   readonly onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => void;
+  readonly onLostPointerCapture: (e: ReactPointerEvent<HTMLDivElement>) => void;
   readonly onContextMenu: (e: ReactMouseEvent<HTMLDivElement>) => void;
 }
 
 const BOTH_BUTTONS = 3;
 
-export function useCellPress(input: CellPressInput): {
-  readonly handlers: CellPressHandlers;
-} {
+export function useCellPress(input: CellPressInput): CellPressHandlers {
   const latest = useRef(input);
   const active = useRef<ActivePress | null>(null);
 
@@ -71,18 +69,19 @@ export function useCellPress(input: CellPressInput): {
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     const kind = cellPressOf(event);
     const index = cellIndexAt(event.clientX, event.clientY);
+    if (active.current?.pointerId === event.pointerId) {
+      settle();
+    }
     if (kind === null || index === null || active.current !== null) {
       return;
     }
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // jsdom has no pointer capture, and a pen can release before it is taken.
+    if (kind === "middle") {
+      event.preventDefault();
     }
+    capturePointer(event);
     const press: ActivePress = {
       pointerId: event.pointerId,
       kind,
-      index,
       x: event.clientX,
       y: event.clientY,
       both: (event.buttons & BOTH_BUTTONS) === BOTH_BUTTONS,
@@ -133,19 +132,20 @@ export function useCellPress(input: CellPressInput): {
     }
   };
 
+  const release = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (active.current?.pointerId === event.pointerId) {
+      settle();
+    }
+  };
+
   return {
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerCancel: (event) => {
-        if (active.current?.pointerId === event.pointerId) {
-          settle();
-        }
-      },
-      onContextMenu: (event) => {
-        event.preventDefault();
-      },
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel: release,
+    onLostPointerCapture: release,
+    onContextMenu: (event) => {
+      event.preventDefault();
     },
   };
 }

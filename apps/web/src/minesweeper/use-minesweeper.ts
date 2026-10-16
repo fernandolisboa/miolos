@@ -70,9 +70,11 @@ export function useMinesweeper(deps?: MinesweeperDeps): Minesweeper {
     }, [level, draw]),
     chooseLevel: useCallback(
       (next) => {
-        dispatch({ type: "new", level: next, seed: draw(), now: Date.now() });
+        if (next !== level) {
+          dispatch({ type: "new", level: next, seed: draw(), now: Date.now() });
+        }
       },
-      [draw],
+      [level, draw],
     ),
   };
 }

@@ -15,25 +15,23 @@ const SHADOW = pixels(
 const FIELD = bodyOf(MINE_CSS, ".field");
 const GAP = pixels(decl(FIELD, "gap"));
 const FIELD_PADDING = pixels(decl(FIELD, "padding"));
+const PAGE = bodyOf(MINE_CSS, ".pageMinefield");
+const PITCH = pixels(decl(PAGE, "--pitch"));
+const CHROME = (() => {
+  const match = /^calc\(2 \* var\(--space-4\) \+ (\d+)px\)$/.exec(
+    decl(PAGE, "--chrome") ?? "",
+  );
+  if (match === null) {
+    throw new Error("`--chrome` is not twice the card padding plus a constant");
+  }
+  return 2 * CARD_PADDING + Number(match[1]);
+})();
 
 const LEVELS = [
-  ["pageBeginner", 9],
-  ["pageIntermediate", 16],
-  ["pageExpert", 30],
+  ["pageBeginner", ".beginner", 9],
+  ["pageIntermediate", ".intermediate", 16],
+  ["pageExpert", ".expert", 30],
 ] as const;
-
-function calcPx(value: string | undefined): number {
-  const match =
-    /^calc\((\d+) \* (\d+)px \+ 2 \* var\(--space-4\) \+ (\d+)px\)$/.exec(
-      value ?? "",
-    );
-  if (match === null) {
-    throw new Error(`\`${String(value)}\` is not cells * pitch + the card`);
-  }
-  return (
-    Number(match[1]) * Number(match[2]) + 2 * CARD_PADDING + Number(match[3])
-  );
-}
 
 function renderedCell(card: number, columns: number): number {
   const inside =
@@ -45,16 +43,16 @@ function renderedCell(card: number, columns: number): number {
   return inside / columns;
 }
 
+function columnsOf(page: string, field: string): number {
+  const group = bodyOf(MINE_CSS, `.${page},\n${field}`);
+  return Number(decl(group, "--columns"));
+}
+
 describe("the board well can hold a board that outgrows it, and no other game notices (T-WEB-S889)", () => {
   const well = bodyOf(SHARED_CSS, ".boardWell");
 
-  it("scrolls sideways only when a game asks, centres safely, and leaves room for the card's shadow", () => {
-    expect(decl(well, "overflow-x")).toBe("var(--board-overflow-x, visible)");
-    expect(decl(well, "padding-inline-end")).toBe(
-      "var(--board-shadow-slack, 0px)",
-    );
-    expect(well).toMatch(/align-items:\s*safe center;/);
-    expect(well).toMatch(/align-items:\s*center;\s*align-items:\s*safe center/);
+  it("leaves scrolling, alignment and the shadow's room to the game that needs them", () => {
+    expect(well).not.toMatch(/overflow|padding-inline-end|safe center/);
   });
 
   it("lets a floor win over the height-and-width fit", () => {
@@ -72,9 +70,7 @@ describe("the board well can hold a board that outgrows it, and no other game no
       "src/termo/termo-board.module.css",
       "src/crossword/crossword-board.module.css",
     ]) {
-      expect(stylesheet(sheet), sheet).not.toMatch(
-        /--board-(floor-side|overflow-x|shadow-slack)/,
-      );
+      expect(stylesheet(sheet), sheet).not.toMatch(/--board-floor-side/);
     }
   });
 });
@@ -96,52 +92,66 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
   });
 
   it("scrolls the well, squares the card and reserves the shadow", () => {
-    const page = bodyOf(MINE_CSS, ".pageMinefield");
+    const well = bodyOf(MINE_CSS, ".pageMinefield :has(> [data-board-card])");
 
-    expect(decl(page, "--board-overflow-x")).toBe("auto");
-    expect(decl(page, "--grid-card-rot")).toBe("0deg");
-    expect(pixels(decl(page, "--board-shadow-slack"))).toBe(SHADOW);
-    expect(pixels(decl(page, "--board-below"))).toBe(SHADOW);
+    expect(decl(well, "overflow-x")).toBe("auto");
+    expect(decl(well, "align-items")).toBe("safe center");
+    expect(pixels(decl(well, "padding-inline-end"))).toBe(SHADOW);
+    expect(decl(PAGE, "--grid-card-rot")).toBe("0deg");
+    expect(pixels(decl(PAGE, "--board-below"))).toBe(SHADOW);
   });
 
   it.each(LEVELS)(
-    "%s: a rendered cell is never under 24px, gaps and borders counted, and the well is as tall as the floor",
-    (page, columns) => {
-      const body = bodyOf(MINE_CSS, `.${page}`);
-      const floor = calcPx(decl(body, "--board-floor-side"));
+    "%s: its one floor is its columns at 25px plus the card, and no cell renders under 24px",
+    (page, field, columns) => {
+      expect(columnsOf(page, field)).toBe(columns);
+      expect(decl(PAGE, "--floor")).toBe(
+        "calc(var(--columns) * var(--pitch) + var(--chrome))",
+      );
+      expect(decl(PAGE, "--board-floor-side")).toBe("var(--floor)");
+      expect(decl(PAGE, "--board-min")).toBe("var(--floor)");
 
+      const floor = columns * PITCH + CHROME;
       expect(renderedCell(floor, columns)).toBeGreaterThanOrEqual(CELL_FLOOR);
       expect(renderedCell(floor, columns)).toBeLessThan(CELL_FLOOR + 1);
-      expect(calcPx(decl(body, "--board-min"))).toBe(floor);
     },
   );
 
   it("holds Especialista at its floor in both views: its ceiling is its floor", () => {
-    const body = bodyOf(MINE_CSS, ".pageExpert");
-
-    expect(calcPx(decl(body, "--board-max"))).toBe(
-      calcPx(decl(body, "--board-floor-side")),
+    expect(decl(bodyOf(MINE_CSS, ".pageExpert"), "--board-max")).toBe(
+      "var(--floor)",
     );
   });
 
-  it("turns Especialista into 16 columns of 30 rows when 30 cells no longer fit the well", () => {
-    const query = bodyOf(MINE_CSS, "@container (max-width: 785px)");
-    const wide = calcPx(
-      decl(bodyOf(MINE_CSS, ".pageExpert"), "--board-floor-side"),
-    );
+  it("turns Especialista into 16 columns of 30 rows when 30 cells no longer fit a laptop-narrow well", () => {
+    const media = bodyOf(MINE_CSS, "@media (max-width: 1279px)");
+    const query = bodyOf(media, "@container (max-width: 785px)");
 
-    expect(785).toBe(wide - 1);
+    expect(785).toBe(30 * PITCH + CHROME - 1);
     const turned = bodyOf(query, ".expert:not(.finished)");
-    expect(decl(turned, "grid-template-columns")).toBe(
-      "repeat(16, minmax(0, 1fr))",
-    );
+    expect(decl(turned, "--columns")).toBe("16");
     expect(decl(turned, "grid-template-rows")).toBe("repeat(30, auto)");
     expect(decl(turned, "grid-auto-flow")).toBe("column");
-    expect(decl(bodyOf(MINE_CSS, ".expert"), "grid-auto-flow")).toBeUndefined();
-    const card = calcPx(
-      decl(bodyOf(query, ".pageExpert [data-board-card]"), "width"),
+    expect(decl(FIELD, "grid-template-columns")).toBe(
+      "repeat(var(--columns), minmax(0, 1fr))",
     );
-    expect(renderedCell(card, 16)).toBeGreaterThanOrEqual(CELL_FLOOR);
-    expect(renderedCell(card, 16)).toBeLessThan(CELL_FLOOR + 1);
+    expect(decl(bodyOf(MINE_CSS, ".field"), "grid-auto-flow")).toBeUndefined();
+    expect(decl(bodyOf(query, ".pageExpert [data-board-card]"), "width")).toBe(
+      "calc(16 * var(--pitch) + var(--chrome))",
+    );
+    expect(renderedCell(16 * PITCH + CHROME, 16)).toBeGreaterThanOrEqual(
+      CELL_FLOOR,
+    );
+  });
+
+  it("keeps Especialista landscape from 1280px, overhanging its column instead of scrolling it", () => {
+    const media = bodyOf(MINE_CSS, "@media (min-width: 1280px)");
+    const well = bodyOf(media, ".pageExpert :has(> [data-board-card])");
+
+    expect(decl(well, "overflow-x")).toBe("visible");
+    expect(decl(well, "align-items")).toBe("center");
+    expect(decl(bodyOf(media, ".pageExpert"), "--board-min")).toBe(
+      "calc(16 * var(--pitch) + var(--chrome))",
+    );
   });
 });

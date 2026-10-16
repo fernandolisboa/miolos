@@ -20,13 +20,17 @@ function readouts(onReset: (() => void) | null): PlayChromeReadouts {
   };
 }
 
+function minefieldReadouts(onReset: (() => void) | null): PlayChromeReadouts {
+  return { ...readouts(onReset), resetCopy: copy.reset };
+}
+
 function minefieldChrome(onReset: (() => void) | null) {
   return render(
     <FreePlayChrome
       game="minesweeper"
       pageModifier="page-minesweeper"
       clock={{ elapsedMs: 65_000 }}
-      state={{ kind: "playing", readouts: readouts(onReset) }}
+      state={{ kind: "playing", readouts: minefieldReadouts(onReset) }}
     >
       <div className={shared.gridCard} />
     </FreePlayChrome>,
@@ -78,7 +82,7 @@ describe("the chrome serves Campo Minado with no hint, no undo and its own Novo 
       <FreePlayChrome
         game="minesweeper"
         pageModifier="page-minesweeper"
-        state={{ kind: "playing", readouts: readouts(null) }}
+        state={{ kind: "playing", readouts: minefieldReadouts(null) }}
       >
         <div />
       </FreePlayChrome>,

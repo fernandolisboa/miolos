@@ -225,7 +225,7 @@ describe("a failed free Rainhas offers a retry that recovers (T-WEB-S481)", () =
   });
 });
 
-describe("the six free-play cards lay out without an orphan (T-WEB-S482)", () => {
+describe("the free-play cards lay out without an orphan (T-WEB-S482)", () => {
   const index = stylesheet("app/modo-livre/page.module.css");
   const mobile = bodyOf(index, "@media (max-width: 768px)");
   const ROTATION = /^rotate\(-?\d+(\.\d+)?deg\)$/;
@@ -236,9 +236,7 @@ describe("the six free-play cards lay out without an orphan (T-WEB-S482)", () =>
       "repeat(6, 1fr)",
     );
     expect(decl(bodyOf(index, ".card"), "grid-column")).toBe("span 2");
-    expect(index).not.toMatch(
-      /\.card:nth-child\((?!7\))[^)]*\)\s*\{[^}]*grid-column/,
-    );
+    expect(index).not.toMatch(/\.card:nth-child\([^)]*\)\s*\{[^}]*grid-column/);
   });
 
   it("fills the single column on a phone", () => {

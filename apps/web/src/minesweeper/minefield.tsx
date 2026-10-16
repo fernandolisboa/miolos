@@ -15,6 +15,7 @@ import {
 
 import { minesweeperMessages } from "./messages";
 import { isShortcut, keyMove, movedSelection } from "../play/grid-selection";
+import { cellIndexOf } from "../play/cell-index-at";
 import { useCellPress } from "../play/use-cell-press";
 import { FlagGlyph, MineGlyph } from "./glyphs";
 import styles from "./minefield.module.css";
@@ -22,7 +23,7 @@ import { cellView, type CellView } from "./view";
 
 const copy = minesweeperMessages;
 
-export type TapMode = "reveal" | "flag";
+export type TapMode = "open" | "flag";
 
 const LEVEL_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
   beginner: styles.beginner,
@@ -120,6 +121,26 @@ const Cell = memo(function Cell({
 
 // Turned, the grid draws board columns as rows, so a key moves on the screen
 // while the index stays the board's.
+function toViewIndex(
+  index: number,
+  rows: number,
+  columns: number,
+  turned: boolean,
+): number {
+  return turned
+    ? (index % columns) * rows + Math.floor(index / columns)
+    : index;
+}
+
+function fromViewIndex(
+  index: number,
+  rows: number,
+  columns: number,
+  turned: boolean,
+): number {
+  return turned ? (index % rows) * columns + Math.floor(index / rows) : index;
+}
+
 function movedIndex(
   key: string,
   index: number,
@@ -132,13 +153,13 @@ function movedIndex(
   if (move === null) {
     return null;
   }
-  const row = Math.floor(index / columns);
-  const column = index % columns;
-  const at = turned ? column * viewColumns + row : index;
-  const next = movedSelection(at, move, viewRows, viewColumns);
-  return turned
-    ? (next % viewColumns) * columns + Math.floor(next / viewColumns)
-    : next;
+  const at = toViewIndex(index, rows, columns, turned);
+  return fromViewIndex(
+    movedSelection(at, move, viewRows, viewColumns),
+    rows,
+    columns,
+    turned,
+  );
 }
 
 export const Minefield = memo(function Minefield({
@@ -158,7 +179,13 @@ export const Minefield = memo(function Minefield({
   const fieldRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(0);
   const press = useCellPress({
-    onActivate: tapMode === "flag" ? onMark : onActivate,
+    onActivate: (index) => {
+      if (tapMode === "flag" && !game.open[index]) {
+        onMark(index);
+      } else {
+        onActivate(index);
+      }
+    },
     onMark,
     onChord,
   });
@@ -174,12 +201,10 @@ export const Minefield = memo(function Minefield({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const field = fieldRef.current;
-    const cell =
-      event.target instanceof Element
-        ? event.target.closest("[data-cell-index]")
-        : null;
-    const index = Number(cell?.getAttribute("data-cell-index"));
-    if (field === null || isShortcut(event) || !Number.isInteger(index)) {
+    const index = cellIndexOf(
+      event.target instanceof Element ? event.target : null,
+    );
+    if (field === null || isShortcut(event) || index === null) {
       return;
     }
     if (event.key.toLowerCase() === "f") {
@@ -204,7 +229,7 @@ export const Minefield = memo(function Minefield({
       aria-label={copy.boardAria(rows, columns)}
       className={`${styles.field} ${LEVEL_CLASS[game.level] ?? ""}`}
       onKeyDown={onKeyDown}
-      {...press.handlers}
+      {...press}
     >
       {game.open.map((_open, index) => (
         <Cell

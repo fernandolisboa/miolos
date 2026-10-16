@@ -334,9 +334,7 @@ describe("the reset confirm opens over the hint and never moves the page (T-WEB-
   });
 
   it("renders the confirm inside the control, where the trigger was", () => {
-    const { container } = render(
-      <ResetControl onReset={() => undefined} copy={messages.play.reset} />,
-    );
+    const { container } = render(<ResetControl onReset={() => undefined} />);
     const control = container.querySelector(`.${resetStyles.control ?? ""}`);
 
     fireEvent.click(dom.getByRole("button", { name: "Recomeçar" }));

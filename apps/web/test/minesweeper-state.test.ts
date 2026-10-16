@@ -100,20 +100,67 @@ describe("the clock starts at the first open, stops at the end, and the counter 
     expect(minesLeft(play.game)).toBe(0);
   });
 
-  it("chords on an open number through the same activation", () => {
+  it("opens the neighbours of an open number whose mines are all flagged, and loses on a wrong flag", () => {
     const opened = open(fresh(), 40, T0);
-    const field = opened.game.field;
+    const { counts, mines } = opened.game.field ?? { counts: [], mines: [] };
+    const around = (index: number) =>
+      [-10, -9, -8, -1, 1, 8, 9, 10]
+        .map((step) => index + step)
+        .filter(
+          (cell) =>
+            cell >= 0 && cell < 81 && Math.abs((cell % 9) - (index % 9)) <= 1,
+        );
     const number = opened.game.open.findIndex(
-      (isOpen, index) => isOpen && (field?.counts[index] ?? 0) > 0,
+      (isOpen, index) =>
+        isOpen &&
+        (counts[index] ?? 0) > 0 &&
+        around(index).some((cell) => !opened.game.open[cell] && !mines[cell]),
     );
     expect(number).toBeGreaterThanOrEqual(0);
+    const flag = (play: MinesweeperPlay, cells: readonly number[]) =>
+      cells.reduce(
+        (acc, index) =>
+          minesweeperReducer(acc, {
+            type: "mark",
+            index,
+            questionMarks: false,
+          }),
+        play,
+      );
+    const neighbours = around(number);
+    const safe = neighbours.filter(
+      (cell) => !opened.game.open[cell] && !mines[cell],
+    );
+    const dangerous = neighbours.filter((cell) => mines[cell]);
 
-    const chorded = minesweeperReducer(opened, {
-      type: "chord",
+    const right = minesweeperReducer(flag(opened, dangerous), {
+      type: "activate",
       index: number,
       now: T0 + 1,
     });
-    expect(chorded.game).toBe(opened.game);
+    expect(safe.every((cell) => right.game.open[cell])).toBe(true);
+    expect(right.game.status).not.toBe("lost");
+
+    const wrongFlags = [safe[0] ?? 0, ...dangerous.slice(1)];
+    const wrong = minesweeperReducer(flag(opened, wrongFlags), {
+      type: "activate",
+      index: number,
+      now: T0 + 1,
+    });
+    expect(wrong.game.status).toBe("lost");
+    expect(wrong.timer.runningSince).toBeNull();
+  });
+
+  it("a first open that clears the whole board wins with the clock never started", () => {
+    const won = minesweeperReducer(initMinesweeper("beginner", 66_614, T0), {
+      type: "activate",
+      index: 0,
+      now: T0 + 3000,
+    });
+
+    expect(won.game.status).toBe("won");
+    expect(won.timer.runningSince).toBeNull();
+    expect(elapsedMs(won.timer, T0 + 99_000)).toBe(0);
   });
 
   it("a new game takes the level and seed given, and a stopped clock", () => {

@@ -29,7 +29,7 @@ export const minesweeperMessages = {
   },
   tap: {
     label: "O que o toque faz",
-    reveal: "Revelar",
+    open: "Abrir",
     flag: "Bandeira",
   },
 } as const;

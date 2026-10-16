@@ -6,6 +6,7 @@ import {
 } from "@miolos/games/minesweeper";
 import { useState } from "react";
 
+import { messages } from "../i18n";
 import { minesweeperMessages } from "../minesweeper/messages";
 import {
   FinishedMinefield,
@@ -27,7 +28,7 @@ import { FreePlaySolvedCard } from "./solved-card";
 
 const copy = minesweeperMessages;
 
-const LEVELS = ["beginner", "intermediate", "expert"] as const;
+const LEVELS = Object.keys(MINESWEEPER_LEVELS) as readonly MinesweeperLevel[];
 
 const PAGE_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
   beginner: minefield.pageBeginner,
@@ -35,7 +36,7 @@ const PAGE_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
   expert: minefield.pageExpert,
 };
 
-function levelChoice(
+function minesweeperLevelChoice(
   level: MinesweeperLevel,
   onChange: (level: MinesweeperLevel) => void,
 ): FreePlayChoice<MinesweeperLevel> {
@@ -58,12 +59,13 @@ export function MinesweeperFreeScreen({
   readonly deps?: MinesweeperDeps;
 }) {
   const mines = useMinesweeper(deps);
-  const [tapMode, setTapMode] = useState<TapMode>("reveal");
+  const [tapMode, setTapMode] = useState<TapMode>("open");
   const { game } = mines.play;
-  const choice = levelChoice(game.level, mines.chooseLevel);
+  const choice = minesweeperLevelChoice(game.level, mines.chooseLevel);
 
   return (
     <EndingStage
+      key={`${game.level}:${String(game.seed)}`}
       over={game.status === "won" || game.status === "lost"}
       won={game.status === "won"}
       ending={() => (
@@ -96,6 +98,7 @@ export function MinesweeperFreeScreen({
             progressLong: copy.progressLong(mines.minesLeft),
             hint: null,
             onReset: game.status === "ready" ? null : mines.newGame,
+            resetCopy: messages.games.minesweeper.play.reset,
           },
         }}
       >

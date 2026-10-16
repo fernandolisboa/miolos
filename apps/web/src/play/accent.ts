@@ -12,10 +12,16 @@ export const ACCENTS: Readonly<Record<FreePlayGame, string>> = {
   minesweeper: "var(--accent-minesweeper)",
 };
 
+const INKS_ON_ACCENT: Readonly<Record<FreePlayGame, string>> = {
+  termo: "var(--paper-desk)",
+  sudoku: "var(--paper-desk)",
+  nonogram: "var(--paper-card)",
+  binairo: "var(--paper-desk)",
+  crossword: "var(--paper-desk)",
+  queens: "var(--paper-desk)",
+  minesweeper: "var(--paper-desk)",
+};
+
 export function accentVars(game: FreePlayGame): CSSProperties {
-  return {
-    "--accent": ACCENTS[game],
-    "--ink-on-accent":
-      game === "nonogram" ? "var(--paper-card)" : "var(--paper-desk)",
-  };
+  return { "--accent": ACCENTS[game], "--ink-on-accent": INKS_ON_ACCENT[game] };
 }

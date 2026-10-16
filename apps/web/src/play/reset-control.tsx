@@ -2,9 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { messages } from "../i18n";
 import styles from "./reset-control.module.css";
 
-interface ResetCopy {
+export interface ResetCopy {
   readonly label: string;
   readonly question: string;
   readonly cancel: string;
@@ -12,10 +13,10 @@ interface ResetCopy {
 
 export function ResetControl({
   onReset,
-  copy,
+  copy = messages.play.reset,
 }: {
   readonly onReset: (() => void) | null;
-  readonly copy: ResetCopy;
+  readonly copy?: ResetCopy;
 }) {
   const [confirming, setConfirming] = useState(false);
   const questionId = useId();

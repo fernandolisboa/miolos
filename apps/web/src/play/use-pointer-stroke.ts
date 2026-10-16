@@ -6,7 +6,7 @@ import {
 } from "react";
 
 import { pressOf, type Press } from "./brush";
-import { cellIndexAt } from "./cell-index-at";
+import { capturePointer, cellIndexAt } from "./cell-index-at";
 import {
   cellsAfter,
   projectOnLine,
@@ -120,16 +120,7 @@ export function usePointerStroke(input: {
     anchorAt.current = { x: event.clientX, y: event.clientY };
     axis.current = null;
     line.current = straight;
-    let captured = false;
-    if (painting) {
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        captured = true;
-      } catch {
-        // jsdom does not implement pointer capture, and a pen can release
-        // before it is taken; capture is only an optimisation here.
-      }
-    }
+    const captured = painting && capturePointer(event);
     if (!captured) {
       armWindowEnd();
     }
