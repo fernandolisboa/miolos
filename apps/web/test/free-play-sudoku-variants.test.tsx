@@ -12,7 +12,7 @@ import { flushGeneration } from "./free-generation";
 
 const SEED = 20_261_016;
 
-// see ADR-0055: slowest solve alone, 3866 ms (3 runs) x 4 = 15464, rounded up to 5000
+// see ADR-0055: slowest solve in the full web suite, 4145 ms x 4 = 16580, rounded up to 20000
 const SOLVE_TIMEOUT = 20_000;
 
 const variant = messages.freePlay.sudokuVariant;
@@ -240,7 +240,7 @@ describe("the free Sudoku layout is parsed at the boundary (T-WEB-S862)", () => 
     expect(playState(container)).toBe("error");
   });
 
-  it("freezes the parsed layout at every level", async () => {
+  it("freezes the parsed layout at every depth", async () => {
     const input = { level: "leve", variant: "diagonal" } as const;
     const { deps } = spiedDeps();
     const { result } = renderHook(() => useFreeSudoku(input, deps));
