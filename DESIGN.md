@@ -90,7 +90,7 @@ Ships as a device preference (`prefers-color-scheme`, overridable per-device, [A
 
 The Rainhas violet was placed by distance: its CIE ΔE76 to every other accent is at least 25 in both themes. The nearest are Cruzadinha plum (26.27 light, 28.08 dark) and Sudoku ink-blue (26.78 light, 28.95 dark) (`T-WEB-S448a`). `--paper-desk` on it is 5.1756:1 light and 6.6724:1 dark (`T-WEB-S299`, `T-WEB-S299a`).
 
-The Campo Minado teal was placed the same way: ΔE76 ≥ 25 to every other accent in both themes. The nearest are Binairo moss-green (25.38 light, 31.05 dark) and Sudoku ink-blue (29.54 light, 34.51 dark) (`T-WEB-S926`). `--paper-desk` on it is 5.2654:1 light (`T-WEB-S299`).
+The Campo Minado teal was placed the same way: ΔE76 ≥ 25 to every other accent in both themes. The nearest are Binairo moss-green (25.38 light, 31.05 dark) and Sudoku ink-blue (29.54 light, 34.51 dark) (`T-WEB-S926`). `--paper-desk` on it is 5.2654:1 light and 6.0543:1 dark (`T-WEB-S299`, `T-WEB-S299a`).
 
 The Rainhas regions are nine paper tints, `--queens-region-1…9`. Light: `#EECFAE` `#F8C8D0` `#C1DCBF` `#B8DAE7` `#E7CDE4` `#FACABB` `#B3DDD4` `#D8D6B0` `#CDD4EC`. Dark: `#3F301D` `#462B32` `#253727` `#1C363F` `#3C2E3D` `#462C25` `#1A3734` `#33341E` `#2C3242`. On every tint `--ink` clears 11.29:1 light and 9.94:1 dark, the `--accent-app` conflict ring 4.54:1 and 3.29:1, and the violet hint ring 3.89:1 and 4.57:1 (`T-WEB-S457`). Colour is never a region's only carrier: a 2 px `--ink` boundary and the cell's name carry it too ([ADR-0092](./docs/adr/0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md)).
 

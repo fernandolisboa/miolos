@@ -128,21 +128,26 @@ export function ConclusionChunkFallback({
 export function resilientConclusion<P extends object>(
   load: () => Promise<ComponentType<P>>,
   fallbackOf: (props: P) => ReactNode,
-): ComponentType<P> {
+): { readonly Conclusion: ComponentType<P>; readonly preload: () => void } {
   const Lazy = nextDynamic(load, {
     ssr: false,
     loading: ConclusionLoading,
   });
-  return function ResilientConclusion(props: P) {
-    return (
-      <ConclusionChunkBoundary
-        retry={load}
-        recovered={(Loaded) => <Loaded {...props} />}
-        fallback={fallbackOf(props)}
-      >
-        <Lazy {...props} />
-      </ConclusionChunkBoundary>
-    );
+  return {
+    Conclusion: function ResilientConclusion(props: P) {
+      return (
+        <ConclusionChunkBoundary
+          retry={load}
+          recovered={(Loaded) => <Loaded {...props} />}
+          fallback={fallbackOf(props)}
+        >
+          <Lazy {...props} />
+        </ConclusionChunkBoundary>
+      );
+    },
+    preload: () => {
+      void load().catch(() => undefined);
+    },
   };
 }
 
@@ -169,17 +174,16 @@ export function remoteConclusionFallback(props: RemoteConclusionViewProps) {
   );
 }
 
-export const ConclusionView = resilientConclusion<ConclusionViewProps>(
+const local = resilientConclusion<ConclusionViewProps>(
   async () => (await import("./conclusion-view")).ConclusionView,
   localConclusionFallback,
 );
+
+export const ConclusionView = local.Conclusion;
+export const preloadConclusionView = local.preload;
 
 export const RemoteConclusionView =
   resilientConclusion<RemoteConclusionViewProps>(
     async () => (await import("./conclusion-view")).RemoteConclusionView,
     remoteConclusionFallback,
-  );
-
-export function preloadConclusionView(): void {
-  void import("./conclusion-view").catch(() => undefined);
-}
+  ).Conclusion;

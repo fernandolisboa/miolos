@@ -206,7 +206,7 @@
   animation: none;
 }
 
-.pictureRow {
+.figureRow {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -740,7 +740,7 @@
 
   /* Inside the ONE `@media (max-width: 768px)` block this module declares, so
      `bodyOf`'s first-match lookup cannot be handed the wrong body. */
-  .pictureRow {
+  .figureRow {
     margin-top: var(--space-4);
   }
 

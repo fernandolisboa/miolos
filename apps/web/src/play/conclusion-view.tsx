@@ -61,7 +61,8 @@ export function ConclusionView({
   copy,
   result,
   figure,
-  outcome,
+  outcome: given,
+  lost: lostGame = false,
   answer,
 }: {
   readonly game: Game;
@@ -70,8 +71,10 @@ export function ConclusionView({
   readonly result?: ConclusionResult;
   readonly figure?: ReactNode;
   readonly outcome?: ConclusionOutcome;
+  readonly lost?: boolean;
   readonly answer?: ConclusionAnswer;
 }) {
+  const outcome = given ?? playedOutcome(copy, lostGame);
   const snapshot = useRecordSnapshot(game, date);
   const hydrated = snapshot.hydrated;
   const record = snapshot.hydrated ? snapshot.record : undefined;
@@ -193,7 +196,7 @@ export function ConclusionView({
           </div>
         )}
         {figure !== undefined && (
-          <div className={styles.pictureRow}>{figure}</div>
+          <div className={styles.figureRow}>{figure}</div>
         )}
 
         {syncOutcome === "recorded" && (
@@ -245,6 +248,7 @@ export function RemoteConclusionView({
   const stats = useStats();
   const accent = accentVars(game);
   const played = claim.status === "played";
+  const playedStamp = playedOutcome(copy, played);
   const remote = messages.conclusion.remote;
 
   const next = nextPendingDaily((dayGame) => dayState[dayGame]);
@@ -267,8 +271,8 @@ export function RemoteConclusionView({
               played={played}
               guesses={remoteTermoGuesses(stats, date)}
             />
-          ) : played && copy.played !== undefined ? (
-            <OutcomeStamp outcome={copy.played} />
+          ) : playedStamp !== undefined ? (
+            <OutcomeStamp outcome={playedStamp} />
           ) : (
             <RemoteShippedStamp title={copy.title} claim={claim} />
           )}
@@ -302,6 +306,13 @@ export function RemoteConclusionView({
       />
     </main>
   );
+}
+
+function playedOutcome(
+  copy: ConclusionCopy,
+  played: boolean,
+): ConclusionOutcome | undefined {
+  return played ? copy.played : undefined;
 }
 
 export function PictureFigure({

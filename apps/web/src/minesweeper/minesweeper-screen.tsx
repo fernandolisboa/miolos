@@ -12,9 +12,10 @@ import { useServerDayClaim } from "../play/day-state";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useMinesweeperPlay } from "./use-minesweeper-play";
 
-const MinesweeperConclusion = resilientConclusion<
-  Parameters<typeof import("./minesweeper-conclusion").MinesweeperConclusion>[0]
->(
+const {
+  Conclusion: MinesweeperConclusion,
+  preload: preloadMinesweeperConclusion,
+} = resilientConclusion(
   async () => (await import("./minesweeper-conclusion")).MinesweeperConclusion,
   (props) => (
     <ConclusionChunkFallback
@@ -23,10 +24,6 @@ const MinesweeperConclusion = resilientConclusion<
     />
   ),
 );
-
-function preloadMinesweeperConclusion(): void {
-  void import("./minesweeper-conclusion").catch(() => undefined);
-}
 
 export function MinesweeperScreen({
   daily,

@@ -276,12 +276,25 @@ export const crosswordPlayRecordSchema = z
 
 export type CrosswordPlayRecord = z.infer<typeof crosswordPlayRecordSchema>;
 
+export const MINESWEEPER_ENTRIES = [
+  { open: false, mark: null },
+  { open: true, mark: null },
+  { open: false, mark: "flag" },
+  { open: false, mark: "question" },
+] as const;
+
 export const minesweeperPlayRecordSchema = z
   .strictObject({
     ...recordHeaderShape,
     game: z.literal("minesweeper"),
     entries: z
-      .array(z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]))
+      .array(
+        z
+          .number()
+          .int()
+          .min(0)
+          .max(MINESWEEPER_ENTRIES.length - 1),
+      )
       .length(DAILY_MINESWEEPER_SIZE.rows * DAILY_MINESWEEPER_SIZE.columns),
     hit: minesweeperCellIndexSchema.nullable().optional(),
   })

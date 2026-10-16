@@ -396,3 +396,20 @@ describe("what a LATE share may honestly say (T-WEB-S231)", () => {
     }
   });
 });
+
+describe("a lost Campo Minado's late share says played (T-WEB-S931a)", () => {
+  it("the second line is the played word, not the clock", async () => {
+    writePlayRecord({ ...minesweeper(), hit: 3 });
+
+    const text = await sharedFrom(
+      <LateResult
+        game="minesweeper"
+        date={DATE}
+        outcome="lost"
+        alreadyConcluded={false}
+      />,
+    );
+
+    expect(text.split("\n")[1]).toBe(messages.share.played);
+  });
+});

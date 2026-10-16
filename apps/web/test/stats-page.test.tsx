@@ -146,7 +146,6 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
       screen.getByText(messages.stats.rows.solved.sudoku),
     ).toBeInTheDocument();
 
-    // binairo, crossword, queens and minesweeper are zero: best + average each.
     expect(screen.getAllByText(messages.stats.emptyValue)).toHaveLength(8);
 
     expect(

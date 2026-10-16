@@ -120,12 +120,11 @@ describe("hintsUsedSchema", () => {
     validQueens,
     validSudoku,
     validTermo,
+    validMinesweeper,
   ];
 
-  it("T-CORE-S163: every completion member but Campo Minado, and a completed /day claim, accept 0..HINTS_PER_PUZZLE_CEILING hints and nothing else", () => {
-    expect(
-      [...validBodies, validMinesweeper].map((body) => body.game).sort(),
-    ).toEqual(
+  it("T-CORE-S163: every completion member and a completed /day claim accept 0..HINTS_PER_PUZZLE_CEILING hints and nothing else", () => {
+    expect(validBodies.map((body) => body.game).sort()).toEqual(
       completionRequestSchema.options
         .map((member) => member.shape.game.value)
         .sort(),
@@ -754,14 +753,13 @@ describe("minesweeperCompletionRequestSchema", () => {
     ).toEqual(["date", "elapsedMs", "game", "hintsUsed", "hit"]);
   });
 
-  it("T-CORE-S199: hit is an integer cell in [0, 160) or null, hintsUsed is exactly 0, and nothing else rides along", () => {
+  it("T-CORE-S199: hit is an integer cell in [0, 160) or null, and nothing else rides along", () => {
     for (const body of [
       { ...validMinesweeper, hit: 160 },
       { ...validMinesweeper, hit: -1 },
       { ...validMinesweeper, hit: 1.5 },
       { ...validMinesweeper, hit: "3" },
       { ...validMinesweeper, hit: undefined },
-      { ...validMinesweeper, hintsUsed: 1 },
       { ...validMinesweeper, date: "2026-02-30" },
       { ...validMinesweeper, elapsedMs: -1 },
       { ...validMinesweeper, grid: Array.from({ length: 160 }, () => 0) },

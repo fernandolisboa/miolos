@@ -2,15 +2,14 @@
 
 import type { DailyMinesweeperResponse } from "@miolos/core";
 import type { MinesweeperState } from "@miolos/games/minesweeper";
+import { useMemo } from "react";
 
 import { messages } from "../i18n";
 import { ConclusionView, type ConclusionResult } from "../play/conclusion-view";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
-import { initMinesweeperDaily, minesweeperDailyReducer } from "./daily-state";
-import { FinishedMinefield } from "./minefield";
+import { gameOfRecord, startedGame } from "./daily-record";
+import { FinishedMinefield } from "./finished-minefield";
 import minefield from "./minefield.module.css";
-
-const copy = messages.games.minesweeper.conclusion;
 
 export function MinesweeperConclusion({
   daily,
@@ -23,23 +22,22 @@ export function MinesweeperConclusion({
 }) {
   const snapshot = useRecordSnapshot("minesweeper", daily.date);
   const stored = snapshot.hydrated ? snapshot.record : undefined;
-  const fromRecord =
-    stored?.game === "minesweeper" && stored.concluded
-      ? minesweeperDailyReducer(initMinesweeperDaily(daily), {
-          type: "restore",
-          record: stored,
-          now: 0,
-        }).game
-      : undefined;
+  const fromRecord = useMemo(
+    () =>
+      stored?.game === "minesweeper" && stored.concluded
+        ? gameOfRecord(startedGame(daily), stored)
+        : undefined,
+    [daily, stored],
+  );
   const game = fromRecord ?? live;
 
   return (
     <ConclusionView
       game="minesweeper"
       date={daily.date}
-      copy={copy}
+      copy={messages.games.minesweeper.conclusion}
       result={result}
-      outcome={game?.status === "lost" ? copy.played : undefined}
+      lost={game?.status === "lost"}
       figure={
         game === undefined ? undefined : (
           <div className={minefield.conclusionField}>

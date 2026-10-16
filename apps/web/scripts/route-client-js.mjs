@@ -83,6 +83,10 @@ const FORBIDDEN_EVERYWHERE = [
   { marker: "então\\nagora", reason: "adjacent Termo answers" },
   { marker: "mamãe\\nconta", reason: "adjacent Termo answers" },
   { marker: "época\\ncarne", reason: "adjacent Termo answers" },
+  {
+    marker: "needs-a-guess",
+    reason: "the daily Campo Minado generator and solver (ADR-0138)",
+  },
 ];
 
 const ROUTE_EXCLUSIVE_MARKERS = [

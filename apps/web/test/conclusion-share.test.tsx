@@ -545,3 +545,32 @@ describe("the call site builds the share URL from the shipped builders (T-WEB-S1
     }
   });
 });
+
+describe("a lost Campo Minado shares as played, never a time (T-WEB-S931)", () => {
+  it("from its stored record, the second line is the played word", async () => {
+    writePlayRecord({ ...minesweeper(), hit: 3 });
+    render(view("minesweeper", { lost: true }));
+    (shareButton() as HTMLButtonElement).click();
+    await waitFor(() => {
+      expect(shareMock).toHaveBeenCalledTimes(1);
+    });
+
+    const text = (shareMock.mock.calls[0]?.[0] as { text: string }).text;
+    expect(text.split("\n")[1]).toBe(messages.share.played);
+  });
+
+  it("before its record lands, the button holds back rather than share the clock", async () => {
+    render(
+      view("minesweeper", {
+        lost: true,
+        result: { elapsedMs: 95_000, hintsUsed: 0 },
+      }),
+    );
+    const button = shareButton();
+    expect(button).toBeDisabled();
+
+    (button as HTMLButtonElement).click();
+    await Promise.resolve();
+    expect(composed).not.toHaveBeenCalled();
+  });
+});

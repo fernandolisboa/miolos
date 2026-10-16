@@ -1148,6 +1148,7 @@ describe("the coloured Nonogram engine is walled to its chunk, statically and dy
 describe("the daily Campo Minado is walled off free play, statically and dynamically (T-LINT-S73)", () => {
   const DAILY_DOORS = [
     "../minesweeper/daily-state",
+    "../minesweeper/daily-record",
     "../minesweeper/use-minesweeper-play",
     "../minesweeper/minesweeper-screen",
     "../minesweeper/minesweeper-conclusion",
@@ -1185,6 +1186,7 @@ describe("the daily Campo Minado is walled off free play, statically and dynamic
   it("the shared board and free-play state stay clean for free play", async () => {
     for (const door of [
       "../minesweeper/minefield",
+      "../minesweeper/finished-minefield",
       "../minesweeper/state",
       "../minesweeper/use-minesweeper",
     ]) {

@@ -1666,7 +1666,7 @@ describe("POST /completions — minesweeper (ADR-0138)", () => {
     expect(await completionRows()).toHaveLength(1);
   }, 30_000);
 
-  it("T-API-S339: a hit on a safe cell ⇒ 422 hit-mismatch; a grid body or a hint ⇒ 400; nothing recorded", async () => {
+  it("T-API-S339: a hit on a safe cell ⇒ 422 hit-mismatch; a grid body or an off-board hit ⇒ 400; nothing recorded", async () => {
     const today = await todaySaoPaulo(ctx.db);
     const mines = await seedMinesweeperDaily(today);
     const { token } = await createSession();
@@ -1680,11 +1680,7 @@ describe("POST /completions — minesweeper (ADR-0138)", () => {
     expect(safe.status).toBe(422);
     expect(await errorOf(safe)).toEqual({ error: "hit-mismatch" });
 
-    for (const body of [
-      { grid: [...mines] },
-      { hintsUsed: 1 },
-      { hit: mines.length },
-    ]) {
+    for (const body of [{ grid: [...mines] }, { hit: mines.length }]) {
       const response = await POST(
         completionRequest({
           token,

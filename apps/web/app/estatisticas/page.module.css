@@ -5,9 +5,7 @@
    each game's accent — and every WORD stays --ink/--ink-2 (ADR-0041:
    accents colour shapes, never words). */
 
-/* Block flow, never a flex column: the games section runs far past the fold,
-   and a flex column reads as a row of columns to `impeccable detect`'s
-   first-viewport-column-overflow. */
+/* Block flow, not a flex column: `impeccable detect` misreads a tall flex column as column overflow. */
 .page {
   box-sizing: border-box;
   min-height: 100dvh;

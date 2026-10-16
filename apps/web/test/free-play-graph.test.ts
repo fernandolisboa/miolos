@@ -154,6 +154,7 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
         "apps/web/src/queens/use-queens-play.ts",
         "apps/web/src/queens/queens-screen.tsx",
         "apps/web/src/minesweeper/daily-state.ts",
+        "apps/web/src/minesweeper/daily-record.ts",
         "apps/web/src/minesweeper/use-minesweeper-play.ts",
         "apps/web/src/minesweeper/minesweeper-screen.tsx",
         "apps/web/src/minesweeper/minesweeper-conclusion.tsx",

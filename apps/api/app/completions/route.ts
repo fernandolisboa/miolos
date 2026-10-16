@@ -84,68 +84,46 @@ function storedSolution(
   }
 }
 
-function judgeGrid(
-  body: Extract<CompletionRequest, { game: GridCompletionGame }>,
-  content: unknown,
-): CompletionOutcome | null {
-  const solution = storedSolution(body.game, content);
-
-  if (body.grid.length !== solution.length) {
-    return null;
-  }
-
-  let mismatches = 0;
-  for (const [index, cell] of solution.entries()) {
-    if (cell !== body.grid[index]) {
-      mismatches += 1;
-    }
-  }
-  return mismatches > 0 ? null : "won";
-}
-
-function judgeTermo(
-  guesses: readonly string[],
-  content: unknown,
-): CompletionOutcome | null {
-  const answer = termoDailyContentSchema.parse(content).normalized;
-
-  const judged = judgeGuessList(guesses, answer);
-  if (!judged) {
-    return null;
-  }
-  return judged.status === "playing" ? null : judged.status;
-}
-
-function judgeMinesweeper(
-  hit: number | null,
-  content: unknown,
-): CompletionOutcome | null {
-  if (hit === null) {
-    return "won";
-  }
-  return minesweeperDailyContentSchema.parse(content).mines[hit] === 1
-    ? "lost"
-    : null;
-}
-
 type Judgement =
   { readonly outcome: CompletionOutcome } | { readonly mismatch: string };
 
-function judged(
-  outcome: CompletionOutcome | null,
-  mismatch: string,
+function judgeGrid(
+  body: Extract<CompletionRequest, { game: GridCompletionGame }>,
+  content: unknown,
 ): Judgement {
-  return outcome === null ? { mismatch } : { outcome };
+  const solution = storedSolution(body.game, content);
+  const matches =
+    body.grid.length === solution.length &&
+    solution.every((cell, index) => cell === body.grid[index]);
+  return matches ? { outcome: "won" } : { mismatch: "grid-mismatch" };
+}
+
+function judgeTermo(guesses: readonly string[], content: unknown): Judgement {
+  const answer = termoDailyContentSchema.parse(content).normalized;
+
+  const judged = judgeGuessList(guesses, answer);
+  return judged && judged.status !== "playing"
+    ? { outcome: judged.status }
+    : { mismatch: "guess-mismatch" };
+}
+
+function judgeMinesweeper(hit: number | null, content: unknown): Judgement {
+  if (hit === null) {
+    return { outcome: "won" };
+  }
+  return minesweeperDailyContentSchema.parse(content).mines[hit] === 1
+    ? { outcome: "lost" }
+    : { mismatch: "hit-mismatch" };
 }
 
 function judge(body: CompletionRequest, content: unknown): Judgement {
   switch (body.game) {
     case "termo":
-      return judged(judgeTermo(body.guesses, content), "guess-mismatch");
+      return judgeTermo(body.guesses, content);
     case "minesweeper":
-      return judged(judgeMinesweeper(body.hit, content), "hit-mismatch");
+      return judgeMinesweeper(body.hit, content);
     default:
-      return judged(judgeGrid(body, content), "grid-mismatch");
+      return judgeGrid(body, content);
   }
 }
 

@@ -160,11 +160,11 @@ they ship (an id is a wire value and a grant key).
 | 26 | `founder` | Da primeira leva | Estava aqui quando tudo começou. | curated | Launch-window founder grant (#37 decides the instant; the one-shot bulk insert is documented in ADR-0052). |
 | 27 | `full-1` | Página cheia | Concluiu um Dia Cheio: três jogos do dia, ou todos, no próprio dia. | fullDaysReached, 1 | The middle tier (ADR-0129): three on-time wins in a day, so a player who plays most of the lineup earns something before the whole of it. "Ou todos" covers a lineup shorter than three. |
 | 28 | `full-10` | Caderno cheio | Concluiu 10 Dias Cheios. | fullDaysReached, 10 | Ten full days; ≥ 2× spacing from 1. A Dia Perfeito counts as a Dia Cheio. |
-| 29 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, appended last so no earlier medal's tilt moves (ADR-0122). |
+| 29 | `full-50` | Cinquenta páginas cheias | Concluiu 50 Dias Cheios. | fullDaysReached, 50 | The deep mark, last on the list. Its tilt (ADR-0122) moved once when `minesweeper-30` took place 12 (ADR-0138). |
 
 **Quota check against the table:** all-games totalWins 5 ∈ [4, 5] (1, 10, 50,
 100, 500 — strictly increasing, first 1, last ≤ 1000, each ≥ 2× its
-predecessor); per-game totalWins 7 ∈ [4, 7] (all seven games, one mark each);
+predecessor); per-game totalWins 7 ∈ [4, 7] (every game, one mark each);
 streakReached 5 ∈ [4, 5] (3, 7, 30, 100, 365 — in [3, 365], each ≥ 2×);
 perfectDaysReached 4 ∈ [3, 4] (1, 5, 10, 30 — first 1, each ≥ 2×);
 fullDaysReached 3 ∈ [2, 3] (1, 10, 50 — first 1, each ≥ 2×);
