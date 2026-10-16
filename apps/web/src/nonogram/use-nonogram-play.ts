@@ -1,6 +1,11 @@
 import type { DailyNonogramResponse } from "@miolos/core";
-import { useMemo, useReducer } from "react";
+import { useMemo } from "react";
 
+import {
+  mistakeRecord,
+  SOLUTION_MISTAKES,
+  usePlayReducer,
+} from "../play/mistakes";
 import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -26,10 +31,11 @@ export function useNonogramPlay(
   daily: DailyNonogramResponse,
   remotelyClaimed = false,
 ): NonogramPlay {
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = usePlayReducer(
     nonogramPlayReducer,
     daily,
     initNonogramPlayState,
+    SOLUTION_MISTAKES,
   );
   const controls = useNonogramControls(state, dispatch);
 
@@ -43,7 +49,7 @@ export function useNonogramPlay(
     dispatch,
     buildRecord,
     remotelyClaimed,
-    persistDeps: [state.entries, state.hint.used],
+    persistDeps: [state.entries, state.hint.used, state.mistakes.cells],
   });
 
   return {
@@ -69,5 +75,6 @@ function buildRecord(
     size: state.size,
     entries: [...state.entries],
     grid: submitted === null ? undefined : [...submitted],
+    mistakes: mistakeRecord(state, closed),
   };
 }

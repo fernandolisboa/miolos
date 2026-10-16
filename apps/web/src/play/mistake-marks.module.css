@@ -1,0 +1,27 @@
+.marks {
+  align-items: center;
+  gap: 7px;
+}
+
+.left,
+.spent {
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.left {
+  background: var(--ink);
+  box-shadow: 1.5px 1.5px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Half filled, so the spent count still reads in grayscale. */
+.spent {
+  border: 1.5px solid var(--accent-app);
+  background: linear-gradient(
+    to bottom left,
+    var(--accent-app) 50%,
+    transparent 50%
+  );
+}

@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import lookStyles from "../src/free-play/sudoku-look.module.css";
 import { sudokuLook, namedHint } from "../src/free-play/sudoku-layout";
 import { messages } from "../src/i18n";
+import { NO_MISTAKES } from "../src/play/mistakes";
 import { Board, type BoardLook } from "../src/sudoku/board";
 import {
   sudokuHintExplanation,
@@ -71,6 +72,7 @@ function renderBoard(layout: SudokuLayout, look: BoardLook | undefined) {
       look={look}
       givens={givens}
       solution={null}
+      mistakes={NO_MISTAKES}
       entries={BLANK.map(() => null)}
       notes={BLANK}
       selected={null}

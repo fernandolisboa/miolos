@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from "react";
 
 import { messages } from "../i18n";
 import { isShortcut, keyMove } from "../play/grid-selection";
+import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
@@ -39,6 +40,7 @@ export function Board({
   look,
   solution,
   entries,
+  mistakes,
   notes,
   selected,
   violating,
@@ -57,6 +59,7 @@ export function Board({
   readonly look?: BoardLook;
   readonly solution: readonly SudokuDigit[] | null;
   readonly entries: readonly SudokuCellValue[];
+  readonly mistakes: MistakeState;
   readonly notes: readonly number[];
 
   readonly selected: number | null;
@@ -76,7 +79,7 @@ export function Board({
   const tabbable = selected ?? 0;
   const { highlightSelection } = useSettings().games.sudoku;
   const playable = useMemo(() => playableGivens(givens), [givens]);
-  const wrong = useWrongCells("sudoku", solution, playable, entries);
+  const wrong = useWrongCells("sudoku", solution, playable, entries, mistakes);
   const highlights =
     spotlight.length > 0
       ? spotlightHighlights(spotlight)

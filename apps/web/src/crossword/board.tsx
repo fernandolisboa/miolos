@@ -8,6 +8,7 @@ import {
 import { messages } from "../i18n";
 import { isShortcut, keyMove } from "../play/grid-selection";
 import { typedLetter } from "../play/typed-letter";
+import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import {
@@ -52,6 +53,7 @@ export function Board({
   solution,
   clues,
   entries,
+  mistakes,
   selected,
   direction,
   hintIndex,
@@ -66,6 +68,7 @@ export function Board({
   readonly solution: readonly (string | null)[];
   readonly clues: readonly CrosswordClue[];
   readonly entries: readonly (string | null)[];
+  readonly mistakes: MistakeState;
 
   readonly selected: number | null;
   readonly direction: CrosswordDirection;
@@ -77,7 +80,7 @@ export function Board({
   readonly onBackspace: () => void;
 }) {
   const wasSelectedRef = useRef(false);
-  const wrong = useWrongCells("crossword", solution, null, entries);
+  const wrong = useWrongCells("crossword", solution, null, entries, mistakes);
   const numbers = numbering(clues, size);
   const tabbable = selected ?? firstPlayableIndex(solution);
   const clue =

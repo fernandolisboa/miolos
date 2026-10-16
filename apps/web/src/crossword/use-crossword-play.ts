@@ -1,5 +1,6 @@
 import type { DailyCrosswordResponse } from "@miolos/core";
 
+import { mistakeRecord } from "../play/mistakes";
 import { recordHeader, type CrosswordPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
@@ -25,7 +26,12 @@ export function useCrosswordPlay(
     buildRecord,
     remotelyClaimed,
 
-    persistDeps: [state.solution, state.entries, state.hint.used],
+    persistDeps: [
+      state.solution,
+      state.entries,
+      state.hint.used,
+      state.mistakes.cells,
+    ],
   });
 
   return { ...board, elapsed: elapsedMs(state.timer, state.now) };
@@ -41,5 +47,6 @@ function buildRecord(
     game: "crossword",
     entries: [...state.entries],
     grid: closed && state.status === "solved" ? [...state.solution] : undefined,
+    mistakes: mistakeRecord(state, closed),
   };
 }

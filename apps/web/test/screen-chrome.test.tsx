@@ -116,7 +116,7 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
-  edits: { onReset: null, onUndo: null },
+  edits: { onReset: null, onUndo: null, mistakesLeft: null },
 };
 
 const SUDOKU_PLAY = {
@@ -139,7 +139,7 @@ const SUDOKU_PLAY = {
     tapCell: noop,
   },
   revealHint: noop,
-  edits: { onReset: null, onUndo: null },
+  edits: { onReset: null, onUndo: null, mistakesLeft: null },
 };
 
 const NONOGRAM_PLAY = {
@@ -157,7 +157,7 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
-  edits: { onReset: null, onUndo: null },
+  edits: { onReset: null, onUndo: null, mistakesLeft: null },
 };
 
 function pageIn(root: ParentNode): Element {
@@ -579,10 +579,13 @@ describe("each chrome variant renders the markup its shape shipped (T-WEB-S367)"
         "back",
         "barKicker",
         "board",
+        "frozen",
         "hint",
         "hintLive",
         "hintLong",
         "hintUsed",
+        "mistakesBar",
+        "mistakesCard",
         "page",
         "placeholder",
         "progressBar",

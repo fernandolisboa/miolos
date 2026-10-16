@@ -70,6 +70,7 @@ export function PlayView({
           givens={state.givens}
           solution={play.solution}
           entries={state.entries}
+          mistakes={state.mistakes}
           notes={state.notes}
           selected={state.selected}
           violating={state.violating}

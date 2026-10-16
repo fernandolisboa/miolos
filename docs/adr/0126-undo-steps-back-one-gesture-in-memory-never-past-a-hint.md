@@ -4,6 +4,7 @@
 **Amends:** [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (the reset row holds a third stateful child, `UndoControl`); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (Recomeçar also clears the undo history).
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — decision 2: Sudoku's step fields are `entries` and `notes`; `undoable` takes the list.
 **Depends on:** [ADR-0106](./0106-the-termo-current-row-is-editable.md), [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md)
+**Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the mistake count is kept outside `undoable`'s snapshot so undo never refunds it, and a frozen board has no undo.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — Campo Minado has no undo and takes no Ctrl/⌘+Z.
 
 ## Context

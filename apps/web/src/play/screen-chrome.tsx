@@ -14,6 +14,7 @@ import {
 } from "../settings/settings-dialog";
 import { accentVars } from "./accent";
 import { useFreeHintsPerPuzzle } from "./free-hints";
+import { MistakeMarks } from "./mistake-marks";
 import { PlayTitle, type PlayTitleNote } from "./play-title";
 import {
   ResetControl,
@@ -47,6 +48,7 @@ export interface PlayChromeReadouts {
   readonly progressLong: string;
   readonly onReset: BoardEdits["onReset"];
   readonly onUndo?: BoardEdits["onUndo"];
+  readonly mistakesLeft?: BoardEdits["mistakesLeft"];
   readonly resetCopy?: ResetCopy;
   readonly hint: {
     readonly ready: boolean;
@@ -144,12 +146,15 @@ export function PlayScreenChrome({
   const left = Math.max(allowance - (hint?.used ?? 0), 0);
   const label = hintLabel(left);
   const { kicker, play } = messages.games[game];
+  const mistakesLeft = readouts?.mistakesLeft ?? null;
+  const frozen = mistakesLeft === 0;
 
   return (
     <main
       className={`${screen.page} ${pageModifier}`}
       style={accentVars(game)}
       data-play-state={state.kind}
+      data-frozen={frozen ? true : undefined}
     >
       <header className={screen.topBar}>
         <Link
@@ -172,6 +177,9 @@ export function PlayScreenChrome({
         note={note}
         inert={skeleton}
       >
+        {mistakesLeft === null ? null : (
+          <MistakeMarks left={mistakesLeft} className={screen.mistakesBar} />
+        )}
         <span
           aria-hidden={readouts === null ? true : undefined}
           className={screen.progressBar}
@@ -202,6 +210,14 @@ export function PlayScreenChrome({
             {readouts === null ? BLANK_READOUT : readouts.progressLong}
           </span>
         </div>
+        {mistakesLeft === null ? null : (
+          <div className={screen.statRow}>
+            <span className={screen.statLabel}>
+              {messages.play.mistakes.label}
+            </span>
+            <MistakeMarks left={mistakesLeft} className={screen.mistakesCard} />
+          </div>
+        )}
         {extraStat === null ? null : (
           <div className={screen.statRow}>
             <span className={screen.statLabel}>{extraStat.label}</span>
@@ -252,6 +268,17 @@ export function PlayScreenChrome({
         >
           <span className={screen.hintLong}>{BLANK_READOUT}</span>
         </div>
+      ) : frozen ? (
+        <p
+          role="status"
+          aria-label={messages.play.mistakes.frozen}
+          className={`${screen.hint} ${screen.frozen}`}
+          data-short={messages.play.mistakes.frozenShort}
+        >
+          <span className={screen.hintLong}>
+            {messages.play.mistakes.frozen}
+          </span>
+        </p>
       ) : (
         hint !== null && (
           <button

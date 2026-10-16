@@ -4,6 +4,7 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { usePointerStroke } from "../play/use-pointer-stroke";
+import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import styles from "./binairo-screen.module.css";
@@ -15,6 +16,7 @@ export function Grid({
   givens,
   solution,
   entries,
+  mistakes,
   violating,
   hintIndex,
   spotlight,
@@ -26,6 +28,7 @@ export function Grid({
   readonly givens: BinairoGrid;
   readonly solution: readonly (0 | 1)[] | null;
   readonly entries: readonly CellValue[];
+  readonly mistakes: MistakeState;
   readonly violating: ReadonlySet<number>;
   readonly hintIndex: number | null;
   readonly spotlight: readonly number[];
@@ -42,7 +45,7 @@ export function Grid({
     onPaintOver,
   });
 
-  const wrong = useWrongCells("binairo", solution, givens, entries);
+  const wrong = useWrongCells("binairo", solution, givens, entries, mistakes);
 
   return (
     <div className={styles.grid} {...stroke.handlers}>

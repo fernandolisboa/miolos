@@ -11,6 +11,7 @@ import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
+import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
@@ -34,6 +35,7 @@ export const Board = memo(function Board({
   clues,
   solution,
   entries,
+  mistakes,
   selected,
   hintIndex,
   spotlight,
@@ -49,6 +51,7 @@ export const Board = memo(function Board({
   readonly clues: NonogramClues;
   readonly solution: readonly NonogramMark[] | null;
   readonly entries: readonly NonogramCellValue[];
+  readonly mistakes: MistakeState;
 
   readonly selected: number | null;
   readonly hintIndex: number | null;
@@ -65,7 +68,7 @@ export const Board = memo(function Board({
   readonly onPaintOver: (index: number) => void;
 }) {
   const copy = messages.games.nonogram.play;
-  const wrong = useWrongCells("nonogram", solution, null, entries);
+  const wrong = useWrongCells("nonogram", solution, null, entries, mistakes);
   const { strikePlacedRuns: strike, straightDrag } =
     useSettings().games.nonogram;
   const placed = useMemo(

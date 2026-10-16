@@ -1,7 +1,8 @@
 import type { DailySudokuResponse } from "@miolos/core";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { mistakeRecord, usePlayReducer } from "../play/mistakes";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
@@ -16,6 +17,7 @@ import {
 import {
   canHint,
   initSudokuPlayState,
+  sudokuMistakes,
   sudokuPlayReducer,
   type SudokuDigit,
   type SudokuPlayState,
@@ -50,10 +52,16 @@ export function useSudokuPlay(
   daily: DailySudokuResponse,
   remotelyClaimed = false,
 ): SudokuPlay {
-  const [state, dispatch] = useReducer(
+  const solution = useMemo(() => solutionDigits(daily.givens), [daily.givens]);
+  const rules = useMemo(
+    () => sudokuMistakes(solution, daily.givens),
+    [solution, daily.givens],
+  );
+  const [state, dispatch] = usePlayReducer(
     sudokuPlayReducer,
     daily,
     initSudokuPlayState,
+    rules,
   );
   const allowance = useFreeHintsPerPuzzle();
 
@@ -69,8 +77,6 @@ export function useSudokuPlay(
   const playable = useMemo(() => playableGivens(givens), [givens]);
   const filled = countFilled(playable, entries);
 
-  const solution = useMemo(() => solutionDigits(givens), [givens]);
-
   usePlayLifecycle({
     game: "sudoku",
     state,
@@ -79,7 +85,7 @@ export function useSudokuPlay(
     buildRecord,
     remotelyClaimed,
 
-    persistDeps: [givens, entries, notes, hintsUsed],
+    persistDeps: [givens, entries, notes, hintsUsed, state.mistakes.cells],
   });
 
   const {
@@ -98,7 +104,7 @@ export function useSudokuPlay(
     if (solution !== null && canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint", solution, cleanNotes });
     }
-  }, [solution, allowance, cleanNotes]);
+  }, [dispatch, solution, allowance, cleanNotes]);
 
   return {
     state,
@@ -132,5 +138,6 @@ function buildRecord(
     entries: [...state.entries],
     notes: !closed && hasNote(state.notes) ? [...state.notes] : undefined,
     grid: solved === null ? undefined : [...solved],
+    mistakes: mistakeRecord(state, closed),
   };
 }

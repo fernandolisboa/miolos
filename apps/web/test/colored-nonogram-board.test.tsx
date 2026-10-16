@@ -47,6 +47,7 @@ function Harness() {
         clues={clues}
         solution={state.solution}
         entries={state.entries}
+        mistakes={state.mistakes}
         selected={state.selected}
         hintIndex={state.hint.lastIndex}
         spotlight={state.hint.spotlight}

@@ -21,9 +21,10 @@ import {
   playRecordSchema,
   type PlayRecord,
 } from "../src/play/play-record";
-import { NO_HISTORY, useBoardEdits, type Undoable } from "../src/play/undo";
+import { NO_HISTORY, useBoardEdits, type Editable } from "../src/play/undo";
 import { UndoControl } from "../src/play/undo-control";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
+import { NO_MISTAKES } from "../src/play/mistakes";
 import { bodyOf, decl, stylesheet } from "./css-source";
 import { flushGeneration } from "./free-generation";
 
@@ -39,7 +40,7 @@ const SCREEN_CSS = stylesheet("src/play/screen.module.css");
 const DATE = "2026-10-15";
 const SEED = 20_261_015;
 
-function board(overrides: Partial<Undoable<unknown>> = {}): Undoable<unknown> {
+function board(overrides: Partial<Editable> = {}): Editable {
   return {
     date: DATE,
     timer: { accumulatedMs: 0, runningSince: null },
@@ -50,6 +51,7 @@ function board(overrides: Partial<Undoable<unknown>> = {}): Undoable<unknown> {
     entries: [null, null],
     hint: { used: 0, lastIndex: null, reason: null, spotlight: [] },
     history: NO_HISTORY,
+    mistakes: NO_MISTAKES,
     ...overrides,
   };
 }
@@ -65,7 +67,11 @@ afterEach(() => {
 describe("useBoardEdits offers Recomeçar and undo only when they can act (T-WEB-S826)", () => {
   it("offers neither on an untouched board", () => {
     const { result } = renderHook(() => useBoardEdits(board(), vi.fn()));
-    expect(result.current).toEqual({ onReset: null, onUndo: null });
+    expect(result.current).toEqual({
+      onReset: null,
+      onUndo: null,
+      mistakesLeft: null,
+    });
   });
 
   it("dispatches each once there is a decided cell and a step", () => {

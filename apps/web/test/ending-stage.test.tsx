@@ -12,6 +12,7 @@ import { messages } from "../src/i18n";
 import { DailyScreen } from "../src/play/daily-screen";
 import type { PlayCore } from "../src/play/types";
 import { readSettings, writeSettings } from "../src/settings/settings";
+import { NO_MISTAKES } from "../src/play/mistakes";
 import { bodyOf, decl, stylesheet } from "./css-source";
 import { flushGeneration } from "./free-generation";
 import { parseCss, uncoveredSelectors } from "./reduced-motion";
@@ -380,6 +381,7 @@ describe("the glow is paint on the cells, calm under reduced motion (T-WEB-S764)
         solution={["A", null, "B", "C"]}
         clues={[]}
         entries={[null, null, null, null]}
+        mistakes={NO_MISTAKES}
         selected={null}
         direction="across"
         hintIndex={null}

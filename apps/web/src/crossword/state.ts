@@ -6,11 +6,22 @@ import {
 import { movedSelection } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint } from "../play/hint-state";
+import {
+  judgedBySolution,
+  NO_MISTAKES,
+  type MistakeRules,
+  type MistakeState,
+} from "../play/mistakes";
 import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
 import { resetBoard, type ResetAction } from "../play/reset-board";
 import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
-import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
+import {
+  NO_HISTORY,
+  undoable,
+  type UndoAction,
+  type UndoHistory,
+} from "../play/undo";
 import {
   entryAt,
   flattenGrid,
@@ -40,6 +51,7 @@ export interface CrosswordPlayState extends PlayCore {
 
   readonly status: "playing" | "solved";
   readonly history: UndoHistory<CrosswordSnapshot>;
+  readonly mistakes: MistakeState;
 }
 
 type CrosswordSnapshot = Pick<
@@ -91,8 +103,14 @@ export function initCrosswordPlayState(
     now: 0,
     hydrated: false,
     history: NO_HISTORY,
+    mistakes: NO_MISTAKES,
   };
 }
+
+export const CROSSWORD_MISTAKES: MistakeRules<
+  CrosswordPlayState,
+  CrosswordPlayAction | UndoAction
+> = { judge: judgedBySolution };
 
 export const crosswordPlayReducer = undoable(
   playCrossword,
