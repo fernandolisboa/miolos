@@ -591,6 +591,22 @@ export default tseslint.config(
     },
   },
   {
+    files: [`apps/web/app/modo-livre/**/*.${webWallExtensions}`],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns,
+            ...freePlayBannedModuleGroups,
+            coloredNonogramModulesGroup,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
     files: ["apps/web/src/free-play/use-free-crossword.ts"],
     rules: {
       "no-restricted-imports": [

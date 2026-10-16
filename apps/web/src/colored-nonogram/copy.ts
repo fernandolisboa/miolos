@@ -16,7 +16,7 @@ const TONE_NAMES = {
   b: "azul",
   p: "roxo",
   m: "rosa",
-} satisfies Record<PictureTone, string>;
+} as const satisfies Record<PictureTone, string>;
 
 export const coloredCopy = {
   painted: (tone: string) => `pintada de ${tone}`,
@@ -25,7 +25,7 @@ export const coloredCopy = {
   swatchAria: (tone: string) => `pintar de ${tone}`,
   affordance:
     "No teclado: 1 pinta com a cor escolhida, 2 marca, 0 apaga. O botão direito troca entre a cor e o ✕.",
-};
+} as const;
 
 export function toneName(
   palette: readonly PictureTone[],

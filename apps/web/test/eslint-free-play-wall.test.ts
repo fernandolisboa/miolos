@@ -1108,6 +1108,7 @@ describe("the coloured Nonogram engine is walled to its chunk, statically and dy
       const source = `import * as cores from "${door}";\n\nexport const probe = cores;\n`;
       for (const path of [
         DAILY_PATH,
+        ROUTE_PATH,
         "apps/web/src/nonogram/eslint-probe.ts",
       ]) {
         expect
