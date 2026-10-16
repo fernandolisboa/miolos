@@ -323,7 +323,7 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
   });
 });
 
-describe("a lost timed game decorates nothing as today's (T-WEB-S932)", () => {
+describe("a lost timed game decorates nothing as today's (T-WEB-S922c)", () => {
   it("a lost Campo Minado gets no today bucket and no closing line, over a block that would earn both", async () => {
     const stats = statsWith(430_000, 3);
     clients.fetchStats.mockResolvedValue({

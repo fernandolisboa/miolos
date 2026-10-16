@@ -397,7 +397,7 @@ describe("what a LATE share may honestly say (T-WEB-S231)", () => {
   });
 });
 
-describe("a lost Campo Minado's late share says played (T-WEB-S931a)", () => {
+describe("a lost Campo Minado's late share says played (T-WEB-S922b)", () => {
   it("the second line is the played word, not the clock", async () => {
     writePlayRecord({ ...minesweeper(), hit: 3 });
 

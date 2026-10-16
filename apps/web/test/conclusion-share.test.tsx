@@ -546,7 +546,7 @@ describe("the call site builds the share URL from the shipped builders (T-WEB-S1
   });
 });
 
-describe("a lost Campo Minado shares as played, never a time (T-WEB-S931)", () => {
+describe("a lost Campo Minado shares as played, never a time (T-WEB-S922a)", () => {
   it("from its stored record, the second line is the played word", async () => {
     writePlayRecord({ ...minesweeper(), hit: 3 });
     render(view("minesweeper", { lost: true }));
