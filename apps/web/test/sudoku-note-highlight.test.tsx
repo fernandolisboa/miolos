@@ -76,8 +76,7 @@ describe("the board draws the matching note as a chip (T-WEB-S933)", () => {
     expect(NOTE_MATCH).not.toBe("");
     const container = renderBoard({});
     const noted = cellAt(container, NOTED);
-    expect(noted.className).not.toContain(styles.cellSameDigit ?? "-");
-    expect(noted.className).not.toContain(styles.cellUnit ?? "-");
+    expect(noted.className).toBe(cellAt(container, NOTED - 1).className);
     expect(matches(container)).toEqual(["5"]);
   });
 
