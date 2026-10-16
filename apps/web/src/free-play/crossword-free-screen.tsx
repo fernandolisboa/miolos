@@ -97,7 +97,11 @@ function CrosswordFreeBoard({
       over={board.state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="crossword"
+          level={choice.optionLabel(choice.value)}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome

@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-15 (issue #374)
 **Amends:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) decision 1 (`drawFreeTermoWords(seed, count)` draws N distinct pool words); [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 2 and 3 (Termo gains a _Variante_; its state is `{seed, variant}`, in component state, never the URL); [ADR-0042](./0042-the-termo-board-is-read-only-output.md) decision 5 (on a variant keyboard the marks sit on per-board segments); [ADR-0106](./0106-the-termo-current-row-is-editable.md) decision 5 (only the first open board's row is editable); [ADR-0123](./0123-on-a-phone-the-rules-sit-behind-an-i-and-the-hint-shares-the-reset-row.md) decision 1 (on a phone Quarteto drops the title block and the variant menu carries the rules); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/modo-livre/termo` re-sized).
+**Amended by:** [ADR-0131](./0131-sudoku-free-play-offers-diagonal-and-formas.md) (#371) — decision 5 holds for Termo only: Sudoku's variant code ships statically, and the trigger and menu are shared modules.
 **Depends on:** [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md), [ADR-0113](./0113-the-hint-reason-shows-in-a-card-on-the-hinted-cell.md)
 
 ## Context

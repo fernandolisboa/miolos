@@ -119,7 +119,7 @@ function NonogramFreeBoard({
       ending={() => (
         <FreePlaySolvedCard
           game="nonogram"
-          choice={choice}
+          level={choice.optionLabel(choice.value)}
           onAgain={onNext}
           picture={
             <PictureArt

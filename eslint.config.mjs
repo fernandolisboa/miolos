@@ -66,6 +66,13 @@ const webDynamicNonogramColorsImport = {
     "apps/web never imports the Nonogram tones table dynamically: it ships on /modo-livre/nonogram alone (ADR-0121).",
 };
 
+const webDynamicSudokuVariantsImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/sudoku-variants(\\/|$)/i]",
+  message:
+    "apps/web never imports the Sudoku variant engine dynamically: it ships on /modo-livre/sudoku alone, statically (ADR-0131).",
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -105,6 +112,12 @@ const nonogramColorsGroup = {
   group: ["@miolos/games/nonogram-colors", "@miolos/games/nonogram-colors/*"],
   message:
     "@miolos/games/nonogram-colors carries every motif's tones: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its tones from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
+};
+
+const sudokuVariantsGroup = {
+  group: ["@miolos/games/sudoku-variants", "@miolos/games/sudoku-variants/*"],
+  message:
+    "@miolos/games/sudoku-variants is free play's variant engine: only apps/web/src/free-play/use-free-sudoku.ts imports it, so the daily Sudoku never ships it (ADR-0131). Tests may import it.",
 };
 
 const webWallImportPatterns = [
@@ -165,6 +178,7 @@ const webClientImportPatterns = [
   ...webWallImportPatterns,
   termoAnswersGroup,
   nonogramColorsGroup,
+  sudokuVariantsGroup,
 ];
 
 const webWallImportPaths = [
@@ -496,6 +510,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicSudokuVariantsImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -520,6 +535,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicSudokuVariantsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -549,6 +565,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicSudokuVariantsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -594,6 +611,23 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/web/src/free-play/use-free-sudoku.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns.filter(
+              (pattern) => pattern !== sudokuVariantsGroup,
+            ),
+            ...freePlayBannedModuleGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
     files: [
       `apps/web/src/og/**/*.${webWallExtensions}`,
 
@@ -618,6 +652,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicSudokuVariantsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -652,6 +687,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicSudokuVariantsImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,

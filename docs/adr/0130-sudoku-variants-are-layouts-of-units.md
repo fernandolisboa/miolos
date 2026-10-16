@@ -1,6 +1,7 @@
 # ADR-0130 — Sudoku variants are layouts of units
 
 **Status:** Accepted — 2026-10-15 (issue #371, part 1)
+**Amended by:** [ADR-0131](./0131-sudoku-free-play-offers-diagonal-and-formas.md) (#371) — decision 5: `generateSudokuVariant` moves to `@miolos/games/sudoku-variants`; decision 6: free play names a Formas `box` unit "região".
 **Depends on:** [ADR-0019](./0019-per-game-subpath-exports-in-packages-games.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0055](./0055-test-timeouts-are-sized-against-contention.md), [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md), [ADR-0099](./0099-the-sudoku-hint-reveals-the-next-logical-step.md)
 
 ## Context

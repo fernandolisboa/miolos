@@ -1,0 +1,104 @@
+/* Formas: no 3×3 rhythm, so the gutter tracks close and every cell keeps the
+   same spacing through its own margin. The grid's negative margin puts the
+   outer cells back on the card's content box. */
+.formas.formas {
+  --edge-gap: 4px;
+  --edge-border: 1.5px;
+  --edge-reach: calc(var(--edge-border) + var(--edge-gap) / 2 + 1px);
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) 0 repeat(3, minmax(0, 1fr)) 0
+    repeat(3, minmax(0, 1fr));
+  grid-template-rows:
+    repeat(3, minmax(0, 1fr)) 0 repeat(3, minmax(0, 1fr)) 0
+    repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: calc(var(--edge-gap) / -2);
+}
+
+.formas.formas > * {
+  margin: calc(var(--edge-gap) / 2);
+}
+
+/* A region border is a 2px ink line centred in the spacing, the same ink as
+   the classic box rule. Each line reaches into the spacing past its cell's
+   corners so two borders meet square, but never past the board's edge. */
+.edgeRight::after,
+.edgeBottom::before {
+  content: "";
+  position: absolute;
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
+  pointer-events: none;
+}
+
+.edgeRight::after {
+  top: calc(-1 * var(--edge-reach));
+  bottom: calc(-1 * var(--edge-reach));
+  right: calc(-1 * var(--edge-reach));
+  width: 2px;
+}
+
+.edgeBottom::before {
+  left: calc(-1 * var(--edge-reach));
+  right: calc(-1 * var(--edge-reach));
+  bottom: calc(-1 * var(--edge-reach));
+  height: 2px;
+}
+
+.formas > :nth-child(-n + 9)::after {
+  top: calc(-1 * var(--edge-border));
+}
+
+.formas > :nth-child(n + 73)::after {
+  bottom: calc(-1 * var(--edge-border));
+}
+
+.formas > :nth-child(9n + 1)::before {
+  left: calc(-1 * var(--edge-border));
+}
+
+.formas > :nth-child(9n)::before {
+  right: calc(-1 * var(--edge-border));
+}
+
+/* Diagonal: a pencil stroke under the cell's content, masked out of the
+   middle so it never crosses a digit; the corners of neighbouring cells line
+   up into one dashed diagonal. The cell's own background stays, so the
+   selection tint still paints. */
+.diagonalMain,
+.diagonalAnti {
+  isolation: isolate;
+}
+
+.diagonalMain::before,
+.diagonalAnti::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  mask-image: radial-gradient(circle, transparent 62%, var(--ink) 62%);
+}
+
+.diagonalMain::before {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.75px),
+    color-mix(in srgb, var(--ink) 40%, transparent) 50%,
+    transparent calc(50% + 0.75px)
+  );
+}
+
+.diagonalAnti::after {
+  background: linear-gradient(
+    to top left,
+    transparent calc(50% - 0.75px),
+    color-mix(in srgb, var(--ink) 40%, transparent) 50%,
+    transparent calc(50% + 0.75px)
+  );
+}
+
+@media (max-width: 768px) {
+  .formas.formas {
+    --edge-gap: 3px;
+  }
+}

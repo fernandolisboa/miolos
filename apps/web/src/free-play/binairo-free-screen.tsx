@@ -113,7 +113,11 @@ function BinairoFreeBoard({
       over={state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="binairo" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="binairo"
+          level={choice.optionLabel(choice.value)}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome

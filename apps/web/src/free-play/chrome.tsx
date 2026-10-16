@@ -25,12 +25,16 @@ export function FreePlayChrome<T extends string | number>({
   game,
   pageModifier,
   choice,
+  picker,
+  rules,
   state,
   children,
 }: {
   readonly game: ChromeGame;
   readonly pageModifier: string;
   readonly choice?: FreePlayChoice<T>;
+  readonly picker?: ReactNode;
+  readonly rules?: string;
   readonly state: PlayChromeState;
   readonly children: ReactNode;
 }): ReactElement {
@@ -44,6 +48,8 @@ export function FreePlayChrome<T extends string | number>({
       note={null}
       clock="none"
       extraStat={choice === undefined ? null : choiceStat(choice)}
+      picker={picker}
+      rules={rules}
     >
       {choice !== undefined && <ChoicePicker {...choice} />}
       {children}

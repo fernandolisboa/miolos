@@ -66,6 +66,7 @@ export function PlayView({
         }
       >
         <Board
+          layout={state.layout}
           givens={state.givens}
           solution={play.solution}
           entries={state.entries}

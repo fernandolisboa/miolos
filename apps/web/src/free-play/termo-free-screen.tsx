@@ -15,6 +15,7 @@ import { FREE_PLAY_DATE } from "./catalog";
 import { FreePlayErrorCard } from "./error-card";
 import styles from "./free-play.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
+import { VariantTrigger } from "./variant-trigger";
 import {
   useFreeTermo,
   useFreeTermoBoard,
@@ -45,19 +46,15 @@ export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
     ...CHROME,
     picker: (
       <>
-        <button
-          type="button"
-          className={styles.variantTrigger}
-          aria-label={messages.freePlay.variant.triggerAria(name)}
-          popoverTarget={variants === null ? undefined : menuId}
+        <VariantTrigger
+          name={name}
+          menuId={variants === null ? undefined : menuId}
           onClick={() => {
             if (variants === null) setAsks(asks + 1);
           }}
-        >
-          {name}
-        </button>
+        />
         {variants !== null && (
-          <variants.VariantMenu
+          <variants.TermoVariantMenu
             id={menuId}
             value={variant}
             onChange={setVariant}
@@ -76,7 +73,6 @@ export function TermoFreeScreen({ deps }: { readonly deps?: FreeTermoDeps }) {
           variant={variant}
           words={phase.puzzle.words}
           chrome={chrome}
-          onVariant={setVariant}
           onNext={regenerate}
         />
       ) : (

@@ -1053,4 +1053,25 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
         .toContain("no-restricted-imports");
     }
   });
+
+  it("T-LINT-S67a: use-free-sudoku.ts alone may import @miolos/games/sudoku-variants statically; any other free-play or daily path, and a dynamic import, stay red", async () => {
+    const exempt = "apps/web/src/free-play/use-free-sudoku.ts";
+    const source =
+      'import { generateSudokuVariant } from "@miolos/games/sudoku-variants";\n\nexport const make = generateSudokuVariant;\n';
+
+    expect(wallHits(await lintProbe(exempt, source))).toEqual([]);
+    for (const path of [FREE_PATH, ROUTE_PATH, DAILY_PATH]) {
+      expect
+        .soft(ruleIds(await lintProbe(path, source)), path)
+        .toContain("no-restricted-imports");
+    }
+    expect(
+      ruleIds(
+        await lintProbe(
+          exempt,
+          'export const load = () => import("@miolos/games/sudoku-variants");\n',
+        ),
+      ),
+    ).toContain("no-restricted-syntax");
+  });
 });

@@ -3,6 +3,7 @@ import {
   sudokuCriteriaForWeekday,
   SudokuGenerationError,
 } from "@miolos/games/sudoku";
+import { generateSudokuVariant } from "@miolos/games/sudoku-variants";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +23,7 @@ const LEVE_PUZZLE = generateDailySudoku({
 
 function stableDeps(overrides: {
   readonly seeds: readonly number[];
-  readonly generate?: typeof generateDailySudoku;
+  readonly generate?: typeof generateSudokuVariant;
 }) {
   const queue = [...overrides.seeds];
   const pickSeed = vi.fn(() => {
@@ -65,12 +66,12 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
       1,
     );
     let calls = 0;
-    const generate: typeof generateDailySudoku = (options) => {
+    const generate: typeof generateSudokuVariant = (options) => {
       calls += 1;
       if (calls <= 2) {
         throw failures;
       }
-      return generateDailySudoku(options);
+      return generateSudokuVariant(options);
     };
     const { deps, pickSeed } = stableDeps({
       seeds: [1, 2, SEED],
@@ -94,12 +95,12 @@ describe("free-play Sudoku generation states (T-WEB-S118)", () => {
       1,
     );
     let calls = 0;
-    const generate: typeof generateDailySudoku = (options) => {
+    const generate: typeof generateSudokuVariant = (options) => {
       calls += 1;
       if (calls <= 3) {
         throw failure;
       }
-      return generateDailySudoku(options);
+      return generateSudokuVariant(options);
     };
     const { deps, pickSeed } = stableDeps({
       seeds: [1, 2, 3, SEED],

@@ -81,7 +81,11 @@ function QueensFreeBoard({
       over={board.state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="queens" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="queens"
+          level={choice.optionLabel(choice.value)}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome

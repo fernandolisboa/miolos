@@ -1,6 +1,7 @@
 import {
   nextSudokuStep,
   type SudokuGrid,
+  type SudokuLayout,
   type SudokuStep,
 } from "@miolos/games/sudoku";
 
@@ -21,16 +22,23 @@ export type SudokuHint = LogicalHint<SudokuDigit, SudokuStep>;
 
 const copy = messages.games.sudoku.play.hint;
 
+export type SudokuUnitName = Parameters<typeof copy.hiddenSingle>[0];
+
+type NamedSudokuStep = Omit<SudokuStep, "unit"> & {
+  readonly unit: { readonly kind: SudokuUnitName } | null;
+};
+
 const SIDE = 9;
 
 export function nextSudokuHint(
   solution: readonly SudokuDigit[],
   givens: SudokuGrid,
   entries: readonly SudokuCellValue[],
+  layout: SudokuLayout,
 ): SudokuHint | null {
   const first = nextHint(solution, playableGivens(givens), entries);
   return nextLogicalHint(solution, first, () => {
-    const step = nextSudokuStep(mergedGrid(givens, entries));
+    const step = nextSudokuStep(mergedGrid(givens, entries), layout);
     const value = step === null ? null : asDigit(step.digit);
     return step === null || value === null
       ? null
@@ -39,7 +47,8 @@ export function nextSudokuHint(
 }
 
 export function sudokuHintExplanation(
-  reason: SudokuHintReason | null,
+  reason: HintReason<NamedSudokuStep> | null,
+  units?: readonly SudokuUnitName[],
 ): string | null {
   if (reason === null) {
     return null;
@@ -51,7 +60,7 @@ export function sudokuHintExplanation(
   const cell = toRowColumn(index, SIDE);
   if (after === null) {
     return unit === null
-      ? copy.nakedSingle(digit, cell)
+      ? copy.nakedSingle(digit, cell, units)
       : copy.hiddenSingle(unit.kind, digit, cell);
   }
   const technique = copy.technique[after];
