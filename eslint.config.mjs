@@ -674,7 +674,11 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [...webWallImportPatterns, ...ogBannedGameGroups],
+          patterns: [
+            ...webWallImportPatterns,
+            ...ogBannedGameGroups,
+            coloredNonogramModulesGroup,
+          ],
           paths: webWallImportPaths,
         },
       ],
@@ -709,6 +713,7 @@ export default tseslint.config(
             ...webWallImportPatterns,
             ...freePlayBannedModuleGroups,
             ...ogBannedGameGroups,
+            coloredNonogramModulesGroup,
           ],
           paths: webWallImportPaths,
         },

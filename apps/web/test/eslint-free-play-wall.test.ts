@@ -1110,6 +1110,8 @@ describe("the coloured Nonogram engine is walled to its chunk, statically and dy
         DAILY_PATH,
         ROUTE_PATH,
         "apps/web/src/nonogram/eslint-probe.ts",
+        "apps/web/src/og/eslint-probe.ts",
+        "apps/web/app/modo-livre/nonogram/opengraph-image.tsx",
       ]) {
         expect
           .soft(ruleIds(await lintProbe(path, source)), `${path} ${door}`)
