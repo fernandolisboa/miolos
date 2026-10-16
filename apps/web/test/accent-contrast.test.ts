@@ -1,11 +1,9 @@
+import { GAMES, type Game } from "@miolos/core";
 import { describe, expect, it } from "vitest";
 
-import { FREE_PLAY_GAMES, type FreePlayGame } from "../src/free-play/catalog";
 import { accentVars } from "../src/play/accent";
 import { bodyOf, colorTokens, decl, stylesheet } from "./css-source";
 import { contrast, deltaE76, luminance } from "./contrast";
-
-const GAMES = FREE_PLAY_GAMES;
 
 function contrastTools(theme: "light" | "dark") {
   const tokens = colorTokens(theme);
@@ -26,7 +24,7 @@ function contrastTools(theme: "light" | "dark") {
     return hexOf(match[1]);
   }
 
-  function pair(game: FreePlayGame): { accent: string; ink: string } {
+  function pair(game: Game): { accent: string; ink: string } {
     const vars = accentVars(game);
     return {
       accent: resolveVar(String(vars["--accent"])),
@@ -52,14 +50,14 @@ describe("every game's filled-surface label clears AA on its own fill (T-WEB-S29
   });
 
   it("reproduces the recorded figures, as its own control", () => {
-    const recorded: Readonly<Record<FreePlayGame, number>> = {
+    const recorded: Readonly<Record<Game, number>> = {
       sudoku: 7.5113,
       binairo: 5.3066,
       nonogram: 4.5063,
       termo: 4.8433,
       crossword: 7.1191,
       queens: 5.1756,
-      minesweeper: 5.2023,
+      minesweeper: 5.2654,
     };
     for (const game of GAMES) {
       const { accent, ink } = LIGHT.pair(game);
@@ -261,6 +259,34 @@ describe("the Rainhas accent stands apart from every other accent (T-WEB-S448a)"
       for (const [other, value] of Object.entries(measured[theme])) {
         expect(
           deltaE76(queens, tools.hexOf(`--accent-${other}`)),
+          `${theme} vs ${other}`,
+        ).toBeCloseTo(value, 2);
+      }
+    }
+  });
+});
+
+describe("the Campo Minado accent stands apart from every other accent (T-WEB-S926)", () => {
+  it("keeps --accent-minesweeper at ΔE76 >= 25 from each game accent and --accent-app, in both themes", () => {
+    const measured = {
+      light: { binairo: 25.38, sudoku: 29.54 },
+      dark: { binairo: 31.05, sudoku: 34.51 },
+    };
+    for (const [theme, tools] of [
+      ["light", LIGHT],
+      ["dark", DARK],
+    ] as const) {
+      const teal = tools.hexOf("--accent-minesweeper");
+      for (const other of [
+        ...GAMES.filter((g) => g !== "minesweeper"),
+        "app",
+      ]) {
+        const distance = deltaE76(teal, tools.hexOf(`--accent-${other}`));
+        expect(distance, `${theme} vs ${other}`).toBeGreaterThanOrEqual(25);
+      }
+      for (const [other, value] of Object.entries(measured[theme])) {
+        expect(
+          deltaE76(teal, tools.hexOf(`--accent-${other}`)),
           `${theme} vs ${other}`,
         ).toBeCloseTo(value, 2);
       }

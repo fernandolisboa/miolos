@@ -20,7 +20,7 @@ describe("recordFor", () => {
     expect(recordFor([], () => 1)).toEqual({});
   });
 
-  it("T-CORE-S130: the crossword is the fifth game, Rainhas the sixth and last, both timed", () => {
+  it("T-CORE-S130: the crossword is the fifth game, Rainhas the sixth, Campo Minado the seventh and last, all three timed", () => {
     expect([...GAMES]).toEqual([
       "binairo",
       "sudoku",
@@ -28,6 +28,7 @@ describe("recordFor", () => {
       "termo",
       "crossword",
       "queens",
+      "minesweeper",
     ]);
     expect([...TIMED_GAMES]).toEqual([
       "binairo",
@@ -35,6 +36,7 @@ describe("recordFor", () => {
       "nonogram",
       "crossword",
       "queens",
+      "minesweeper",
     ]);
   });
 });

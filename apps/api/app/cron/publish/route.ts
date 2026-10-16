@@ -22,6 +22,7 @@ export const dynamic = "force-dynamic";
 const COST_ASCENDING_GAMES = [
   "termo",
   "binairo",
+  "minesweeper",
   "nonogram",
   "crossword",
   "queens",

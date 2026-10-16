@@ -222,9 +222,60 @@ export const dailyQueensResponseSchema = z
 
 export type DailyQueensResponse = z.infer<typeof dailyQueensResponseSchema>;
 
+export const DAILY_MINESWEEPER_SIZE = { rows: 16, columns: 10 } as const;
+
+const MINESWEEPER_CELLS =
+  DAILY_MINESWEEPER_SIZE.rows * DAILY_MINESWEEPER_SIZE.columns;
+
+export const minesweeperCellIndexSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(MINESWEEPER_CELLS - 1);
+
+export const minesweeperMinesSchema = z
+  .array(z.union([z.literal(0), z.literal(1)]))
+  .length(MINESWEEPER_CELLS);
+
+function startIsClear(mines: readonly (0 | 1)[], start: number): boolean {
+  const { rows, columns } = DAILY_MINESWEEPER_SIZE;
+  const row = Math.floor(start / columns);
+  const column = start % columns;
+  for (let r = Math.max(0, row - 1); r <= Math.min(rows - 1, row + 1); r += 1) {
+    for (
+      let c = Math.max(0, column - 1);
+      c <= Math.min(columns - 1, column + 1);
+      c += 1
+    ) {
+      if (mines[r * columns + c] === 1) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+export const dailyMinesweeperResponseSchema = z
+  .strictObject({
+    game: z.literal("minesweeper"),
+    date: isoDateString,
+    rows: z.literal(DAILY_MINESWEEPER_SIZE.rows),
+    columns: z.literal(DAILY_MINESWEEPER_SIZE.columns),
+    mines: minesweeperMinesSchema,
+    start: minesweeperCellIndexSchema,
+  })
+  .refine((d) => startIsClear(d.mines, d.start), {
+    message: "the start's 3x3 must hold no mine",
+  });
+
+export type DailyMinesweeperResponse = z.infer<
+  typeof dailyMinesweeperResponseSchema
+>;
+
 export const dailyPuzzleResponseSchema = z.discriminatedUnion("game", [
   dailyBinairoResponseSchema,
   dailyCrosswordResponseSchema,
+  dailyMinesweeperResponseSchema,
   dailyNonogramResponseSchema,
   dailyQueensResponseSchema,
   dailySudokuResponseSchema,

@@ -33,6 +33,7 @@ const BUDGETED = [
   "/termo",
   "/cruzadinha",
   "/rainhas",
+  "/campo-minado",
   "/modo-livre",
   "/modo-livre/binairo",
   "/modo-livre/nonogram",
@@ -53,6 +54,7 @@ const BUDGETED = [
   "/arquivo/[data]/termo",
   "/arquivo/[data]/cruzadinha",
   "/arquivo/[data]/rainhas",
+  "/arquivo/[data]/campo-minado",
 
   "/binairo/concluido",
   "/nonogram/concluido",
@@ -60,6 +62,7 @@ const BUDGETED = [
   "/termo/concluido",
   "/cruzadinha/concluido",
   "/rainhas/concluido",
+  "/campo-minado/concluido",
 ];
 
 const FREE_PLAY_PREFIX = "/modo-livre";
@@ -80,6 +83,10 @@ const FORBIDDEN_EVERYWHERE = [
   { marker: "então\\nagora", reason: "adjacent Termo answers" },
   { marker: "mamãe\\nconta", reason: "adjacent Termo answers" },
   { marker: "época\\ncarne", reason: "adjacent Termo answers" },
+  {
+    marker: "needs-a-guess",
+    reason: "the daily Campo Minado generator and solver (ADR-0138)",
+  },
 ];
 
 const ROUTE_EXCLUSIVE_MARKERS = [

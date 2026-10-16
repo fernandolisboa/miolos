@@ -13,21 +13,16 @@ import { submittedCells } from "./engine";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useNonogramPlay } from "./use-nonogram-play";
 
-const NonogramConclusion = resilientConclusion<
-  Parameters<typeof import("./nonogram-conclusion").NonogramConclusion>[0]
->(
-  async () => (await import("./nonogram-conclusion")).NonogramConclusion,
-  (props) => (
-    <ConclusionChunkFallback
-      copy={messages.games.nonogram.conclusion}
-      stamp={props.result}
-    />
-  ),
-);
-
-function preloadNonogramConclusion(): void {
-  void import("./nonogram-conclusion").catch(() => undefined);
-}
+const { Conclusion: NonogramConclusion, preload: preloadNonogramConclusion } =
+  resilientConclusion(
+    async () => (await import("./nonogram-conclusion")).NonogramConclusion,
+    (props) => (
+      <ConclusionChunkFallback
+        copy={messages.games.nonogram.conclusion}
+        stamp={props.result}
+      />
+    ),
+  );
 
 export function NonogramScreen({
   daily,

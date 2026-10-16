@@ -5,11 +5,15 @@ import {
   binairoCellSchema,
   crosswordDirectionSchema,
   crosswordGridSchema,
+  DAILY_MINESWEEPER_SIZE,
   dailyBinairoResponseSchema,
+  dailyMinesweeperResponseSchema,
   dailyNonogramResponseSchema,
   dailyQueensResponseSchema,
   dailySudokuResponseSchema,
   dailyTermoResponseSchema,
+  minesweeperCellIndexSchema,
+  minesweeperMinesSchema,
   nonogramCluesSchema,
   nonogramSizeSchema,
   projectCrossword,
@@ -119,6 +123,19 @@ export const queensDailyContentSchema = z
 
 export type QueensDailyContent = z.infer<typeof queensDailyContentSchema>;
 
+export const minesweeperDailyContentSchema = z.strictObject({
+  seed: z.number().int().nonnegative(),
+  weekday: z.number().int().min(1).max(7),
+  rows: z.literal(DAILY_MINESWEEPER_SIZE.rows),
+  columns: z.literal(DAILY_MINESWEEPER_SIZE.columns),
+  mines: minesweeperMinesSchema,
+  start: minesweeperCellIndexSchema,
+});
+
+export type MinesweeperDailyContent = z.infer<
+  typeof minesweeperDailyContentSchema
+>;
+
 export class DailyProjectionUnsupportedError extends Error {
   readonly game: Game;
 
@@ -178,6 +195,17 @@ export function stripDailyContent(
         date,
         size: parsed.size,
         regions: parsed.regions,
+      });
+    }
+    case "minesweeper": {
+      const parsed = minesweeperDailyContentSchema.parse(content);
+      return dailyMinesweeperResponseSchema.parse({
+        game: "minesweeper",
+        date,
+        rows: parsed.rows,
+        columns: parsed.columns,
+        mines: parsed.mines,
+        start: parsed.start,
       });
     }
   }

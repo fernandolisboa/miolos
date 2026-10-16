@@ -41,10 +41,13 @@ vi.mock("../src/play/day-state", async (original) => ({
 }));
 vi.mock("../src/play/conclusion-lazy", async (original) => ({
   ...(await original<object>()),
-  resilientConclusion: () => (props: object) => {
-    spies.ownConclusion(props);
-    return null;
-  },
+  resilientConclusion: () => ({
+    Conclusion: (props: object) => {
+      spies.ownConclusion(props);
+      return null;
+    },
+    preload: () => undefined,
+  }),
 }));
 vi.mock("../src/play/daily-screen", () => ({
   DailyScreen: (props: object) => {

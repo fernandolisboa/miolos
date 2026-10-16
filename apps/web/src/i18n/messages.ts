@@ -1,18 +1,19 @@
 import {
   FREE_HINTS_PER_PUZZLE,
   type AdminMemberRole,
+  type Game,
   type RemoteConfigKey,
 } from "@miolos/core";
-
-import type { FreePlayGame } from "../free-play/catalog";
 
 const wordmark = "Miolos";
 const tagline = "jogos de raciocínio por dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
 
-const freePlayDescriptions: Partial<Record<FreePlayGame, string>> = {
+const freePlayDescriptions: Partial<Record<Game, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
+  minesweeper:
+    "Abra as casas sem pisar em nenhuma mina. O clássico, em três níveis.",
 };
 
 const back = "← Hoje";
@@ -241,7 +242,7 @@ const cellAriaQueens = (
 export const messages = {
   meta: {
     title: `${wordmark} — ${tagline}`,
-    description: `${taglineCapitalised} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. ${signOff}`,
+    description: `${taglineCapitalised} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. ${signOff}`,
   },
   brand: {
     wordmark,
@@ -345,6 +346,7 @@ export const messages = {
         binairo: "Binairo",
         crossword: "Cruzadinha",
         queens: "Rainhas",
+        minesweeper: "Campo Minado",
       },
     },
     streak: {
@@ -381,6 +383,7 @@ export const messages = {
       `${wordmark} · ${game} · ${shortDate}`,
     termoWon: (used: number, max: number) => `${used}/${max}`,
     termoLost: (max: number) => `X/${max}`,
+    played: "💥 Jogado",
   },
   stats: {
     title: "Estatísticas",
@@ -396,7 +399,15 @@ export const messages = {
     rows: {
       best: "Seu melhor tempo",
       average: "Sua média (30 dias)",
-      solved: (name: string) => `${name}s resolvidos`,
+      solved: {
+        termo: "Termos resolvidos",
+        sudoku: "Sudokus resolvidos",
+        nonogram: "Nonograms resolvidos",
+        binairo: "Binairos resolvidos",
+        crossword: "Cruzadinhas resolvidas",
+        queens: "Rainhas resolvidas",
+        minesweeper: "Campos Minados resolvidos",
+      } satisfies Record<Game, string>,
     },
     emptyValue: "—",
     histogram: {
@@ -637,7 +648,7 @@ export const messages = {
   },
   onboarding: {
     invitation: "Puzzles do dia, iguais para todo mundo.",
-    lead: "Termo, Cruzadinha, Sudoku, Nonogram, Binairo e Rainhas. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
+    lead: "Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
     rollover: "A virada é à meia-noite, no horário de Brasília.",
     noAccount: "Sem cadastro — é só jogar.",
     dismiss: "Entendi",
@@ -1403,8 +1414,7 @@ export const messages = {
     minesweeper: {
       kicker: "Minas",
       name: "Campo Minado",
-      description:
-        "Abra as casas sem pisar em nenhuma mina. O clássico, em três níveis.",
+      description: "Um campo por dia que se abre inteiro na lógica, sem chute.",
       play: {
         title: "Campo Minado",
 
@@ -1415,6 +1425,26 @@ export const messages = {
           label: "Novo jogo",
           question: "Começar um novo jogo? Este será perdido.",
           cancel: "Cancelar",
+        },
+
+        unavailable: {
+          title: "O Campo Minado de hoje ainda não chegou.",
+          body: "Alguma coisa saiu do lugar por aqui. Tente de novo daqui a pouco — o puzzle de hoje é o mesmo para todo mundo.",
+          cta: "Voltar para Hoje",
+        },
+      },
+      conclusion: {
+        title: "Campo Minado",
+        kicker: "Minas",
+        notYet: {
+          title: "Você ainda não concluiu o Campo Minado de hoje.",
+          cta: "Jogar o Campo Minado de hoje",
+        },
+        played: {
+          state: "lost",
+          label: "Jogado",
+          detail: "Bum!",
+          aria: "Campo Minado jogado: uma mina explodiu.",
         },
       },
     },

@@ -1,4 +1,4 @@
-import { layMines } from "@miolos/games/minesweeper";
+import { MINESWEEPER_LEVELS, layMines } from "@miolos/games/minesweeper";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,16 +38,18 @@ function open(index: number): void {
 
 function win(seed: number): void {
   open(FIRST);
-  layMines({ seed, level: "beginner", safe: FIRST }).mines.forEach(
-    (isMine, index) => {
-      if (
-        !isMine &&
-        cell(index).getAttribute("aria-label")?.endsWith(copy.cell.hidden)
-      ) {
-        open(index);
-      }
-    },
-  );
+  layMines({
+    seed,
+    size: MINESWEEPER_LEVELS.beginner,
+    safe: [FIRST],
+  }).mines.forEach((isMine, index) => {
+    if (
+      !isMine &&
+      cell(index).getAttribute("aria-label")?.endsWith(copy.cell.hidden)
+    ) {
+      open(index);
+    }
+  });
 }
 
 function page(): HTMLElement {
@@ -194,8 +196,8 @@ describe("the Campo Minado screen is a static page that plays and records nothin
     });
     const mine = layMines({
       seed: SEED,
-      level: "beginner",
-      safe: FIRST,
+      size: MINESWEEPER_LEVELS.beginner,
+      safe: [FIRST],
     }).mines.findIndex(Boolean);
     open(mine);
 
@@ -312,8 +314,8 @@ describe("the Campo Minado screen is a static page that plays and records nothin
     open(FIRST);
     const mine = layMines({
       seed: SEED,
-      level: "beginner",
-      safe: FIRST,
+      size: MINESWEEPER_LEVELS.beginner,
+      safe: [FIRST],
     }).mines.findIndex(Boolean);
     open(mine);
 

@@ -9,6 +9,7 @@
 **Amended by:** [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md) (#285) — the **forbidden-in-daily-scope** list gains `advancedSteps`, the Rainhas grade, which no daily chunk may carry.
 **Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — `zurro` is checked on every free-play route but `/modo-livre/termo`, which ships the dictionary; the free pool gets its own route-exclusive marker, `ábaco\nabade`.
 **Amended by:** [ADR-0121](./0121-the-solved-nonogram-picture-is-painted-in-its-motifs-tones.md) (#366) — forbidden-in-daily-scope and expected-in-free-play gain the tones table's marker, `heart:mrmr13`.
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — forbidden-everywhere gains `needs-a-guess`, a failure code of `validateMinesweeperDaily`, so the daily generator and solver cannot reach a client chunk unseen. The daily projection ships the layout, so forbidden-in-daily-scope gains nothing; `/campo-minado` and its archive route are daily scope by path.
 
 ## Context
 

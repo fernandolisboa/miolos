@@ -86,6 +86,7 @@ function statsBody(date: string, guesses: number | null): unknown {
     nonogram: timed,
     crossword: timed,
     queens: timed,
+    minesweeper: timed,
     termo: {
       solved: guesses === null ? 0 : 1,
       distribution:

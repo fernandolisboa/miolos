@@ -10,7 +10,7 @@ import {
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { useDayTruth } from "../day/day-truth";
-import { readPlayRecord } from "./play-record";
+import { isPlayedRecord, readPlayRecord } from "./play-record";
 import { subscribeToPlayRecords } from "./use-record-snapshot";
 
 export type DayStatus = DayGameStatus;
@@ -109,12 +109,13 @@ function entryFor(game: Game, date: string): DayEntry {
   if (record === undefined || !record.concluded) {
     return PENDING;
   }
-  if (record.game === "termo") {
-    return record.outcome === "lost"
-      ? { status: "played", elapsedMs: undefined }
-      : { status: "completed", elapsedMs: undefined };
+  if (isPlayedRecord(record)) {
+    return { status: "played", elapsedMs: undefined };
   }
-  return { status: "completed", elapsedMs: record.elapsedMs };
+  return {
+    status: "completed",
+    elapsedMs: record.game === "termo" ? undefined : record.elapsedMs,
+  };
 }
 
 const serverDayState = (): Readonly<Record<Game, DayEntry>> => NOTHING_DONE;

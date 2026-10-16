@@ -49,6 +49,10 @@ export const MEDAL_DEFINITIONS = [
     rule: { kind: "totalWins", game: "crossword", count: 30 },
   },
   { id: "queens-30", rule: { kind: "totalWins", game: "queens", count: 30 } },
+  {
+    id: "minesweeper-30",
+    rule: { kind: "totalWins", game: "minesweeper", count: 30 },
+  },
 
   { id: "streak-3", rule: { kind: "streakReached", days: 3 } },
   { id: "streak-7", rule: { kind: "streakReached", days: 7 } },

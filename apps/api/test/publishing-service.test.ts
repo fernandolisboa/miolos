@@ -1,5 +1,6 @@
 import {
   crosswordDailyContentSchema,
+  minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
   stripDailyContent,
@@ -11,6 +12,7 @@ import { dailyPuzzles, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
 import { isWeekday, type Weekday } from "@miolos/games";
 import { validateCrossword } from "@miolos/games/crossword";
+import { validateMinesweeperDaily } from "@miolos/games/minesweeper";
 import {
   NONOGRAM_WEEKDAY_CRITERIA,
   validateNonogram,
@@ -35,6 +37,7 @@ import {
   drawUniformIndex,
   MAX_BINAIRO_SEED_RETRIES_PER_DATE,
   MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
+  MAX_MINESWEEPER_SEED_RETRIES_PER_DATE,
   MAX_NONOGRAM_SEED_RETRIES_PER_DATE,
   MAX_QUEENS_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_DATE,
@@ -42,6 +45,7 @@ import {
   TopUpAbortedError,
   topUpBinairoBuffer,
   topUpCrosswordBuffer,
+  topUpMinesweeperBuffer,
   topUpNonogramBuffer,
   topUpQueensBuffer,
   topUpSudokuBuffer,
@@ -123,6 +127,15 @@ const { queens } = vi.hoisted(() => ({
   queens: {
     failCount: 0,
     calls: 0,
+    rejectValidator: false,
+    injectStrayKey: false,
+  },
+}));
+
+const { minesweeper } = vi.hoisted(() => ({
+  minesweeper: {
+    failCount: 0,
+    seeds: [] as number[],
     rejectValidator: false,
     injectStrayKey: false,
   },
@@ -276,6 +289,37 @@ vi.mock("@miolos/games/queens", async (importOriginal) => {
   };
 });
 
+vi.mock("@miolos/games/minesweeper", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@miolos/games/minesweeper")>();
+  return {
+    ...actual,
+    generateMinesweeperDaily: (
+      options: Parameters<typeof actual.generateMinesweeperDaily>[0],
+    ) => {
+      minesweeper.seeds.push(options.seed);
+      if (minesweeper.failCount > 0) {
+        minesweeper.failCount -= 1;
+        throw new actual.MinesweeperGenerationError(
+          options.seed,
+          options.weekday,
+          1,
+        );
+      }
+      const puzzle = actual.generateMinesweeperDaily(options);
+      return minesweeper.injectStrayKey ? { ...puzzle, stray: 1 } : puzzle;
+    },
+    validateMinesweeperDaily: (
+      puzzle: Parameters<typeof actual.validateMinesweeperDaily>[0],
+    ) => {
+      if (minesweeper.rejectValidator) {
+        return { ok: false, failures: ["needs-a-guess"] };
+      }
+      return actual.validateMinesweeperDaily(puzzle);
+    },
+  };
+});
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -306,6 +350,10 @@ beforeEach(async () => {
   queens.calls = 0;
   queens.rejectValidator = false;
   queens.injectStrayKey = false;
+  minesweeper.failCount = 0;
+  minesweeper.seeds = [];
+  minesweeper.rejectValidator = false;
+  minesweeper.injectStrayKey = false;
 });
 
 afterAll(async () => {
@@ -1087,6 +1135,85 @@ describe("topUpQueensBuffer", () => {
     expect(result.failures[0]?.date).toBe(today);
     expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
     expect(queens.calls).toBe(1);
+  });
+});
+
+async function minesweeperRows(): Promise<
+  { date: string; seed: number; content: unknown }[]
+> {
+  const rows = await ctx.db.select().from(dailyPuzzles);
+  return rows
+    .filter((row) => row.game === "minesweeper")
+    .map((row) => ({ date: row.date, seed: row.seed, content: row.content }));
+}
+
+describe("topUpMinesweeperBuffer", () => {
+  it("T-API-S340: covers a full week with content the strict contract and the validator both accept, each on its own weekday", async () => {
+    const result = await topUpMinesweeperBuffer(ctx.db, 7);
+
+    expect(result).toEqual({ generated: 7, depth: 7, failures: [] });
+    const rows = await minesweeperRows();
+    expect(rows).toHaveLength(7);
+    for (const row of rows) {
+      const content = minesweeperDailyContentSchema.parse(row.content);
+      const weekday = weekdayOf(row.date);
+      expect(content.weekday).toBe(weekday);
+      expect(content.seed).toBe(row.seed);
+      expect(validateMinesweeperDaily({ ...content, weekday }).ok).toBe(true);
+    }
+  }, 30_000);
+
+  it("T-API-S340: a MinesweeperGenerationError retries with a new seed and still fills the date", async () => {
+    minesweeper.failCount = 1;
+
+    const result = await topUpMinesweeperBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(1);
+    expect(result.failures).toEqual([]);
+    expect(minesweeper.seeds).toHaveLength(2);
+    expect(minesweeper.seeds[1]).not.toBe(minesweeper.seeds[0]);
+    expect((await minesweeperRows())[0]?.seed).toBe(minesweeper.seeds[1]);
+  });
+
+  it("T-API-S340: a seed that always fails generation exhausts the per-date retry budget", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    minesweeper.failCount = Number.POSITIVE_INFINITY;
+
+    const result = await topUpMinesweeperBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.date).toBe(today);
+    expect(result.failures[0]?.reason).toContain(
+      "minesweeper generation failed",
+    );
+    expect(minesweeper.seeds).toHaveLength(
+      MAX_MINESWEEPER_SEED_RETRIES_PER_DATE,
+    );
+  });
+
+  it("T-API-S340: a validator that always rejects retries the full per-date budget", async () => {
+    minesweeper.rejectValidator = true;
+    const today = await todaySaoPaulo(ctx.db);
+
+    const result = await topUpMinesweeperBuffer(ctx.db, 1);
+
+    expect(result.failures).toEqual([
+      { date: today, reason: "validator rejected: needs-a-guess" },
+    ]);
+    expect(minesweeper.seeds).toHaveLength(
+      MAX_MINESWEEPER_SEED_RETRIES_PER_DATE,
+    );
+  });
+
+  it("T-API-S340: a schema rejection stops the date after one attempt", async () => {
+    minesweeper.injectStrayKey = true;
+
+    const result = await topUpMinesweeperBuffer(ctx.db, 1);
+
+    expect(result.generated).toBe(0);
+    expect(result.failures[0]?.reason).toMatch(/^content schema rejected:/);
+    expect(minesweeper.seeds).toHaveLength(1);
   });
 });
 

@@ -2,6 +2,8 @@ import {
   type BufferDepthResponse,
   type Game,
   bufferDepthResponseSchema,
+  GAMES,
+  recordFor,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
 } from "@miolos/core";
@@ -13,9 +15,10 @@ import {
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
-import { isWeekday } from "@miolos/games";
+import { isWeekday, type Weekday } from "@miolos/games";
 import { generateBinairo } from "@miolos/games/binairo";
 import { generateCrossword } from "@miolos/games/crossword";
+import { generateMinesweeperDaily } from "@miolos/games/minesweeper";
 import { generateNonogram } from "@miolos/games/nonogram";
 import { generateQueens } from "@miolos/games/queens";
 import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
@@ -61,6 +64,20 @@ function sudokuContentPlaceholder(seed: number): unknown {
   });
 }
 
+const CONTENT: Record<
+  Game,
+  (seed: number, weekday: Weekday, offset: number) => unknown
+> = {
+  binairo: (seed, weekday) => generateBinairo({ seed, weekday }),
+  sudoku: (seed) => sudokuContentPlaceholder(seed),
+  nonogram: (seed, weekday) => generateNonogram(seed, weekday),
+  termo: (_seed, _weekday, offset) =>
+    termoDailyContentSchema.parse(TERMO_ANSWERS[offset % 400]),
+  crossword: (seed) => generateCrossword(seed),
+  queens: (seed, weekday) => generateQueens({ seed, weekday }),
+  minesweeper: (seed, weekday) => generateMinesweeperDaily({ seed, weekday }),
+};
+
 async function seedDays(game: Game, count: number): Promise<void> {
   const today = await todaySaoPaulo(ctx.db);
   for (let offset = 0; offset < count; offset += 1) {
@@ -70,21 +87,24 @@ async function seedDays(game: Game, count: number): Promise<void> {
       throw new Error(`unreachable: bad weekday for ${date}`);
     }
     const seed = offset + 1;
-
-    const content =
-      game === "binairo"
-        ? generateBinairo({ seed, weekday })
-        : game === "nonogram"
-          ? generateNonogram(seed, weekday)
-          : game === "termo"
-            ? termoDailyContentSchema.parse(TERMO_ANSWERS[offset % 400])
-            : game === "crossword"
-              ? generateCrossword(seed)
-              : game === "queens"
-                ? generateQueens({ seed, weekday })
-                : sudokuContentPlaceholder(seed);
+    const content = CONTENT[game](seed, weekday, offset);
     await insertDailyPuzzle(ctx.db, { game, date, seed, content });
   }
+}
+
+async function seedAllBut(count: number, drained?: Game): Promise<void> {
+  for (const game of GAMES) {
+    if (game !== drained) {
+      await seedDays(game, count);
+    }
+  }
+}
+
+function depthsOf(
+  depth: number,
+  drained?: Game,
+): BufferDepthResponse["depths"] {
+  return recordFor(GAMES, (game) => (game === drained ? 0 : depth));
 }
 
 async function spendPastAnswers(from: number, count: number): Promise<void> {
@@ -107,24 +127,12 @@ async function readBody(): Promise<BufferDepthResponse> {
 
 describe("GET /buffer-depth", () => {
   it("T-API-S5: reports per-game depth, the effective threshold and shallow=false at 7", async () => {
-    await seedDays("termo", 7);
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("crossword", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7);
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 7,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: depthsOf(7),
       threshold: 4,
       shallow: false,
       termoAnswersRemaining: 393,
@@ -133,23 +141,12 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S5: a drained SUDOKU buffer reports shallow=true even with binairo healthy", async () => {
-    await seedDays("termo", 7);
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("crossword", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7, "sudoku");
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 0,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: depthsOf(7, "sudoku"),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 393,
@@ -158,23 +155,12 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S22: a drained NONOGRAM buffer alone flips shallow=true", async () => {
-    await seedDays("termo", 7);
-    await seedDays("binairo", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("crossword", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7, "nonogram");
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 0,
-        sudoku: 7,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: depthsOf(7, "nonogram"),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 393,
@@ -183,23 +169,12 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S34b: a drained TERMO buffer alone flips shallow=true", async () => {
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("crossword", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7, "termo");
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 0,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 7,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: depthsOf(7, "termo"),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 400,
@@ -208,23 +183,12 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S224: a drained CROSSWORD buffer alone flips shallow=true", async () => {
-    await seedDays("termo", 7);
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7, "crossword");
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 7,
-        crossword: 0,
-        queens: 7,
-      },
+      depths: depthsOf(7, "crossword"),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 393,
@@ -233,20 +197,20 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S240: a drained QUEENS buffer alone flips shallow=true", async () => {
-    await seedDays("termo", 7);
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("crossword", 7);
+    await seedAllBut(7, "queens");
     expect(await readBody()).toEqual({
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 7,
-        crossword: 7,
-        queens: 0,
-      },
+      depths: depthsOf(7, "queens"),
+      threshold: 4,
+      shallow: true,
+      termoAnswersRemaining: 393,
+      termoAnswersLow: false,
+    });
+  });
+
+  it("T-API-S341: a drained CAMPO MINADO buffer alone flips shallow=true", async () => {
+    await seedAllBut(7, "minesweeper");
+    expect(await readBody()).toEqual({
+      depths: depthsOf(7, "minesweeper"),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 393,
@@ -255,24 +219,12 @@ describe("GET /buffer-depth", () => {
   });
 
   it("shallow=true below the effective threshold — still HTTP 200 (the poller reads the flag)", async () => {
-    await seedDays("termo", 3);
-    await seedDays("binairo", 3);
-    await seedDays("nonogram", 3);
-    await seedDays("sudoku", 3);
-    await seedDays("crossword", 3);
-    await seedDays("queens", 3);
+    await seedAllBut(3);
     const response = await GET();
     expect(response.status).toBe(200);
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 3,
-        binairo: 3,
-        nonogram: 3,
-        sudoku: 3,
-        crossword: 3,
-        queens: 3,
-      },
+      depths: depthsOf(3),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 397,
@@ -282,23 +234,11 @@ describe("GET /buffer-depth", () => {
 
   it("tuned bufferDepth=2 with depth 2 reports shallow=false (A3)", async () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 2 });
-    await seedDays("termo", 2);
-    await seedDays("binairo", 2);
-    await seedDays("nonogram", 2);
-    await seedDays("sudoku", 2);
-    await seedDays("crossword", 2);
-    await seedDays("queens", 2);
+    await seedAllBut(2);
     const response = await GET();
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 2,
-        binairo: 2,
-        nonogram: 2,
-        sudoku: 2,
-        crossword: 2,
-        queens: 2,
-      },
+      depths: depthsOf(2),
       threshold: 2,
       shallow: false,
       termoAnswersRemaining: 398,
@@ -310,14 +250,7 @@ describe("GET /buffer-depth", () => {
     const response = await GET();
     const body = bufferDepthResponseSchema.parse(await response.json());
     expect(body).toEqual({
-      depths: {
-        termo: 0,
-        binairo: 0,
-        nonogram: 0,
-        sudoku: 0,
-        crossword: 0,
-        queens: 0,
-      },
+      depths: depthsOf(0),
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 400,
@@ -353,11 +286,7 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S219: a shallow buffer and a low answer list are reported independently", async () => {
-    await seedDays("binairo", 7);
-    await seedDays("nonogram", 7);
-    await seedDays("sudoku", 7);
-    await seedDays("crossword", 7);
-    await seedDays("queens", 7);
+    await seedAllBut(7, "termo");
     expect(await readBody()).toMatchObject({
       shallow: true,
       termoAnswersLow: false,

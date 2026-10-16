@@ -1,3 +1,4 @@
+import { DAILY_MINESWEEPER_SIZE } from "@miolos/core";
 import { describe, expect, it } from "vitest";
 
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
@@ -154,5 +155,32 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
     expect(decl(bodyOf(media, ".pageExpert"), "--board-min")).toBe(
       "calc(16 * var(--pitch) + var(--chrome))",
     );
+  });
+});
+
+describe("the daily field is 16 by 10, fits the well's height and keeps 24px cells below it (T-WEB-S929)", () => {
+  const daily = bodyOf(MINE_CSS, ".pageDaily");
+
+  it("lays out the core's ten columns", () => {
+    expect(columnsOf("pageDaily", ".daily")).toBe(
+      DAILY_MINESWEEPER_SIZE.columns,
+    );
+  });
+
+  it("caps the card's width by the well's height through the board's own aspect", () => {
+    expect(decl(daily, "--board-aspect")).toBe(
+      `calc(${String(DAILY_MINESWEEPER_SIZE.columns)} / ${String(DAILY_MINESWEEPER_SIZE.rows)})`,
+    );
+  });
+
+  it("reserves the floor card's height, whose cells are 24px, and scrolls below it", () => {
+    expect(decl(daily, "--board-min")).toBe(
+      `calc(${String(DAILY_MINESWEEPER_SIZE.rows)} * var(--pitch) + var(--chrome))`,
+    );
+    expect(decl(PAGE, "--board-floor-side")).toBe("var(--floor)");
+    const floor = DAILY_MINESWEEPER_SIZE.columns * PITCH + CHROME;
+    expect(
+      renderedCell(floor, DAILY_MINESWEEPER_SIZE.columns),
+    ).toBeGreaterThanOrEqual(CELL_FLOOR);
   });
 });

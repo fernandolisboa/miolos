@@ -21,7 +21,11 @@ function open(play: MinesweeperPlay, index: number, now: number) {
 }
 
 function firstMineAfter(first: number): number {
-  const { mines } = layMines({ seed: SEED, level: "beginner", safe: first });
+  const { mines } = layMines({
+    seed: SEED,
+    size: MINESWEEPER_LEVELS.beginner,
+    safe: [first],
+  });
   return mines.findIndex(Boolean);
 }
 
@@ -87,7 +91,11 @@ describe("the clock starts at the first open, stops at the end, and the counter 
 
   it("freezes the clock at a win", () => {
     let play = open(fresh(), 40, T0);
-    const { mines } = layMines({ seed: SEED, level: "beginner", safe: 40 });
+    const { mines } = layMines({
+      seed: SEED,
+      size: MINESWEEPER_LEVELS.beginner,
+      safe: [40],
+    });
     mines.forEach((isMine, index) => {
       if (!isMine) {
         play = open(play, index, T0 + 12_000);
@@ -172,8 +180,8 @@ describe("the clock starts at the first open, stops at the end, and the counter 
       now: T0 + 5000,
     });
 
-    expect(next.game.level).toBe("expert");
-    expect(next.game.seed).toBe(7);
+    expect(next.level).toBe("expert");
+    expect(next.seed).toBe(7);
     expect(next.game.status).toBe("ready");
     expect(elapsedMs(next.timer, T0 + 99_000)).toBe(0);
     expect(minesLeft(next.game)).toBe(99);

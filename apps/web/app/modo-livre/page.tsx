@@ -1,6 +1,6 @@
+import { GAMES } from "@miolos/core";
 import Link from "next/link";
 
-import { FREE_PLAY_GAMES } from "../../src/free-play/catalog";
 import { freePlayRoutes, messages } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
 import { PageTopBar } from "../../src/components/page-top-bar";
@@ -17,7 +17,7 @@ export default function FreePlayIndexPage() {
       </div>
 
       <section className={styles.games}>
-        {FREE_PLAY_GAMES.map((game) => (
+        {GAMES.map((game) => (
           <Link
             key={game}
             className={styles.card}

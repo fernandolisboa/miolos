@@ -123,7 +123,6 @@ function TimedBlock({
 }) {
   const block =
     stats === undefined ? undefined : stats === null ? TIMED_ZERO : stats[game];
-  const name = messages.games[game].name;
   return (
     <div data-stats-state={block === undefined ? "skeleton" : "value"}>
       <div className={styles.statRows}>
@@ -148,7 +147,7 @@ function TimedBlock({
           }
         />
         <StatRow
-          label={messages.stats.rows.solved(name)}
+          label={messages.stats.rows.solved[game]}
           value={block === undefined ? BLANK_VALUE : String(block.solved)}
         />
       </div>
@@ -222,7 +221,7 @@ function TermoBlock({
     <div data-stats-state={block === undefined ? "skeleton" : "value"}>
       <div className={styles.statRows}>
         <StatRow
-          label={messages.stats.rows.solved(messages.games.termo.name)}
+          label={messages.stats.rows.solved.termo}
           value={block === undefined ? BLANK_VALUE : String(block.solved)}
         />
       </div>

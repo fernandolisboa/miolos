@@ -255,7 +255,7 @@ describe("the lazy conclusion's failure story — skeleton, one retry, degraded 
     const Broken = lazy.resilientConclusion(() => {
       loads.push(loads.length);
       return Promise.reject(new Error("chunk fetch failed (test)"));
-    }, lazy.localConclusionFallback);
+    }, lazy.localConclusionFallback).Conclusion;
 
     const { container } = render(
       <Broken

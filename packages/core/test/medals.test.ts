@@ -138,7 +138,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
       (d) => d.rule.kind === "totalWins" && d.rule.game !== null,
     );
     expect(perGame.length).toBeGreaterThanOrEqual(4);
-    expect(perGame.length).toBeLessThanOrEqual(6);
+    expect(perGame.length).toBeLessThanOrEqual(7);
     for (const game of GAMES) {
       const gameCounts = perGame
         .filter((d) => d.rule.kind === "totalWins" && d.rule.game === game)
@@ -182,8 +182,7 @@ describe("the definition harness (content/medals/README.md, ADR-0015 scaled)", (
     const guessMedals = definitions.filter(
       (d) => d.rule.kind === "termoGuessWins",
     );
-    expect(guessMedals.length).toBeGreaterThanOrEqual(3);
-    expect(guessMedals.length).toBeLessThanOrEqual(4);
+    expect(guessMedals).toHaveLength(3);
     for (const guesses of [1, 2, 6] as const) {
       const scoped = guessMedals
         .filter(
@@ -296,8 +295,7 @@ describe("the Cruzadinha's medals (ADR-0087)", () => {
 });
 
 describe("the Rainhas medal", () => {
-  it("T-CORE-S135: queens-30 follows crossword-30, earns at the 30th Rainhas win and not the 29th, all-games ignores it, and the catalog holds 28", () => {
-    expect(MEDAL_IDS).toHaveLength(28);
+  it("T-CORE-S135: queens-30 follows crossword-30, earns at the 30th Rainhas win and not the 29th, and all-games ignores it", () => {
     expect(MEDAL_IDS.indexOf("queens-30")).toBe(
       MEDAL_IDS.indexOf("crossword-30") + 1,
     );
@@ -315,6 +313,35 @@ describe("the Rainhas medal", () => {
       row({ game: "queens", date: daysAgo(9) }),
     ];
     expect(earnedMedals(queensForTermo, [], TODAY, [])).not.toContain(
+      "all-games",
+    );
+  });
+
+  it("T-CORE-S201: minesweeper-30 follows queens-30, earns at the 30th Campo Minado win and not the 29th, never from losses, and all-games ignores it", () => {
+    expect(MEDAL_IDS.indexOf("minesweeper-30")).toBe(
+      MEDAL_IDS.indexOf("queens-30") + 1,
+    );
+    expect(
+      earnedMedals(lateWins("minesweeper", 29), [], TODAY, []),
+    ).not.toContain("minesweeper-30");
+    const thirty = earnedMedals(lateWins("minesweeper", 30), [], TODAY, []);
+    expect(thirty).toContain("minesweeper-30");
+    expect(thirty).not.toContain("queens-30");
+
+    const lost = lateWins("minesweeper", 30).map((won) => ({
+      ...won,
+      onTime: true,
+      outcome: "lost" as const,
+    }));
+    expect(earnedMedals(lost, [], TODAY, [])).toEqual([]);
+
+    const minesweeperForTermo = [
+      ...ORIGINAL_FOUR.filter((game) => game !== "termo").map((game, i) =>
+        row({ game, date: daysAgo(i + 1) }),
+      ),
+      row({ game: "minesweeper", date: daysAgo(9) }),
+    ];
+    expect(earnedMedals(minesweeperForTermo, [], TODAY, [])).not.toContain(
       "all-games",
     );
   });

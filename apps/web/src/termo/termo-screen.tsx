@@ -13,16 +13,11 @@ import { elapsedMs } from "../play/timer";
 import { PlaySkeleton, PlayView } from "./play-view";
 import { useTermoPlay } from "./use-termo-play";
 
-const TermoConclusion = resilientConclusion<
-  Parameters<typeof import("./termo-conclusion").TermoConclusion>[0]
->(
-  async () => (await import("./termo-conclusion")).TermoConclusion,
-  () => <ConclusionChunkFallback copy={messages.games.termo.conclusion} />,
-);
-
-function preloadTermoConclusion(): void {
-  void import("./termo-conclusion").catch(() => undefined);
-}
+const { Conclusion: TermoConclusion, preload: preloadTermoConclusion } =
+  resilientConclusion(
+    async () => (await import("./termo-conclusion")).TermoConclusion,
+    () => <ConclusionChunkFallback copy={messages.games.termo.conclusion} />,
+  );
 
 export function TermoScreen({ daily }: { readonly daily: DailyTermoResponse }) {
   const claim = useServerDayClaim(daily.date, "termo");

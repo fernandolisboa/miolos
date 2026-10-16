@@ -2,7 +2,6 @@ import { fireEvent, render, screen as dom } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { FreePlayChrome } from "../src/free-play/chrome";
-import { DailyPlayChrome } from "../src/play/daily-chrome";
 import { messages } from "../src/i18n";
 import { minesweeperMessages } from "../src/minesweeper/messages";
 import type { PlayChromeReadouts } from "../src/play/screen-chrome";
@@ -109,22 +108,5 @@ describe("the chrome serves Campo Minado with no hint, no undo and its own Novo 
     expect(
       dom.getByRole("button", { name: messages.play.reset.label }),
     ).toBeInTheDocument();
-  });
-
-  it("is closed to the daily chrome", () => {
-    const probe = () => (
-      <DailyPlayChrome
-        // @ts-expect-error the daily chrome serves the daily games only
-        game="minesweeper"
-        pageModifier=""
-        date="2026-08-18"
-        clock="none"
-        extraStat={null}
-        state={{ kind: "skeleton" }}
-      >
-        <div />
-      </DailyPlayChrome>
-    );
-    expect(probe).toBeTypeOf("function");
   });
 });

@@ -7,6 +7,7 @@
 **Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — Recomeçar also clears the undo history, and a hint is a point undo never steps past.
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — a Sudoku board that holds only notes is resettable: decision 1 clears the notes, and `onReset` stays on while any exist.
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — Recomeçar also clears the counted mistakes and unfreezes the board; `onReset` stays on while any are counted, on an empty board too.
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — decision 3: `PlayChromeReadouts.onReset` is optional; the daily Campo Minado has no Recomeçar, so its reset area holds no `ResetControl`.
 
 ## Context
 

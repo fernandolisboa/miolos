@@ -78,6 +78,7 @@ function dayBody(
       binairo: { status: "pending" },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
       ...games,
     },
   };

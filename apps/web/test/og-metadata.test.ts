@@ -51,6 +51,7 @@ const DAILY_PAGES = {
   termo: await import("../app/termo/page"),
   crossword: await import("../app/cruzadinha/page"),
   queens: await import("../app/rainhas/page"),
+  minesweeper: await import("../app/campo-minado/page"),
 } as const;
 
 const ARCHIVE_PAGES = {
@@ -60,12 +61,12 @@ const ARCHIVE_PAGES = {
   termo: await import("../app/arquivo/[data]/termo/page"),
   crossword: await import("../app/arquivo/[data]/cruzadinha/page"),
   queens: await import("../app/arquivo/[data]/rainhas/page"),
+  minesweeper: await import("../app/arquivo/[data]/campo-minado/page"),
 } as const;
 
 describe("the daily play routes carry openGraph and NOTHING else (T-WEB-S198)", () => {
   it("every member of @miolos/core's GAMES is covered by both page maps", () => {
     const covered = [...GAMES].sort();
-    expect(covered).toHaveLength(6);
     expect(Object.keys(DAILY_PAGES).sort()).toEqual(covered);
     expect(Object.keys(ARCHIVE_PAGES).sort()).toEqual(covered);
   });
@@ -128,7 +129,7 @@ describe("og:locale is pt_BR, and it is asserted on a LEAF (T-WEB-S199)", () => 
 });
 
 describe("the per-game archive routes' openGraph (T-WEB-S207)", () => {
-  it("every one of the six spreads OG_DEFAULTS and reuses the strings it already composes", async () => {
+  it("every one spreads OG_DEFAULTS and reuses the strings it already composes", async () => {
     for (const game of GAMES) {
       const metadata = await ARCHIVE_PAGES[game].generateMetadata({
         params: Promise.resolve({ data: "2026-02-22" }),

@@ -1,8 +1,4 @@
-import {
-  MINESWEEPER_LEVELS,
-  type MinesweeperLevel,
-  type MinesweeperState,
-} from "@miolos/games/minesweeper";
+import type { MinesweeperState } from "@miolos/games/minesweeper";
 import {
   memo,
   useCallback,
@@ -10,14 +6,13 @@ import {
   useState,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
 } from "react";
 
 import { minesweeperMessages } from "./messages";
 import { isShortcut, keyMove, movedSelection } from "../play/grid-selection";
 import { cellIndexOf } from "../play/cell-index-at";
 import { useCellPress } from "../play/use-cell-press";
-import { FlagGlyph, MineGlyph } from "./glyphs";
+import { classOf, glyphOf } from "./finished-minefield";
 import styles from "./minefield.module.css";
 import { cellView, type CellView } from "./view";
 
@@ -25,53 +20,11 @@ const copy = minesweeperMessages;
 
 export type TapMode = "open" | "flag";
 
-const LEVEL_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
-  beginner: styles.beginner,
-  intermediate: styles.intermediate,
-  expert: styles.expert,
-};
-
 function labelOf(view: CellView): string {
   if (typeof view === "number") {
     return view === 0 ? copy.cell.empty : copy.cell.count(view);
   }
   return copy.cell[view];
-}
-
-function glyphOf(view: CellView): ReactNode {
-  switch (view) {
-    case "flag":
-      return <FlagGlyph />;
-    case "wrongFlag":
-      return <FlagGlyph crossed />;
-    case "mine":
-    case "hit":
-      return <MineGlyph />;
-    case "question":
-      return "?";
-    case "hidden":
-      return null;
-    default:
-      return view === 0 ? null : view;
-  }
-}
-
-function classOf(view: CellView): string {
-  const shown =
-    typeof view === "number" ||
-    view === "hit" ||
-    view === "mine" ||
-    view === "wrongFlag";
-  return [
-    styles.cell,
-    shown ? styles.open : undefined,
-    typeof view === "number" && view > 0
-      ? styles[`count${String(view)}`]
-      : undefined,
-    view === "hit" ? styles.hit : undefined,
-  ]
-    .filter((name) => name !== undefined)
-    .join(" ");
 }
 
 function positionLabel(index: number, columns: number, view: CellView): string {
@@ -144,18 +97,20 @@ function movedIndex(
 
 export const Minefield = memo(function Minefield({
   game,
+  sizeClass,
   tapMode,
   onActivate,
   onMark,
   onChord,
 }: {
   readonly game: MinesweeperState;
+  readonly sizeClass: string | undefined;
   readonly tapMode: TapMode;
   readonly onActivate: (index: number) => void;
   readonly onMark: (index: number) => void;
   readonly onChord: (index: number) => void;
 }) {
-  const { rows, columns } = MINESWEEPER_LEVELS[game.level];
+  const { rows, columns } = game.size;
   const fieldRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(0);
   const press = useCellPress({
@@ -207,7 +162,7 @@ export const Minefield = memo(function Minefield({
       ref={fieldRef}
       role="group"
       aria-label={copy.boardAria(rows, columns)}
-      className={`${styles.field} ${LEVEL_CLASS[game.level] ?? ""}`}
+      className={`${styles.field} ${sizeClass ?? ""}`}
       onKeyDown={onKeyDown}
       {...press}
     >
@@ -226,21 +181,17 @@ export const Minefield = memo(function Minefield({
   );
 });
 
-export function FinishedMinefield({
-  game,
+export function MinefieldSkeleton({
+  cells,
+  sizeClass,
 }: {
-  readonly game: MinesweeperState;
+  readonly cells: number;
+  readonly sizeClass: string | undefined;
 }) {
   return (
-    <div
-      role="img"
-      aria-label={copy.finishedAria(game.status === "won")}
-      className={`${styles.field} ${styles.finished} ${LEVEL_CLASS[game.level] ?? ""}`}
-    >
-      {game.open.map((_open, index) => (
-        <span key={index} className={classOf(cellView(game, index))}>
-          {glyphOf(cellView(game, index))}
-        </span>
+    <div className={`${styles.field} ${sizeClass ?? ""}`}>
+      {Array.from({ length: cells }, (_unused, index) => (
+        <span key={index} className={styles.cell} />
       ))}
     </div>
   );

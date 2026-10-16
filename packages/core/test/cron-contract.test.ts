@@ -6,6 +6,7 @@ import {
   cronPublishGameResultSchema,
   cronPublishResponseSchema,
   GAMES,
+  recordFor,
   streakReminderSchema,
   type BufferDepthResponse,
   type CronPublishGameResult,
@@ -20,18 +21,11 @@ const healthy: CronPublishGameResult = {
 };
 
 const body: CronPublishResponse = {
-  games: {
-    termo: healthy,
-    binairo: healthy,
-    nonogram: healthy,
-    sudoku: healthy,
-    crossword: healthy,
-    queens: healthy,
-  },
+  games: recordFor(GAMES, () => healthy),
 };
 
 describe("cronPublishResponseSchema", () => {
-  it("parses and round-trips a six-game body", () => {
+  it("parses and round-trips a body over every game", () => {
     expect(cronPublishResponseSchema.parse(body)).toEqual(body);
   });
 
@@ -62,6 +56,7 @@ describe("cronPublishResponseSchema", () => {
   it("carries a per-date failure and an escaped-throw message on the same shape", () => {
     const degraded: CronPublishResponse = {
       games: {
+        ...body.games,
         termo: {
           generated: 5,
           depth: 5,
@@ -93,8 +88,6 @@ describe("cronPublishResponseSchema", () => {
           failures: [{ date: "2026-08-09", reason: "seed-retries-exhausted" }],
           error: null,
         },
-        crossword: healthy,
-        queens: healthy,
       },
     };
     expect(cronPublishResponseSchema.parse(degraded)).toEqual(degraded);
@@ -122,21 +115,14 @@ describe("cronPublishResponseSchema", () => {
 
 describe("bufferDepthResponseSchema", () => {
   const depths: BufferDepthResponse = {
-    depths: {
-      termo: 7,
-      binairo: 7,
-      nonogram: 7,
-      sudoku: 7,
-      crossword: 7,
-      queens: 7,
-    },
+    depths: recordFor(GAMES, () => 7),
     threshold: 4,
     shallow: false,
     termoAnswersRemaining: 120,
     termoAnswersLow: false,
   };
 
-  it("parses and round-trips a six-game body", () => {
+  it("parses and round-trips a body over every game", () => {
     expect(bufferDepthResponseSchema.parse(depths)).toEqual(depths);
   });
 
@@ -162,14 +148,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode: one game drained, shallow true", () => {
     const drained: BufferDepthResponse = {
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 0,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: { ...recordFor(GAMES, () => 7), sudoku: 0 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -180,14 +159,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #25 just added: nonogram drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: {
-        termo: 7,
-        binairo: 7,
-        nonogram: 0,
-        sudoku: 7,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: { ...recordFor(GAMES, () => 7), nonogram: 0 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,
@@ -198,14 +170,7 @@ describe("bufferDepthResponseSchema", () => {
 
   it("carries the S16 failure mode for the key #27 just added: termo drained alone", () => {
     const drained: BufferDepthResponse = {
-      depths: {
-        termo: 0,
-        binairo: 7,
-        nonogram: 7,
-        sudoku: 7,
-        crossword: 7,
-        queens: 7,
-      },
+      depths: { ...recordFor(GAMES, () => 7), termo: 0 },
       threshold: 4,
       shallow: true,
       termoAnswersRemaining: 120,

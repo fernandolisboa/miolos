@@ -37,9 +37,9 @@ import { FreeHintsContext } from "../src/play/free-hints";
 import type { PlayTitleNote } from "../src/play/play-title";
 import {
   PlayScreenChrome,
-  type DailyChromeGame,
   type PlayChromeBack,
   type PlayChromeClock,
+  type PlayChromeGame,
   type PlayChromeReadouts,
   type PlayChromeStat,
   type PlayChromeState,
@@ -749,16 +749,17 @@ describe("the chrome's back link is routed (T-WEB-S376)", () => {
 });
 
 describe("the chrome looks its copy up by game (T-WEB-S486)", () => {
-  const GAMES: readonly DailyChromeGame[] = [
+  const GAMES: readonly PlayChromeGame[] = [
     "sudoku",
     "nonogram",
     "binairo",
     "crossword",
     "queens",
+    "minesweeper",
   ];
 
   function dailyChrome(
-    game: DailyChromeGame,
+    game: PlayChromeGame,
     archive?: ArchivePlayChrome,
   ): ReactElement {
     return (

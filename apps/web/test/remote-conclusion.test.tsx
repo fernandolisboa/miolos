@@ -53,6 +53,7 @@ function dayBody(
       binairo: { status: "pending" },
       crossword: { status: "pending" },
       queens: { status: "pending" },
+      minesweeper: { status: "pending" },
       ...games,
     },
   };
@@ -76,6 +77,7 @@ function statsBody(overrides: Partial<StatsResponse> = {}): StatsResponse {
     nonogram: emptyTimed(),
     crossword: emptyTimed(),
     queens: emptyTimed(),
+    minesweeper: emptyTimed(),
     termo: { solved: 3, distribution: [0, 1, 0, 2, 0, 0, 1] },
     perfectDays: 0,
     todayTermoGuesses: 4,

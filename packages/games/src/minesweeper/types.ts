@@ -1,4 +1,6 @@
-interface MinesweeperSize {
+import type { Weekday } from "../weekday";
+
+export interface MinesweeperSize {
   readonly rows: number;
   readonly columns: number;
   readonly mines: number;
@@ -23,12 +25,53 @@ export type MinesweeperMark = "flag" | "question" | null;
 
 export type MinesweeperStatus = "ready" | "playing" | "won" | "lost";
 
-export interface MinesweeperState {
-  readonly level: MinesweeperLevel;
-  readonly seed: number;
-  readonly field: MinesweeperField | null;
+export type MinesweeperState = {
+  readonly size: MinesweeperSize;
   readonly open: readonly boolean[];
   readonly marks: readonly MinesweeperMark[];
   readonly status: MinesweeperStatus;
   readonly hit: number | null;
+} & (
+  | { readonly field: null; readonly seed: number }
+  | { readonly field: MinesweeperField }
+);
+
+export interface MinesweeperDaily {
+  readonly seed: number;
+  readonly weekday: Weekday;
+  readonly rows: number;
+  readonly columns: number;
+  readonly mines: readonly (0 | 1)[];
+  readonly start: number;
+}
+
+export type MinesweeperRejectionReason =
+  | "malformed"
+  | "size-mismatch"
+  | "mine-count"
+  | "start-not-clear"
+  | "opens-too-much"
+  | "needs-a-guess";
+
+export type MinesweeperValidationResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly failures: readonly MinesweeperRejectionReason[];
+    };
+
+export class MinesweeperGenerationError extends Error {
+  readonly seed: number;
+  readonly weekday: Weekday;
+  readonly attempts: number;
+
+  constructor(seed: number, weekday: Weekday, attempts: number) {
+    super(
+      `minesweeper generation failed for seed ${String(seed)}, weekday ${String(weekday)} after ${String(attempts)} attempts`,
+    );
+    this.name = "MinesweeperGenerationError";
+    this.seed = seed;
+    this.weekday = weekday;
+    this.attempts = attempts;
+  }
 }

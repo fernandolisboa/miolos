@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { formatElapsed, formatShortDate, messages } from "../src/i18n";
 import {
   binairoPlayRecordSchema,
+  minesweeperPlayRecordSchema,
   nonogramPlayRecordSchema,
   sudokuPlayRecordSchema,
   termoPlayRecordSchema,
@@ -288,7 +289,9 @@ function resolveRelative(from: string, specifier: string): string | undefined {
 describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
   it("composes header, elapsed, a blank line and the URL — and nothing else", () => {
     for (const record of [binairo(), sudoku(), nonogram()]) {
-      expect(buildShareText(record, { url: URL }).split("\n")).toEqual([
+      expect(
+        buildShareText({ ...record, played: false }, { url: URL }).split("\n"),
+      ).toEqual([
         `${messages.brand.wordmark} · ${messages.games[record.game].name} · ${SHORT_DATE}`,
         formatElapsed(ELAPSED_MS),
         "",
@@ -414,9 +417,17 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
       }
       expect(JSON.stringify(left), name).not.toBe(JSON.stringify(right));
       expect(
-        buildShareText(left as BinairoPlayRecord, { url: URL }),
+        buildShareText(
+          { ...(left as BinairoPlayRecord), played: false },
+          { url: URL },
+        ),
         name,
-      ).toBe(buildShareText(right as BinairoPlayRecord, { url: URL }));
+      ).toBe(
+        buildShareText(
+          { ...(right as BinairoPlayRecord), played: false },
+          { url: URL },
+        ),
+      );
     }
   });
 
@@ -476,6 +487,18 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
         "pendingSync",
         "syncOutcome",
       ],
+      minesweeper: [
+        "v",
+        "game",
+        "date",
+        "entries",
+        "hit",
+        "elapsedMs",
+        "hintsUsed",
+        "concluded",
+        "pendingSync",
+        "syncOutcome",
+      ],
     };
 
     const shapes: Readonly<Record<string, object>> = {
@@ -484,6 +507,7 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
 
       nonogram: nonogramPlayRecordSchema.shape,
       termo: termoPlayRecordSchema.shape,
+      minesweeper: minesweeperPlayRecordSchema.shape,
     };
 
     for (const [game, expected] of Object.entries(SHAPES)) {

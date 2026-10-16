@@ -5,6 +5,7 @@
 **Amends:** [ADR-0041](./0041-accents-colour-shapes-never-words.md) — decision 1's accent-as-text allowance and consequence (h)'s site figures are now measured in both themes, not light alone; decision 6 (`--accent-termo`, as already carried by ADR-0067) gains its dark twin here too. The dark figures are pinned by `T-WEB-S299a`, `T-WEB-S300a` and `T-WEB-S395`.
 **Amended by:** [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md) (#276) — decision 2's accent list gains `--accent-crossword` (`#6B4560` light, `#BD7F9D` dark), which clears both floors. Decision 3's small-text sites gain the crossword `.cellHinted`, but it needs no `-text` token: its plain accent measures 6.1459:1 light and 5.1844:1 dark on its own 10% tint (`T-WEB-S395`).
 **Amended by:** [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md) (#285) — decision 2's accent list gains `--accent-queens` (`#7A569C` light, `#B48AD8` dark), which clears both floors: `--paper-desk` on it is 5.1756:1 light and 6.6724:1 dark. Decision 3's small-text sites gain nothing.
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — decision 2's accent list gains `--accent-minesweeper` as a daily accent; it clears both floors in both themes.
 
 ## Context
 

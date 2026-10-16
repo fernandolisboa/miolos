@@ -6,6 +6,7 @@
 **Amended by:** [ADR-0091](./0091-rainhas-joins-the-catalogue-as-the-sixth-daily.md) (#285) — decision 4's count: `queens-30` follows `crossword-30`, making 25 medals. `all-games` stays on `ORIGINAL_GAMES`.
 **Amended by:** [ADR-0122](./0122-earned-medals-are-drawn-as-medals-side-by-side.md) (#360) — decision 4's `ORIGINAL_GAMES` moved from `medals/derive.ts` to `medals/definitions.ts` and is exported from `@miolos/core`, so the medal art draws the same four games.
 **Amended by:** [ADR-0129](./0129-dia-cheio-is-three-on-time-wins-in-a-day.md) (#370) — a second tier, Dia Cheio, uses the lineup only for its threshold `min(3, size)`; the Perfeito test is unchanged and now lives in `dayMarkOf`.
+**Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — decision 4's count: `minesweeper-30` follows `queens-30`, making 29 medals. `all-games` stays on `ORIGINAL_GAMES`.
 
 ## Context
 

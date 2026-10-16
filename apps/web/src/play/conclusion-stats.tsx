@@ -108,11 +108,9 @@ export function ConclusionStatsBody({
   const counts = block?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
   const max = Math.max(...counts, 1);
 
+  const today = lost ? undefined : elapsedMs;
   const todayBucket =
-    elapsedMs === undefined || !dayMatches
-      ? undefined
-      : timeBucketIndex(elapsedMs);
-  const name = messages.games[game].name;
+    today === undefined || !dayMatches ? undefined : timeBucketIndex(today);
   return (
     <div
       className={styles.statsBlock}
@@ -141,7 +139,7 @@ export function ConclusionStatsBody({
           }
         />
         <StatRow
-          label={messages.stats.rows.solved(name)}
+          label={messages.stats.rows.solved[game]}
           value={block === undefined ? BLANK_VALUE : String(block.solved)}
         />
       </div>
@@ -172,13 +170,13 @@ export function ConclusionStatsBody({
 
       {loaded &&
         dayMatches &&
-        elapsedMs !== undefined &&
+        today !== undefined &&
         block !== undefined &&
         block.averageSampleCount >= 2 &&
         block.averageMs !== null &&
-        elapsedMs !== block.averageMs && (
+        today !== block.averageMs && (
           <p className={styles.closingLine}>
-            {elapsedMs < block.averageMs
+            {today < block.averageMs
               ? messages.conclusion.closingFaster
               : messages.conclusion.closingSlower}
           </p>
