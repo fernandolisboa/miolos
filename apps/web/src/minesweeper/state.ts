@@ -11,6 +11,8 @@ import {
 import { applyTimerAction, type TimerState } from "../play/timer";
 
 export interface MinesweeperPlay {
+  readonly level: MinesweeperLevel;
+  readonly seed: number;
   readonly game: MinesweeperState;
   readonly timer: TimerState;
   readonly now: number;
@@ -39,12 +41,18 @@ export function initMinesweeper(
   seed: number,
   now: number,
 ): MinesweeperPlay {
-  return { game: newMinesweeperGame(level, seed), timer: STOPPED, now };
+  return {
+    level,
+    seed,
+    game: newMinesweeperGame(MINESWEEPER_LEVELS[level], seed),
+    timer: STOPPED,
+    now,
+  };
 }
 
 export function minesLeft(game: MinesweeperState): number {
   const flags = game.marks.filter((mark) => mark === "flag").length;
-  return MINESWEEPER_LEVELS[game.level].mines - flags;
+  return game.size.mines - flags;
 }
 
 function moved(
@@ -57,15 +65,21 @@ function moved(
   }
   if (game.status === "won" || game.status === "lost") {
     return {
+      ...play,
       game,
       timer: applyTimerAction(play.timer, { type: "pause", now }),
       now,
     };
   }
   if (play.game.status === "ready" && game.status !== "ready") {
-    return { game, timer: { accumulatedMs: 0, runningSince: now }, now };
+    return {
+      ...play,
+      game,
+      timer: { accumulatedMs: 0, runningSince: now },
+      now,
+    };
   }
-  return { game, timer: play.timer, now };
+  return { ...play, game, now };
 }
 
 export function minesweeperReducer(

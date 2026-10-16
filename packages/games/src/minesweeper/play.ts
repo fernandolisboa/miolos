@@ -1,28 +1,47 @@
 import { layMines } from "./field";
 import { assertCell, neighbours } from "./internal";
-import {
-  MINESWEEPER_LEVELS,
-  type MinesweeperField,
-  type MinesweeperLevel,
-  type MinesweeperMark,
-  type MinesweeperState,
+import type {
+  MinesweeperField,
+  MinesweeperMark,
+  MinesweeperSize,
+  MinesweeperState,
 } from "./types";
 
-export function newMinesweeperGame(
-  level: MinesweeperLevel,
-  seed: number,
-): MinesweeperState {
-  const { rows, columns } = MINESWEEPER_LEVELS[level];
-  const cells = rows * columns;
+type Board = Pick<MinesweeperState, "size" | "open" | "marks">;
+
+function blankBoard(size: MinesweeperSize): Board {
+  const cells = size.rows * size.columns;
   return {
-    level,
-    seed,
-    field: null,
+    size,
     open: new Array<boolean>(cells).fill(false),
     marks: new Array<MinesweeperMark>(cells).fill(null),
+  };
+}
+
+export function newMinesweeperGame(
+  size: MinesweeperSize,
+  seed: number,
+): MinesweeperState {
+  return {
+    ...blankBoard(size),
+    seed,
+    field: null,
     status: "ready",
     hit: null,
   };
+}
+
+export function startMinesweeper(
+  field: MinesweeperField,
+  start: number,
+): MinesweeperState {
+  assertCell(field.mines.length, start);
+  const size = {
+    rows: field.rows,
+    columns: field.columns,
+    mines: field.mines.filter(Boolean).length,
+  };
+  return openCells(blankBoard(size), field, [start]);
 }
 
 function isOver(state: MinesweeperState): boolean {
@@ -30,7 +49,7 @@ function isOver(state: MinesweeperState): boolean {
 }
 
 function openCells(
-  state: MinesweeperState,
+  state: Board,
   field: MinesweeperField,
   starts: readonly number[],
 ): MinesweeperState {
@@ -62,14 +81,15 @@ function openCells(
     }
   }
 
+  const { size } = state;
   if (hit !== null) {
-    return { ...state, field, open, marks, status: "lost", hit };
+    return { size, field, open, marks, status: "lost", hit };
   }
   if (field.mines.every((mine, i) => mine || open[i])) {
     const flagged = marks.map((mark, i) => (field.mines[i] ? "flag" : mark));
-    return { ...state, field, open, marks: flagged, status: "won" };
+    return { size, field, open, marks: flagged, status: "won", hit: null };
   }
-  return { ...state, field, open, marks, status: "playing" };
+  return { size, field, open, marks, status: "playing", hit: null };
 }
 
 export function openMinesweeperCell(
@@ -81,8 +101,9 @@ export function openMinesweeperCell(
     return state;
   }
   const field =
-    state.field ??
-    layMines({ seed: state.seed, level: state.level, safe: index });
+    state.field === null
+      ? layMines({ seed: state.seed, size: state.size, safe: [index] })
+      : state.field;
   return openCells(state, field, [index]);
 }
 

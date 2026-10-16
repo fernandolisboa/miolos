@@ -48,8 +48,7 @@ export function beginnerPlaying(
 ): MinesweeperState {
   const field = fieldFrom(9, 9, mineIndexes);
   return {
-    level: "beginner",
-    seed: 0,
+    size: { rows: 9, columns: 9, mines: mineIndexes.length },
     field,
     open: field.mines.map(() => false),
     marks: field.mines.map(() => null),

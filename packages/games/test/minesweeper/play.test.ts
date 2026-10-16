@@ -5,12 +5,14 @@ import {
   MINESWEEPER_LEVELS,
   chordMinesweeper,
   cycleMinesweeperMark,
+  layMines,
   newMinesweeperGame,
   openMinesweeperCell,
+  startMinesweeper,
   type MinesweeperLevel,
   type MinesweeperState,
 } from "../../src/minesweeper/index";
-import { beginnerPlaying, neighboursOf } from "./fixtures";
+import { beginnerPlaying, fieldFrom, neighboursOf } from "./fixtures";
 
 const levelArb = fc.constantFrom<MinesweeperLevel>(
   "beginner",
@@ -48,7 +50,7 @@ const actionArb: fc.Arbitrary<Action> = fc.oneof(
 );
 
 function apply(state: MinesweeperState, action: Action): MinesweeperState {
-  const { rows, columns } = MINESWEEPER_LEVELS[state.level];
+  const { rows, columns } = state.size;
   const at = action.at % (rows * columns);
   switch (action.kind) {
     case "reveal":
@@ -119,8 +121,8 @@ function expectConsistent(
 
 describe("newMinesweeperGame", () => {
   it("starts ready, with no field, nothing open and nothing marked", () => {
-    expect(newMinesweeperGame("beginner", 7)).toEqual({
-      level: "beginner",
+    expect(newMinesweeperGame(MINESWEEPER_LEVELS.beginner, 7)).toEqual({
+      size: MINESWEEPER_LEVELS.beginner,
       seed: 7,
       field: null,
       open: Array.from({ length: 81 }, () => false),
@@ -131,16 +133,54 @@ describe("newMinesweeperGame", () => {
   });
 });
 
+describe("startMinesweeper", () => {
+  it("opens exactly what a first open of the same field opens", () => {
+    fc.assert(
+      fc.property(firstRevealArb, ({ level, seed, start }) => {
+        const size = MINESWEEPER_LEVELS[level];
+        const field = layMines({ seed, size, safe: [start] });
+
+        expect(startMinesweeper(field, start)).toEqual(
+          openMinesweeperCell(newMinesweeperGame(size, seed), start),
+        );
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it("is playing with only the start's flood open, its size read off the field", () => {
+    const field = fieldFrom(3, 4, [0, 2]);
+
+    const state = startMinesweeper(field, 11);
+
+    expect(state).toEqual({
+      size: { rows: 3, columns: 4, mines: 2 },
+      field,
+      open: [false, false, false, false, ...Array<boolean>(8).fill(true)],
+      marks: Array.from({ length: 12 }, () => null),
+      status: "playing",
+      hit: null,
+    });
+  });
+
+  it("rejects a start outside the field", () => {
+    const field = fieldFrom(3, 4, [0]);
+    expect(() => startMinesweeper(field, 12)).toThrow(RangeError);
+    expect(() => startMinesweeper(field, -1)).toThrow(RangeError);
+  });
+});
+
 describe("openMinesweeperCell", () => {
   it("lays the mines at the first open and never on that cell", () => {
     fc.assert(
       fc.property(firstRevealArb, ({ level, seed, start }) => {
         const state = openMinesweeperCell(
-          newMinesweeperGame(level, seed),
+          newMinesweeperGame(MINESWEEPER_LEVELS[level], seed),
           start,
         );
 
         expect(state.field).not.toBeNull();
+        expect(state).not.toHaveProperty("seed");
         expect(state.field!.mines[start]).toBe(false);
         expect(state.field!.mines.filter(Boolean)).toHaveLength(
           MINESWEEPER_LEVELS[level].mines,
@@ -156,7 +196,7 @@ describe("openMinesweeperCell", () => {
     fc.assert(
       fc.property(firstRevealArb, ({ level, seed, start }) => {
         const state = openMinesweeperCell(
-          newMinesweeperGame(level, seed),
+          newMinesweeperGame(MINESWEEPER_LEVELS[level], seed),
           start,
         );
         const field = state.field!;
@@ -236,7 +276,7 @@ describe("openMinesweeperCell", () => {
     expect(openMinesweeperCell(flagged, 0)).toBe(flagged);
 
     const ready = cycleMinesweeperMark(
-      newMinesweeperGame("beginner", 3),
+      newMinesweeperGame(MINESWEEPER_LEVELS.beginner, 3),
       4,
       false,
     );
@@ -250,7 +290,7 @@ describe("openMinesweeperCell", () => {
   });
 
   it("rejects an index outside the board", () => {
-    const state = newMinesweeperGame("beginner", 1);
+    const state = newMinesweeperGame(MINESWEEPER_LEVELS.beginner, 1);
     expect(() => openMinesweeperCell(state, 81)).toThrow(RangeError);
     expect(() => openMinesweeperCell(state, -1)).toThrow(RangeError);
     expect(() => chordMinesweeper(state, 81)).toThrow(RangeError);
@@ -276,7 +316,7 @@ describe("chordMinesweeper", () => {
     fc.assert(
       fc.property(firstRevealArb, fc.nat(), ({ level, seed, start }, pick) => {
         const opened = openMinesweeperCell(
-          newMinesweeperGame(level, seed),
+          newMinesweeperGame(MINESWEEPER_LEVELS[level], seed),
           start,
         );
         const field = opened.field!;
@@ -329,7 +369,7 @@ describe("chordMinesweeper", () => {
     hidden = cycleMinesweeperMark(hidden, 2, false);
     expect(chordMinesweeper(hidden, 1)).toBe(hidden);
 
-    const ready = newMinesweeperGame("beginner", 1);
+    const ready = newMinesweeperGame(MINESWEEPER_LEVELS.beginner, 1);
     expect(chordMinesweeper(ready, 0)).toBe(ready);
 
     let lost = openMinesweeperCell(beginnerPlaying([0, 2, 80]), 10);
@@ -407,7 +447,7 @@ describe("cycleMinesweeperMark", () => {
 
   it("marks before the first open without laying mines", () => {
     const state = cycleMinesweeperMark(
-      newMinesweeperGame("expert", 9),
+      newMinesweeperGame(MINESWEEPER_LEVELS.expert, 9),
       3,
       false,
     );
@@ -434,7 +474,7 @@ describe("any sequence of moves", () => {
         seedArb,
         fc.array(actionArb, { maxLength: 60 }),
         (level, seed, actions) => {
-          let state = newMinesweeperGame(level, seed);
+          let state = newMinesweeperGame(MINESWEEPER_LEVELS[level], seed);
           for (const action of actions) {
             const next = apply(state, action);
             expectConsistent(state, next);

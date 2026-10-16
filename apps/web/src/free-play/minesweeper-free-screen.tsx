@@ -30,10 +30,18 @@ const copy = minesweeperMessages;
 
 const LEVELS = Object.keys(MINESWEEPER_LEVELS) as readonly MinesweeperLevel[];
 
-const PAGE_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
-  beginner: minefield.pageBeginner,
-  intermediate: minefield.pageIntermediate,
-  expert: minefield.pageExpert,
+const LEVEL_CLASSES: Readonly<
+  Record<
+    MinesweeperLevel,
+    { readonly page: string | undefined; readonly field: string | undefined }
+  >
+> = {
+  beginner: { page: minefield.pageBeginner, field: minefield.beginner },
+  intermediate: {
+    page: minefield.pageIntermediate,
+    field: minefield.intermediate,
+  },
+  expert: { page: minefield.pageExpert, field: minefield.expert },
 };
 
 function minesweeperLevelChoice(
@@ -60,8 +68,9 @@ export function MinesweeperFreeScreen({
 }) {
   const mines = useMinesweeper(deps);
   const [tapMode, setTapMode] = useState<TapMode>("open");
-  const { game } = mines.play;
-  const choices = [minesweeperLevelChoice(game.level, mines.chooseLevel)];
+  const { game, level, seed } = mines.play;
+  const classes = LEVEL_CLASSES[level];
+  const choices = [minesweeperLevelChoice(level, mines.chooseLevel)];
 
   return (
     <EndingStage
@@ -75,7 +84,7 @@ export function MinesweeperFreeScreen({
           onAgain={mines.newGame}
           picture={
             <div className={minefield.finishedField}>
-              <FinishedMinefield game={game} />
+              <FinishedMinefield game={game} sizeClass={classes.field} />
               <TimerReadout
                 className={minefield.finishedTime}
                 elapsedMs={mines.elapsedMs}
@@ -89,7 +98,7 @@ export function MinesweeperFreeScreen({
         game="minesweeper"
         choices={choices}
         clock={{ elapsedMs: mines.elapsedMs }}
-        pageModifier={`${minefield.pageMinefield ?? ""} ${PAGE_CLASS[game.level] ?? ""}`}
+        pageModifier={`${minefield.pageMinefield ?? ""} ${classes.page ?? ""}`}
         state={{
           kind: "playing",
           readouts: {
@@ -103,8 +112,9 @@ export function MinesweeperFreeScreen({
       >
         <BoardCard>
           <Minefield
-            key={`${game.level}:${String(game.seed)}`}
+            key={`${level}:${String(seed)}`}
             game={game}
+            sizeClass={classes.field}
             tapMode={tapMode}
             onActivate={mines.activate}
             onMark={mines.mark}
