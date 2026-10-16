@@ -28,6 +28,7 @@ Fernando asked for the classic Windows Minesweeper, "same features, same way to 
 ## Consequences
 
 - Ctrl/⌘+Z does nothing on this screen.
+- The shared chrome costs the daily `/nonogram` route its last headroom: its budget rises 49 → 50 KB (49.5 KB measured), under Fernando's standing approval of budget raises (2026-10-16).
 - Fast times are not comparable between devices or kept anywhere; a server would have to replay moves (ADR-0133).
 - A game that outgrows its well sets `--board-floor-side` and styles its own well; the other games set nothing and render as before.
 - The copy is a module of its own, not part of `messages.ts`: moving it there measured +741 bytes of first-load JS on 31 of the 37 routes, and +212 on this one.

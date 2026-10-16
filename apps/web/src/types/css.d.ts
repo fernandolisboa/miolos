@@ -10,5 +10,6 @@ declare module "csstype" {
     "--crossword-size"?: number;
     "--angle"?: string;
     "--ribbon"?: string;
+    "--cell-ink"?: string;
   }
 }

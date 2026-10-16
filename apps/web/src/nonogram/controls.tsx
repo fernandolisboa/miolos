@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { messages } from "../i18n";
 import { InfoTip, InfoTipSkeleton } from "../play/info-tip";
 import styles from "./nonogram-board.module.css";
@@ -8,6 +10,52 @@ const SEGMENTS = [
   { brush: "fill", label: "fillAria", Icon: FillIcon },
 ] as const;
 
+export interface BrushSegment {
+  readonly key: string;
+  readonly label: string;
+  readonly pressed: boolean;
+  readonly onPress: () => void;
+  readonly icon: ReactNode;
+}
+
+export function BrushToggle({
+  segments,
+  affordance,
+  className,
+}: {
+  readonly segments: readonly BrushSegment[];
+  readonly affordance: string;
+  readonly className?: string;
+}) {
+  return (
+    <div className={styles.controls}>
+      <div
+        className={
+          className === undefined
+            ? styles.brushToggle
+            : `${styles.brushToggle} ${className}`
+        }
+      >
+        {segments.map(({ key, label, pressed, onPress, icon }) => (
+          <button
+            key={key}
+            type="button"
+            className={`${styles.control}${pressed ? ` ${styles.controlActive}` : ""}`}
+            aria-label={label}
+            aria-pressed={pressed}
+            onClick={onPress}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
+      <span className={styles.affordance}>
+        <InfoTip text={affordance} align="center" />
+      </span>
+    </div>
+  );
+}
+
 export function Controls({
   brush,
   onSetBrush,
@@ -16,27 +64,17 @@ export function Controls({
   readonly onSetBrush: (brush: NonogramBrush) => void;
 }) {
   const copy = messages.games.nonogram.play.controls;
-
   return (
-    <div className={styles.controls}>
-      <div className={styles.brushToggle}>
-        {SEGMENTS.map(({ brush: mode, label, Icon }) => (
-          <button
-            key={mode}
-            type="button"
-            className={`${styles.control}${brush === mode ? ` ${styles.controlActive}` : ""}`}
-            aria-label={copy[label]}
-            aria-pressed={brush === mode}
-            onClick={() => onSetBrush(mode)}
-          >
-            <Icon />
-          </button>
-        ))}
-      </div>
-      <span className={styles.affordance}>
-        <InfoTip text={copy.affordance} align="center" />
-      </span>
-    </div>
+    <BrushToggle
+      affordance={copy.affordance}
+      segments={SEGMENTS.map(({ brush: mode, label, Icon }) => ({
+        key: mode,
+        label: copy[label],
+        pressed: brush === mode,
+        onPress: () => onSetBrush(mode),
+        icon: <Icon />,
+      }))}
+    />
   );
 }
 
@@ -60,7 +98,7 @@ export function ControlsSkeleton() {
   );
 }
 
-function CrossIcon() {
+export function CrossIcon() {
   return (
     <svg aria-hidden className={styles.brushIcon} viewBox="0 0 24 24">
       <path

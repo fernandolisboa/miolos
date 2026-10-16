@@ -53,6 +53,21 @@
   --tone-p: #7B4BA0;
   --tone-m: #E48BA6;
 
+  --ink-on-tone-k: #FBF7EF;
+  --ink-on-tone-e: #211D19;
+  --ink-on-tone-l: #211D19;
+  --ink-on-tone-n: #FBF7EF;
+  --ink-on-tone-t: #211D19;
+  --ink-on-tone-r: #FBF7EF;
+  --ink-on-tone-o: #211D19;
+  --ink-on-tone-y: #211D19;
+  --ink-on-tone-g: #211D19;
+  --ink-on-tone-d: #FBF7EF;
+  --ink-on-tone-s: #211D19;
+  --ink-on-tone-b: #FBF7EF;
+  --ink-on-tone-p: #FBF7EF;
+  --ink-on-tone-m: #211D19;
+
   --accent-sudoku-text: var(--accent-sudoku);
   --accent-binairo-text: var(--accent-binairo);
 
@@ -146,6 +161,21 @@
     --tone-p: #9A6CC2;
     --tone-m: #E99AB2;
 
+    --ink-on-tone-k: #EAE3D5;
+    --ink-on-tone-e: #1D1914;
+    --ink-on-tone-l: #1D1914;
+    --ink-on-tone-n: #FBF7EF;
+    --ink-on-tone-t: #1D1914;
+    --ink-on-tone-r: #1D1914;
+    --ink-on-tone-o: #1D1914;
+    --ink-on-tone-y: #1D1914;
+    --ink-on-tone-g: #1D1914;
+    --ink-on-tone-d: #0B0907;
+    --ink-on-tone-s: #1D1914;
+    --ink-on-tone-b: #16130F;
+    --ink-on-tone-p: #16130F;
+    --ink-on-tone-m: #1D1914;
+
     --accent-sudoku-text: #5E87C4;
     --accent-binairo-text: #68906E;
 
@@ -206,6 +236,21 @@
   --tone-b: #4F7FC4;
   --tone-p: #9A6CC2;
   --tone-m: #E99AB2;
+
+  --ink-on-tone-k: #EAE3D5;
+  --ink-on-tone-e: #1D1914;
+  --ink-on-tone-l: #1D1914;
+  --ink-on-tone-n: #FBF7EF;
+  --ink-on-tone-t: #1D1914;
+  --ink-on-tone-r: #1D1914;
+  --ink-on-tone-o: #1D1914;
+  --ink-on-tone-y: #1D1914;
+  --ink-on-tone-g: #1D1914;
+  --ink-on-tone-d: #0B0907;
+  --ink-on-tone-s: #1D1914;
+  --ink-on-tone-b: #16130F;
+  --ink-on-tone-p: #16130F;
+  --ink-on-tone-m: #1D1914;
 
   --accent-sudoku-text: #5E87C4;
   --accent-binairo-text: #68906E;

@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md), [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md)
 **Superseded in part by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 5, consequence (e) and the Rejected bullet *"A per-cell 'this is wrong' state, in any colour"*, for the opt-in case only: with *Mostrar erros* on, a wrong cell gets a corner flag whose paper band carries it on the terracotta fill (`T-WEB-S594`); with it off, this board is as written.
 **Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for all inputs (the brush has two modes, `apagar` is gone, and a tap or a stroke starting on a cell already holding the brush mark clears) and consequence (a) (the hook's surface: `Press`, `clickPress`, required `onStrokeStart`, `onContextMenu`).
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 4: in Cores, key 1 paints the current tone.
 
 ## Context
 

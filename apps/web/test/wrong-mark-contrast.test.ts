@@ -1,3 +1,4 @@
+import { PICTURE_TONES } from "@miolos/games/nonogram-colors";
 import { describe, expect, it } from "vitest";
 
 import { accentVars } from "../src/play/accent";
@@ -50,6 +51,34 @@ describe("the wrong-cell flag reads on every surface it can sit on, in both them
           contrast(red, hex(surface)),
         );
         expect(best, `${theme} ${surface}`).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+});
+
+describe("on a painted tone the flag gains an edge in that tone's ink, which clears 3:1 on it (T-WEB-S594)", () => {
+  it("draws an edge stop that is transparent unless the cell sets --wrong-edge, which a painted tone sets to its ink", () => {
+    expect(MARK).toContain("var(--wrong-edge, transparent) 66% 72%");
+    expect(
+      decl(
+        bodyOf(
+          stylesheet("src/colored-nonogram/colored-board.module.css"),
+          ".cellTone",
+        ),
+        "--wrong-edge",
+      ),
+    ).toBe("var(--cell-ink)");
+  });
+
+  for (const theme of ["light", "dark"] as const) {
+    it(`${theme}: every --ink-on-tone clears 3:1 on its tone`, () => {
+      const tokens = colorTokens(theme);
+      for (const tone of PICTURE_TONES) {
+        const ink = tokens.get(`--ink-on-tone-${tone}`) ?? "";
+        const fill = tokens.get(`--tone-${tone}`) ?? "";
+        expect(contrast(ink, fill), `${theme} ${tone}`).toBeGreaterThanOrEqual(
+          3,
+        );
       }
     });
   }

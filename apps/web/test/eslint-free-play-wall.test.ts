@@ -1054,3 +1054,72 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
     }
   });
 });
+
+describe("the coloured Nonogram engine is walled to its chunk, statically and dynamically (T-LINT-S72)", () => {
+  const STATIC =
+    'import { generateColoredNonogram } from "@miolos/games/colored-nonogram";\n\nexport const make = generateColoredNonogram;\n';
+  const DYNAMIC =
+    'export const load = () => import("@miolos/games/colored-nonogram");\n';
+  const IMPORTERS = [
+    "apps/web/src/colored-nonogram/eslint-probe.ts",
+    "apps/web/src/free-play/use-free-colored-nonogram.ts",
+  ];
+
+  it("red everywhere else in the app, the tones importer and the route included", async () => {
+    for (const path of [
+      FREE_PATH,
+      ROUTE_PATH,
+      DAILY_PATH,
+      "apps/web/src/free-play/use-free-nonogram.ts",
+      "apps/web/src/nonogram/eslint-probe.ts",
+    ]) {
+      expect
+        .soft(ruleIds(await lintProbe(path, STATIC)), path)
+        .toContain("no-restricted-imports");
+    }
+  });
+
+  it("clean statically at its two importers, red dynamically there and everywhere", async () => {
+    for (const path of IMPORTERS) {
+      expect.soft(wallHits(await lintProbe(path, STATIC)), path).toEqual([]);
+    }
+    for (const path of [...IMPORTERS, FREE_PATH, DAILY_PATH]) {
+      expect
+        .soft(ruleIds(await lintProbe(path, DYNAMIC)), path)
+        .toContain("no-restricted-syntax");
+    }
+  });
+
+  it("both importers carry the free-play wall", async () => {
+    for (const path of IMPORTERS) {
+      expect
+        .soft(ruleIds(await lintProbe(path, 'import "../play/sync";\n')), path)
+        .toContain("no-restricted-imports");
+    }
+  });
+
+  it("the Cores modules are red by relative path outside free play and their own folder", async () => {
+    const doors = [
+      "../colored-nonogram/board",
+      "../free-play/colored-nonogram-free-screen",
+      "../free-play/use-free-colored-nonogram",
+    ];
+    for (const door of doors) {
+      const source = `import * as cores from "${door}";\n\nexport const probe = cores;\n`;
+      for (const path of [
+        DAILY_PATH,
+        ROUTE_PATH,
+        "apps/web/src/nonogram/eslint-probe.ts",
+        "apps/web/src/og/eslint-probe.ts",
+        "apps/web/app/modo-livre/nonogram/opengraph-image.tsx",
+      ]) {
+        expect
+          .soft(ruleIds(await lintProbe(path, source)), `${path} ${door}`)
+          .toContain("no-restricted-imports");
+      }
+      expect
+        .soft(wallHits(await lintProbe(FREE_PATH, source)), door)
+        .toEqual([]);
+    }
+  });
+});

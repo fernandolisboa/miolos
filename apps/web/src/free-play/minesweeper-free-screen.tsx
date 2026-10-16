@@ -22,7 +22,7 @@ import {
 import { BoardCard } from "../play/board-card";
 import { EndingStage } from "../play/ending-stage";
 import { TimerReadout } from "../play/timer-readout";
-import { type FreePlayChoice } from "./choice-picker";
+import { choice, type Choice } from "./choice";
 import { FreePlayChrome } from "./chrome";
 import { FreePlaySolvedCard } from "./solved-card";
 
@@ -38,19 +38,19 @@ const PAGE_CLASS: Readonly<Record<MinesweeperLevel, string | undefined>> = {
 
 function minesweeperLevelChoice(
   level: MinesweeperLevel,
-  onChange: (level: MinesweeperLevel) => void,
-): FreePlayChoice<MinesweeperLevel> {
-  return {
+  onSelect: (level: MinesweeperLevel) => void,
+): Choice {
+  return choice({
     label: copy.levels.label,
     options: LEVELS,
-    value: level,
+    selected: level,
     optionLabel: (option) => copy.levels[option],
     optionAria: (option) => {
       const { rows, columns, mines } = MINESWEEPER_LEVELS[option];
       return copy.levels.aria(copy.levels[option], rows, columns, mines);
     },
-    onChange,
-  };
+    onSelect,
+  });
 }
 
 export function MinesweeperFreeScreen({
@@ -61,7 +61,7 @@ export function MinesweeperFreeScreen({
   const mines = useMinesweeper(deps);
   const [tapMode, setTapMode] = useState<TapMode>("open");
   const { game } = mines.play;
-  const choice = minesweeperLevelChoice(game.level, mines.chooseLevel);
+  const choices = [minesweeperLevelChoice(game.level, mines.chooseLevel)];
 
   return (
     <EndingStage
@@ -70,7 +70,7 @@ export function MinesweeperFreeScreen({
       ending={() => (
         <FreePlaySolvedCard
           game="minesweeper"
-          choice={choice}
+          choices={choices}
           lost={game.status === "lost"}
           onAgain={mines.newGame}
           picture={
@@ -87,7 +87,7 @@ export function MinesweeperFreeScreen({
     >
       <FreePlayChrome
         game="minesweeper"
-        choice={choice}
+        choices={choices}
         clock={{ elapsedMs: mines.elapsedMs }}
         pageModifier={`${minefield.pageMinefield ?? ""} ${PAGE_CLASS[game.level] ?? ""}`}
         state={{

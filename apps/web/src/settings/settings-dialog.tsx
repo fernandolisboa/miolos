@@ -10,11 +10,8 @@ import type { SettingsGame } from "./settings";
 const copy = messages.settings.games.dialog;
 
 // see ADR-0123; the dialog opens once the panel is here, so showModal focuses its first switch.
-let GameSettings: typeof import("./game-settings").GameSettings | null = null;
-const useGameSettingsLoaded = lazyChunk(() =>
-  import("./game-settings").then((module) => {
-    GameSettings = module.GameSettings;
-  }),
+const useGameSettings = lazyChunk(() =>
+  import("./game-settings").then((module) => module.GameSettings),
 );
 
 export function GameSettingsButton({
@@ -28,7 +25,9 @@ export function GameSettingsButton({
   const [asks, setAsks] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const ready = useGameSettingsLoaded(asks) && open;
+  const panel = useGameSettings(asks);
+  const GameSettings = panel.state === "ready" && open ? panel.value : null;
+  const ready = GameSettings !== null;
   useEffect(() => {
     if (ready) {
       dialogRef.current?.showModal();
@@ -59,7 +58,7 @@ export function GameSettingsButton({
       >
         <h2 className={styles.title}>{copy.title}</h2>
         <p className={styles.note}>{copy.note}</p>
-        {ready && GameSettings !== null ? (
+        {GameSettings !== null ? (
           <GameSettings games={[game]} clock={clock} />
         ) : null}
         <button
