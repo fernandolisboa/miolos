@@ -1,0 +1,53 @@
+/* Layered on nonogram-board.module.css, which loads from another chunk, so
+   their order is not guaranteed: never redeclare a property a Clássico class sets
+   on the same element at the same specificity. A painted cell's fill and a
+   chip's tone come inline from `toneStyle`, which also sets --cell-ink. */
+
+.pageColored.overhang5 {
+  --board-overhang: 34px;
+}
+
+.pageColored.overhang10 {
+  --board-overhang: 56px;
+}
+
+.pageColored.overhang15 {
+  --board-overhang: 42px;
+}
+
+.cellTone {
+  --wrong-edge: var(--cell-ink);
+}
+
+.cellToneHinted {
+  box-shadow: inset 0 0 0 2px var(--cell-ink);
+}
+
+.chip {
+  box-sizing: border-box;
+  padding: 1px 1.5px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--ink);
+  color: var(--cell-ink);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* see ADR-0132 decision 7 */
+.dense > button {
+  width: 36px;
+  height: 48px;
+  padding: 0;
+}
+
+.swatch {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--ink);
+}

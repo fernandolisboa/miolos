@@ -4,48 +4,51 @@ import { useRef } from "react";
 
 import { messages } from "../i18n";
 import { FREE_PLAY_LEVELS, type FreePlayLevel } from "./catalog";
+import { choice, type Choice } from "./choice";
 import styles from "./free-play.module.css";
-
-export interface FreePlayChoice<T extends string | number> {
-  readonly label: string;
-  readonly options: readonly T[];
-  readonly value: T;
-  readonly optionLabel: (option: T) => string;
-  readonly optionAria: (option: T) => string;
-  readonly onChange: (option: T) => void;
-}
 
 export function levelChoice(
   level: FreePlayLevel,
-  onChange: (level: FreePlayLevel) => void,
-): FreePlayChoice<FreePlayLevel> {
-  return {
-    label: messages.freePlay.level.label,
+  onSelect: (level: FreePlayLevel) => void,
+): Choice {
+  const copy = messages.freePlay.level;
+  return choice({
+    label: copy.label,
     options: FREE_PLAY_LEVELS,
-    value: level,
-    optionLabel: (option) => messages.freePlay.level[option],
-    optionAria: (option) =>
-      messages.freePlay.level.aria(messages.freePlay.level[option]),
-    onChange,
-  };
+    selected: level,
+    optionLabel: (option) => copy[option],
+    optionAria: (option) => copy.aria(copy[option]),
+    onSelect,
+  });
 }
 
-export function ChoicePicker<T extends string | number>({
-  label,
-  options,
-  value,
-  optionLabel,
-  optionAria,
-  onChange,
-}: FreePlayChoice<T>) {
-  const chipsRef = useRef<Map<T, HTMLButtonElement>>(new Map());
+type VariantName = "classico" | "cores" | "dueto" | "quarteto";
+
+export function variantChoice<V extends VariantName>(
+  options: readonly V[],
+  variant: V,
+  onSelect: (variant: V) => void,
+): Choice {
+  const copy = messages.freePlay.variant;
+  return choice({
+    label: copy.label,
+    options,
+    selected: variant,
+    optionLabel: (option) => copy[option],
+    optionAria: (option) => copy.aria(copy[option]),
+    onSelect,
+  });
+}
+
+export function ChoicePicker({ label, options, selected, onSelect }: Choice) {
+  const chipsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const moveBy = (offset: number) => {
-    const at = options.indexOf(value);
+    const at = options.findIndex((option) => option.key === selected);
     const next = options[(at + offset + options.length) % options.length];
-    if (next !== undefined && next !== value) {
-      onChange(next);
-      chipsRef.current.get(next)?.focus();
+    if (next !== undefined && next.key !== selected) {
+      onSelect(next.key);
+      chipsRef.current.get(next.key)?.focus();
     }
   };
 
@@ -53,24 +56,24 @@ export function ChoicePicker<T extends string | number>({
     <div role="radiogroup" aria-label={label} className={styles.choicePicker}>
       {options.map((option) => (
         <button
-          key={option}
+          key={option.key}
           type="button"
           role="radio"
-          aria-checked={option === value}
-          aria-label={optionAria(option)}
-          tabIndex={option === value ? 0 : -1}
+          aria-checked={option.key === selected}
+          aria-label={option.aria}
+          tabIndex={option.key === selected ? 0 : -1}
           className={`${styles.choiceChip}${
-            option === value ? ` ${styles.choiceChipActive}` : ""
+            option.key === selected ? ` ${styles.choiceChipActive}` : ""
           }`}
           ref={(element) => {
             if (element === null) {
-              chipsRef.current.delete(option);
+              chipsRef.current.delete(option.key);
             } else {
-              chipsRef.current.set(option, element);
+              chipsRef.current.set(option.key, element);
             }
           }}
           onClick={() => {
-            onChange(option);
+            onSelect(option.key);
           }}
           onKeyDown={(event) => {
             if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -82,7 +85,7 @@ export function ChoicePicker<T extends string | number>({
             }
           }}
         >
-          {optionLabel(option)}
+          {option.label}
         </button>
       ))}
     </div>

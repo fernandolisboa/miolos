@@ -68,7 +68,10 @@ const cellAriaNonogram = (row: number, column: number, value: 0 | 1 | null) =>
     value === null ? "vazia" : value === 1 ? "preenchida" : "marcada"
   }`;
 
-const runsText = (runs: readonly number[], placed: readonly boolean[]) =>
+const runsText = (
+  runs: readonly (number | string)[],
+  placed: readonly boolean[],
+) =>
   runs.length === 0
     ? "0"
     : runs
@@ -85,9 +88,9 @@ const LINE = {
 const nonogramStep = (
   line: LineKind,
   at: number,
-  runs: readonly number[],
+  runs: readonly (number | string)[],
   across: number,
-  value: 0 | 1,
+  mark: string,
 ) => {
   const { name, across: otherName } = LINE[line];
   const cell = `a célula da ${otherName} ${across}`;
@@ -98,7 +101,7 @@ const nonogramStep = (
     runs.length === 1
       ? `o número ${runs[0]} só fecha`
       : `os números ${runs.join(", ")} só fecham`;
-  return `Na ${name} ${at}, ${numbers} com ${cell} ${value === 1 ? "preenchida" : "marcada"}.`;
+  return `Na ${name} ${at}, ${numbers} com ${cell} ${mark}.`;
 };
 
 const BINAIRO_COUNT_WORDS = ["zero", "um", "dois", "três", "quatro"] as const;
@@ -476,6 +479,7 @@ export const messages = {
     variant: {
       label: "Variante",
       classico: "Clássico",
+      cores: "Cores",
       dueto: "Dueto",
       quarteto: "Quarteto",
       aria: (name: string) => `Variante: ${name}`,
@@ -520,8 +524,7 @@ export const messages = {
       lostStamp: "Não deu!",
       wordLead: "A palavra era",
       wordsLead: "As palavras eram",
-      modeLine: (mode: string, game: string, level?: string) =>
-        [mode, game, level].filter((part) => part !== undefined).join(" · "),
+      modeLine: (...parts: readonly string[]) => parts.join(" · "),
       again: {
         binairo: "Mais um",
         sudoku: "Mais um",
@@ -1108,12 +1111,12 @@ export const messages = {
 
         rowCluesAria: (
           row: number,
-          runs: readonly number[],
+          runs: readonly (number | string)[],
           placed: readonly boolean[],
         ) => `números da linha ${row}: ${runsText(runs, placed)}`,
         columnCluesAria: (
           column: number,
-          runs: readonly number[],
+          runs: readonly (number | string)[],
           placed: readonly boolean[],
         ) => `números da coluna ${column}: ${runsText(runs, placed)}`,
         controls: {
@@ -1128,6 +1131,8 @@ export const messages = {
             cross:
               "Não achamos um passo lógico simples aqui, então marcamos uma célula fora da figura.",
             step: nonogramStep,
+            filled: "preenchida",
+            crossed: "marcada",
           },
         },
         unavailable: {

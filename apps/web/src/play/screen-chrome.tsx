@@ -104,11 +104,8 @@ function clockRow(clock: PlayChromeClock): ReactNode {
 }
 
 // Outside every route's first load; a failed chunk leaves the live region alone (ADR-0113).
-let LoadedHintCard: typeof import("./hint-card").HintCard | null = null;
-const useHintCardLoaded = lazyChunk(() =>
-  import("./hint-card").then((module) => {
-    LoadedHintCard = module.HintCard;
-  }),
+const useHintCard = lazyChunk(() =>
+  import("./hint-card").then((module) => module.HintCard),
 );
 
 export function PlayScreenChrome({
@@ -138,7 +135,7 @@ export function PlayScreenChrome({
   const readouts = state.kind === "playing" ? state.readouts : null;
   const hint = readouts?.hint;
   const reason = hint?.explain ?? null;
-  const cardLoaded = useHintCardLoaded();
+  const card = useHintCard();
   const left = Math.max(allowance - (hint?.used ?? 0), 0);
   const label = hintLabel(left);
   const { kicker, play } = messages.games[game];
@@ -215,9 +212,8 @@ export function PlayScreenChrome({
         </div>
         {reason === null ||
         hint?.cell == null ||
-        !cardLoaded ||
-        LoadedHintCard === null ? null : (
-          <LoadedHintCard key={hint.used} text={reason} cell={hint.cell} />
+        card.state !== "ready" ? null : (
+          <card.value key={hint.used} text={reason} cell={hint.cell} />
         )}
       </section>
 

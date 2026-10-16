@@ -1521,7 +1521,9 @@ describe("the board geometry (T-WEB-S48)", () => {
 
     const caret = bodyOf(GAME_CSS, ".cell:focus-visible");
 
-    expect(decl(caret, "outline")).toBe("2px solid var(--ink)");
+    expect(decl(caret, "outline")).toBe(
+      "2px solid var(--cell-ink, var(--ink))",
+    );
 
     expect(pixels(decl(caret, "outline-offset"))).toBeLessThan(0);
   });

@@ -36,26 +36,29 @@ function deferred() {
 
 const copy = messages.settings.games.dialog;
 
-describe("lazyChunk loads once, retries on a new key, and outlives an unmount (T-WEB-S915)", () => {
-  it("reports loaded only after the chunk lands, and starts loaded once it has", async () => {
+describe("lazyChunk reports loading, ready or failed, retries on a new key or mount, and outlives an unmount (T-WEB-S915)", () => {
+  it("is loading until the chunk lands, then ready with its value, and starts ready once it has", async () => {
     const chunk = deferred();
-    const useLoaded = lazyChunk(() => chunk.promise);
-    const first = renderHook(() => useLoaded());
+    const useChunk = lazyChunk(() => chunk.promise.then(() => "panel"));
+    const first = renderHook(() => useChunk());
 
-    expect(first.result.current).toBe(false);
+    expect(first.result.current).toEqual({ state: "loading" });
     await act(async () => {
       chunk.resolve();
       await chunk.promise;
     });
-    expect(first.result.current).toBe(true);
-    expect(renderHook(() => useLoaded()).result.current).toBe(true);
+    expect(first.result.current).toEqual({ state: "ready", value: "panel" });
+    expect(renderHook(() => useChunk()).result.current).toEqual({
+      state: "ready",
+      value: "panel",
+    });
   });
 
-  it("asks again after a failure only when the retry key changes", async () => {
+  it("fails, stays failed under the same key, and loads again under a new one", async () => {
     let attempt = deferred();
     const load = vi.fn(() => attempt.promise);
-    const useLoaded = lazyChunk(load);
-    const hook = renderHook(({ key }) => useLoaded(key), {
+    const useChunk = lazyChunk(load);
+    const hook = renderHook(({ key }) => useChunk(key), {
       initialProps: { key: 0 },
     });
 
@@ -63,31 +66,56 @@ describe("lazyChunk loads once, retries on a new key, and outlives an unmount (T
       attempt.reject();
       await attempt.promise.catch(() => undefined);
     });
-    expect(hook.result.current).toBe(false);
+    expect(hook.result.current.state).toBe("failed");
     hook.rerender({ key: 0 });
+    expect(hook.result.current.state).toBe("failed");
     expect(load).toHaveBeenCalledTimes(1);
 
     attempt = deferred();
     hook.rerender({ key: 1 });
+    expect(hook.result.current.state).toBe("loading");
     expect(load).toHaveBeenCalledTimes(2);
     await act(async () => {
       attempt.resolve();
       await attempt.promise;
     });
-    expect(hook.result.current).toBe(true);
+    expect(hook.result.current.state).toBe("ready");
+  });
+
+  it("loads again when a failed hook mounts anew", async () => {
+    let attempt = deferred();
+    const load = vi.fn(() => attempt.promise);
+    const useChunk = lazyChunk(load);
+    const first = renderHook(() => useChunk());
+    await act(async () => {
+      attempt.reject();
+      await attempt.promise.catch(() => undefined);
+    });
+    expect(first.result.current.state).toBe("failed");
+    first.unmount();
+
+    attempt = deferred();
+    const second = renderHook(() => useChunk());
+    expect(second.result.current.state).toBe("loading");
+    expect(load).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      attempt.resolve();
+      await attempt.promise;
+    });
+    expect(second.result.current.state).toBe("ready");
   });
 
   it("a chunk landing after unmount still counts for the next mount", async () => {
     const chunk = deferred();
-    const useLoaded = lazyChunk(() => chunk.promise);
-    const { unmount } = renderHook(() => useLoaded());
+    const useChunk = lazyChunk(() => chunk.promise);
+    const { unmount } = renderHook(() => useChunk());
 
     unmount();
     await act(async () => {
       chunk.resolve();
       await chunk.promise;
     });
-    expect(renderHook(() => useLoaded()).result.current).toBe(true);
+    expect(renderHook(() => useChunk()).result.current.state).toBe("ready");
   });
 });
 

@@ -18,6 +18,7 @@ const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
 const FREE_PLAY_PROBE = "apps/web/src/free-play/eslint-probe.ts";
 const CROSSWORD_IMPORTER = "apps/web/src/free-play/use-free-crossword.ts";
 const TONES_IMPORTER = "apps/web/src/free-play/use-free-nonogram.ts";
+const COLORED_IMPORTER = "apps/web/src/free-play/use-free-colored-nonogram.ts";
 const WALL_RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
 const IO =
@@ -186,13 +187,17 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
 });
 
 describe("every specifier free play's runtime graph writes passes the real wall (T-WEB-S375)", () => {
-  it("at a free-play path, through both wall rules, the crossword engine and the picture tones only at their one importer each", async () => {
+  it("at a free-play path, through both wall rules, the crossword engine, the picture tones and the coloured engine only at their own importers", async () => {
     const specifiers = specifiersWrittenBy(valueGraph);
 
     expect({
       banned: await wallVerdictOn(FREE_PLAY_PROBE, specifiers),
       bannedAtImporter: await wallVerdictOn(CROSSWORD_IMPORTER, specifiers),
       bannedAtTonesImporter: await wallVerdictOn(TONES_IMPORTER, specifiers),
+      bannedAtColoredImporter: await wallVerdictOn(
+        COLORED_IMPORTER,
+        specifiers,
+      ),
       reachesStylesheet: specifiers.includes("../play/screen.module.css"),
       reachesCore: specifiers.includes("@miolos/core"),
       doorsAreCaught: await wallVerdictOn(CROSSWORD_IMPORTER, [
@@ -203,16 +208,26 @@ describe("every specifier free play's runtime graph writes passes the real wall 
       ]),
     }).toEqual({
       banned: [
+        "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/crossword",
         "no-restricted-imports: @miolos/games/nonogram-colors",
       ],
       bannedAtImporter: [
+        "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/nonogram-colors",
       ],
-      bannedAtTonesImporter: ["no-restricted-imports: @miolos/games/crossword"],
+      bannedAtTonesImporter: [
+        "no-restricted-imports: @miolos/games/colored-nonogram",
+        "no-restricted-imports: @miolos/games/crossword",
+      ],
+      bannedAtColoredImporter: [
+        "no-restricted-imports: @miolos/games/crossword",
+        "no-restricted-imports: @miolos/games/nonogram-colors",
+      ],
       reachesStylesheet: true,
       reachesCore: true,
       doorsAreCaught: [
+        "no-restricted-imports: @miolos/games/colored-nonogram",
         "no-restricted-imports: @miolos/games/nonogram-colors",
         "no-restricted-imports: ../termo/termo-screen",
         "no-restricted-imports: ../streak/streak-client",

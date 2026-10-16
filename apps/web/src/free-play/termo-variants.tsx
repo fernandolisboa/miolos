@@ -10,7 +10,7 @@ import { Board, FinishedBoard } from "../termo/board";
 import { TermoNotice, TermoPage, useTermoKeys } from "../termo/play-view";
 import type { TermoChrome } from "../termo/types";
 import { FREE_PLAY_DATE } from "./catalog";
-import { ChoicePicker, type FreePlayChoice } from "./choice-picker";
+import { ChoicePicker, variantChoice } from "./choice-picker";
 import { FreePlaySolvedCard } from "./solved-card";
 import { SplitKeyboard } from "./split-keyboard";
 import styles from "./termo-variants.module.css";
@@ -19,20 +19,6 @@ import { useTermoVariant } from "./use-termo-variant";
 const copy = messages.freePlay.variant;
 
 const VARIANTS = Object.keys(TERMO_VARIANTS) as readonly TermoVariant[];
-
-function variantChoice(
-  value: TermoVariant,
-  onChange: (variant: TermoVariant) => void,
-): FreePlayChoice<TermoVariant> {
-  return {
-    label: copy.label,
-    options: VARIANTS,
-    value,
-    optionLabel: (option) => copy[option],
-    optionAria: (option) => copy.aria(copy[option]),
-    onChange,
-  };
-}
 
 export function VariantMenu({
   id,
@@ -61,7 +47,7 @@ export function VariantMenu({
       }}
     >
       <p className={styles.menuTitle}>{copy.label}</p>
-      <ChoicePicker {...variantChoice(value, onChange)} />
+      <ChoicePicker {...variantChoice(VARIANTS, value, onChange)} />
       <p className={styles.menuLine}>{copy.rules[value]}</p>
     </div>
   );
@@ -102,7 +88,7 @@ export function TermoVariants({
       ending={() => (
         <FreePlaySolvedCard
           game="termo"
-          choice={variantChoice(variant, onVariant)}
+          choices={[variantChoice(VARIANTS, variant, onVariant)]}
           words={words}
           lost={judged.status === "lost"}
           onAgain={onNext}

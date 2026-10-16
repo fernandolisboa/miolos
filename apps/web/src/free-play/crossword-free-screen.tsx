@@ -12,7 +12,7 @@ import { pageClassName } from "../crossword/size-classes";
 import { useCrosswordBoard } from "../crossword/use-crossword-board";
 import { messages } from "../i18n";
 import { EndingStage } from "../play/ending-stage";
-import type { FreePlayChoice } from "./choice-picker";
+import { choice, type Choice } from "./choice";
 import { FreePlayChrome } from "./chrome";
 import { FreePlayErrorCard } from "./error-card";
 import { GeneratingNote } from "./generating-note";
@@ -25,16 +25,16 @@ import {
 
 function sizeChoice(
   size: CrosswordSize,
-  onChange: (size: CrosswordSize) => void,
-): FreePlayChoice<CrosswordSize> {
-  return {
+  onSelect: (size: CrosswordSize) => void,
+): Choice {
+  return choice({
     label: messages.freePlay.size.label,
     options: CROSSWORD_SIZES,
-    value: size,
+    selected: size,
     optionLabel: messages.freePlay.size.option,
     optionAria: messages.freePlay.size.aria,
-    onChange,
-  };
+    onSelect,
+  });
 }
 
 export function CrosswordFreeScreen({
@@ -61,7 +61,7 @@ export function CrosswordFreeScreen({
     <FreePlayChrome
       game="crossword"
       pageModifier={pageClassName(size)}
-      choice={sizeChoice(size, setSize)}
+      choices={[sizeChoice(size, setSize)]}
       state={{ kind: phase.kind === "failed" ? "error" : "generating" }}
     >
       {phase.kind === "failed" ? (
@@ -90,20 +90,24 @@ function CrosswordFreeBoard({
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, [dispatch]);
 
-  const choice = sizeChoice(size, onSizeChange);
+  const choices = [sizeChoice(size, onSizeChange)];
 
   return (
     <EndingStage
       over={board.state.status === "solved"}
       won
       ending={() => (
-        <FreePlaySolvedCard game="crossword" choice={choice} onAgain={onNext} />
+        <FreePlaySolvedCard
+          game="crossword"
+          choices={choices}
+          onAgain={onNext}
+        />
       )}
     >
       <FreePlayChrome
         game="crossword"
         pageModifier={pageClassName(size)}
-        choice={choice}
+        choices={choices}
         state={{ kind: "playing", readouts: crosswordReadouts(board) }}
       >
         <CrosswordBoardView board={board} />

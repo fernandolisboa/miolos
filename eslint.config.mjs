@@ -66,6 +66,13 @@ const webDynamicNonogramColorsImport = {
     "apps/web never imports the Nonogram tones table dynamically: it ships on /modo-livre/nonogram alone (ADR-0121).",
 };
 
+const webDynamicColoredNonogramImport = {
+  selector:
+    "ImportExpression > Literal[value=/^@miolos\\/games\\/colored-nonogram(\\/|$)/i]",
+  message:
+    "apps/web never imports the coloured Nonogram engine dynamically: it is imported statically inside the Cores chunk, which /modo-livre/nonogram alone loads (ADR-0132).",
+};
+
 const webComputedDynamicImport = {
   selector: 'ImportExpression[source.type!="Literal"]',
   message:
@@ -105,6 +112,22 @@ const nonogramColorsGroup = {
   group: ["@miolos/games/nonogram-colors", "@miolos/games/nonogram-colors/*"],
   message:
     "@miolos/games/nonogram-colors carries every motif's tones: only apps/web/src/free-play/use-free-nonogram.ts imports it, so the table ships on /modo-livre/nonogram alone and a daily gets its tones from its own completed /day claim (ADR-0121, ADR-0004). Tests may import it.",
+};
+
+const coloredNonogramGroup = {
+  group: ["@miolos/games/colored-nonogram", "@miolos/games/colored-nonogram/*"],
+  message:
+    "@miolos/games/colored-nonogram reaches every motif's tones: only apps/web/src/colored-nonogram/** and apps/web/src/free-play/use-free-colored-nonogram.ts import it, inside the Cores chunk /modo-livre/nonogram alone loads (ADR-0132, ADR-0121). Tests may import it.",
+};
+
+const coloredNonogramModulesGroup = {
+  group: [
+    "**/colored-nonogram/*",
+    "**/free-play/colored-nonogram-*",
+    "**/free-play/use-free-colored-nonogram",
+  ],
+  message:
+    "The Cores modules load only inside the lazy chunk /modo-livre/nonogram fetches: only apps/web/src/free-play/** and apps/web/src/colored-nonogram/** import them (ADR-0132).",
 };
 
 const webWallImportPatterns = [
@@ -165,6 +188,7 @@ const webClientImportPatterns = [
   ...webWallImportPatterns,
   termoAnswersGroup,
   nonogramColorsGroup,
+  coloredNonogramGroup,
 ];
 
 const webWallImportPaths = [
@@ -496,6 +520,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webNormalForm,
@@ -510,7 +535,10 @@ export default tseslint.config(
     rules: {
       "no-restricted-imports": [
         "error",
-        { patterns: webClientImportPatterns, paths: webWallImportPaths },
+        {
+          patterns: [...webClientImportPatterns, coloredNonogramModulesGroup],
+          paths: webWallImportPaths,
+        },
       ],
       "no-restricted-syntax": [
         "error",
@@ -520,6 +548,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -532,6 +561,7 @@ export default tseslint.config(
   {
     files: [
       `apps/web/src/free-play/**/*.${webWallExtensions}`,
+      `apps/web/src/colored-nonogram/**/*.${webWallExtensions}`,
       `apps/web/app/modo-livre/**/*.${webWallExtensions}`,
     ],
     rules: {
@@ -549,6 +579,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -556,6 +587,22 @@ export default tseslint.config(
         webNormalForm,
         webCodeExtension,
         freePlayDynamicBannedModule,
+      ],
+    },
+  },
+  {
+    files: [`apps/web/app/modo-livre/**/*.${webWallExtensions}`],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns,
+            ...freePlayBannedModuleGroups,
+            coloredNonogramModulesGroup,
+          ],
+          paths: webWallImportPaths,
+        },
       ],
     },
   },
@@ -595,6 +642,26 @@ export default tseslint.config(
   },
   {
     files: [
+      "apps/web/src/free-play/use-free-colored-nonogram.ts",
+      `apps/web/src/colored-nonogram/**/*.${webWallExtensions}`,
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ...webClientImportPatterns.filter(
+              (pattern) => pattern !== coloredNonogramGroup,
+            ),
+            ...freePlayBannedModuleGroups,
+          ],
+          paths: webWallImportPaths,
+        },
+      ],
+    },
+  },
+  {
+    files: [
       `apps/web/src/og/**/*.${webWallExtensions}`,
 
       `apps/web/app/**/opengraph-image.${webWallExtensions}`,
@@ -607,7 +674,11 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
-          patterns: [...webWallImportPatterns, ...ogBannedGameGroups],
+          patterns: [
+            ...webWallImportPatterns,
+            ...ogBannedGameGroups,
+            coloredNonogramModulesGroup,
+          ],
           paths: webWallImportPaths,
         },
       ],
@@ -618,6 +689,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
@@ -641,6 +713,7 @@ export default tseslint.config(
             ...webWallImportPatterns,
             ...freePlayBannedModuleGroups,
             ...ogBannedGameGroups,
+            coloredNonogramModulesGroup,
           ],
           paths: webWallImportPaths,
         },
@@ -652,6 +725,7 @@ export default tseslint.config(
         webDynamicCrosswordImport,
         webDynamicTermoAnswersImport,
         webDynamicNonogramColorsImport,
+        webDynamicColoredNonogramImport,
         webComputedDynamicImport,
         webRequireCall,
         webTableNameLiteral,
