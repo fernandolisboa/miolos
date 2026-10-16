@@ -72,14 +72,20 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
         { type: "select", index: FIRST },
         ...(before === null
           ? []
-          : [{ type: "enter-digit", digit: before } as const]),
+          : [
+              { type: "enter-digit", digit: before, cleanNotes: true } as const,
+            ]),
       );
-      const afterFirstTap = play(prepared, { type: "enter-digit", digit });
+      const afterFirstTap = play(prepared, {
+        type: "enter-digit",
+        digit,
+        cleanNotes: true,
+      });
 
       const locked = play(afterFirstTap, {
         type: "lock-digit",
         digit,
-        undo: { index: FIRST, value: before },
+        undo: { index: FIRST, value: before, notes: FRESH.notes },
       });
 
       expect(locked.locked).toBe(digit);
@@ -91,7 +97,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     const locked = play(FRESH, {
       type: "lock-digit",
       digit: 5,
-      undo: { index: GIVEN, value: 5 },
+      undo: { index: GIVEN, value: 5, notes: FRESH.notes },
     });
 
     expect(locked.entries).toEqual(FRESH.entries);
@@ -104,7 +110,11 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
   });
 
   it("tap-cell selects the cell and writes the locked digit there", () => {
-    const state = play(lockedOn(6), { type: "tap-cell", index: FIRST });
+    const state = play(lockedOn(6), {
+      type: "tap-cell",
+      index: FIRST,
+      cleanNotes: true,
+    });
 
     expect(state.selected).toBe(FIRST);
     expect(state.entries[FIRST]).toBe(6);
@@ -114,8 +124,8 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
   it("tap-cell on a cell already holding the locked digit clears it", () => {
     const state = play(
       lockedOn(6),
-      { type: "tap-cell", index: FIRST },
-      { type: "tap-cell", index: FIRST },
+      { type: "tap-cell", index: FIRST, cleanNotes: true },
+      { type: "tap-cell", index: FIRST, cleanNotes: true },
     );
 
     expect(state.entries[FIRST]).toBeNull();
@@ -126,26 +136,36 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     const state = play(
       lockedOn(6),
       { type: "select", index: SECOND },
-      { type: "enter-digit", digit: 9 },
-      { type: "tap-cell", index: SECOND },
+      { type: "enter-digit", digit: 9, cleanNotes: true },
+      { type: "tap-cell", index: SECOND, cleanNotes: true },
     );
 
     expect(state.entries[SECOND]).toBe(6);
   });
 
   it("tap-cell on a given selects it and changes nothing else", () => {
-    const state = play(lockedOn(6), { type: "tap-cell", index: GIVEN });
+    const state = play(lockedOn(6), {
+      type: "tap-cell",
+      index: GIVEN,
+      cleanNotes: true,
+    });
 
     expect(state.selected).toBe(GIVEN);
     expect(state.entries).toEqual(FRESH.entries);
   });
 
   it("tap-cell does nothing while no digit is locked", () => {
-    expect(play(FRESH, { type: "tap-cell", index: FIRST })).toBe(FRESH);
+    expect(
+      play(FRESH, { type: "tap-cell", index: FIRST, cleanNotes: true }),
+    ).toBe(FRESH);
   });
 
   it("is kept by Recomeçar and by a restore with no record", () => {
-    const written = play(lockedOn(6), { type: "tap-cell", index: FIRST });
+    const written = play(lockedOn(6), {
+      type: "tap-cell",
+      index: FIRST,
+      cleanNotes: true,
+    });
 
     expect(play(written, { type: "reset" }).locked).toBe(6);
     expect(
@@ -159,11 +179,19 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
         play(
           state,
           { type: "select", index },
-          { type: "enter-digit", digit: SOLUTION[index] ?? 1 },
+          {
+            type: "enter-digit",
+            digit: SOLUTION[index] ?? 1,
+            cleanNotes: true,
+          },
         ),
       lockedOn(SOLUTION[FIRST] ?? 1),
     );
-    const solved = play(nearly, { type: "tap-cell", index: FIRST });
+    const solved = play(nearly, {
+      type: "tap-cell",
+      index: FIRST,
+      cleanNotes: true,
+    });
 
     it("a lock tap that completes the board solves it", () => {
       expect(nearly.status).toBe("playing");
@@ -174,9 +202,13 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
       const lock = play(solved, {
         type: "lock-digit",
         digit: 1,
-        undo: { index: FIRST, value: null },
+        undo: { index: FIRST, value: null, notes: FRESH.notes },
       });
-      const tap = play(solved, { type: "tap-cell", index: SECOND });
+      const tap = play(solved, {
+        type: "tap-cell",
+        index: SECOND,
+        cleanNotes: true,
+      });
 
       expect(lock).toBe(solved);
       expect(tap).toBe(solved);
@@ -190,7 +222,11 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
         play(
           current,
           { type: "select", index },
-          { type: "enter-digit", digit: SOLUTION[index] ?? 1 },
+          {
+            type: "enter-digit",
+            digit: SOLUTION[index] ?? 1,
+            cleanNotes: true,
+          },
         ),
       FRESH,
     );

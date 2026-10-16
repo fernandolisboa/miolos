@@ -213,11 +213,12 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
       within(sudoku)
         .getAllByRole("switch")
         .map((s) => s.getAttribute("aria-labelledby")),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     for (const label of [
       copy.flags.showErrors.label,
       copy.flags.lockDigit.label,
       copy.flags.highlightSelection.label,
+      copy.flags.cleanNotes.label,
     ]) {
       expect(
         within(sudoku).getByRole("switch", { name: label }),
@@ -338,6 +339,7 @@ describe("the in-game dialog carries the same switches for this game (T-WEB-S593
       copy.flags.showErrors.label,
       copy.flags.lockDigit.label,
       copy.flags.highlightSelection.label,
+      copy.flags.cleanNotes.label,
     ]) {
       expect(
         within(dialog).getByRole("switch", { name: label }),

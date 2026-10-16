@@ -29,6 +29,7 @@ export interface BoardEdits {
 export function useBoardEdits(
   state: Undoable<unknown>,
   dispatch: Dispatch<ResetAction | UndoAction>,
+  resettable = hasDecidedCell(state.entries),
 ): BoardEdits {
   const reset = useCallback(() => {
     dispatch({ type: "reset" });
@@ -39,13 +40,15 @@ export function useBoardEdits(
   }, [dispatch]);
 
   return {
-    onReset: hasDecidedCell(state.entries) ? reset : null,
+    onReset: resettable ? reset : null,
     onUndo:
       state.status === "playing" && state.history.steps.length > 0
         ? undo
         : null,
   };
 }
+
+type StepFields = readonly (readonly unknown[])[];
 
 export function undoable<
   S extends Undoable<T>,
@@ -54,6 +57,7 @@ export function undoable<
 >(
   reduce: (state: S, action: A) => S,
   snapshot: (state: S) => T,
+  stepFields: (snap: T) => StepFields = ({ entries }) => [entries],
 ): (state: S, action: A | UndoAction) => S {
   return (state, action) => {
     if (action.type === "undo") {
@@ -68,7 +72,9 @@ export function undoable<
       return { ...next, history: NO_HISTORY };
     }
     const { steps, open } = state.history;
-    if (next.entries === state.entries) {
+    const before = stepFields(snapshot(state));
+    const after = stepFields(snapshot(next));
+    if (before.every((cells, at) => cells === after[at])) {
       return action.type === "stroke-start" && open
         ? closed(next, steps)
         : next;
@@ -79,9 +85,11 @@ export function undoable<
       open &&
       (action.type === "paint-over" || action.type === "lock-digit")
     ) {
-      return continued(next, steps);
+      return continued(next, steps, (opening) =>
+        sameFields(stepFields(opening), after),
+      );
     }
-    if (sameEntries(state.entries, next.entries)) {
+    if (sameFields(before, after)) {
       return next;
     }
     return {
@@ -94,12 +102,13 @@ export function undoable<
   };
 }
 
-function continued<
-  S extends Undoable<T>,
-  T extends { readonly entries: S["entries"] },
->(next: S, steps: readonly T[]): S {
+function continued<S extends Undoable<T>, T>(
+  next: S,
+  steps: readonly T[],
+  endsWhereItBegan: (opening: T) => boolean,
+): S {
   const opening = steps.at(-1);
-  return opening !== undefined && sameEntries(opening.entries, next.entries)
+  return opening !== undefined && endsWhereItBegan(opening)
     ? closed(next, steps.slice(0, -1))
     : next;
 }
@@ -117,6 +126,12 @@ function closed<S extends Undoable<T>, T>(state: S, steps: readonly T[]): S {
   return { ...state, history: { steps, open: false } };
 }
 
-function sameEntries(a: readonly unknown[], b: readonly unknown[]): boolean {
-  return a.length === b.length && a.every((entry, at) => entry === b[at]);
+function sameFields(a: StepFields, b: StepFields): boolean {
+  return a.every((cells, at) => {
+    const other = b[at] ?? [];
+    return (
+      cells.length === other.length &&
+      cells.every((cell, index) => cell === other[index])
+    );
+  });
 }
