@@ -20,7 +20,7 @@ const {
   (props) => (
     <ConclusionChunkFallback
       copy={messages.games.minesweeper.conclusion}
-      stamp={props.result}
+      stamp={props.live?.status === "lost" ? undefined : props.result}
     />
   ),
 );

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ArchiveMinesweeperScreen } from "../src/archive/minesweeper-screen";
 import { formatElapsed, messages } from "../src/i18n";
 import { minesweeperMessages } from "../src/minesweeper/messages";
+import { MinesweeperConclusion } from "../src/minesweeper/minesweeper-conclusion";
 import { MinesweeperScreen } from "../src/minesweeper/minesweeper-screen";
 import { RemoteConclusionView } from "../src/play/conclusion-view";
 import type { MinesweeperPlayRecord } from "../src/play/play-record";
@@ -171,6 +172,27 @@ describe("the daily Campo Minado is the free board on the published field, with 
     ).toBeInTheDocument();
     const [queued] = sync.flushPendingCompletions.mock.calls.at(-1) ?? [];
     expect(queued).toMatchObject({ game: "minesweeper", hit: null });
+  });
+});
+
+describe("the conclusion route reopens a stored loss as played (T-WEB-S923c)", () => {
+  it("reads the lost record with no live board: played stamp, finished field, no time", async () => {
+    const { unmount } = render(<MinesweeperScreen daily={DAILY} />);
+    playToEnd(false);
+    await settle();
+    unmount();
+
+    render(<MinesweeperConclusion daily={DAILY} />);
+
+    expect(
+      await screen.findByRole("img", { name: copy.played.aria }),
+    ).toHaveTextContent(copy.played.label);
+    expect(
+      screen.getByRole("img", {
+        name: minesweeperMessages.finishedAria(false),
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(messages.conclusion.stampLabel)).toBeNull();
   });
 });
 
