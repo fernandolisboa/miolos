@@ -140,9 +140,13 @@
   outline-offset: -2px;
 }
 
-.open {
+.open,
+.pressed {
   background: var(--cell-open);
   box-shadow: inset 1px 1px 0 color-mix(in srgb, black 16%, transparent);
+}
+
+.open {
   cursor: default;
 }
 

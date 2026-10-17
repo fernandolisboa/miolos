@@ -9,6 +9,7 @@ describe("@miolos/games exports map", () => {
       "MINESWEEPER_WEEKDAY_MINES",
       "MinesweeperGenerationError",
       "chordMinesweeper",
+      "chordTargets",
       "cycleMinesweeperMark",
       "generateMinesweeperDaily",
       "layMines",

@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pressOf } from "../src/play/brush";
@@ -19,13 +19,13 @@ function Harness({
     readonly chord: (index: number) => void;
   };
 }) {
-  const handlers = useCellPress({
+  const { handlers, heldAt } = useCellPress({
     onActivate: spies.activate,
     onMark: spies.mark,
     onChord: spies.chord,
   });
   return (
-    <div data-testid="board" {...handlers}>
+    <div data-testid="board" data-held={heldAt ?? ""} {...handlers}>
       {Array.from({ length: CELLS }, (_unused, index) => (
         <button key={index} type="button" data-cell-index={index} />
       ))}
@@ -35,9 +35,9 @@ function Harness({
 
 function mount() {
   const spies = { activate: vi.fn(), mark: vi.fn(), chord: vi.fn() };
-  const { container, getByTestId } = render(<Harness spies={spies} />);
+  const { container, getByTestId, unmount } = render(<Harness spies={spies} />);
   stubElementFromPoint(container);
-  return { spies, board: getByTestId("board") };
+  return { spies, board: getByTestId("board"), unmount };
 }
 
 const MOUSE = { pointerId: 1, pointerType: "mouse" } as const;
@@ -288,5 +288,172 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
 
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 1, button: 0 });
     expect(spies.activate.mock.calls).toStrictEqual([[1]]);
+  });
+});
+
+describe("both buttons chord the way Windows does (T-WEB-S940)", () => {
+  const down = (buttons: number) => ({ ...MOUSE, clientX: 3, buttons });
+
+  it.each([
+    ["left first, left released first", 0, 2, 0],
+    ["left first, right released first", 0, 2, 2],
+    ["right first, right released first", 2, 0, 2],
+    ["right first, left released first", 2, 0, 0],
+  ] as const)(
+    "%s: the first release chords once, and the second does nothing",
+    (_name, first, second, released) => {
+      const { spies, board } = mount();
+      const left = released === 0 ? 2 : 1;
+
+      fireEvent.pointerDown(board, {
+        ...down(first === 0 ? 1 : 2),
+        button: first,
+      });
+      fireEvent.pointerMove(board, { ...down(3), button: second });
+      expect(spies.chord).not.toHaveBeenCalled();
+      fireEvent.pointerMove(board, { ...down(left), button: released });
+      expect(spies.chord.mock.calls).toStrictEqual([[3]]);
+      fireEvent.pointerUp(board, {
+        ...down(0),
+        button: released === 0 ? 2 : 0,
+      });
+      fireEvent.click(board, { detail: 1 });
+
+      expect(spies.chord).toHaveBeenCalledTimes(1);
+      expect(spies.activate).not.toHaveBeenCalled();
+      expect(spies.mark.mock.calls).toStrictEqual(first === 2 ? [[3]] : []);
+    },
+  );
+
+  it("chords at the cell under the pointer when the first button comes up", () => {
+    const { spies, board } = mount();
+
+    fireEvent.pointerDown(board, { ...down(1), button: 0 });
+    fireEvent.pointerMove(board, { ...down(3), button: 2 });
+    fireEvent.pointerMove(board, {
+      ...MOUSE,
+      clientX: 4,
+      buttons: 1,
+      button: 2,
+    });
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 8, buttons: 0, button: 0 });
+
+    expect(spies.chord.mock.calls).toStrictEqual([[4]]);
+  });
+});
+
+describe("the press names the cell a release would act on (T-WEB-S941)", () => {
+  const held = (board: HTMLElement) => board.dataset.held;
+
+  it("holds the cell under a left or middle press, follows the pointer, and lets go on release", () => {
+    const { board } = mount();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 2,
+      button: 0,
+      buttons: 1,
+    });
+    expect(held(board)).toBe("2");
+    fireEvent.pointerMove(board, { ...MOUSE, clientX: 5, buttons: 1 });
+    expect(held(board)).toBe("5");
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 5, button: 0, buttons: 0 });
+    expect(held(board)).toBe("");
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 6,
+      button: 1,
+      buttons: 4,
+    });
+    expect(held(board)).toBe("6");
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 6, button: 1, buttons: 0 });
+    expect(held(board)).toBe("");
+  });
+
+  it("holds nothing for a right press alone, and the cell once the left joins it", () => {
+    const { board } = mount();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 2,
+      button: 2,
+      buttons: 2,
+    });
+    expect(held(board)).toBe("");
+    fireEvent.pointerMove(board, {
+      ...MOUSE,
+      clientX: 2,
+      button: 0,
+      buttons: 3,
+    });
+    expect(held(board)).toBe("2");
+    fireEvent.pointerMove(board, {
+      ...MOUSE,
+      clientX: 2,
+      button: 2,
+      buttons: 1,
+    });
+    expect(held(board)).toBe("");
+  });
+
+  it("lets go when a long press turns into a flag", () => {
+    const { board } = mount();
+
+    fireEvent.pointerDown(board, { ...TOUCH, clientX: 7, button: 0 });
+    expect(held(board)).toBe("7");
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS);
+    });
+    expect(held(board)).toBe("");
+  });
+});
+
+describe("a press with the right button keeps the page menu away (T-WEB-S942)", () => {
+  function outside(): HTMLElement {
+    const element = document.createElement("div");
+    document.body.append(element);
+    return element;
+  }
+
+  it.each([
+    ["a right press", { button: 2, buttons: 2 }],
+    ["both buttons", { button: 0, buttons: 3 }],
+  ] as const)(
+    "takes the one menu Windows opens after %s ends the board, and no later one",
+    (_name, press) => {
+      const { board, unmount } = mount();
+      const elsewhere = outside();
+
+      fireEvent.pointerDown(board, { ...MOUSE, clientX: 3, ...press });
+      unmount();
+      fireEvent.pointerUp(window, { ...MOUSE, clientX: 3, buttons: 0 });
+
+      expect(fireEvent.contextMenu(elsewhere)).toBe(false);
+      expect(fireEvent.contextMenu(elsewhere)).toBe(true);
+    },
+  );
+
+  it("lapses one task after the release when no menu came, and never arms for a left press", () => {
+    const { board } = mount();
+    const elsewhere = outside();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 3,
+      button: 2,
+      buttons: 2,
+    });
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 3, button: 2, buttons: 0 });
+    vi.advanceTimersByTime(0);
+    expect(fireEvent.contextMenu(elsewhere)).toBe(true);
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 3,
+      button: 0,
+      buttons: 1,
+    });
+    expect(fireEvent.contextMenu(elsewhere)).toBe(true);
   });
 });

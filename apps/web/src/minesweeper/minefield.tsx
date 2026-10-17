@@ -1,7 +1,8 @@
-import type { MinesweeperState } from "@miolos/games/minesweeper";
+import { chordTargets, type MinesweeperState } from "@miolos/games/minesweeper";
 import {
   memo,
   useCallback,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -39,6 +40,7 @@ const Cell = memo(function Cell({
   index,
   columns,
   view,
+  pressed,
   tabbable,
   onFocus,
   onClick,
@@ -46,6 +48,7 @@ const Cell = memo(function Cell({
   readonly index: number;
   readonly columns: number;
   readonly view: CellView;
+  readonly pressed: boolean;
   readonly tabbable: boolean;
   readonly onFocus: (index: number) => void;
   readonly onClick: (
@@ -56,7 +59,7 @@ const Cell = memo(function Cell({
   return (
     <button
       type="button"
-      className={classOf(view)}
+      className={pressed ? `${classOf(view)} ${styles.pressed}` : classOf(view)}
       data-cell-index={index}
       tabIndex={tabbable ? 0 : -1}
       aria-label={positionLabel(index, columns, view)}
@@ -124,6 +127,11 @@ export const Minefield = memo(function Minefield({
     onMark,
     onChord,
   });
+  const { heldAt } = press;
+  const pressed = useMemo(
+    () => new Set(heldAt === null ? [] : chordTargets(game, heldAt)),
+    [game, heldAt],
+  );
 
   const onCellClick = useCallback(
     (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -164,7 +172,7 @@ export const Minefield = memo(function Minefield({
       aria-label={copy.boardAria(rows, columns)}
       className={`${styles.field} ${sizeClass ?? ""}`}
       onKeyDown={onKeyDown}
-      {...press}
+      {...press.handlers}
     >
       {game.open.map((_open, index) => (
         <Cell
@@ -172,6 +180,7 @@ export const Minefield = memo(function Minefield({
           index={index}
           columns={columns}
           view={cellView(game, index)}
+          pressed={pressed.has(index)}
           tabbable={index === selected}
           onFocus={setSelected}
           onClick={onCellClick}

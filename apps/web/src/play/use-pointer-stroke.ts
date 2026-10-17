@@ -13,6 +13,7 @@ import {
   strokeAxis,
   type StrokeAxis,
 } from "./straight-stroke";
+import { useContextMenuNet } from "./use-context-menu-net";
 
 interface PointerStrokeHandlers {
   readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -72,31 +73,11 @@ export function usePointerStroke(input: {
     };
   };
 
-  const releaseContextNet = useRef<(() => void) | null>(null);
-  const lapseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-
-  // Windows fires `contextmenu` after mouseup at the element under the cursor,
-  // so a right press released off the board would open the page menu.
-  const armContextNet = () => {
-    releaseContextNet.current?.();
-    const swallow = (native: Event) => {
-      native.preventDefault();
-      releaseContextNet.current?.();
-    };
-    window.addEventListener("contextmenu", swallow, true);
-    releaseContextNet.current = () => {
-      clearTimeout(lapseTimer.current);
-      window.removeEventListener("contextmenu", swallow, true);
-      releaseContextNet.current = null;
-    };
-  };
+  const armContextNet = useContextMenuNet();
 
   useEffect(
     () => () => {
       detachWindowEnd.current?.();
-      releaseContextNet.current?.();
     },
     [],
   );
@@ -175,9 +156,6 @@ export function usePointerStroke(input: {
     dragging.current = false;
     strokePointer.current = null;
     detachWindowEnd.current?.();
-    if (releaseContextNet.current !== null) {
-      lapseTimer.current = setTimeout(() => releaseContextNet.current?.(), 0);
-    }
   };
 
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>) => {

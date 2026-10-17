@@ -1,5 +1,7 @@
 import {
   MINESWEEPER_LEVELS,
+  chordTargets,
+  cycleMinesweeperMark,
   layMines,
   newMinesweeperGame,
   openMinesweeperCell,
@@ -12,6 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "../src/i18n";
 import { minesweeperMessages } from "../src/minesweeper/messages";
 import { Minefield } from "../src/minesweeper/minefield";
+import styles from "../src/minesweeper/minefield.module.css";
 import { cellView } from "../src/minesweeper/view";
 import { bodyOf, decl, stylesheet } from "./css-source";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
@@ -393,5 +396,82 @@ describe("the keyboard moves on the grid as it is drawn, wide or turned (T-WEB-S
     expect(document.activeElement).toBe(cellAt(1));
     fireEvent.keyDown(cellAt(1), { key: "ArrowRight" });
     expect(document.activeElement).toBe(cellAt(31));
+  });
+});
+
+describe("a held chord presses the cells it would open (T-WEB-S943)", () => {
+  function chordable(): { game: MinesweeperState; at: number; flag: number } {
+    const game = played("beginner", 40);
+    const at = game.open.findIndex(
+      (open, i) => open && chordTargets(game, i).length > 1,
+    );
+    const flag = chordTargets(game, at)[0];
+    if (at < 0 || flag === undefined) {
+      throw new Error(
+        "the fixture has no open number with two closed neighbours",
+      );
+    }
+    return { game: cycleMinesweeperMark(game, flag, false), at, flag };
+  }
+
+  const pressedCells = () =>
+    [...document.querySelectorAll<HTMLElement>("[data-cell-index]")]
+      .filter((cell) => cell.classList.contains(styles.pressed ?? "pressed"))
+      .map((cell) => Number(cell.dataset.cellIndex));
+  const mouse = { pointerId: 1, pointerType: "mouse" } as const;
+
+  it("presses the closed, unflagged neighbours of the held number until the release", () => {
+    const { game, at, flag } = chordable();
+    const { container } = mountField(game);
+    const board = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(board, {
+      ...mouse,
+      button: 0,
+      buttons: 1,
+      clientX: at,
+    });
+
+    expect(pressedCells()).toStrictEqual([...chordTargets(game, at)]);
+    expect(pressedCells()).not.toContain(flag);
+    fireEvent.pointerUp(board, {
+      ...mouse,
+      button: 0,
+      buttons: 0,
+      clientX: at,
+    });
+    expect(pressedCells()).toStrictEqual([]);
+  });
+
+  it("presses nothing for a right press, or for a closed cell", () => {
+    const { game, at, flag } = chordable();
+    const { container } = mountField(game);
+    const board = container.firstElementChild as HTMLElement;
+
+    fireEvent.pointerDown(board, {
+      ...mouse,
+      button: 2,
+      buttons: 2,
+      clientX: at,
+    });
+    expect(pressedCells()).toStrictEqual([]);
+    fireEvent.pointerUp(board, {
+      ...mouse,
+      button: 2,
+      buttons: 0,
+      clientX: at,
+    });
+    fireEvent.pointerDown(board, {
+      ...mouse,
+      button: 1,
+      buttons: 4,
+      clientX: flag,
+    });
+    expect(pressedCells()).toStrictEqual([]);
+  });
+
+  it("draws a pressed cell as an open one", () => {
+    const css = stylesheet("src/minesweeper/minefield.module.css");
+    expect(bodyOf(css, ".open,\n.pressed")).toContain("var(--cell-open)");
   });
 });
