@@ -536,7 +536,8 @@ describe("a right press keeps the page menu away after the pointer leaves (T-WEB
     expect(fireEvent.contextMenu(outsideOf(container))).toBe(true);
   });
 
-  it("leaves nothing behind on unmount", () => {
+  it("outlives an unmount until the release, then leaves nothing behind", () => {
+    vi.useFakeTimers();
     const { container, unmount } = render(<StrokeHarness />);
     stubElementFromPoint(container);
     const detached = document.createElement("div");
@@ -544,6 +545,14 @@ describe("a right press keeps the page menu away after the pointer leaves (T-WEB
 
     fireEvent.pointerDown(boardOf(container), { ...right, clientX: 3 });
     unmount();
+    expect(fireEvent.contextMenu(detached)).toBe(false);
+    expect(fireEvent.contextMenu(detached)).toBe(true);
+    const again = render(<StrokeHarness />);
+    stubElementFromPoint(again.container);
+    fireEvent.pointerDown(boardOf(again.container), { ...right, clientX: 3 });
+    again.unmount();
+    fireEvent.pointerUp(window, { ...right, clientX: 3 });
+    vi.advanceTimersByTime(0);
 
     expect(fireEvent.contextMenu(detached)).toBe(true);
   });

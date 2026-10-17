@@ -14,6 +14,7 @@ export {
 export { layMines, minesweeperField } from "./field";
 export {
   chordMinesweeper,
+  chordTargets,
   cycleMinesweeperMark,
   newMinesweeperGame,
   openMinesweeperCell,
