@@ -11,11 +11,12 @@ Fernando reported twice that the left + right chord "does not work well". In Chr
 
 1. **Both buttons chord on the first release**, at the cell under the pointer then, as Windows' Minesweeper does. The second release does nothing. Middle still chords on its release; a left click on an open number still chords.
 2. **A held press draws the cells its release would open.** `useCellPress` reports `heldAt`, the cell under a left, middle, tap or two-button press (never a right press alone); the minefield draws that cell's `chordTargets` (closed, unflagged neighbours of an open cell) as `.pressed`, the open cell's look. The press shows even when the flags do not match, which is when the player needs to see it.
-3. **The right button arms one window-level `contextmenu` net** (`useContextMenuNet`, shared with `usePointerStroke`). It lives until the next pointerup or pointercancel, plus one task, so it outlives a board that ends or unmounts under the pointer.
+3. **A right press, or a right button joining a left press, arms one window-level `contextmenu` net** (`useContextMenuNet`, shared with `usePointerStroke`). It lives until the next pointerup or pointercancel, plus one task, so it outlives a board that ends or unmounts under the pointer.
 
 ## Consequences
 
 - `chordTargets` joins `@miolos/games/minesweeper`; `chordMinesweeper` opens exactly those cells.
+- A pen's barrel button chords too: once both are held, the long-press timer stops.
 - Pinned by `T-WEB-S940…S943` and the `chordTargets` properties in `packages/games/test/minesweeper/play.test.ts`. `T-WEB-S503`'s unmount case now waits for the release.
 
 ## Rejected

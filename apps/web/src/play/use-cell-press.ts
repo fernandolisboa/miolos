@@ -122,7 +122,7 @@ export function useCellPress(input: CellPressInput): CellPress {
     }
     if (kind === "right") {
       latest.current.onMark(index);
-    } else if (kind === "tap") {
+    } else if (kind === "tap" && !press.both) {
       press.timer = setTimeout(() => {
         spend(press);
         latest.current.onMark(index);
@@ -146,6 +146,7 @@ export function useCellPress(input: CellPressInput): CellPress {
     if (bothHeld(event)) {
       if (!press.both) {
         press.both = true;
+        clearTimeout(press.timer);
         armContextNet();
       }
     } else if (press.both) {

@@ -313,6 +313,7 @@ describe("both buttons chord the way Windows does (T-WEB-S940)", () => {
       expect(spies.chord).not.toHaveBeenCalled();
       fireEvent.pointerMove(board, { ...down(left), button: released });
       expect(spies.chord.mock.calls).toStrictEqual([[3]]);
+      fireEvent.pointerMove(board, { ...MOUSE, clientX: 5, buttons: left });
       fireEvent.pointerUp(board, {
         ...down(0),
         button: released === 0 ? 2 : 0,
@@ -336,9 +337,22 @@ describe("both buttons chord the way Windows does (T-WEB-S940)", () => {
       buttons: 1,
       button: 2,
     });
+    fireEvent.pointerMove(board, { ...MOUSE, clientX: 6, buttons: 1 });
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 8, buttons: 0, button: 0 });
 
     expect(spies.chord.mock.calls).toStrictEqual([[4]]);
+  });
+  it("lets a pen chord with its barrel button however long it is held", () => {
+    const { spies, board } = mount();
+    const pen = { pointerId: 5, pointerType: "pen", clientX: 3 } as const;
+
+    fireEvent.pointerDown(board, { ...pen, button: 0, buttons: 1 });
+    fireEvent.pointerMove(board, { ...pen, button: 2, buttons: 3 });
+    vi.advanceTimersByTime(LONG_PRESS * 2);
+    fireEvent.pointerMove(board, { ...pen, button: 2, buttons: 1 });
+
+    expect(spies.chord.mock.calls).toStrictEqual([[3]]);
+    expect(spies.mark).not.toHaveBeenCalled();
   });
 });
 
@@ -417,15 +431,25 @@ describe("a press with the right button keeps the page menu away (T-WEB-S942)", 
   }
 
   it.each([
-    ["a right press", { button: 2, buttons: 2 }],
-    ["both buttons", { button: 0, buttons: 3 }],
+    ["a right press", [{ button: 2, buttons: 2 }]],
+    [
+      "a right button joining a left press",
+      [
+        { button: 0, buttons: 1 },
+        { button: 2, buttons: 3 },
+      ],
+    ],
   ] as const)(
     "takes the one menu Windows opens after %s ends the board, and no later one",
-    (_name, press) => {
+    (_name, presses) => {
       const { board, unmount } = mount();
       const elsewhere = outside();
 
-      fireEvent.pointerDown(board, { ...MOUSE, clientX: 3, ...press });
+      const [first, ...joins] = presses;
+      fireEvent.pointerDown(board, { ...MOUSE, clientX: 3, ...first });
+      for (const join of joins) {
+        fireEvent.pointerMove(board, { ...MOUSE, clientX: 3, ...join });
+      }
       unmount();
       fireEvent.pointerUp(window, { ...MOUSE, clientX: 3, buttons: 0 });
 
@@ -433,6 +457,22 @@ describe("a press with the right button keeps the page menu away (T-WEB-S942)", 
       expect(fireEvent.contextMenu(elsewhere)).toBe(true);
     },
   );
+
+  it("lapses one task after a pointercancel too", () => {
+    const { board } = mount();
+    const elsewhere = outside();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 3,
+      button: 2,
+      buttons: 2,
+    });
+    fireEvent.pointerCancel(window, { ...MOUSE });
+    vi.advanceTimersByTime(0);
+
+    expect(fireEvent.contextMenu(elsewhere)).toBe(true);
+  });
 
   it("lapses one task after the release when no menu came, and never arms for a left press", () => {
     const { board } = mount();

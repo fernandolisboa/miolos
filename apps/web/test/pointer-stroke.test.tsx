@@ -545,6 +545,12 @@ describe("a right press keeps the page menu away after the pointer leaves (T-WEB
 
     fireEvent.pointerDown(boardOf(container), { ...right, clientX: 3 });
     unmount();
+    expect(fireEvent.contextMenu(detached)).toBe(false);
+    expect(fireEvent.contextMenu(detached)).toBe(true);
+    const again = render(<StrokeHarness />);
+    stubElementFromPoint(again.container);
+    fireEvent.pointerDown(boardOf(again.container), { ...right, clientX: 3 });
+    again.unmount();
     fireEvent.pointerUp(window, { ...right, clientX: 3 });
     vi.advanceTimersByTime(0);
 
