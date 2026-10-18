@@ -22,7 +22,7 @@ Fernando asked (#402) that a Nonogram row or column whose fills complete its clu
 
 - By default the whole-line deduction ADR-0104 accepted is now written for the player, even with *Riscar números resolvidos* off. The capped hint is unchanged; the streak, the stats and the medals are untouched.
 - *Mostrar o erro* and *Só se estiver certa* read the solution the client already holds, like *Mostrar erros* (ADR-0102 d3).
-- `/nonogram` measured 51.1 KB (budget 50); it rises to 52 KB, the minimum whole step, under Fernando's standing approval of budget raises (2026-10-16). `/modo-livre/nonogram` (75.6 of 76) and `/arquivo/[data]/nonogram` (46.0 of 48) fit.
+- On top of redo, `/nonogram` measured 52.2 KB (budget 51) and `/modo-livre/nonogram` 76.7 KB (budget 76); they rise to 53 and 77 KB, the minimum whole steps, under Fernando's standing approval of budget raises (2026-10-16). `/arquivo/[data]/nonogram` (47.1 of 48) fits.
 - A ✕ stroke over an automatic ✕ changes no entry, so the cell stays the line's and clears with it; a tap clears it and makes it the player's.
 - Settings with a choice share one row driven by a table in `game-settings.tsx`; its options wrap below the text when they do not fit.
 

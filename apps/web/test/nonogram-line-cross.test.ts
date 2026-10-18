@@ -93,6 +93,10 @@ describe("a line whose fills form its clue crosses the rest (T-WEB-S970)", () =>
     const undone = play("always", after, { type: "undo" });
     expect(undone.entries).toEqual(before.entries);
     expect(undone.autoCrossed.size).toBe(0);
+
+    const redone = play("always", undone, { type: "redo" });
+    expect(redone.entries).toEqual(after.entries);
+    expect(claims(redone)).toEqual({ 0: [ROW_0], 4: [ROW_0] });
   });
 
   it("a cell a row and a column both claim stays crossed while either still forms its clue", () => {

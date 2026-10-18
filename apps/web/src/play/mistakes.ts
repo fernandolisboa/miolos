@@ -15,15 +15,22 @@ export interface HeldTap {
   readonly before: unknown;
 }
 
+export interface ParkedHold {
+  readonly hold: HeldTap;
+  readonly entry: unknown;
+}
+
 export interface MistakeState {
   readonly cells: readonly number[];
   readonly held: HeldTap | null;
+  readonly parked: ParkedHold | null;
   readonly stroke: boolean;
 }
 
 export const NO_MISTAKES: MistakeState = {
   cells: [],
   held: null,
+  parked: null,
   stroke: false,
 };
 
@@ -51,6 +58,7 @@ type MistakeAction = {
 const RESTORE = "restore" satisfies LifecycleAction["type"];
 const RESET = "reset" satisfies ResetAction["type"];
 const UNDO = "undo" satisfies UndoAction["type"];
+const REDO = "redo" satisfies UndoAction["type"];
 const PAINT_OVER = "paint-over" satisfies StrokeAction["type"];
 const STROKE_START = "stroke-start" satisfies StrokeAction["type"];
 
@@ -76,7 +84,7 @@ export function withMistakes<S extends Editable, A extends MistakeAction>(
   rules: MistakeRules<S, A>,
   enabled: boolean,
 ): (state: S, action: A) => S {
-  return (state, action) => {
+  const step = (state: S, action: A): S => {
     const next = reduce(state, action);
     if (action.type === RESTORE) {
       return next.entries === state.entries
@@ -94,11 +102,54 @@ export function withMistakes<S extends Editable, A extends MistakeAction>(
     if (isFrozen(state.mistakes, true)) {
       return changesBoard(state, next) ? state : next;
     }
-    if (action.type === UNDO) {
-      return marked(next, settled(state.mistakes, next));
+    if (action.type === UNDO || action.type === REDO) {
+      return marked(next, travelled(state, next, action.type));
     }
     return counted(state, next, action, rules);
   };
+  return (state, action) => unparked(step(state, action));
+}
+
+// Undo parks a hold it took back on the redo entry it pushed, and only the redo
+// of that very entry re-arms it, so Desfazer then Refazer never frees a held write.
+function travelled(
+  state: Editable,
+  next: Editable,
+  direction: UndoAction["type"],
+): MistakeState {
+  const { mistakes } = state;
+  const { held, parked } = mistakes;
+  if (next.status !== "playing") {
+    return settled(mistakes, next);
+  }
+  if (direction === REDO) {
+    return parked !== null &&
+      state.history.redo.at(-1) === parked.entry &&
+      !isBefore(next, parked.hold)
+      ? { ...mistakes, held: parked.hold, parked: null }
+      : mistakes;
+  }
+  return held !== null && isBefore(next, held)
+    ? {
+        ...mistakes,
+        held: null,
+        parked: { hold: held, entry: next.history.redo.at(-1) },
+      }
+    : mistakes;
+}
+
+function unparked<S extends Editable>(state: S): S {
+  const { parked } = state.mistakes;
+  const { redo, displaced } = state.history;
+  return parked === null ||
+    redo.includes(parked.entry) ||
+    displaced.includes(parked.entry)
+    ? state
+    : marked(state, { ...state.mistakes, parked: null });
+}
+
+function isBefore(state: Editable, hold: HeldTap): boolean {
+  return (state.entries[hold.index] ?? null) === hold.before;
 }
 
 function counted<S extends Editable, A extends MistakeAction>(
@@ -189,15 +240,14 @@ function written(
           before: state.entries[press.index] ?? null,
         })
       : mistakes.held,
+    parked: mistakes.parked,
     stroke: repeat || wrong !== null,
   };
 }
 
 function settled(mistakes: MistakeState, next: Editable): MistakeState {
   const { held } = mistakes;
-  return held !== null &&
-    (next.status !== "playing" ||
-      (next.entries[held.index] ?? null) === held.before)
+  return held !== null && (next.status !== "playing" || isBefore(next, held))
     ? { ...mistakes, held: null }
     : mistakes;
 }
