@@ -805,3 +805,27 @@ describe("a held tap that fills the last cell (T-WEB-S849)", () => {
     expect(left.mistakes.cells).toEqual([last]);
   });
 });
+
+describe("a Número fixo switch tap judges nothing (T-WEB-S951)", () => {
+  const given = SUDOKU.givens.findIndex((cell) => cell !== 0);
+  const shown = SUDOKU.givens[given] as SudokuDigit;
+
+  it("leaves a held wrong write waiting, and the next write elsewhere counts it", () => {
+    const switched = sudoku(
+      sudokuBoard(),
+      ...write(S0, wrongDigit(S0), true),
+      {
+        type: "lock-digit",
+        digit: ((shown % 9) + 1) as SudokuDigit,
+        undo: null,
+      },
+      { type: "tap-cell", index: given, cleanNotes: true },
+    );
+    expect(switched.locked).toBe(shown);
+    expect(switched.mistakes.cells).toEqual([]);
+    expect(switched.mistakes.held).not.toBeNull();
+
+    const next = sudoku(switched, ...write(S2, rightDigit(S2)));
+    expect(next.mistakes.cells).toEqual([S0]);
+  });
+});

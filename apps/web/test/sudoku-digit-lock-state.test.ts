@@ -5,7 +5,7 @@ import {
 import { generateDailySudoku } from "@miolos/games/sudoku";
 import { describe, expect, it } from "vitest";
 
-import { solutionDigits } from "../src/sudoku/engine";
+import { asDigit, solutionDigits } from "../src/sudoku/engine";
 import {
   initSudokuPlayState,
   sudokuPlayReducer,
@@ -46,6 +46,13 @@ const FRESH = initSudokuPlayState(DAILY);
 
 function lockedOn(digit: SudokuDigit): SudokuPlayState {
   return play(FRESH, { type: "lock-digit", digit, undo: null });
+}
+
+const GIVEN_DIGIT = asDigit(PUZZLE.givens[GIVEN]) ?? 1;
+const OTHER = asDigit((GIVEN_DIGIT % 9) + 1) ?? 1;
+
+function tapCell(index: number): SudokuPlayAction {
+  return { type: "tap-cell", index, cleanNotes: true };
 }
 
 describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
@@ -132,7 +139,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     expect(state.locked).toBe(6);
   });
 
-  it("tap-cell on a cell holding another digit overwrites it", () => {
+  it("tap-cell on a cell holding another digit fixes that digit and keeps the entry", () => {
     const state = play(
       lockedOn(6),
       { type: "select", index: SECOND },
@@ -140,17 +147,19 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
       { type: "tap-cell", index: SECOND, cleanNotes: true },
     );
 
-    expect(state.entries[SECOND]).toBe(6);
+    expect(state.entries[SECOND]).toBe(9);
+    expect(state.locked).toBe(9);
   });
 
-  it("tap-cell on a given selects it and changes nothing else", () => {
-    const state = play(lockedOn(6), {
+  it("tap-cell on a given selects it, fixes its digit and changes no entry", () => {
+    const state = play(lockedOn(OTHER), {
       type: "tap-cell",
       index: GIVEN,
       cleanNotes: true,
     });
 
     expect(state.selected).toBe(GIVEN);
+    expect(state.locked).toBe(GIVEN_DIGIT);
     expect(state.entries).toEqual(FRESH.entries);
   });
 
@@ -235,5 +244,58 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     expect(play(state, { type: "lock-digit", digit: 2, undo: null })).toBe(
       state,
     );
+  });
+});
+
+describe("a tap on a filled cell switches the fixed digit (T-WEB-S950)", () => {
+  function withEntry(index: number, digit: SudokuDigit): SudokuPlayState {
+    return play(
+      FRESH,
+      { type: "select", index },
+      { type: "enter-digit", digit, cleanNotes: true },
+    );
+  }
+
+  it("on an entry holding another digit, fixes that digit with no undo step", () => {
+    const start = play(withEntry(FIRST, 2), {
+      type: "lock-digit",
+      digit: 8,
+      undo: null,
+    });
+    const state = play(start, tapCell(FIRST));
+
+    expect(state.locked).toBe(2);
+    expect(state.selected).toBe(FIRST);
+    expect(state.entries).toBe(start.entries);
+    expect(state.notes).toBe(start.notes);
+    expect(state.history).toBe(start.history);
+  });
+
+  it("then writes the new digit into an empty cell", () => {
+    const state = play(lockedOn(OTHER), tapCell(GIVEN), tapCell(SECOND));
+
+    expect(state.entries[SECOND]).toBe(GIVEN_DIGIT);
+  });
+
+  it("leaves a given holding the fixed digit fixed", () => {
+    const state = play(lockedOn(GIVEN_DIGIT), tapCell(GIVEN));
+
+    expect(state.locked).toBe(GIVEN_DIGIT);
+    expect(state.selected).toBe(GIVEN);
+  });
+
+  it("switches in Rascunho too, and notes nothing on the filled cell", () => {
+    const start = play(
+      withEntry(FIRST, 2),
+      { type: "toggle-noting" },
+      { type: "lock-digit", digit: 8, undo: null },
+    );
+    const onEntry = play(start, tapCell(FIRST));
+    expect(onEntry.locked).toBe(2);
+    expect(onEntry.notes).toBe(start.notes);
+
+    const onGiven = play(onEntry, tapCell(GIVEN));
+    expect(onGiven.locked).toBe(GIVEN_DIGIT);
+    expect(onGiven.noting).toBe(true);
   });
 });

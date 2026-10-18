@@ -286,16 +286,18 @@ describe("Número fixo works in Rascunho (T-WEB-S930)", () => {
     expect(play(blank(), noting, lock(3)).locked).toBe(3);
   });
 
-  it("leaves a given or an entered cell alone, only selecting it", () => {
-    const given = PUZZLE.givens.findIndex((cell) => cell !== 0);
+  it("notes nothing on a given or an entered cell, and fixes its digit instead", () => {
+    const given = PUZZLE.givens.findIndex((cell) => cell !== 0 && cell !== 4);
     const onGiven = play(puzzle(), noting, lock(4), tap(given));
     expect(onGiven.selected).toBe(given);
     expect(onGiven.notes[given]).toBe(0);
+    expect(onGiven.locked).toBe(PUZZLE.givens[given]);
 
     const entered = play(blank(), select(2), write(6), noting, lock(4));
     const onEntry = play(entered, tap(2));
     expect(onEntry.entries[2]).toBe(6);
     expect(onEntry.notes).toBe(entered.notes);
+    expect(onEntry.locked).toBe(6);
   });
 
   it("makes each noted tap one undo step", () => {
