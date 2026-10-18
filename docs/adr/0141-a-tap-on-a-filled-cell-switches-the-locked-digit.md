@@ -9,7 +9,7 @@ With *Número fixo* on, a tap on a cell showing another digit overwrote an entry
 
 ## Decision
 
-1. With a digit locked and the board playing, one pointer tap on a cell showing a different digit (a given or an entry) selects the cell and locks its digit. The board, the notes and the undo history are unchanged, in either mode. The predicate is `switchedLock` in `sudoku/state.ts`, shared by the reducer's `tap-cell` and `useDigitLock`.
+1. With a digit locked and the board playing, one pointer tap on a cell showing a different digit (a given or an entry) selects the cell and locks its digit, in either mode, with no board change and no undo step. The predicate is `switchedLock` in `sudoku/state.ts`, shared by the reducer's `tap-cell` and `useDigitLock`.
 2. An empty cell still takes the locked digit (or its note in *Rascunho*), and an entry holding the locked digit is still cleared by a tap.
 3. The double tap keeps its meaning: the switch marks the cell tap settled, so a quick second tap is ignored instead of releasing the digit it just locked.
 4. A switch changes no entry, so *Limite de 3 erros* judges nothing on it: a held wrong write elsewhere keeps waiting for the next board change (ADR-0128).
@@ -17,7 +17,6 @@ With *Número fixo* on, a tap on a cell showing another digit overwrote an entry
 ## Consequences
 
 - A wrong entry can no longer be replaced in one tap. The player taps it (switch), taps it again slowly (clear), then locks the right digit again, or uses Apagar.
-- Pinned by `T-WEB-S950…S952`; `S591`, `S592` and `S930` were re-aimed in place.
 
 ## Rejected
 

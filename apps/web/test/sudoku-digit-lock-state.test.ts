@@ -139,7 +139,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     expect(state.locked).toBe(6);
   });
 
-  it("tap-cell on a cell holding another digit fixes that digit and keeps the entry", () => {
+  it("tap-cell on a cell holding another digit locks that digit and keeps the entry", () => {
     const state = play(
       lockedOn(6),
       { type: "select", index: SECOND },
@@ -151,7 +151,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
     expect(state.locked).toBe(9);
   });
 
-  it("tap-cell on a given selects it, fixes its digit and changes no entry", () => {
+  it("tap-cell on a given selects it, locks its digit and changes no entry", () => {
     const state = play(lockedOn(OTHER), {
       type: "tap-cell",
       index: GIVEN,
@@ -247,7 +247,7 @@ describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
   });
 });
 
-describe("a tap on a filled cell switches the fixed digit (T-WEB-S950)", () => {
+describe("a tap on a filled cell switches the locked digit (T-WEB-S950)", () => {
   function withEntry(index: number, digit: SudokuDigit): SudokuPlayState {
     return play(
       FRESH,
@@ -256,7 +256,7 @@ describe("a tap on a filled cell switches the fixed digit (T-WEB-S950)", () => {
     );
   }
 
-  it("on an entry holding another digit, fixes that digit with no undo step", () => {
+  it("on an entry holding another digit, locks that digit with no undo step", () => {
     const start = play(withEntry(FIRST, 2), {
       type: "lock-digit",
       digit: 8,
@@ -277,7 +277,7 @@ describe("a tap on a filled cell switches the fixed digit (T-WEB-S950)", () => {
     expect(state.entries[SECOND]).toBe(GIVEN_DIGIT);
   });
 
-  it("leaves a given holding the fixed digit fixed", () => {
+  it("leaves a given holding the locked digit locked", () => {
     const state = play(lockedOn(GIVEN_DIGIT), tapCell(GIVEN));
 
     expect(state.locked).toBe(GIVEN_DIGIT);

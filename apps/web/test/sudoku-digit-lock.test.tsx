@@ -299,7 +299,7 @@ describe("the Sudoku digit lock on the keypad (T-WEB-S592)", () => {
       expect(pressed(7)).toBe("true");
     });
 
-    it("a pointer tap on a given selects it, writes nothing and fixes its digit", () => {
+    it("a pointer tap on a given selects it, writes nothing and locks its digit", () => {
       render(<SudokuScreen daily={DAILY} />);
       locked(OTHER);
       const before = boardValues();
@@ -767,7 +767,7 @@ describe("a placed-out digit still locks and still writes (T-WEB-S654)", () => {
   });
 });
 
-describe("one tap on a filled cell switches the fixed digit (T-WEB-S952)", () => {
+describe("one tap on a filled cell switches the locked digit (T-WEB-S952)", () => {
   function lockFromKeypad(digit: number): void {
     tap(digit);
     wait(50);
@@ -775,7 +775,7 @@ describe("one tap on a filled cell switches the fixed digit (T-WEB-S952)", () =>
     wait(1000);
   }
 
-  it("on an entry, fixes its digit and keeps the entry", () => {
+  it("on an entry, locks its digit and keeps the entry", () => {
     render(<SudokuScreen daily={DAILY} />);
     select(FIRST);
     type(3);
@@ -789,7 +789,7 @@ describe("one tap on a filled cell switches the fixed digit (T-WEB-S952)", () =>
     expect(boardValues()).toEqual(before);
   });
 
-  it("a quick second tap keeps the new digit fixed, and an empty cell then takes it", () => {
+  it("a quick second tap keeps the new digit locked, and an empty cell then takes it", () => {
     render(<SudokuScreen daily={DAILY} />);
     lockFromKeypad(OTHER);
 
