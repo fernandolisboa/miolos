@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-16 (issue #390)
 **Amends:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) decision 3 (Rascunho no longer releases or blocks *Número fixo*); [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 4 (a locked digit notes instead of writing while Rascunho is on).
+**Amended by:** [ADR-0144](./0144-a-tap-on-a-filled-cell-switches-the-locked-digit.md) (#397) — decision 1: a given or an entry showing another digit is no longer only selected; the tap locks its digit.
 
 ## Context
 

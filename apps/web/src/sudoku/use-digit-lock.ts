@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, type Dispatch } from "react";
 
 import { useSettings } from "../settings/settings";
-import { asDigit } from "./engine";
-import type {
-  DigitLockUndo,
-  SudokuDigit,
-  SudokuPlayAction,
-  SudokuPlayState,
+import {
+  shownAt,
+  switchedLock,
+  type DigitLockUndo,
+  type SudokuDigit,
+  type SudokuPlayAction,
+  type SudokuPlayState,
 } from "./state";
 
 const DOUBLE_TAP_MS = 300;
@@ -42,10 +43,6 @@ function undoAt(
     return null;
   }
   return { index, value: state.entries[index] ?? null, notes: state.notes };
-}
-
-function shownAt(state: SudokuPlayState, index: number): SudokuDigit | null {
-  return asDigit(state.givens[index]) ?? state.entries[index] ?? null;
 }
 
 export function useDigitLock(
@@ -153,7 +150,7 @@ export function useDigitLock(
         at: now,
         shown: paired ? null : shownAt(current, index),
         undo: undoAt(current, index),
-        settled: false,
+        settled: switchedLock(current, index) !== null,
       };
       dispatch({ type: "tap-cell", index, cleanNotes });
     },

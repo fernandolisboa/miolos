@@ -30,7 +30,7 @@ import {
   type UndoAction,
   type UndoHistory,
 } from "../play/undo";
-import { mergedGrid, playableGivens } from "./engine";
+import { asDigit, mergedGrid, playableGivens } from "./engine";
 import { nextSudokuHint, type SudokuHintReason } from "./hint";
 import {
   clearNotes,
@@ -265,6 +265,10 @@ function playSudoku(
         return state;
       }
       const tapped = unlit({ ...state, selected: action.index });
+      const switched = switchedLock(state, action.index);
+      if (switched !== null) {
+        return { ...tapped, locked: switched };
+      }
       if (state.noting) {
         return noted(tapped, state.locked);
       }
@@ -327,6 +331,25 @@ function playSudoku(
     case "mark-synced":
       return state.pendingSync ? { ...state, pendingSync: false } : state;
   }
+}
+
+export function shownAt(
+  state: SudokuPlayState,
+  index: number,
+): SudokuDigit | null {
+  return asDigit(state.givens[index]) ?? state.entries[index] ?? null;
+}
+
+export function switchedLock(
+  state: SudokuPlayState,
+  index: number,
+): SudokuDigit | null {
+  const shown = shownAt(state, index);
+  return state.status === "playing" &&
+    state.locked !== null &&
+    shown !== state.locked
+    ? shown
+    : null;
 }
 
 function playableValue(
