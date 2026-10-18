@@ -838,7 +838,7 @@ export const messages = {
         },
         lockDigit: {
           label: "Número fixo com toque duplo",
-          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células para escrevê-lo, ou anotá-lo com o rascunho ligado. Toque no número de novo para soltar.",
+          hint: "Toque duas vezes num número, no teclado ou no tabuleiro, para fixá-lo e depois toque nas células vazias para escrevê-lo, ou anotá-lo com o rascunho ligado. Um toque numa célula com outro número fixa esse número. Toque no número de novo para soltar.",
         },
         highlightSelection: {
           label: "Destacar linha, coluna e bloco",
