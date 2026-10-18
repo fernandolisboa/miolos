@@ -6,6 +6,7 @@
 **Depends on:** [ADR-0106](./0106-the-termo-current-row-is-editable.md), [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md)
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the mistake count is kept outside `undoable`'s snapshot so undo never refunds it, and a frozen board has no undo.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — Campo Minado has no undo and takes no Ctrl/⌘+Z.
+**Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 3: the Nonogram snapshot, Clássico and Cores, gains `autoCrossed`.
 
 ## Context
 

@@ -852,6 +852,10 @@ export const messages = {
           label: "Riscar números resolvidos",
           hint: "Risca o número de uma linha ou coluna quando suas marcas já mostram o bloco inteiro. Não consulta a solução.",
         },
+        lineCross: {
+          label: "Marcar ✕ ao completar a linha",
+          hint: "Quando os quadrados pintados de uma linha ou coluna formam a pista dela, o resto ganha ✕; tirar um pintado apaga esses ✕. Mostrar o erro marca o que está errado nessa linha, e Só se estiver certa deixa sem ✕ a linha errada: esses dois consultam a solução.",
+        },
         straightDrag: {
           label: "Arrastar só em linha reta",
           hint: "Ao arrastar, a marcação fica na linha ou na coluna do primeiro movimento, nunca na diagonal.",
@@ -880,6 +884,12 @@ export const messages = {
           label: "Pular letras já preenchidas",
           hint: "Ao digitar, a seleção pula as células com letra e vai para a próxima vazia, seguindo para a próxima pista quando a palavra se completa.",
         },
+      },
+      lineCross: {
+        always: "Sempre",
+        flag: "Sempre e mostrar o erro",
+        correct: "Só se estiver certa",
+        off: "Desligado",
       },
       dialog: {
         trigger: "Ajustes",

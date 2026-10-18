@@ -9,9 +9,10 @@ import { Controls } from "../nonogram/controls";
 import { countFilledCells, filledTarget } from "../nonogram/engine";
 import { nonogramHintExplanation } from "../nonogram/hint";
 import { nonogramPageModifier } from "../nonogram/page-class";
-import { initNonogramPlayState, nonogramPlayReducer } from "../nonogram/state";
+import { initNonogramPlayState, nonogramReducers } from "../nonogram/state";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { SOLUTION_MISTAKES, usePlayReducer } from "../play/mistakes";
+import { useSettings } from "../settings/settings";
 import {
   DEFAULT_FREE_PLAY_LEVEL,
   NONOGRAM_VARIANTS,
@@ -123,7 +124,7 @@ function ClassicFreeBoard({
   readonly onNext: () => void;
 }) {
   const [state, dispatch] = usePlayReducer(
-    nonogramPlayReducer,
+    nonogramReducers[useSettings().games.nonogram.lineCross],
     puzzle.daily,
     initNonogramPlayState,
     SOLUTION_MISTAKES,

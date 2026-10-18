@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-13 (issue #297)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0086](./0086-the-cruzadinha-daily-ships-its-letters.md), [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md), [ADR-0090](./0090-rainhas-is-a-planted-grown-region-map-graded-by-a-deduction-ladder.md), [ADR-0099](./0099-the-sudoku-hint-reveals-the-next-logical-step.md)
 **Amends:** [ADR-0027](./0027-the-hint-is-computed-on-the-client.md) decision 1 for Binairo, Nonogram, Rainhas and the Cruzadinha, and closes its decision 5 (`nextBinairoDeduction`); [ADR-0099](./0099-the-sudoku-hint-reveals-the-next-logical-step.md) decision 4: `SudokuHintState` becomes the shared `HintState<R>`.
+**Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 1: on the Nonogram, Clássico and Cores, a wrong fill is corrected before a wrong ✕.
 
 ## Context
 

@@ -8,6 +8,7 @@ import {
 import { messages } from "../i18n";
 import {
   nextBinaryHint,
+  nextHint,
   nextLogicalHint,
   toRowColumn,
   type HintReason,
@@ -34,9 +35,16 @@ export function nextPictureHint<M extends number, S extends PictureStep<M>>(
   entries: readonly (M | null)[],
   findStep: () => S | null,
 ): Revealed<M, PictureHintReason<S>> | null {
+  const wrongFill = nextHint(
+    solution,
+    entries.map((entry) => (entry === 0 ? entry : null)),
+    entries,
+  );
   const hint = nextLogicalHint(
     solution,
-    nextBinaryHint(solution, entries),
+    wrongFill?.kind === "correction"
+      ? wrongFill
+      : nextBinaryHint(solution, entries),
     () => {
       const step = findStep();
       return step === null

@@ -32,3 +32,7 @@
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+
+.choiceRow {
+  flex-wrap: wrap;
+}

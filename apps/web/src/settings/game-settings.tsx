@@ -8,9 +8,11 @@ import { messages } from "../i18n";
 import styles from "./game-settings.module.css";
 import {
   BINAIRO_FIRST_VALUES,
+  NONOGRAM_LINE_CROSSES,
   readSettings,
   useSettings,
   writeSettings,
+  type LineCross,
   type Settings,
   type SettingsGame,
 } from "./settings";
@@ -21,7 +23,23 @@ type GameSetting = {
   [G in SettingsGame]: keyof Settings["games"][G];
 }[SettingsGame];
 type Setting = GameSetting | "showClock" | "endAnimation" | "mistakeLimit";
-type FirstValue = (typeof BINAIRO_FIRST_VALUES)[number];
+type ChoiceValue = (typeof BINAIRO_FIRST_VALUES)[number] | LineCross;
+
+interface ChoiceOption {
+  readonly value: ChoiceValue;
+  readonly label: string;
+}
+
+const CHOICES: Partial<Record<GameSetting, readonly ChoiceOption[]>> = {
+  firstValue: BINAIRO_FIRST_VALUES.map((value) => ({
+    value,
+    label: String(value),
+  })),
+  lineCross: NONOGRAM_LINE_CROSSES.map((value) => ({
+    value,
+    label: copy.lineCross[value],
+  })),
+};
 
 function SettingText({
   id,
@@ -71,35 +89,39 @@ function SettingSwitch({
   );
 }
 
-function FirstValueChoice({
+function SettingChoice({
+  setting,
+  options,
   value,
   onChange,
 }: {
-  readonly value: FirstValue;
-  readonly onChange: (value: FirstValue) => void;
+  readonly setting: GameSetting;
+  readonly options: readonly ChoiceOption[];
+  readonly value: ChoiceValue;
+  readonly onChange: (value: ChoiceValue) => void;
 }) {
   const id = useId();
   return (
-    <div className={switchStyles.switchRow}>
-      <SettingText id={id} setting="firstValue" />
+    <div className={`${switchStyles.switchRow} ${choiceStyles.choiceRow}`}>
+      <SettingText id={id} setting={setting} />
       <div
         role="radiogroup"
         className={choiceStyles.choices}
         aria-labelledby={`${id}-label`}
         aria-describedby={`${id}-hint`}
       >
-        {BINAIRO_FIRST_VALUES.map((option) => (
-          <label key={option} className={choiceStyles.choice}>
+        {options.map((option) => (
+          <label key={option.value} className={choiceStyles.choice}>
             <input
               type="radio"
               name={id}
-              value={option}
-              checked={value === option}
+              value={option.value}
+              checked={value === option.value}
               onChange={() => {
-                onChange(option);
+                onChange(option.value);
               }}
             />
-            {option}
+            {option.label}
           </label>
         ))}
       </div>
@@ -110,7 +132,7 @@ function FirstValueChoice({
 function setGameSetting(
   game: SettingsGame,
   setting: GameSetting,
-  value: boolean | FirstValue,
+  value: boolean | ChoiceValue,
 ): void {
   const current = readSettings();
   writeSettings({
@@ -169,7 +191,7 @@ export function GameSettings({
             {(
               Object.entries(settings.games[game]) as [
                 GameSetting,
-                boolean | FirstValue,
+                boolean | ChoiceValue,
               ][]
             ).map(([setting, current]) =>
               typeof current === "boolean" ? (
@@ -182,8 +204,10 @@ export function GameSettings({
                   }}
                 />
               ) : (
-                <FirstValueChoice
+                <SettingChoice
                   key={setting}
+                  setting={setting}
+                  options={CHOICES[setting] ?? []}
                   value={current}
                   onChange={(value) => {
                     setGameSetting(game, setting, value);

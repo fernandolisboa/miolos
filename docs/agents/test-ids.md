@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S945`    | `S944`         | `T-WEB-23`            |
+| `T-WEB`  | `S945`    | `S978`         | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#402 (the Nonogram crosses a line its fills complete, ADR-0143) spent **`T-WEB-S970…S978`**. In `nonogram-line-cross.test.ts`: `S970` (the transition crosses and one undo takes it back; a cell a row and a column share; a changed cell is the player's; a line with no runs never claims; the solving move crosses nothing), `S971` (restore and Recomeçar measure no transition), `S972` (*Desligado* still releases, a mode switch crosses no formed line, *Só se estiver certa* with and without a solution, `flag` shares `always`'s reducer), `S973` (a drag is one undo step; an automatic ✕ is never a mistake), `S974` (Cores by tone and length) and `S975` (the hint corrects a wrong fill before a wrong ✕). `S976` is in `settings.test.tsx` (the four values and the fallback to `always`). In `nonogram-line-cross-board.test.tsx`: `S977` (the choice in Ajustes, its order, default, wrap class, and a mounted board following it) and `S978` (*Sempre e mostrar o erro* on both boards). `S979` is **burned**. `T-WEB-S580` was widened in place for the new default; `S44` and `S498a` in `nonogram-screen.test.tsx` now run with the setting off. `S970…S979` sit inside the sibling threads' reservations past `S944`, so the `T-WEB` frontier is unchanged at `S945`.
 
 The Campo Minado left-press fix (ADR-0141) spent **`T-WEB-S944`** in `minesweeper-field.test.tsx` (a mouse left click on an open number does nothing; a tap or a key still chords it) and re-aimed `S941` (the held press says whether it chords; Shift+left is a chord) and `S943` (a press sinks its own closed cell, a chord its closed 3×3) in place. Next free is `S945`.
 

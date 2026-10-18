@@ -1,3 +1,4 @@
+export { coloredRuns } from "./clues";
 export { CONFUSABLE_TONE_PAIRS } from "./pool";
 export { generateColoredNonogram } from "./generate";
 export { nextColoredStep } from "./step";

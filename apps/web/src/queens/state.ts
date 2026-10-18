@@ -8,6 +8,7 @@ import {
   type QueensGrid,
 } from "@miolos/games/queens";
 
+import { claim, released, type AutoCrosses } from "../play/auto-cross";
 import { cycled, toggled, type Press } from "../play/brush";
 import type { PlayRecord } from "../play/play-record";
 import {
@@ -41,8 +42,6 @@ import { nextQueensHint, type QueensHintReason } from "./hint";
 export type QueensMark = BinaryMark;
 
 export type QueensCellValue = BinaryCellValue;
-
-export type AutoCrosses = ReadonlyMap<number, ReadonlySet<number>>;
 
 export interface QueensPlayState extends BinaryGridState<QueensHintReason> {
   readonly size: QueensSize;
@@ -196,59 +195,25 @@ function withAutoCrosses(
   autoCross: boolean,
 ): QueensPlayState {
   const entries = [...next.entries];
-  const owners = released(previous.autoCrossed, entries);
+  const owners = released(
+    previous.autoCrossed,
+    entries,
+    (queen) => entries[queen] === 1,
+  );
   if (autoCross && next.status === "playing") {
     const placed = entries.flatMap((entry, at) =>
       entry === 1 && previous.entries[at] !== 1 ? [at] : [],
     );
-    claim(next, placed, entries, owners);
+    claim(
+      placed.map((queen) => ({
+        owner: queen,
+        cells: queensAttackedCells(next, queen),
+      })),
+      entries,
+      owners,
+    );
   }
   return { ...QUEENS_RULES.derive(next, entries), autoCrossed: owners };
-}
-
-function released(
-  claims: AutoCrosses,
-  entries: QueensCellValue[],
-): Map<number, Set<number>> {
-  const owners = new Map<number, Set<number>>();
-  for (const [cell, queens] of claims) {
-    if (entries[cell] !== 0) {
-      continue;
-    }
-    const kept = standing(queens, entries);
-    if (kept.size > 0) {
-      owners.set(cell, kept);
-    } else {
-      entries[cell] = null;
-    }
-  }
-  return owners;
-}
-
-function claim(
-  board: QueensBoard,
-  queens: readonly number[],
-  entries: QueensCellValue[],
-  owners: Map<number, Set<number>>,
-): void {
-  for (const queen of queens) {
-    for (const cell of queensAttackedCells(board, queen)) {
-      const claimed = owners.get(cell);
-      if (claimed !== undefined) {
-        claimed.add(queen);
-      } else if (entries[cell] === null) {
-        entries[cell] = 0;
-        owners.set(cell, new Set([queen]));
-      }
-    }
-  }
-}
-
-function standing(
-  queens: Iterable<number>,
-  entries: readonly QueensCellValue[],
-): Set<number> {
-  return new Set([...queens].filter((queen) => entries[queen] === 1));
 }
 
 function restoredAutoCrosses(
@@ -258,7 +223,7 @@ function restoredAutoCrosses(
   const saved = record?.game === "queens" ? record.autoCrossed : undefined;
   const owners = new Map<number, ReadonlySet<number>>();
   for (const { cell, by } of saved ?? []) {
-    const kept = standing(by, state.entries);
+    const kept = new Set(by.filter((queen) => state.entries[queen] === 1));
     if (state.entries[cell] === 0 && kept.size > 0) {
       owners.set(cell, kept);
     }

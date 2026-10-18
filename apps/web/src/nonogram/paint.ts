@@ -1,3 +1,4 @@
+import type { AutoCrosses } from "../play/auto-cross";
 import {
   binaryCellValue,
   settled,
@@ -80,10 +81,20 @@ export function pictureSettled<S extends BinaryGridState<unknown, number>>(
   );
 }
 
-export function pictureSnapshot<S extends BinaryGridState<unknown, number>>({
+interface Crossable extends BinaryGridState<unknown, number> {
+  readonly autoCrossed: AutoCrosses;
+}
+
+export type PictureSnapshot<S extends Crossable> = Pick<
+  S,
+  "entries" | "selected" | "hint" | "autoCrossed"
+>;
+
+export function pictureSnapshot<S extends Crossable>({
   entries,
   selected,
   hint,
-}: S): Pick<S, "entries" | "selected" | "hint"> {
-  return { entries, selected, hint };
+  autoCrossed,
+}: S): PictureSnapshot<S> {
+  return { entries, selected, hint, autoCrossed };
 }

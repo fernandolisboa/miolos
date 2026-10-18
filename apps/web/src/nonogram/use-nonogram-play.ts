@@ -9,10 +9,11 @@ import {
 import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
+import { useSettings } from "../settings/settings";
 import { countFilledCells, filledTarget, submittedCells } from "./engine";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramPlayState,
 } from "./state";
 import {
@@ -31,8 +32,9 @@ export function useNonogramPlay(
   daily: DailyNonogramResponse,
   remotelyClaimed = false,
 ): NonogramPlay {
+  const reduce = nonogramReducers[useSettings().games.nonogram.lineCross];
   const [state, dispatch] = usePlayReducer(
-    nonogramPlayReducer,
+    reduce,
     daily,
     initNonogramPlayState,
     SOLUTION_MISTAKES,
@@ -45,7 +47,7 @@ export function useNonogramPlay(
   usePlayLifecycle({
     game: "nonogram",
     state,
-    reduce: nonogramPlayReducer,
+    reduce,
     dispatch,
     buildRecord,
     remotelyClaimed,
