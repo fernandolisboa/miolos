@@ -46,6 +46,7 @@ export interface PlayChromeReadouts {
   readonly progressLong: string;
   readonly onReset?: BoardEdits["onReset"];
   readonly onUndo?: BoardEdits["onUndo"];
+  readonly onRedo?: BoardEdits["onRedo"];
   readonly mistakesLeft?: BoardEdits["mistakesLeft"];
   readonly resetCopy?: ResetCopy;
   readonly hint: {
@@ -246,7 +247,10 @@ export function PlayScreenChrome({
         ) : (
           <>
             {readouts.onUndo !== undefined && (
-              <UndoControl onUndo={readouts.onUndo} />
+              <UndoControl
+                onUndo={readouts.onUndo}
+                onRedo={readouts.onRedo ?? null}
+              />
             )}
             {readouts.onReset !== undefined && (
               <ResetControl

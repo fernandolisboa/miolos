@@ -13,6 +13,7 @@
 **Amended by:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (#367) — the reset row holds a third stateful child, `UndoControl`, first in the row; `PlayChromeReadouts` carries `onUndo` beside `onReset`.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — the chrome's game widens to `PlayChromeGame` (`DailyChromeGame` stays closed to Campo Minado); the hint is optional and `onUndo` may be absent; the reset confirm's words are per game.
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the readouts gain `mistakesLeft` (a number or null): the marks in the stats card and beside the phone title, and at zero the frozen line in the hint slot. No new stateful child.
+**Amended by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) (#400) — `PlayChromeReadouts` carries `onRedo`, and `UndoControl` draws the Desfazer/Refazer pair.
 
 ## Context
 

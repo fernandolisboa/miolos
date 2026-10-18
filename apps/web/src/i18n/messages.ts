@@ -300,6 +300,7 @@ export const messages = {
       short: "Dica",
     },
     undo: "Desfazer",
+    redo: "Refazer",
     mistakes: {
       label: "Erros",
       aria: (left: number) =>

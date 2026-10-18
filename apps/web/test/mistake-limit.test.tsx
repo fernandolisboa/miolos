@@ -198,7 +198,7 @@ describe("useBoardEdits offers Recomeçar for a count alone and no undo while fr
       useBoardEdits(
         board({
           entries: [1, 2, 3, null],
-          history: { steps: [{ entries: [] }], open: false },
+          history: { ...NO_HISTORY, steps: [{ entries: [] }], open: false },
           mistakes: counted([0, 1, 2]),
         }),
         vi.fn(),
@@ -214,7 +214,7 @@ describe("useBoardEdits offers Recomeçar for a count alone and no undo while fr
     const { result } = renderHook(() =>
       useBoardEdits(
         board({
-          history: { steps: [{ entries: [] }], open: false },
+          history: { ...NO_HISTORY, steps: [{ entries: [] }], open: false },
           mistakes: counted([0, 1, 2]),
         }),
         vi.fn(),
@@ -248,6 +248,7 @@ describe("with only the limit on, a wrong mark sits on counted cells still wrong
       ...wrongWith({
         cells: [0, 4],
         held: { index: 4, before: null },
+        parked: null,
         stroke: false,
       }),
     ]).toEqual([0]);
