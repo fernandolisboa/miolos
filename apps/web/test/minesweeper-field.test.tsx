@@ -1,6 +1,6 @@
 import {
   MINESWEEPER_LEVELS,
-  chordTargets,
+  chordBlock,
   cycleMinesweeperMark,
   layMines,
   newMinesweeperGame,
@@ -399,19 +399,29 @@ describe("the keyboard moves on the grid as it is drawn, wide or turned (T-WEB-S
   });
 });
 
-describe("a held chord presses the cells it would open (T-WEB-S943)", () => {
-  function chordable(): { game: MinesweeperState; at: number; flag: number } {
+describe("a press sinks its own closed cell, and a chord its closed 3×3, as Windows does (T-WEB-S943)", () => {
+  function chordable(): {
+    game: MinesweeperState;
+    at: number;
+    flag: number;
+    closed: number;
+  } {
     const game = played("beginner", 40);
     const at = game.open.findIndex(
-      (open, i) => open && chordTargets(game, i).length > 1,
+      (open, i) => open && chordBlock(game, i).length > 1,
     );
-    const flag = chordTargets(game, at)[0];
-    if (at < 0 || flag === undefined) {
+    const [flag, closed] = chordBlock(game, at);
+    if (at < 0 || flag === undefined || closed === undefined) {
       throw new Error(
         "the fixture has no open number with two closed neighbours",
       );
     }
-    return { game: cycleMinesweeperMark(game, flag, false), at, flag };
+    return {
+      game: cycleMinesweeperMark(game, flag, false),
+      at,
+      flag,
+      closed,
+    };
   }
 
   const pressedCells = () =>
@@ -420,58 +430,118 @@ describe("a held chord presses the cells it would open (T-WEB-S943)", () => {
       .map((cell) => Number(cell.dataset.cellIndex));
   const mouse = { pointerId: 1, pointerType: "mouse" } as const;
 
-  it("presses the closed, unflagged neighbours of the held number until the release", () => {
+  function pressAt(board: HTMLElement, clientX: number, button = 0) {
+    const buttons = button === 0 ? 1 : button === 2 ? 2 : 4;
+    fireEvent.pointerDown(board, { ...mouse, button, buttons, clientX });
+  }
+
+  function releaseAt(board: HTMLElement, clientX: number, button = 0) {
+    fireEvent.pointerUp(board, { ...mouse, button, buttons: 0, clientX });
+  }
+
+  it("sinks only the closed cell under a left press, and nothing over a number or a flag", () => {
+    const { game, at, flag, closed } = chordable();
+    const { container } = mountField(game);
+    const board = container.firstElementChild as HTMLElement;
+
+    pressAt(board, closed);
+    expect(pressedCells()).toStrictEqual([closed]);
+    releaseAt(board, 99);
+    expect(pressedCells()).toStrictEqual([]);
+
+    pressAt(board, at);
+    expect(pressedCells()).toStrictEqual([]);
+    releaseAt(board, at);
+
+    pressAt(board, flag);
+    expect(pressedCells()).toStrictEqual([]);
+    releaseAt(board, flag);
+  });
+
+  it("sinks the closed, unflagged 3×3 once the right button joins, until the first release", () => {
     const { game, at, flag } = chordable();
     const { container } = mountField(game);
     const board = container.firstElementChild as HTMLElement;
 
-    fireEvent.pointerDown(board, {
+    pressAt(board, at);
+    fireEvent.pointerMove(board, {
       ...mouse,
-      button: 0,
-      buttons: 1,
+      button: 2,
+      buttons: 3,
       clientX: at,
     });
 
-    expect(pressedCells()).toStrictEqual([...chordTargets(game, at)]);
+    expect(pressedCells()).toStrictEqual([...chordBlock(game, at)]);
+    expect(pressedCells().length).toBeGreaterThan(0);
     expect(pressedCells()).not.toContain(flag);
-    fireEvent.pointerUp(board, {
+    expect(pressedCells()).not.toContain(at);
+    fireEvent.pointerMove(board, {
       ...mouse,
-      button: 0,
-      buttons: 0,
+      button: 2,
+      buttons: 1,
       clientX: at,
     });
     expect(pressedCells()).toStrictEqual([]);
   });
 
-  it("presses nothing for a right press, or for a closed cell", () => {
-    const { game, at, flag } = chordable();
+  it("sinks a closed cell with its closed neighbours under a middle press, and nothing under a right press", () => {
+    const { game, closed } = chordable();
     const { container } = mountField(game);
     const board = container.firstElementChild as HTMLElement;
 
-    fireEvent.pointerDown(board, {
-      ...mouse,
-      button: 2,
-      buttons: 2,
-      clientX: at,
-    });
-    expect(pressedCells()).toStrictEqual([]);
-    fireEvent.pointerUp(board, {
-      ...mouse,
-      button: 2,
-      buttons: 0,
-      clientX: at,
-    });
-    fireEvent.pointerDown(board, {
-      ...mouse,
-      button: 1,
-      buttons: 4,
-      clientX: flag,
-    });
+    pressAt(board, closed, 1);
+    expect(pressedCells()).toStrictEqual(
+      [...chordBlock(game, closed)].sort((a, b) => a - b),
+    );
+    expect(pressedCells()).toContain(closed);
+    releaseAt(board, closed, 1);
+
+    pressAt(board, closed, 2);
     expect(pressedCells()).toStrictEqual([]);
   });
 
   it("draws a pressed cell as an open one", () => {
     const css = stylesheet("src/minesweeper/minefield.module.css");
     expect(bodyOf(css, ".open,\n.pressed")).toContain("var(--cell-open)");
+  });
+});
+
+describe("a mouse left click on an open number does nothing; a tap or a key still chords it (T-WEB-S944)", () => {
+  function numbered(): { game: MinesweeperState; number: number } {
+    const game = played("beginner", 40);
+    const number = game.open.findIndex(
+      (isOpen, i) => isOpen && (game.field?.counts[i] ?? 0) > 0,
+    );
+    return { game, number };
+  }
+
+  it.each(["open", "flag"] as const)(
+    "with %s taps, a left click on the number opens, marks and chords nothing",
+    (tapMode) => {
+      const { game, number } = numbered();
+      const { container, spies } = mountField(game, tapMode);
+      const board = container.firstElementChild as HTMLElement;
+      const click = { pointerId: 1, pointerType: "mouse", clientX: number };
+
+      fireEvent.pointerDown(board, { ...click, button: 0, buttons: 1 });
+      fireEvent.pointerUp(board, { ...click, button: 0, buttons: 0 });
+
+      expect(spies.activate).not.toHaveBeenCalled();
+      expect(spies.mark).not.toHaveBeenCalled();
+      expect(spies.chord).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lets a tap and the keyboard reach the number, where the engine chords", () => {
+    const { game, number } = numbered();
+    const { container, spies } = mountField(game);
+    const board = container.firstElementChild as HTMLElement;
+    const tap = { pointerId: 1, pointerType: "touch", button: 0 };
+
+    fireEvent.pointerDown(board, { ...tap, clientX: number });
+    fireEvent.pointerUp(board, { ...tap, clientX: number });
+    fireEvent.click(cellAt(number), { detail: 0 });
+
+    expect(spies.activate.mock.calls).toStrictEqual([[number], [number]]);
   });
 });

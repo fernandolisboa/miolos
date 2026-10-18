@@ -1,7 +1,7 @@
 import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pressOf } from "../src/play/brush";
+import { pressOf, type Press } from "../src/play/brush";
 import { useCellPress } from "../src/play/use-cell-press";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 
@@ -14,18 +14,24 @@ function Harness({
   spies,
 }: {
   readonly spies: {
-    readonly activate: (index: number) => void;
+    readonly activate: (index: number, press: Press) => void;
     readonly mark: (index: number) => void;
     readonly chord: (index: number) => void;
   };
 }) {
-  const { handlers, heldAt } = useCellPress({
+  const { handlers, held } = useCellPress({
     onActivate: spies.activate,
     onMark: spies.mark,
     onChord: spies.chord,
   });
   return (
-    <div data-testid="board" data-held={heldAt ?? ""} {...handlers}>
+    <div
+      data-testid="board"
+      data-held={
+        held === null ? "" : `${String(held.index)}${held.chord ? "+" : ""}`
+      }
+      {...handlers}
+    >
       {Array.from({ length: CELLS }, (_unused, index) => (
         <button key={index} type="button" data-cell-index={index} />
       ))}
@@ -80,7 +86,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     expect(spies.activate).not.toHaveBeenCalled();
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 5, button: 0 });
 
-    expect(spies.activate.mock.calls).toStrictEqual([[5]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[5, "left"]]);
     expect(spies.mark).not.toHaveBeenCalled();
   });
 
@@ -161,7 +167,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     fireEvent.pointerUp(board, { ...TOUCH, clientX: 7, button: 0 });
     vi.advanceTimersByTime(1000);
 
-    expect(spies.activate.mock.calls).toStrictEqual([[7]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[7, "tap"]]);
     expect(spies.mark).not.toHaveBeenCalled();
   });
 
@@ -230,7 +236,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     fireEvent.pointerDown(board, { ...MOUSE, clientX: 4, button: 0 });
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 4, button: 0 });
 
-    expect(spies.activate.mock.calls).toStrictEqual([[4]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[4, "left"]]);
   });
 
   it("lets a new primary pointer replace a press whose pointer never reported its release", () => {
@@ -242,7 +248,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     fireEvent.pointerDown(board, { ...fresh, clientX: 4, button: 0 });
     fireEvent.pointerUp(board, { ...fresh, clientX: 4, button: 0 });
 
-    expect(spies.activate.mock.calls).toStrictEqual([[4]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[4, "tap"]]);
   });
 
   it("keeps a pen press when a palm touches down beside it", () => {
@@ -254,7 +260,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     fireEvent.pointerDown(board, { ...palm, clientX: 4, button: 0 });
     fireEvent.pointerUp(board, { ...pen, clientX: 1, button: 0 });
 
-    expect(spies.activate.mock.calls).toStrictEqual([[1]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[1, "tap"]]);
   });
 
   it("gives up when the pointer capture is lost before the release", () => {
@@ -287,7 +293,7 @@ describe("a cell press is read from the button and the pointer, not guessed (T-W
     expect(spies.activate).not.toHaveBeenCalled();
 
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 1, button: 0 });
-    expect(spies.activate.mock.calls).toStrictEqual([[1]]);
+    expect(spies.activate.mock.calls).toStrictEqual([[1, "left"]]);
   });
 });
 
@@ -356,10 +362,10 @@ describe("both buttons chord the way Windows does (T-WEB-S940)", () => {
   });
 });
 
-describe("the press names the cell a release would act on (T-WEB-S941)", () => {
+describe("the press names the cell a release would act on, and whether it chords (T-WEB-S941)", () => {
   const held = (board: HTMLElement) => board.dataset.held;
 
-  it("holds the cell under a left or middle press, follows the pointer, and lets go on release", () => {
+  it("holds the cell under a left press alone and a middle press as a chord, follows the pointer, and lets go on release", () => {
     const { board } = mount();
 
     fireEvent.pointerDown(board, {
@@ -380,12 +386,12 @@ describe("the press names the cell a release would act on (T-WEB-S941)", () => {
       button: 1,
       buttons: 4,
     });
-    expect(held(board)).toBe("6");
+    expect(held(board)).toBe("6+");
     fireEvent.pointerUp(board, { ...MOUSE, clientX: 6, button: 1, buttons: 0 });
     expect(held(board)).toBe("");
   });
 
-  it("holds nothing for a right press alone, and the cell once the left joins it", () => {
+  it("holds nothing for a right press alone, a chord once the left joins it, and nothing after the first release", () => {
     const { board } = mount();
 
     fireEvent.pointerDown(board, {
@@ -401,7 +407,7 @@ describe("the press names the cell a release would act on (T-WEB-S941)", () => {
       button: 0,
       buttons: 3,
     });
-    expect(held(board)).toBe("2");
+    expect(held(board)).toBe("2+");
     fireEvent.pointerMove(board, {
       ...MOUSE,
       clientX: 2,
@@ -409,6 +415,25 @@ describe("the press names the cell a release would act on (T-WEB-S941)", () => {
       buttons: 1,
     });
     expect(held(board)).toBe("");
+  });
+
+  it("turns a left press into a chord when the right button joins it", () => {
+    const { board } = mount();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 4,
+      button: 0,
+      buttons: 1,
+    });
+    expect(held(board)).toBe("4");
+    fireEvent.pointerMove(board, {
+      ...MOUSE,
+      clientX: 4,
+      button: 2,
+      buttons: 3,
+    });
+    expect(held(board)).toBe("4+");
   });
 
   it("lets go when a long press turns into a flag", () => {
