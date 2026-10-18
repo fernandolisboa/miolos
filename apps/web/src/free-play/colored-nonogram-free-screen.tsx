@@ -15,7 +15,7 @@ import { countFilledCells } from "../nonogram/engine";
 import { nonogramPageModifier } from "../nonogram/page-class";
 import { useNonogramControls } from "../nonogram/use-nonogram-controls";
 import { SOLUTION_MISTAKES, usePlayReducer } from "../play/mistakes";
-import { useSettings } from "../settings/settings";
+import { useLineCross } from "../nonogram/line-cross";
 import { NONOGRAM_LEVEL_SIZES, type FreePlayLevel } from "./catalog";
 import type { Choice } from "./choice";
 import { PictureFreeFrame, PictureFreeScreen } from "./picture-free-frame";
@@ -71,7 +71,7 @@ function ColoredFreeBoard({
   readonly onNext: () => void;
 }) {
   const [state, dispatch] = usePlayReducer(
-    coloredNonogramReducers[useSettings().games.nonogram.lineCross],
+    useLineCross(coloredNonogramReducers),
     puzzle,
     initColoredNonogramState,
     SOLUTION_MISTAKES,

@@ -91,8 +91,6 @@ export const nonogramReducers = lineCrossModes((crossing) =>
   ),
 );
 
-export const nonogramPlayReducer = nonogramReducers.off;
-
 function playNonogram(
   state: NonogramPlayState,
   action: NonogramPlayAction,

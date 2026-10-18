@@ -105,8 +105,6 @@ export const coloredNonogramReducers = lineCrossModes((crossing) =>
   undoable(lineCrossing(playColored, coloredFormed, crossing), pictureSnapshot),
 );
 
-export const coloredNonogramReducer = coloredNonogramReducers.off;
-
 function playColored(
   state: ColoredNonogramState,
   action: ColoredNonogramAction,

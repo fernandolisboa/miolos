@@ -854,7 +854,7 @@ export const messages = {
         },
         lineCross: {
           label: "Marcar ✕ ao completar a linha",
-          hint: "Quando os quadrados pintados de uma linha ou coluna formam a pista dela, o resto ganha ✕; tirar um pintado apaga esses ✕. Mostrar o erro marca o que está errado nessa linha, e Só se estiver certa deixa sem ✕ a linha errada: esses dois consultam a solução.",
+          hint: "Quando as células preenchidas de uma linha ou coluna formam os números dela, o resto ganha ✕; tirar uma preenchida apaga esses ✕. Numa linha errada, “mostrar o erro” aponta onde está o erro e “só se estiver certa” não marca nada.",
         },
         straightDrag: {
           label: "Arrastar só em linha reta",

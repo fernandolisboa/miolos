@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-10-18 (issue #402)
 **Depends on:** [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md), [ADR-0105](./0105-rainhas-fades-what-holds-a-queen-and-auto-crosses-on-request.md), [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md), [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md)
-**Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 2; [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md)'s whole-line consequence; [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md) decision 1; [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) decision 3; [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md). Departs from [ADR-0105](./0105-rainhas-fades-what-holds-a-queen-and-auto-crosses-on-request.md) decision 5 on persistence.
+**Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 2; [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md)'s whole-line consequence; [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md) decision 1; [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) decision 3; [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md). **Supersedes in part:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md) decision 5 and [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md) decision 5's clause, for *Sempre e mostrar o erro* and *Só se estiver certa*. Departs from [ADR-0105](./0105-rainhas-fades-what-holds-a-queen-and-auto-crosses-on-request.md) decision 5 on persistence.
 
 ## Context
 
@@ -23,6 +23,7 @@ Fernando asked (#402) that a Nonogram row or column whose fills complete its clu
 - By default the whole-line deduction ADR-0104 accepted is now written for the player, even with *Riscar números resolvidos* off. The capped hint is unchanged; the streak, the stats and the medals are untouched.
 - *Mostrar o erro* and *Só se estiver certa* read the solution the client already holds, like *Mostrar erros* (ADR-0102 d3).
 - `/nonogram` measured 51.1 KB (budget 50); it rises to 52 KB, the minimum whole step, under Fernando's standing approval of budget raises (2026-10-16). `/modo-livre/nonogram` (75.6 of 76) and `/arquivo/[data]/nonogram` (46.0 of 48) fit.
+- A ✕ stroke over an automatic ✕ changes no entry, so the cell stays the line's and clears with it; a tap clears it and makes it the player's.
 - Settings with a choice share one row driven by a table in `game-settings.tsx`; its options wrap below the text when they do not fit.
 
 ## Rejected

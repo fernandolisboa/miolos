@@ -172,6 +172,14 @@ describe("restore and Recomeçar measure no transition (T-WEB-S971)", () => {
     });
     expect(row(restored, 0)).toEqual([0, 1, 1, 1, 0]);
     expect(restored.autoCrossed.size).toBe(0);
+    expect(formed.autoCrossed.size).toBeGreaterThan(0);
+    expect(
+      play("always", formed, {
+        type: "restore",
+        record: record(formed.entries),
+        now: 1,
+      }).autoCrossed.size,
+    ).toBe(0);
 
     const unformed = play("always", restored, fill(2));
     expect(row(unformed, 0)).toEqual([0, 1, null, 1, 0]);
@@ -334,8 +342,8 @@ describe("Cores crosses a line whose tones form its clue (T-WEB-S974)", () => {
   });
 
   it("the right lengths in the wrong tone cross nothing", () => {
-    const wrong = paint(fresh, tone(1), tap(1), tap(2), tap(3));
-    expect(row(wrong, 0)).toEqual([null, 1, 1, 1, null]);
+    const wrong = paint(fresh, tone(2), tap(1), tap(2), tone(1), tap(3));
+    expect(row(wrong, 0)).toEqual([null, 2, 2, 1, null]);
     expect(wrong.autoCrossed.size).toBe(0);
   });
 });

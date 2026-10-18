@@ -8,7 +8,7 @@ import styles from "../src/colored-nonogram/colored-board.module.css";
 import { ColoredControls } from "../src/colored-nonogram/controls";
 import { coloredCopy, runLabel, toneName } from "../src/colored-nonogram/copy";
 import {
-  coloredNonogramReducer,
+  coloredNonogramReducers,
   initColoredNonogramState,
 } from "../src/colored-nonogram/state";
 import { messages } from "../src/i18n";
@@ -26,7 +26,7 @@ const SIZE = 5;
 
 function Harness() {
   const [state, dispatch] = useReducer(
-    coloredNonogramReducer,
+    coloredNonogramReducers.off,
     { date: "1970-01-01", clues, solution },
     initColoredNonogramState,
   );

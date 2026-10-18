@@ -7,8 +7,7 @@ import {
   type AutoCrosses,
 } from "../play/auto-cross";
 import type { BinaryGridState } from "../play/binary-grid";
-import { wrongCells } from "../play/grid-hint";
-import type { LineCross } from "../settings/settings";
+import { useSettings, type LineCross } from "../settings/settings";
 import { pictureSettled } from "./paint";
 
 export interface LineClues<Run> {
@@ -30,14 +29,12 @@ export interface LineCrossState<M extends number, Run> extends BinaryGridState<
   readonly autoCrossed: AutoCrosses;
 }
 
-type Crossing = "off" | "always" | "correct";
+type Crossing = Exclude<LineCross, "flag">;
 
 interface BoardLine<Run> {
   readonly cells: readonly number[];
   readonly runs: readonly Run[];
 }
-
-const NONE: ReadonlySet<number> = new Set();
 
 function boardLines<Run>(clues: LineClues<Run>): BoardLine<Run>[] {
   const runs = [...clues.rows, ...clues.cols];
@@ -84,14 +81,17 @@ function crossed<S extends LineCrossState<M, Run>, M extends number, Run>(
     entries,
     (line) => formedNow[line] === true,
   );
+  const newlyFormed = (line: number, { cells, runs }: BoardLine<Run>) =>
+    formedNow[line] === true &&
+    runs.length > 0 &&
+    !formed(lineEntries(previous.entries, cells), runs);
+  const permitted = (cells: readonly number[]) =>
+    crossing === "always" || fillsAreRight(next.solution, entries, cells);
   if (crossing !== "off" && next.status === "playing") {
     claim(
-      lines.flatMap(({ cells, runs }, line) =>
-        formedNow[line] === true &&
-        runs.length > 0 &&
-        !formed(lineEntries(previous.entries, cells), runs) &&
-        (crossing === "always" || fillsAreRight(next.solution, entries, cells))
-          ? [{ owner: line, cells }]
+      lines.flatMap((line, at) =>
+        newlyFormed(at, line) && permitted(line.cells)
+          ? [{ owner: at, cells: line.cells }]
           : [],
       ),
       entries,
@@ -138,14 +138,10 @@ export function lineCrossModes<R>(
 
 export function formedWrongCells<M extends number, Run>(
   clues: LineClues<Run>,
-  solution: readonly M[] | null,
+  wrong: ReadonlySet<number>,
   entries: readonly (M | null)[],
   formed: Formed<M, Run>,
 ): ReadonlySet<number> {
-  if (solution === null) {
-    return NONE;
-  }
-  const wrong = wrongCells(solution, null, entries);
   const flagged = new Set<number>();
   for (const { cells, runs } of boardLines(clues)) {
     if (formed(lineEntries(entries, cells), runs)) {
@@ -157,4 +153,8 @@ export function formedWrongCells<M extends number, Run>(
     }
   }
   return flagged;
+}
+
+export function useLineCross<R>(reducers: Record<LineCross, R>): R {
+  return reducers[useSettings().games.nonogram.lineCross];
 }

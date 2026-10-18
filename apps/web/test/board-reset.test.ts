@@ -25,7 +25,7 @@ import {
 } from "../src/crossword/state";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramPlayState,
 } from "../src/nonogram/state";
 import { hasHintLeft } from "../src/play/hint-allowance";
@@ -200,7 +200,7 @@ const NONOGRAM_DAILY = dailyNonogramResponseSchema.parse({
 });
 
 function nonogramCase(): BoardCase<NonogramPlayState> {
-  const reduce = nonogramPlayReducer;
+  const reduce = nonogramReducers.off;
   const start = initNonogramPlayState(NONOGRAM_DAILY);
   const picture = start.solution ?? [];
   const played = run(reduce, start, [

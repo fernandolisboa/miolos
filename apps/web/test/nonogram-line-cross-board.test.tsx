@@ -107,7 +107,7 @@ describe("Marcar ✕ ao completar a linha is a four-way choice in Ajustes (T-WEB
     expect(
       within(choice).getByRole("radio", { name: copy.lineCross.always }),
     ).toBeChecked();
-    expect(choice.parentElement).toHaveClass(choiceStyles.choiceRow ?? "");
+    expect(choice.parentElement).toHaveClass(choiceStyles.stacked ?? "");
   });
 
   it("saves the choice on this device and a mounted board follows it", () => {

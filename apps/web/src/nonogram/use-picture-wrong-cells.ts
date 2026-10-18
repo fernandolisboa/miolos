@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { wrongCells } from "../play/grid-hint";
 import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { useSettings } from "../settings/settings";
@@ -15,10 +16,15 @@ export function usePictureWrongCells<M extends number, Run>(
   const wrong = useWrongCells("nonogram", solution, null, entries, mistakes);
   const flag = useSettings().games.nonogram.lineCross === "flag";
   return useMemo(() => {
-    if (!flag) {
+    if (!flag || solution === null) {
       return wrong;
     }
-    const flagged = formedWrongCells(clues, solution, entries, formed);
+    const flagged = formedWrongCells(
+      clues,
+      wrongCells(solution, null, entries),
+      entries,
+      formed,
+    );
     return flagged.size === 0 ? wrong : new Set([...wrong, ...flagged]);
   }, [flag, wrong, clues, solution, entries, formed]);
 }

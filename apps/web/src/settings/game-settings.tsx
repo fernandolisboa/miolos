@@ -30,16 +30,31 @@ interface ChoiceOption {
   readonly label: string;
 }
 
-const CHOICES: Partial<Record<GameSetting, readonly ChoiceOption[]>> = {
-  firstValue: BINAIRO_FIRST_VALUES.map((value) => ({
-    value,
-    label: String(value),
-  })),
-  lineCross: NONOGRAM_LINE_CROSSES.map((value) => ({
-    value,
-    label: copy.lineCross[value],
-  })),
-};
+interface Choice {
+  readonly options: readonly ChoiceOption[];
+  readonly stacked: boolean;
+}
+
+const CHOICES = {
+  firstValue: {
+    options: BINAIRO_FIRST_VALUES.map((value) => ({
+      value,
+      label: String(value),
+    })),
+    stacked: false,
+  },
+  lineCross: {
+    options: NONOGRAM_LINE_CROSSES.map((value) => ({
+      value,
+      label: copy.lineCross[value],
+    })),
+    stacked: true,
+  },
+} satisfies Partial<Record<GameSetting, Choice>>;
+
+function isChoice(setting: GameSetting): setting is keyof typeof CHOICES {
+  return setting in CHOICES;
+}
 
 function SettingText({
   id,
@@ -91,18 +106,24 @@ function SettingSwitch({
 
 function SettingChoice({
   setting,
-  options,
+  choice,
   value,
   onChange,
 }: {
   readonly setting: GameSetting;
-  readonly options: readonly ChoiceOption[];
+  readonly choice: Choice;
   readonly value: ChoiceValue;
   readonly onChange: (value: ChoiceValue) => void;
 }) {
   const id = useId();
   return (
-    <div className={`${switchStyles.switchRow} ${choiceStyles.choiceRow}`}>
+    <div
+      className={
+        choice.stacked
+          ? `${switchStyles.switchRow} ${choiceStyles.stacked}`
+          : switchStyles.switchRow
+      }
+    >
       <SettingText id={id} setting={setting} />
       <div
         role="radiogroup"
@@ -110,7 +131,7 @@ function SettingChoice({
         aria-labelledby={`${id}-label`}
         aria-describedby={`${id}-hint`}
       >
-        {options.map((option) => (
+        {choice.options.map((option) => (
           <label key={option.value} className={choiceStyles.choice}>
             <input
               type="radio"
@@ -203,17 +224,17 @@ export function GameSettings({
                     setGameSetting(game, setting, value);
                   }}
                 />
-              ) : (
+              ) : isChoice(setting) ? (
                 <SettingChoice
                   key={setting}
                   setting={setting}
-                  options={CHOICES[setting] ?? []}
+                  choice={CHOICES[setting]}
                   value={current}
                   onChange={(value) => {
                     setGameSetting(game, setting, value);
                   }}
                 />
-              ),
+              ) : null,
             )}
           </fieldset>
         ))}

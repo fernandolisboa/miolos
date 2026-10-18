@@ -9,7 +9,7 @@ import {
 import { recordHeader, type NonogramPlayRecord } from "../play/play-record";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { useSettings } from "../settings/settings";
+import { useLineCross } from "./line-cross";
 import { countFilledCells, filledTarget, submittedCells } from "./engine";
 import {
   initNonogramPlayState,
@@ -32,7 +32,7 @@ export function useNonogramPlay(
   daily: DailyNonogramResponse,
   remotelyClaimed = false,
 ): NonogramPlay {
-  const reduce = nonogramReducers[useSettings().games.nonogram.lineCross];
+  const reduce = useLineCross(nonogramReducers);
   const [state, dispatch] = usePlayReducer(
     reduce,
     daily,
