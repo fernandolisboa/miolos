@@ -17,7 +17,7 @@ export interface HeldTap {
 
 export interface ParkedHold {
   readonly hold: HeldTap;
-  readonly depth: number;
+  readonly entry: unknown;
 }
 
 export interface MistakeState {
@@ -103,27 +103,28 @@ export function withMistakes<S extends Editable, A extends MistakeAction>(
       return changesBoard(state, next) ? state : next;
     }
     if (action.type === UNDO || action.type === REDO) {
-      return marked(next, travelled(state.mistakes, next, action.type));
+      return marked(next, travelled(state, next, action.type));
     }
     return counted(state, next, action, rules);
   };
   return (state, action) => unparked(step(state, action));
 }
 
-// Undo parks a hold it took back at that redo entry's depth, and only the redo
-// of that entry re-arms it, so Desfazer then Refazer never frees a held write.
+// Undo parks a hold it took back on the redo entry it pushed, and only the redo
+// of that very entry re-arms it, so Desfazer then Refazer never frees a held write.
 function travelled(
-  mistakes: MistakeState,
+  state: Editable,
   next: Editable,
   direction: UndoAction["type"],
 ): MistakeState {
+  const { mistakes } = state;
   const { held, parked } = mistakes;
   if (next.status !== "playing") {
     return settled(mistakes, next);
   }
   if (direction === REDO) {
     return parked !== null &&
-      next.history.redo.length === parked.depth - 1 &&
+      state.history.redo.at(-1) === parked.entry &&
       !isBefore(next, parked.hold)
       ? { ...mistakes, held: parked.hold, parked: null }
       : mistakes;
@@ -132,16 +133,17 @@ function travelled(
     ? {
         ...mistakes,
         held: null,
-        parked: { hold: held, depth: next.history.redo.length },
+        parked: { hold: held, entry: next.history.redo.at(-1) },
       }
     : mistakes;
 }
 
 function unparked<S extends Editable>(state: S): S {
+  const { parked } = state.mistakes;
   const { redo, displaced } = state.history;
-  return state.mistakes.parked === null ||
-    redo.length >= state.mistakes.parked.depth ||
-    displaced.length >= state.mistakes.parked.depth
+  return parked === null ||
+    redo.includes(parked.entry) ||
+    displaced.includes(parked.entry)
     ? state
     : marked(state, { ...state.mistakes, parked: null });
 }

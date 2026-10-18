@@ -430,6 +430,27 @@ describe("redo neither counts a mistake nor refunds one, and a frozen board has 
     ]);
   });
 
+  it("never re-arms a hold on the redo of a move written after its undo", () => {
+    const other = ((wrongDigit(S0) % 9) + 1) as SudokuDigit;
+    const rewritten = sudoku(
+      sudokuBoard(),
+      ...write(S0, wrongDigit(S0), true),
+      UNDO,
+      ...write(S0, other),
+      UNDO,
+      REDO,
+    );
+    expect(rewritten.entries[S0]).toBe(other);
+    expect(rewritten.mistakes).toMatchObject({
+      cells: [S0],
+      held: null,
+      parked: null,
+    });
+    expect(
+      sudoku(rewritten, ...write(S1, rightDigit(S1))).mistakes.cells,
+    ).toEqual([S0]);
+  });
+
   it("keeps a parked hold across a Número fixo double tap that gives redo back", () => {
     const held = sudoku(sudokuBoard(), ...write(S0, wrongDigit(S0), true));
     const undone = sudoku(held, UNDO);
