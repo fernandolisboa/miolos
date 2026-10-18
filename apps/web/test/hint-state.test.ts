@@ -18,10 +18,7 @@ import {
 } from "../src/crossword/state";
 import { idleHint, spentHint, unlit } from "../src/play/hint-state";
 import type { HintState } from "../src/play/types";
-import {
-  initNonogramPlayState,
-  nonogramPlayReducer,
-} from "../src/nonogram/state";
+import { initNonogramPlayState, nonogramReducers } from "../src/nonogram/state";
 import { initQueensPlayState, queensPlayReducer } from "../src/queens/state";
 import { initSudokuPlayState, sudokuPlayReducer } from "../src/sudoku/state";
 
@@ -156,7 +153,7 @@ describe("Recomeçar forgets the reason and the spotlight in every reducer (T-WE
         }),
       ),
       1,
-      nonogramPlayReducer,
+      nonogramReducers.off,
     ),
     resetCase(
       "queens",
@@ -194,14 +191,14 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
   const lit = { ...nonogram, selected: 0, hint: { ...LIT, used: 1 } };
 
   it("clears it on a new selection, a move and a written cell, but not on re-selecting", () => {
-    expect(nonogramPlayReducer(lit, { type: "select", index: 0 })).toBe(lit);
+    expect(nonogramReducers.off(lit, { type: "select", index: 0 })).toBe(lit);
     for (const action of [
       { type: "select", index: 1 },
       { type: "move-selection", rows: 0, columns: 1 },
       { type: "enter-value", value: 1 },
       { type: "mark-cell", index: 1, press: "tap" },
     ] as const) {
-      expect(nonogramPlayReducer(lit, action).hint.spotlight).toEqual([]);
+      expect(nonogramReducers.off(lit, action).hint.spotlight).toEqual([]);
     }
   });
 
@@ -221,7 +218,7 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
       entries: lit.entries.map((entry, index) => (index === 0 ? 1 : entry)),
       stroke: { value: 1, clears: false },
     } as const;
-    const repainted = nonogramPlayReducer(painting, {
+    const repainted = nonogramReducers.off(painting, {
       type: "paint-over",
       index: 0,
     });

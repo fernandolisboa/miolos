@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Press } from "../src/play/brush";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramBrush,
   type NonogramCellValue,
   type NonogramPlayState,
@@ -55,7 +55,7 @@ describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB
   )(
     "%s brush, %s press on a %s cell: a tap toggles and a stroke opens on the pressed mark",
     (brush, press, start, mark) => {
-      const tapped = nonogramPlayReducer(startingAt(brush, start), {
+      const tapped = nonogramReducers.off(startingAt(brush, start), {
         type: "mark-cell",
         index: 0,
         press,
@@ -63,7 +63,7 @@ describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB
       expect(tapped.entries[0]).toBe(start === mark ? null : mark);
       expect(tapped.stroke).toBeNull();
 
-      const stroked = nonogramPlayReducer(startingAt(brush, start), {
+      const stroked = nonogramReducers.off(startingAt(brush, start), {
         type: "stroke-start",
         index: 0,
         press,
@@ -85,7 +85,7 @@ describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB
   )(
     "a stroke of %i (clears: %s) passing over a %s cell",
     (value, clears, start) => {
-      const over = nonogramPlayReducer(
+      const over = nonogramReducers.off(
         startingAt("fill", start, { value, clears }),
         { type: "paint-over", index: 0 },
       );
@@ -97,7 +97,7 @@ describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB
 
   it("a stroke that starts off the board drops the stroke, and a paint-over without one writes nothing", () => {
     expect(
-      nonogramPlayReducer(
+      nonogramReducers.off(
         startingAt("fill", null, { value: 1, clears: false }),
         {
           type: "stroke-start",
@@ -107,7 +107,7 @@ describe("the Clássico Nonogram's paint, stroke and right-press outcomes (T-WEB
       ).stroke,
     ).toBeNull();
     const idle = startingAt("fill", null);
-    expect(nonogramPlayReducer(idle, { type: "paint-over", index: 0 })).toBe(
+    expect(nonogramReducers.off(idle, { type: "paint-over", index: 0 })).toBe(
       idle,
     );
   });

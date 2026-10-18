@@ -44,6 +44,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
         nonogram: {
           showErrors: false,
           strikePlacedRuns: true,
+          lineCross: "always",
           straightDrag: false,
         },
         queens: {
@@ -101,6 +102,7 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
     expect(settings.games.nonogram).toEqual({
       showErrors: true,
       strikePlacedRuns: true,
+      lineCross: "always",
       straightDrag: false,
     });
     expect(settings).not.toHaveProperty("extra");
@@ -196,6 +198,34 @@ describe("the settings store keeps device-local preferences (T-WEB-S580)", () =>
       window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
     });
     expect(screen.getByText("clock:false errors:true")).toBeInTheDocument();
+  });
+});
+
+describe("Marcar ✕ ao completar a linha reads one of its four values, else Sempre (T-WEB-S976)", () => {
+  it("keeps a stored value and falls back to always on anything else", () => {
+    for (const [stored, read] of [
+      ["always", "always"],
+      ["flag", "flag"],
+      ["correct", "correct"],
+      ["off", "off"],
+      ["never", "always"],
+      [true, "always"],
+      [0, "always"],
+      [null, "always"],
+    ] as const) {
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({
+          games: { nonogram: { lineCross: stored, straightDrag: true } },
+        }),
+      );
+      expect(readSettings().games.nonogram).toEqual({
+        showErrors: false,
+        strikePlacedRuns: true,
+        lineCross: read,
+        straightDrag: true,
+      });
+    }
   });
 });
 

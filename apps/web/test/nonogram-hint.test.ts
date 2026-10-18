@@ -21,7 +21,7 @@ import {
 import { nextBinaryHint, nextHint } from "../src/play/grid-hint";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramCellValue,
   type NonogramMark,
   type NonogramPlayAction,
@@ -420,8 +420,8 @@ describe("the reducer's accounting", () => {
   }
 
   it("reveals one cell, spends a free hint and leaves the caret alone", () => {
-    const selected = nonogramPlayReducer(STATE, { type: "select", index: 24 });
-    const hinted = nonogramPlayReducer(selected, { type: "use-hint" });
+    const selected = nonogramReducers.off(STATE, { type: "select", index: 24 });
+    const hinted = nonogramReducers.off(selected, { type: "use-hint" });
 
     expect(hinted.hint.used).toBe(1);
     expect(hinted.hint.lastIndex).not.toBeNull();
@@ -431,11 +431,11 @@ describe("the reducer's accounting", () => {
   });
 
   it("drops the ring when the player writes the hinted cell again (T-WEB-S58)", () => {
-    const hinted = nonogramPlayReducer(STATE, { type: "use-hint" });
+    const hinted = nonogramReducers.off(STATE, { type: "use-hint" });
     const index = hinted.hint.lastIndex ?? -1;
     expect(hinted.entries[index]).toBe(1);
 
-    const cleared = nonogramPlayReducer(hinted, {
+    const cleared = nonogramReducers.off(hinted, {
       type: "mark-cell",
       index,
       press: "tap",
@@ -450,15 +450,15 @@ describe("the reducer's accounting", () => {
       spotlight: [],
     });
 
-    const selected = nonogramPlayReducer(hinted, { type: "select", index });
-    const overridden = nonogramPlayReducer(selected, {
+    const selected = nonogramReducers.off(hinted, { type: "select", index });
+    const overridden = nonogramReducers.off(selected, {
       type: "enter-value",
       value: 0,
     });
     expect(overridden.entries[index]).toBe(0);
     expect(overridden.hint.lastIndex).toBeNull();
 
-    const elsewhere = nonogramPlayReducer(hinted, {
+    const elsewhere = nonogramReducers.off(hinted, {
       type: "mark-cell",
       index: index === 0 ? 1 : 0,
       press: "tap",
@@ -470,7 +470,7 @@ describe("the reducer's accounting", () => {
     const solved = solutionOf(STATE).reduce<NonogramPlayState>(
       (current, mark, index) =>
         mark === 1
-          ? nonogramPlayReducer(current, {
+          ? nonogramReducers.off(current, {
               type: "mark-cell",
               index,
               press: "tap",
@@ -480,7 +480,7 @@ describe("the reducer's accounting", () => {
     );
 
     expect(solved.status).toBe("solved");
-    expect(nonogramPlayReducer(solved, { type: "use-hint" })).toBe(solved);
+    expect(nonogramReducers.off(solved, { type: "use-hint" })).toBe(solved);
   });
 });
 
@@ -493,8 +493,8 @@ describe("use-hint records the reason and the spotlight (T-WEB-S569)", () => {
   );
 
   function hinted(): NonogramPlayState {
-    return nonogramPlayReducer(
-      nonogramPlayReducer(STATE, { type: "select", index: 24 }),
+    return nonogramReducers.off(
+      nonogramReducers.off(STATE, { type: "select", index: 24 }),
       { type: "use-hint" },
     );
   }
@@ -515,11 +515,11 @@ describe("use-hint records the reason and the spotlight (T-WEB-S569)", () => {
 
   it("names a correction and lights nothing", () => {
     const wrong = STATE.solution?.indexOf(0) ?? -1;
-    const after = nonogramPlayReducer(
-      nonogramPlayReducer(STATE, { type: "select", index: wrong }),
+    const after = nonogramReducers.off(
+      nonogramReducers.off(STATE, { type: "select", index: wrong }),
       { type: "enter-value", value: 1 },
     );
-    const corrected = nonogramPlayReducer(after, { type: "use-hint" });
+    const corrected = nonogramReducers.off(after, { type: "use-hint" });
 
     expect(corrected.hint.reason).toEqual({ kind: "correction" });
     expect(corrected.hint.spotlight).toEqual([]);
@@ -531,20 +531,20 @@ describe("use-hint records the reason and the spotlight (T-WEB-S569)", () => {
     ["selecting another cell", { type: "select", index: 0 }],
     ["moving the selection", { type: "move-selection", rows: 0, columns: -1 }],
   ])("puts the spotlight out on %s, and keeps the reason", (_name, action) => {
-    const after = nonogramPlayReducer(hinted(), action);
+    const after = nonogramReducers.off(hinted(), action);
 
     expect(after.hint.spotlight).toEqual([]);
     expect(after.hint.reason).toEqual({ kind: "step", step: STEP });
   });
 
   it("puts the spotlight out when a stroke paints over a cell", () => {
-    const stroking = nonogramPlayReducer(hinted(), {
+    const stroking = nonogramReducers.off(hinted(), {
       type: "stroke-start",
       index: 0,
       press: "tap",
     });
     const hintedAgain = { ...stroking, hint: hinted().hint };
-    const after = nonogramPlayReducer(hintedAgain, {
+    const after = nonogramReducers.off(hintedAgain, {
       type: "paint-over",
       index: 1,
     });

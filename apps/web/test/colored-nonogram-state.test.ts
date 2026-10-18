@@ -2,7 +2,7 @@ import { generateColoredNonogram } from "@miolos/games/colored-nonogram";
 import { describe, expect, it } from "vitest";
 
 import {
-  coloredNonogramReducer,
+  coloredNonogramReducers,
   initColoredNonogramState,
   type ColoredNonogramAction,
   type ColoredNonogramState,
@@ -23,7 +23,7 @@ function play(
   state: ColoredNonogramState,
   ...actions: readonly (ColoredNonogramAction | UndoAction)[]
 ): ColoredNonogramState {
-  return actions.reduce(coloredNonogramReducer, state);
+  return actions.reduce(coloredNonogramReducers.off, state);
 }
 
 describe("the coloured Nonogram reducer: brush, presses, strokes, completion and undo (T-WEB-S870)", () => {

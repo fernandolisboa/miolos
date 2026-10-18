@@ -53,17 +53,29 @@ function contradicted(
   return groups > runs.length;
 }
 
+function blocksOf(states: readonly NonogramCellState[]): number[] {
+  return runLengths(states.map((state) => state === "filled"));
+}
+
+export function formsClue(
+  states: readonly NonogramCellState[],
+  runs: readonly number[],
+): boolean {
+  const blocks = blocksOf(states);
+  return (
+    blocks.length === runs.length &&
+    blocks.every((block, i) => block === runs[i])
+  );
+}
+
 export function placedRuns(
   states: readonly NonogramCellState[],
   runs: readonly number[],
 ): readonly boolean[] {
-  const blocks = runLengths(states.map((state) => state === "filled"));
-  if (
-    blocks.length === runs.length &&
-    blocks.every((block, i) => block === runs[i])
-  ) {
+  if (formsClue(states, runs)) {
     return runs.map(() => true);
   }
+  const blocks = blocksOf(states);
   if (!states.includes("unknown") || contradicted(states, runs, blocks)) {
     return runs.map(() => false);
   }

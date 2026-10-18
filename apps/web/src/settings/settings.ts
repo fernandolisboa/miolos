@@ -7,6 +7,15 @@ const flag = (fallback: boolean) => z.boolean().catch(fallback);
 
 export const BINAIRO_FIRST_VALUES = [1, 0] as const;
 
+export const NONOGRAM_LINE_CROSSES = [
+  "always",
+  "flag",
+  "correct",
+  "off",
+] as const;
+
+export type LineCross = (typeof NONOGRAM_LINE_CROSSES)[number];
+
 const binairo = z.object({
   showErrors: flag(false),
   firstValue: z.literal(BINAIRO_FIRST_VALUES).catch(1),
@@ -22,6 +31,7 @@ const sudoku = z.object({
 const nonogram = z.object({
   showErrors: flag(false),
   strikePlacedRuns: flag(true),
+  lineCross: z.literal(NONOGRAM_LINE_CROSSES).catch("always"),
   straightDrag: flag(false),
 });
 

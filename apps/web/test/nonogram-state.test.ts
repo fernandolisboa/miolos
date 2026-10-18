@@ -14,7 +14,7 @@ import type {
 import { isPictureComplete, solutionMarks } from "../src/nonogram/engine";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramCellValue,
   type NonogramMark,
   type NonogramPlayAction,
@@ -40,7 +40,7 @@ function play(
   ...actions: readonly NonogramPlayAction[]
 ): NonogramPlayState {
   return actions.reduce(
-    (current, action) => nonogramPlayReducer(current, action),
+    (current, action) => nonogramReducers.off(current, action),
     state,
   );
 }
@@ -66,7 +66,7 @@ function fillOnly(state: NonogramPlayState): NonogramPlayState {
   return solutionOf(state).reduce(
     (current, mark, index) =>
       mark === 1
-        ? nonogramPlayReducer(current, {
+        ? nonogramReducers.off(current, {
             type: "mark-cell",
             index,
             press: "tap",
@@ -472,7 +472,7 @@ describe("status and pendingSync", () => {
     const partial = solution.reduce<NonogramPlayState>(
       (current, mark, index) =>
         mark === 1 && index !== firstPictureCell(MONDAY_STATE)
-          ? nonogramPlayReducer(current, {
+          ? nonogramReducers.off(current, {
               type: "mark-cell",
               index,
               press: "tap",
@@ -485,7 +485,7 @@ describe("status and pendingSync", () => {
     expect(partial.status).toBe("playing");
     expect(partial.pendingSync).toBe(false);
 
-    const solved = nonogramPlayReducer(partial, {
+    const solved = nonogramReducers.off(partial, {
       type: "mark-cell",
       index: firstPictureCell(MONDAY_STATE),
       press: "tap",
@@ -499,7 +499,7 @@ describe("status and pendingSync", () => {
     const solution = solutionOf(MONDAY_STATE);
     const emptyCell = solution.indexOf(0);
     const overpainted = fillOnly(
-      nonogramPlayReducer(MONDAY_STATE, {
+      nonogramReducers.off(MONDAY_STATE, {
         type: "mark-cell",
         index: emptyCell,
         press: "tap",
@@ -521,8 +521,8 @@ describe("status and pendingSync", () => {
     const solution = solutionOf(MONDAY_STATE);
     const crossedThrough = solution.reduce<NonogramPlayState>(
       (current, mark, index) =>
-        nonogramPlayReducer(
-          nonogramPlayReducer(current, {
+        nonogramReducers.off(
+          nonogramReducers.off(current, {
             type: "set-brush",
             brush: mark === 1 ? "fill" : "cross",
           }),
@@ -552,7 +552,7 @@ describe("status and pendingSync", () => {
       { type: "clear-cell" },
     ] as const satisfies readonly NonogramPlayAction[]) {
       expect(
-        nonogramPlayReducer(
+        nonogramReducers.off(
           play(solved, {
             type: "select",
             index: firstPictureCell(MONDAY_STATE),
@@ -564,7 +564,7 @@ describe("status and pendingSync", () => {
     }
 
     expect(
-      nonogramPlayReducer(solved, {
+      nonogramReducers.off(solved, {
         type: "stroke-start",
         index: outside,
         press: "tap",

@@ -5,6 +5,7 @@ describe("@miolos/games exports map", () => {
     const mod = await import("@miolos/games/colored-nonogram");
     expect(Object.keys(mod).sort()).toEqual([
       "CONFUSABLE_TONE_PAIRS",
+      "coloredRuns",
       "generateColoredNonogram",
       "nextColoredStep",
     ]);

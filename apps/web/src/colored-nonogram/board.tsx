@@ -22,12 +22,13 @@ import boardStyles from "../nonogram/nonogram-board.module.css";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
+import { usePictureWrongCells } from "../nonogram/use-picture-wrong-cells";
 import type { MistakeState } from "../play/mistakes";
-import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
 import styles from "./colored-board.module.css";
 import { coloredCopy, runLabel, toneName } from "./copy";
+import { coloredFormed } from "./state";
 
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
@@ -71,7 +72,13 @@ export const ColoredBoard = memo(function ColoredBoard({
   readonly onClear: () => void;
   readonly onPaintOver: (index: number) => void;
 }) {
-  const wrong = useWrongCells("nonogram", solution, null, entries, mistakes);
+  const wrong = usePictureWrongCells(
+    clues,
+    solution,
+    entries,
+    mistakes,
+    coloredFormed,
+  );
   const { straightDrag } = useSettings().games.nonogram;
   const board = useBinaryBoard({
     size,

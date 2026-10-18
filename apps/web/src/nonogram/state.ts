@@ -1,6 +1,7 @@
 import type { DailyNonogramResponse, NonogramSize } from "@miolos/core";
-import type { NonogramClues } from "@miolos/games/nonogram";
+import { formsClue, type NonogramClues } from "@miolos/games/nonogram";
 
+import { NO_AUTO_CROSSES, type AutoCrosses } from "../play/auto-cross";
 import { pressedMark, type Press, type StrokeEffect } from "../play/brush";
 import {
   binaryGridReducer,
@@ -14,13 +15,15 @@ import {
 import { idleHint } from "../play/hint-state";
 import { NO_MISTAKES, type MistakeState } from "../play/mistakes";
 import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
-import { solutionMarks } from "./engine";
+import { cellStateOf, solutionMarks } from "./engine";
 import { nextNonogramHint, type NonogramHintReason } from "./hint";
+import { lineCrossing, lineCrossModes } from "./line-cross";
 import {
   painting,
   pictureSettled,
   pictureSnapshot,
   type PaintAction,
+  type PictureSnapshot,
 } from "./paint";
 
 export type NonogramMark = BinaryMark;
@@ -34,14 +37,10 @@ export interface NonogramPlayState extends BinaryGridState<NonogramHintReason> {
   readonly clues: NonogramClues;
   readonly brush: NonogramBrush;
   readonly stroke: StrokeEffect | null;
-  readonly history: UndoHistory<NonogramSnapshot>;
+  readonly autoCrossed: AutoCrosses;
+  readonly history: UndoHistory<PictureSnapshot<NonogramPlayState>>;
   readonly mistakes: MistakeState;
 }
-
-type NonogramSnapshot = Pick<
-  NonogramPlayState,
-  "entries" | "selected" | "hint"
->;
 
 export type NonogramPlayAction =
   | BinaryGridAction
@@ -61,6 +60,7 @@ export function initNonogramPlayState(
     selected: null,
     brush: "fill",
     stroke: null,
+    autoCrossed: NO_AUTO_CROSSES,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
     status: "playing",
@@ -77,7 +77,19 @@ const NONOGRAM_RULES: BinaryGridRules<NonogramPlayState, NonogramHintReason> = {
   hint: (state) => nextNonogramHint(state.clues, state.solution, state.entries),
 };
 
-export const nonogramPlayReducer = undoable(playNonogram, pictureSnapshot);
+export function nonogramFormed(
+  entries: readonly NonogramCellValue[],
+  runs: readonly number[],
+): boolean {
+  return formsClue(entries.map(cellStateOf), runs);
+}
+
+export const nonogramReducers = lineCrossModes((crossing) =>
+  undoable(
+    lineCrossing(playNonogram, nonogramFormed, crossing),
+    pictureSnapshot,
+  ),
+);
 
 function playNonogram(
   state: NonogramPlayState,

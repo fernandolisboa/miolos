@@ -1,11 +1,22 @@
-import type { ColoredNonogramClues } from "@miolos/games/colored-nonogram";
+import {
+  coloredRuns,
+  type ColoredNonogramClues,
+  type ColoredRun,
+} from "@miolos/games/colored-nonogram";
 
-import { painting, pictureSettled, pictureSnapshot } from "../nonogram/paint";
+import { lineCrossing, lineCrossModes } from "../nonogram/line-cross";
+import {
+  painting,
+  pictureSettled,
+  pictureSnapshot,
+  type PictureSnapshot,
+} from "../nonogram/paint";
 import {
   brushMark,
   type NonogramBrush,
   type NonogramPlayAction,
 } from "../nonogram/state";
+import { NO_AUTO_CROSSES, type AutoCrosses } from "../play/auto-cross";
 import {
   binaryGridReducer,
   type BinaryGridRules,
@@ -25,9 +36,8 @@ export interface ColoredNonogramState extends BinaryGridState<
   readonly brush: NonogramBrush;
   readonly tone: number;
   readonly stroke: StrokeEffect<number> | null;
-  readonly history: UndoHistory<
-    Pick<ColoredNonogramState, "entries" | "selected" | "hint">
-  >;
+  readonly autoCrossed: AutoCrosses;
+  readonly history: UndoHistory<PictureSnapshot<ColoredNonogramState>>;
   readonly mistakes: MistakeState;
 }
 
@@ -56,6 +66,7 @@ export function initColoredNonogramState({
     brush: "fill",
     tone: 1,
     stroke: null,
+    autoCrossed: NO_AUTO_CROSSES,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
     status: "playing",
@@ -76,7 +87,23 @@ const COLORED_RULES: BinaryGridRules<
   hint: (state) => nextColoredHint(state.clues, state.solution, state.entries),
 };
 
-export const coloredNonogramReducer = undoable(playColored, pictureSnapshot);
+export function coloredFormed(
+  entries: readonly (number | null)[],
+  runs: readonly ColoredRun[],
+): boolean {
+  const blocks = coloredRuns(entries.map((entry) => entry ?? 0));
+  return (
+    blocks.length === runs.length &&
+    blocks.every(
+      ({ tone, length }, at) =>
+        tone === runs[at]?.tone && length === runs[at].length,
+    )
+  );
+}
+
+export const coloredNonogramReducers = lineCrossModes((crossing) =>
+  undoable(lineCrossing(playColored, coloredFormed, crossing), pictureSnapshot),
+);
 
 function playColored(
   state: ColoredNonogramState,

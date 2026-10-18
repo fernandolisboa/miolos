@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0095](./0095-three-free-hints-per-puzzle.md), [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 2 (the Nonogram gains a second setting, on by default).
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: Cores strikes no numbers yet, so *Riscar números resolvidos* does nothing there.
+**Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — the whole-line consequence is now written for the player by default: a line whose fills form its clue gets ✕ on the rest, even with *Riscar números resolvidos* off.
 
 ## Context
 

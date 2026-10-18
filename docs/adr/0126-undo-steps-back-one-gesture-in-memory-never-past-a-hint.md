@@ -7,6 +7,7 @@
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the mistake count is kept outside `undoable`'s snapshot so undo never refunds it, and a frozen board has no undo.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — Campo Minado has no undo and takes no Ctrl/⌘+Z.
 **Superseded in part by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) (#400) — decision 7's "No redo"; "no Termo" stands. Also amends decisions 4 and 6: every Recomeçar clears the history, and the control is a Desfazer/Refazer pair.
+**Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 3: the Nonogram snapshot, Clássico and Cores, gains `autoCrossed`.
 
 ## Context
 

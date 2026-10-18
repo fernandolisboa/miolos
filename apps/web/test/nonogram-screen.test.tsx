@@ -218,6 +218,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function withoutLineCross(): void {
+  window.localStorage.setItem(
+    "miolos-settings",
+    JSON.stringify({ games: { nonogram: { lineCross: "off" } } }),
+  );
+}
+
 describe("the composite widget (T-WEB-S42)", () => {
   it("is one tab stop, not size² of them, and not a role=grid", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
@@ -485,6 +492,8 @@ describe("the clue rails (T-WEB-S43)", () => {
 describe("the brush (T-WEB-S44)", () => {
   const copy = messages.games.nonogram.play.controls;
 
+  beforeEach(withoutLineCross);
+
   function brushButton(mode: "fill" | "cross"): HTMLElement {
     return screen.getByLabelText(
       { fill: copy.fillAria, cross: copy.crossAria }[mode],
@@ -574,6 +583,8 @@ describe("the brush is two icons (T-WEB-S498)", () => {
 
 describe("the mouse buttons on the board (T-WEB-S498a)", () => {
   const MOUSE = { pointerId: 1, pointerType: "mouse" } as const;
+
+  beforeEach(withoutLineCross);
 
   function click(board: HTMLElement, index: number, button: number): void {
     const at = { ...MOUSE, clientX: index, clientY: 0, button };

@@ -20,7 +20,7 @@ import {
   type PlayState,
 } from "../src/binairo/state";
 import {
-  coloredNonogramReducer,
+  coloredNonogramReducers,
   initColoredNonogramState,
 } from "../src/colored-nonogram/state";
 import {
@@ -30,7 +30,7 @@ import {
 } from "../src/crossword/state";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramPlayAction,
 } from "../src/nonogram/state";
 import { wrongWrite } from "../src/play/grid-hint";
@@ -154,7 +154,7 @@ const NONOGRAM_DAILY = dailyNonogramResponseSchema.parse({
   size: NONOGRAM.size,
   clues: NONOGRAM.clues,
 });
-const nonogram = limited(nonogramPlayReducer, SOLUTION_MISTAKES);
+const nonogram = limited(nonogramReducers.off, SOLUTION_MISTAKES);
 const nonogramBoard = () =>
   nonogram(initNonogramPlayState(NONOGRAM_DAILY), RESTORE);
 const NONOGRAM_SOLUTION = defined(
@@ -863,7 +863,7 @@ describe("one wrong write takes one mark in every limited game, daily and free (
     [
       "Cores",
       () =>
-        limited(coloredNonogramReducer, SOLUTION_MISTAKES)(
+        limited(coloredNonogramReducers.off, SOLUTION_MISTAKES)(
           initColoredNonogramState({ date: DATE, ...COLORED }),
           RESTORE,
           { type: "set-brush", brush: "cross" },

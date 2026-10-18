@@ -12,7 +12,6 @@ import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
 import { useBinaryBoard } from "../play/use-binary-board";
 import type { MistakeState } from "../play/mistakes";
-import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
 import {
@@ -24,7 +23,12 @@ import {
 } from "./board-grid";
 import { cellStateOf } from "./engine";
 import styles from "./nonogram-board.module.css";
-import type { NonogramCellValue, NonogramMark } from "./state";
+import {
+  nonogramFormed,
+  type NonogramCellValue,
+  type NonogramMark,
+} from "./state";
+import { usePictureWrongCells } from "./use-picture-wrong-cells";
 
 export { SIZE_CLASS, columnRailId, rowRailId, ruleClasses } from "./board-grid";
 
@@ -68,7 +72,13 @@ export const Board = memo(function Board({
   readonly onPaintOver: (index: number) => void;
 }) {
   const copy = messages.games.nonogram.play;
-  const wrong = useWrongCells("nonogram", solution, null, entries, mistakes);
+  const wrong = usePictureWrongCells(
+    clues,
+    solution,
+    entries,
+    mistakes,
+    nonogramFormed,
+  );
   const { strikePlacedRuns: strike, straightDrag } =
     useSettings().games.nonogram;
   const placed = useMemo(

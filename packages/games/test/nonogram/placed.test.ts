@@ -2,7 +2,11 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { runLengths } from "../../src/nonogram/clues";
-import { placedClues, type NonogramCellState } from "../../src/nonogram/index";
+import {
+  formsClue,
+  placedClues,
+  type NonogramCellState,
+} from "../../src/nonogram/index";
 import { placedRuns } from "../../src/nonogram/placed";
 import { FC_SEED } from "../daily-arbitraries";
 import { board, cluesOf, consistent } from "./fixtures";
@@ -243,6 +247,52 @@ describe("placedRuns", () => {
     { runs: [], line: "??x", placed: [] },
   ])("strikes $placed for $runs on $line", ({ runs, line, placed }) => {
     expect(placedRuns(board([line]), runs)).toEqual(placed);
+  });
+});
+
+describe("formsClue", () => {
+  it.each([
+    { runs: [3], line: "?###?", forms: true },
+    { runs: [3], line: "x###x", forms: true },
+    { runs: [1, 2], line: "#?##?", forms: true },
+    { runs: [1, 2], line: "##?#?", forms: false },
+    { runs: [3], line: "?##??", forms: false },
+    { runs: [3], line: "####?", forms: false },
+    { runs: [], line: "x??x?", forms: true },
+    { runs: [], line: "?#???", forms: false },
+  ])("is $forms for $runs on $line", ({ runs, line, forms }) => {
+    expect(formsClue(board([line]), runs)).toBe(forms);
+  });
+
+  it("only ever holds for a subset of a line's fills when the subset is all of them", () => {
+    fc.assert(
+      fc.property(
+        lineArb.chain((line) =>
+          fc.tuple(
+            fc.constant(line),
+            fc.array(fc.constantFrom("kept", "unknown", "empty"), {
+              minLength: line.length,
+              maxLength: line.length,
+            }),
+          ),
+        ),
+        ([line, fate]) => {
+          const states = line.map((filled, k): NonogramCellState => {
+            const kept = fate[k] ?? "unknown";
+            if (kept !== "kept") {
+              return kept;
+            }
+            return filled ? "filled" : "empty";
+          });
+          if (formsClue(states, runLengths(line))) {
+            expect(states.filter((state) => state === "filled")).toHaveLength(
+              line.filter(Boolean).length,
+            );
+          }
+        },
+      ),
+      RUNS,
+    );
   });
 });
 

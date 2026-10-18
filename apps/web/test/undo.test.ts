@@ -25,7 +25,7 @@ import {
 } from "../src/crossword/state";
 import {
   initNonogramPlayState,
-  nonogramPlayReducer,
+  nonogramReducers,
   type NonogramPlayAction,
   type NonogramPlayState,
 } from "../src/nonogram/state";
@@ -60,7 +60,7 @@ function runWith<S, A>(
 const sudoku = runWith<SudokuPlayState, SudokuPlayAction>(sudokuPlayReducer);
 const binairo = runWith<PlayState, PlayAction>(playReducer);
 const nonogram = runWith<NonogramPlayState, NonogramPlayAction>(
-  nonogramPlayReducer,
+  nonogramReducers.off,
 );
 const queens = runWith<QueensPlayState, QueensPlayAction>(queensPlayReducer);
 const crossing = runWith<QueensPlayState, QueensPlayAction>(
