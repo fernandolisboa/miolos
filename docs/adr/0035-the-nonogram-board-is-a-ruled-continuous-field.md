@@ -5,6 +5,7 @@
 **Amended by:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) — decision 7 only: the exemption stands; the mobile brush control is 48px tall, not 60px.
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 7: a Cores palette segment is 36px wide and 48px tall at every width, below 44px in width only, so ✕ and five tones fit the 280px board floor.
 **Depends on:** [ADR-0002](./0002-plain-react-web-ui-not-universal-rn-web.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md), [ADR-0036](./0036-aligning-numerals-use-instrument-sans-not-fraunces.md)
+**Amended by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) (#400) — decision 7: from 360px to 389px the Desfazer and Refazer buttons are 40px wide and 44px tall, so the reset row fits beside the hint.
 
 ## Context
 

@@ -2,9 +2,9 @@
 
 **Status:** Accepted — 2026-10-16 (issue #369)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (a counted cell shows the wrong mark without *Mostrar erros*, and its index is kept in the local play record, never sent; the setting sits in the general group, hidden where no game counts); [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) (the count stays outside `undoable`'s snapshot, and a frozen board has no undo); [ADR-0096](./0096-recomecar-clears-the-board-and-never-refunds-the-hint-or-the-clock.md) (Recomeçar clears the counted cells and is offered while any exist); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (one more data readout, `mistakesLeft`, and no new stateful child).
-**Amended by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) — redo counts nothing and refunds nothing.
 **Supersedes in part:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md) decision 5 and [ADR-0032](./0032-a-nonogram-is-finished-when-the-picture-is-painted.md) decision 5's clause *"forbidden under any framing that arrives at it"*, for the counted cells of the opt-in limit only.
 **Depends on:** [ADR-0008](./0008-completion-and-streak-semantics-across-play-modes.md)
+**Amended by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) (#400) — redo counts nothing and refunds nothing.
 
 ## Context
 

@@ -248,6 +248,7 @@ describe("with only the limit on, a wrong mark sits on counted cells still wrong
       ...wrongWith({
         cells: [0, 4],
         held: { index: 4, before: null },
+        parked: null,
         stroke: false,
       }),
     ]).toEqual([0]);

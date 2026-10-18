@@ -390,6 +390,45 @@ describe("redo neither counts a mistake nor refunds one, and a frozen board has 
     expect(sudoku(redone, UNDO).mistakes.cells).toEqual([S0]);
   });
 
+  it("re-arms a held write on redo, so undo then redo never makes it free", () => {
+    const held = sudoku(sudokuBoard(), ...write(S0, wrongDigit(S0), true));
+    expect(held.mistakes.held).toEqual({ index: S0, before: null });
+
+    const redone = sudoku(held, UNDO, { type: "select", index: S3 }, REDO);
+    expect(redone.entries[S0]).toBe(wrongDigit(S0));
+    expect(redone.mistakes.held).toEqual({ index: S0, before: null });
+    expect(
+      sudoku(redone, ...write(S1, rightDigit(S1) as SudokuDigit)).mistakes
+        .cells,
+    ).toEqual([S0]);
+
+    const moved = sudoku(
+      held,
+      UNDO,
+      ...write(S1, rightDigit(S1) as SudokuDigit),
+    );
+    expect(moved.mistakes).toMatchObject({
+      cells: [],
+      held: null,
+      parked: null,
+    });
+  });
+
+  it("clears redo on a Recomeçar that only reset the count", () => {
+    const undone = sudoku(
+      sudokuBoard(),
+      ...write(S1, rightDigit(S1) as SudokuDigit),
+      ...write(S0, wrongDigit(S0)),
+      UNDO,
+      UNDO,
+    );
+    expect(undone.mistakes.cells).toEqual([S0]);
+    const reset = sudoku(undone, RESET);
+    expect(reset.mistakes.cells).toEqual([]);
+    expect(reset.history.redo).toHaveLength(0);
+    expect(sudoku(reset, REDO, REDO).entries[S0]).toBeNull();
+  });
+
   it("drops redo on a frozen board", () => {
     const board = sudoku(
       sudokuBoard(),

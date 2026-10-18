@@ -549,8 +549,6 @@
   }
 }
 
-/* Under 360px the undo pair, Recomeçar and Ajustes fill the row, so the hint
-   takes its own row below them, as it does beside a desktop board. */
 @media (max-width: 359px) {
   .page {
     grid-template-rows: auto auto 1fr auto auto;

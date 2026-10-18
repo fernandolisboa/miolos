@@ -107,7 +107,8 @@
   transform: translate(-50%, 0);
 }
 
-@media (max-width: 1023px) {
+/* see ADR-0142 */
+@media (max-width: 389px) {
   .pair {
     margin-left: -3px;
   }

@@ -93,7 +93,7 @@ export function undoable<
     if (
       action.type === "restore" ||
       next.hint.used !== state.hint.used ||
-      (action.type === "reset" && next !== state)
+      (action.type === "reset" && (next !== state || hasHistory(state)))
     ) {
       return { ...next, history: NO_HISTORY };
     }
@@ -128,6 +128,10 @@ export function undoable<
       },
     };
   };
+}
+
+function hasHistory(state: Undoable<unknown>): boolean {
+  return state.history.steps.length > 0 || state.history.redo.length > 0;
 }
 
 function continued<S extends Undoable<T>, T>(
