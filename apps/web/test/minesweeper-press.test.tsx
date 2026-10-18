@@ -436,6 +436,31 @@ describe("the press names the cell a release would act on, and whether it chords
     expect(held(board)).toBe("4+");
   });
 
+  it("holds a Shift+left press as a chord, and its release chords, as Windows does for one-button mice", () => {
+    const { spies, board } = mount();
+
+    fireEvent.pointerDown(board, {
+      ...MOUSE,
+      clientX: 4,
+      button: 0,
+      buttons: 1,
+      shiftKey: true,
+    });
+    expect(held(board)).toBe("4+");
+    fireEvent.pointerUp(board, { ...MOUSE, clientX: 4, button: 0, buttons: 0 });
+
+    expect(spies.chord.mock.calls).toStrictEqual([[4]]);
+    expect(spies.activate).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(board, {
+      ...TOUCH,
+      clientX: 5,
+      button: 0,
+      shiftKey: true,
+    });
+    expect(held(board)).toBe("5");
+  });
+
   it("lets go when a long press turns into a flag", () => {
     const { board } = mount();
 

@@ -410,12 +410,12 @@ describe("a press sinks its own closed cell, and a chord its closed 3×3, as Win
     const at = game.open.findIndex(
       (open, i) => open && chordBlock(game, i).length > 1,
     );
-    const [flag, closed] = chordBlock(game, at);
-    if (at < 0 || flag === undefined || closed === undefined) {
+    if (at < 0) {
       throw new Error(
         "the fixture has no open number with two closed neighbours",
       );
     }
+    const [flag, closed] = chordBlock(game, at) as [number, number];
     return {
       game: cycleMinesweeperMark(game, flag, false),
       at,
@@ -500,6 +500,26 @@ describe("a press sinks its own closed cell, and a chord its closed 3×3, as Win
     expect(pressedCells()).toStrictEqual([]);
   });
 
+  it("sinks the block under a held tap on a number, whose release chords, and nothing a Bandeira release would flag", () => {
+    const { game, at, closed } = chordable();
+    const touch = { pointerId: 1, pointerType: "touch", button: 0 } as const;
+
+    const open = mountField(game);
+    const board = open.container.firstElementChild as HTMLElement;
+    fireEvent.pointerDown(board, { ...touch, clientX: at });
+    expect(pressedCells()).toStrictEqual([...chordBlock(game, at)]);
+    fireEvent.pointerUp(board, { ...touch, clientX: at });
+    open.unmount();
+
+    const flagging = mountField(game, "flag");
+    const flagBoard = flagging.container.firstElementChild as HTMLElement;
+    fireEvent.pointerDown(flagBoard, { ...touch, clientX: closed });
+    expect(pressedCells()).toStrictEqual([]);
+    fireEvent.pointerUp(flagBoard, { ...touch, clientX: closed });
+    pressAt(flagBoard, closed);
+    expect(pressedCells()).toStrictEqual([]);
+  });
+
   it("draws a pressed cell as an open one", () => {
     const css = stylesheet("src/minesweeper/minefield.module.css");
     expect(bodyOf(css, ".open,\n.pressed")).toContain("var(--cell-open)");
@@ -512,6 +532,9 @@ describe("a mouse left click on an open number does nothing; a tap or a key stil
     const number = game.open.findIndex(
       (isOpen, i) => isOpen && (game.field?.counts[i] ?? 0) > 0,
     );
+    if (number < 0) {
+      throw new Error("the fixture has no open number");
+    }
     return { game, number };
   }
 

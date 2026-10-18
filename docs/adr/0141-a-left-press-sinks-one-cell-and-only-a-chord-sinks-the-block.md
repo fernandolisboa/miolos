@@ -10,13 +10,13 @@ After ADR-0140, Fernando reported that a plain left press sank all the neighbour
 
 ## Decision
 
-1. **A held press sinks only its own cell** when that cell is closed and unflagged. A held chord (both buttons, or the middle) sinks `chordBlock`: the closed, unflagged cells of the 3×3 around the pointer, the centre included, whether or not the centre is open.
+1. **A held press sinks only its own cell** when that cell is closed and unflagged, and nothing under *Bandeira*, whose release flags. A held chord sinks `chordBlock`: the closed, unflagged cells of the 3×3 around the pointer, the centre included, whether or not the centre is open. A chord is both buttons, the middle button, or a left press begun with Shift, Windows' chord for a trackpad or a one-button mouse; a tap on an open number also draws the block, since its release chords.
 2. **A mouse left click on an open cell does nothing.** `useCellPress` passes the press kind to `onActivate`, and the minefield drops `left` on an open cell. A tap, a pen tap and the keyboard still chord an open number: they have no second button.
 3. `chordBlock` replaces `chordTargets` in `@miolos/games/minesweeper`. `chordMinesweeper` opens the block of an open cell, which is the same set as before.
 
 ## Consequences
 
-- Pinned by `T-WEB-S941` (the held press says whether it chords), `S943` (what is sunk), `S944` (a left click on a number does nothing; a tap or a key still chords) and the `chordBlock` properties in `packages/games/test/minesweeper/play.test.ts`.
+- Pinned by `T-WEB-S941` (the held press says whether it chords; Shift+left chords), `S943` (what is sunk), `S944` (a left click on a number does nothing; a tap or a key still chords) and the `chordBlock` properties in `packages/games/test/minesweeper/play.test.ts`.
 
 ## Rejected
 

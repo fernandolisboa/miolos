@@ -136,8 +136,13 @@ export const Minefield = memo(function Minefield({
       return new Set<number>();
     }
     const block = chordBlock(game, held.index);
-    return new Set(held.chord ? block : block.filter((n) => n === held.index));
-  }, [game, held]);
+    if (held.chord || (held.kind === "tap" && game.open[held.index])) {
+      return new Set(block);
+    }
+    return new Set(
+      tapMode === "flag" ? [] : block.filter((n) => n === held.index),
+    );
+  }, [game, held, tapMode]);
 
   const onCellClick = useCallback(
     (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {

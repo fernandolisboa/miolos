@@ -10,7 +10,7 @@ import { pressOf, type Press } from "./brush";
 import { capturePointer, cellIndexAt } from "./cell-index-at";
 import { useContextMenuNet } from "./use-context-menu-net";
 
-type PressKind = Press | "middle";
+export type PressKind = Press | "middle";
 
 const LONG_PRESS_MS = 350;
 const TAP_SLOP_PX = 10;
@@ -28,6 +28,7 @@ interface ActivePress {
   readonly kind: PressKind;
   readonly x: number;
   readonly y: number;
+  readonly shift: boolean;
   both: boolean;
   spent: boolean;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -50,6 +51,7 @@ interface CellPressHandlers {
 
 export interface HeldPress {
   readonly index: number;
+  readonly kind: PressKind;
   readonly chord: boolean;
 }
 
@@ -65,7 +67,7 @@ function bothHeld(event: { readonly buttons: number }): boolean {
 }
 
 function chords(press: ActivePress): boolean {
-  return press.both || press.kind === "middle";
+  return press.both || press.shift || press.kind === "middle";
 }
 
 export function useCellPress(input: CellPressInput): CellPress {
@@ -104,9 +106,11 @@ export function useCellPress(input: CellPressInput): CellPress {
     setHeld((current) =>
       index === null
         ? null
-        : current?.index === index && current.chord === chord
+        : current?.index === index &&
+            current.kind === press.kind &&
+            current.chord === chord
           ? current
-          : { index, chord },
+          : { index, kind: press.kind, chord },
     );
   };
 
@@ -132,6 +136,7 @@ export function useCellPress(input: CellPressInput): CellPress {
       kind,
       x: event.clientX,
       y: event.clientY,
+      shift: kind === "left" && event.shiftKey,
       both: bothHeld(event),
       spent: false,
       timer: undefined,
