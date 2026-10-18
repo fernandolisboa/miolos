@@ -1,4 +1,4 @@
-# ADR-0141 — A tap on a filled cell switches the locked digit
+# ADR-0144 — A tap on a filled cell switches the locked digit
 
 **Status:** Accepted — 2026-10-18 (issue #397)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 4 and [ADR-0139](./0139-numero-fixo-works-in-rascunho-and-notes-share-the-highlight.md) decision 1.

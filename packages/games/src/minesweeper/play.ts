@@ -107,16 +107,16 @@ export function openMinesweeperCell(
   return openCells(state, field, [index]);
 }
 
-export function chordTargets(
+export function chordBlock(
   state: MinesweeperState,
   index: number,
 ): readonly number[] {
   assertCell(state.open.length, index);
-  const field = state.field;
-  if (field === null || isOver(state) || !state.open[index]) {
+  if (isOver(state)) {
     return [];
   }
-  return neighbours(field.rows, field.columns, index).filter(
+  const { rows, columns } = state.size;
+  return [index, ...neighbours(rows, columns, index)].filter(
     (n) => !state.open[n] && state.marks[n] !== "flag",
   );
 }
@@ -125,9 +125,9 @@ export function chordMinesweeper(
   state: MinesweeperState,
   index: number,
 ): MinesweeperState {
-  const targets = chordTargets(state, index);
+  const targets = chordBlock(state, index);
   const field = state.field;
-  if (field === null || targets.length === 0) {
+  if (field === null || !state.open[index] || targets.length === 0) {
     return state;
   }
   const flags = neighbours(field.rows, field.columns, index).filter(

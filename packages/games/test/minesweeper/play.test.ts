@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   MINESWEEPER_LEVELS,
+  chordBlock,
   chordMinesweeper,
-  chordTargets,
   cycleMinesweeperMark,
   layMines,
   newMinesweeperGame,
@@ -413,7 +413,7 @@ describe("chordMinesweeper", () => {
   });
 });
 
-describe("chordTargets", () => {
+describe("chordBlock", () => {
   it("names the hidden, unflagged neighbours of an open cell, the cells a matched chord opens", () => {
     fc.assert(
       fc.property(firstRevealArb, fc.nat(), ({ level, seed, start }, pick) => {
@@ -432,7 +432,7 @@ describe("chordTargets", () => {
         for (const n of around.filter((n) => field.mines[n])) {
           state = cycleMinesweeperMark(state, n, false);
         }
-        const targets = chordTargets(state, cell);
+        const targets = chordBlock(state, cell);
 
         expect([...targets].sort((a, b) => a - b)).toEqual(
           around
@@ -448,17 +448,35 @@ describe("chordTargets", () => {
     );
   });
 
-  it("names nothing on a hidden cell, before the first open, or after the end", () => {
-    const hidden = beginnerPlaying([0, 2, 80]);
-    expect(chordTargets(hidden, 1)).toEqual([]);
+  it("names a hidden cell itself with its hidden, unflagged neighbours, before the first open too", () => {
+    let hidden = beginnerPlaying([0, 2, 80]);
+    hidden = cycleMinesweeperMark(hidden, 2, false);
+    hidden = cycleMinesweeperMark(hidden, 10, true);
+    hidden = cycleMinesweeperMark(hidden, 10, true);
+    expect(hidden.marks[10]).toBe("question");
+    expect([...chordBlock(hidden, 1)].sort((a, b) => a - b)).toEqual([
+      0, 1, 9, 10, 11,
+    ]);
 
     const ready = newMinesweeperGame(MINESWEEPER_LEVELS.beginner, 1);
-    expect(chordTargets(ready, 0)).toEqual([]);
+    expect([...chordBlock(ready, 0)].sort((a, b) => a - b)).toEqual([
+      0, 1, 9, 10,
+    ]);
+    expect(chordMinesweeper(ready, 0)).toBe(ready);
+  });
 
+  it("names nothing after the end", () => {
     let lost = openMinesweeperCell(beginnerPlaying([0, 2, 80]), 10);
     lost = openMinesweeperCell(lost, 80);
     expect(lost.status).toBe("lost");
-    expect(chordTargets(lost, 10)).toEqual([]);
+    expect(chordBlock(lost, 10)).toEqual([]);
+    expect(chordBlock(lost, 79)).toEqual([]);
+  });
+
+  it("never chords a hidden cell, whatever its flags", () => {
+    let state = beginnerPlaying([0, 80]);
+    state = cycleMinesweeperMark(state, 0, false);
+    expect(chordMinesweeper(state, 1)).toBe(state);
   });
 });
 
