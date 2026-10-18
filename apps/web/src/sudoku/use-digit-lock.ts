@@ -145,13 +145,12 @@ export function useDigitLock(
           return;
         }
       }
-      const switches = switchedLock(current, index) !== null;
       lastCellTap.current = {
         index,
         at: now,
         shown: paired ? null : shownAt(current, index),
         undo: undoAt(current, index),
-        settled: switches,
+        settled: switchedLock(current, index) !== null,
       };
       dispatch({ type: "tap-cell", index, cleanNotes });
     },

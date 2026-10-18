@@ -17,7 +17,6 @@ With *Número fixo* on, a tap on a cell showing another digit overwrote an entry
 ## Consequences
 
 - A wrong entry can no longer be replaced in one tap. The player taps it (switch), taps it again slowly (clear), then locks the right digit again, or uses Apagar.
-- `/sudoku` grew to 51.0 KB on CI; its budget rose 51 → 52 KB under Fernando's standing approval of page-budget raises.
 
 ## Rejected
 
