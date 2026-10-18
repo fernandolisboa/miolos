@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-10-18 (issue #400)
 **Supersedes in part:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) decision 7's "No redo" ("no Termo" stands).
-**Amends:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) decisions 4 and 6 (every Recomeçar clears the history; the control is a pair); [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) decision 2 (redo counts like undo: nothing); [ADR-0123](./0123-on-a-phone-the-rules-sit-behind-an-i-and-the-hint-shares-the-reset-row.md) decision 2 (under 360px the hint takes its own row); [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 7 (two chrome controls narrower than 44px under 390px); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (`PlayChromeReadouts` carries `onRedo`); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/sudoku` 52 KB, `/nonogram` 51 KB).
+**Amends:** [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md) decisions 4 and 6 (every Recomeçar clears the history; the control is a pair); [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) decision 2 (redo counts like undo: nothing); [ADR-0123](./0123-on-a-phone-the-rules-sit-behind-an-i-and-the-hint-shares-the-reset-row.md) decision 2 (under 360px the hint takes its own row); [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 7 (two chrome controls narrower than 44px under 390px); [ADR-0077](./0077-the-play-screen-chrome-is-one-component.md) (`PlayChromeReadouts` carries `onRedo`); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (`/sudoku` 53 KB, `/nonogram` 51 KB).
 
 ## Context
 
@@ -20,7 +20,7 @@ Fernando asked for a redo button in every game that has undo, enabled only when 
 ## Consequences
 
 - `UndoAction` covers both directions, so every reducer and dispatch typed with it takes redo unchanged.
-- `/sudoku` rose to a 52 KB budget (51.8 measured) and `/nonogram` to 51 KB (50.1), under Fernando's standing approval of budget raises (2026-10-16).
+- `/sudoku` rose to a 53 KB budget (52.0 measured with #397's Número fixo switch) and `/nonogram` to 51 KB (50.2), under Fernando's standing approval of budget raises (2026-10-16).
 - Pinned by `T-WEB-S960…S965`.
 
 ## Rejected
