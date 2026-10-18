@@ -13,8 +13,8 @@ export {
 } from "./types";
 export { layMines, minesweeperField } from "./field";
 export {
+  chordBlock,
   chordMinesweeper,
-  chordTargets,
   cycleMinesweeperMark,
   newMinesweeperGame,
   openMinesweeperCell,

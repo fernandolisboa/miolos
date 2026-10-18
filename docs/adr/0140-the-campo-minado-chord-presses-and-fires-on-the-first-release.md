@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-17
 **Amends:** [ADR-0136](./0136-campo-minado-free-play-screen.md) decision 4 (both buttons chord when the first of them comes up, not when the last does; a held chord is drawn).
+**Superseded in part by:** [ADR-0141](./0141-a-left-press-sinks-one-cell-and-only-a-chord-sinks-the-block.md) — decision 2 and the left click on an open number in decision 1: a left press sinks one cell, a mouse left click on a number does nothing.
 
 ## Context
 
