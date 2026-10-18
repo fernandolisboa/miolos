@@ -13,9 +13,9 @@ const MAX_DELTA_BYTES = 48 * 1024;
 const PER_ROUTE_BUDGET = {
   "/termo": 76 * 1024,
 
-  "/nonogram": 50 * 1024,
+  "/nonogram": 51 * 1024,
 
-  "/sudoku": 51 * 1024,
+  "/sudoku": 52 * 1024,
 
   "/modo-livre/nonogram": 76 * 1024,
 

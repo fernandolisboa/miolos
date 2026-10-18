@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S944`    | `S943`         | `T-WEB-23`            |
+| `T-WEB`  | `S966`    | `S965`         | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+Redo (ADR-0142) spent **`T-WEB-S960…S965`**: `S960` in `undo.test.ts` (redo replays undone steps, a new step drops them, a dropped gesture gives them back, checkpoints clear them), `S961` in `mistakes.test.ts` (redo counts and refunds nothing; a frozen board has none), `S962…S965` in `undo-control.test.tsx` (`onRedo`, the Refazer tile, the shortcuts, every grid game). `S944…S949` stay reserved for the Campo Minado chord thread and `S950…S959` for the Sudoku quick-select thread; re-check them before allocating there. Next free is `S966`.
 
 The Campo Minado chord fix (ADR-0140) spent **`T-WEB-S940…S943`**: `S940`, `S941` and `S942` in `minesweeper-press.test.tsx` (both buttons chord on the first release in every order; the held cell `heldAt`; the window `contextmenu` net that outlives the board), `S943` in `minesweeper-field.test.tsx` (a held chord draws its `chordTargets` pressed). `T-WEB-S503`'s unmount case in `pointer-stroke.test.tsx` was re-aimed in place: the net now waits for the release. Next free is `S944`.
 

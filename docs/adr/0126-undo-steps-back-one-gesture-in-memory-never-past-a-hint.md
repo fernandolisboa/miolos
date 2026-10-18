@@ -5,6 +5,7 @@
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — decision 2: Sudoku's step fields are `entries` and `notes`; `undoable` takes the list.
 **Depends on:** [ADR-0106](./0106-the-termo-current-row-is-editable.md), [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md)
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — the mistake count is kept outside `undoable`'s snapshot so undo never refunds it, and a frozen board has no undo.
+**Amended by:** [ADR-0142](./0142-redo-replays-undone-steps-until-a-new-move.md) — there is redo, and the control is a Desfazer/Refazer pair.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — Campo Minado has no undo and takes no Ctrl/⌘+Z.
 
 ## Context

@@ -51,6 +51,7 @@ type MistakeAction = {
 const RESTORE = "restore" satisfies LifecycleAction["type"];
 const RESET = "reset" satisfies ResetAction["type"];
 const UNDO = "undo" satisfies UndoAction["type"];
+const REDO = "redo" satisfies UndoAction["type"];
 const PAINT_OVER = "paint-over" satisfies StrokeAction["type"];
 const STROKE_START = "stroke-start" satisfies StrokeAction["type"];
 
@@ -94,7 +95,7 @@ export function withMistakes<S extends Editable, A extends MistakeAction>(
     if (isFrozen(state.mistakes, true)) {
       return changesBoard(state, next) ? state : next;
     }
-    if (action.type === UNDO) {
+    if (action.type === UNDO || action.type === REDO) {
       return marked(next, settled(state.mistakes, next));
     }
     return counted(state, next, action, rules);

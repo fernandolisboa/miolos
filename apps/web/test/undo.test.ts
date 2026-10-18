@@ -48,6 +48,7 @@ import {
 
 const DATE = "2026-10-15";
 const UNDO: UndoAction = { type: "undo" };
+const REDO: UndoAction = { type: "redo" };
 const RESTORE = { type: "restore", record: undefined, now: 0 } as const;
 
 function runWith<S, A>(
@@ -438,5 +439,93 @@ describe("Cruzadinha undo restores the selection (T-WEB-S825)", () => {
     const undone = crossword(erased, UNDO);
     expect(undone.entries[1]).toBe("a");
     expect(undone.selected).toBe(2);
+  });
+});
+
+describe("redo replays what undo took back, until a new move (T-WEB-S960)", () => {
+  it("steps forward one undone step at a time and then has nothing left", () => {
+    const written = sudoku(blankSudoku(), ...write(0, 3), ...write(1, 5));
+    const undone = sudoku(written, UNDO, UNDO);
+    expect(undone.history.redo).toHaveLength(2);
+
+    const once = sudoku(undone, REDO);
+    expect(once.entries.slice(0, 2)).toEqual([3, null]);
+    expect(once.selected).toBe(1);
+    const twice = sudoku(once, REDO);
+    expect(twice.entries).toEqual(written.entries);
+    expect(twice.violating).toBe(written.violating);
+    expect(twice.history.steps).toHaveLength(2);
+    expect(twice.history.redo).toHaveLength(0);
+    expect(sudoku(twice, REDO)).toBe(twice);
+    expect(sudoku(twice, UNDO).entries.slice(0, 2)).toEqual([3, null]);
+  });
+
+  it("drops what is left to redo on a new move, never on a selection or a tool", () => {
+    const undone = sudoku(blankSudoku(), ...write(0, 3), ...write(1, 5), UNDO);
+    const looked = sudoku(
+      undone,
+      { type: "select", index: 40 },
+      { type: "tick", now: 1000 },
+      { type: "lock-digit", digit: 7, undo: null },
+    );
+    expect(looked.history).toBe(undone.history);
+    expect(sudoku(looked, REDO).entries[1]).toBe(5);
+
+    const moved = sudoku(looked, ...write(2, 8));
+    expect(moved.history.redo).toHaveLength(0);
+    expect(sudoku(moved, REDO)).toBe(moved);
+  });
+
+  it("keeps it across a Número fixo double tap that put the cell back", () => {
+    const undone = sudoku(blankSudoku(), ...write(0, 3), UNDO);
+    const tapped = sudoku(undone, ...write(1, 5));
+    const locked = sudoku(tapped, {
+      type: "lock-digit",
+      digit: 5,
+      undo: { index: 1, value: null, notes: undone.notes },
+    });
+    expect(locked.locked).toBe(5);
+    expect(locked.history.redo).toEqual(undone.history.redo);
+    expect(sudoku(locked, REDO).entries.slice(0, 2)).toEqual([3, null]);
+  });
+
+  it("clears on restore, on Recomeçar and on a hint", () => {
+    const undone = sudoku(blankSudoku(), ...write(0, 3), ...write(1, 5), UNDO);
+    expect(sudoku(undone, RESTORE).history.redo).toHaveLength(0);
+    expect(sudoku(undone, { type: "reset" }).history.redo).toHaveLength(0);
+
+    const solution = solutionDigits(SUDOKU.givens);
+    if (solution === null) {
+      throw new Error("a daily sudoku is uniquely solvable");
+    }
+    const open = SUDOKU.givens.indexOf(0);
+    const hinted = sudoku(
+      sudokuBoard(SUDOKU.givens),
+      ...write(open, solution[open] === 1 ? 2 : 1),
+      UNDO,
+      { type: "use-hint", solution, cleanNotes: true },
+    );
+    expect(hinted.hint.used).toBe(1);
+    expect(sudoku(hinted, REDO)).toBe(hinted);
+  });
+
+  it("redoes a whole drag as one step and keeps the tools", () => {
+    const dragged = nonogram(nonogramBoard(), stroke(0), over(1), over(2));
+    const undone = nonogram(dragged, UNDO, {
+      type: "set-brush",
+      brush: "cross",
+    });
+    const redone = nonogram(undone, REDO);
+    expect(redone.entries.slice(0, 3)).toEqual([1, 1, 1]);
+    expect(redone.brush).toBe("cross");
+    expect(redone.history.steps).toHaveLength(1);
+  });
+
+  it("brings back Rainhas' automatic crosses", () => {
+    const board = crossing(initQueensPlayState(QUEENS_DAILY), RESTORE);
+    const placed = crossing(board, ...queen(0));
+    const redone = crossing(placed, UNDO, REDO);
+    expect(redone.entries).toEqual(placed.entries);
+    expect(redone.autoCrossed).toBe(placed.autoCrossed);
   });
 });

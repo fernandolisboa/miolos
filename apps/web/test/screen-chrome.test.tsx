@@ -116,7 +116,7 @@ const BINAIRO_PLAY = {
   paintOver: noop,
   toggleMode: noop,
   revealHint: noop,
-  edits: { onReset: null, onUndo: null, mistakesLeft: null },
+  edits: { onReset: null, onUndo: null, onRedo: null, mistakesLeft: null },
 };
 
 const SUDOKU_PLAY = {
@@ -139,7 +139,7 @@ const SUDOKU_PLAY = {
     tapCell: noop,
   },
   revealHint: noop,
-  edits: { onReset: null, onUndo: null, mistakesLeft: null },
+  edits: { onReset: null, onUndo: null, onRedo: null, mistakesLeft: null },
 };
 
 const NONOGRAM_PLAY = {
@@ -157,7 +157,7 @@ const NONOGRAM_PLAY = {
   clearCell: noop,
   paintOver: noop,
   revealHint: noop,
-  edits: { onReset: null, onUndo: null, mistakesLeft: null },
+  edits: { onReset: null, onUndo: null, onRedo: null, mistakesLeft: null },
 };
 
 function pageIn(root: ParentNode): Element {
@@ -396,8 +396,8 @@ function resetSlotOf(page: Element): unknown {
       };
 }
 
-const RESET_BUTTON = { buttons: 4, hidden: null, disabled: "false" };
-const RESET_IDLE = { buttons: 4, hidden: null, disabled: "true" };
+const RESET_BUTTON = { buttons: 5, hidden: null, disabled: "false" };
+const RESET_IDLE = { buttons: 5, hidden: null, disabled: "true" };
 const RESET_PLACEHOLDER = { buttons: 0, hidden: "true", disabled: null };
 
 function shapeOf(page: Element): Record<string, unknown> {

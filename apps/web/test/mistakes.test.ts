@@ -70,6 +70,7 @@ import {
 const DATE = "2026-10-16";
 const SEED = 20_261_016;
 const UNDO: UndoAction = { type: "undo" };
+const REDO: UndoAction = { type: "redo" };
 const RESET = { type: "reset" } as const;
 const RESTORE = { type: "restore", record: undefined, now: 0 } as const;
 
@@ -377,6 +378,30 @@ describe("a gesture counts at most one mistake, and undo, restore, hints and not
     expect(noted.mistakes).toBe(NO_MISTAKES);
 
     expect(sudoku(wrong, RESTORE).mistakes).toBe(wrong.mistakes);
+  });
+});
+
+describe("redo neither counts a mistake nor refunds one, and a frozen board has none (T-WEB-S961)", () => {
+  it("puts a counted wrong digit back without counting it again", () => {
+    const wrong = sudoku(sudokuBoard(), ...write(S0, wrongDigit(S0)));
+    const redone = sudoku(wrong, UNDO, REDO);
+    expect(redone.entries[S0]).toBe(wrongDigit(S0));
+    expect(redone.mistakes.cells).toEqual([S0]);
+    expect(sudoku(redone, UNDO).mistakes.cells).toEqual([S0]);
+  });
+
+  it("drops redo on a frozen board", () => {
+    const board = sudoku(
+      sudokuBoard(),
+      ...write(S0, wrongDigit(S0)),
+      ...write(S1, wrongDigit(S1)),
+      ...write(S2, wrongDigit(S2)),
+    );
+    const withRedo = {
+      ...board,
+      history: { ...board.history, redo: board.history.steps.slice(-1) },
+    };
+    expect(sudoku(withRedo, REDO)).toBe(withRedo);
   });
 });
 

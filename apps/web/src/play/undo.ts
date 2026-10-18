@@ -8,14 +8,21 @@ import type { HintState, PlayCore } from "./types";
 
 const UNDO_LIMIT = 200;
 
-export type UndoAction = { readonly type: "undo" };
+export type UndoAction = { readonly type: "undo" | "redo" };
 
 export interface UndoHistory<T> {
   readonly steps: readonly T[];
+  readonly redo: readonly T[];
   readonly open: boolean;
+  readonly displaced: readonly T[];
 }
 
-export const NO_HISTORY: UndoHistory<never> = { steps: [], open: false };
+export const NO_HISTORY: UndoHistory<never> = {
+  steps: [],
+  redo: [],
+  open: false,
+  displaced: [],
+};
 
 export interface Undoable<T> extends PlayCore {
   readonly entries: readonly unknown[];
@@ -30,6 +37,7 @@ export type Editable = Undoable<unknown> & {
 export interface BoardEdits {
   readonly onReset: (() => void) | null;
   readonly onUndo: (() => void) | null;
+  readonly onRedo: (() => void) | null;
   readonly mistakesLeft: number | null;
 }
 
@@ -48,14 +56,17 @@ export function useBoardEdits(
     dispatch({ type: "undo" });
   }, [dispatch]);
 
+  const redo = useCallback(() => {
+    dispatch({ type: "redo" });
+  }, [dispatch]);
+
+  const movable =
+    state.status === "playing" && !isFrozen(state.mistakes, limit);
+
   return {
     onReset: resettable || (limit && spent > 0) ? reset : null,
-    onUndo:
-      state.status === "playing" &&
-      state.history.steps.length > 0 &&
-      !isFrozen(state.mistakes, limit)
-        ? undo
-        : null,
+    onUndo: movable && state.history.steps.length > 0 ? undo : null,
+    onRedo: movable && state.history.redo.length > 0 ? redo : null,
     mistakesLeft: limit ? Math.max(MISTAKE_LIMIT - spent, 0) : null,
   };
 }
@@ -73,7 +84,10 @@ export function undoable<
 ): (state: S, action: A | UndoAction) => S {
   return (state, action) => {
     if (action.type === "undo") {
-      return undone(state);
+      return undone(state, snapshot);
+    }
+    if (action.type === "redo") {
+      return redone(state, snapshot);
     }
     const next = reduce(state, action as A);
     if (
@@ -92,7 +106,7 @@ export function undoable<
         : next;
     }
     // An open step is one drag or digit lock still writing: later cells add to that
-    // step, and a gesture that ends where it began leaves none (ADR-0126).
+    // step, and a gesture that ends where it began leaves none (ADR-0126, ADR-0142).
     if (
       open &&
       (action.type === "paint-over" || action.type === "lock-digit")
@@ -108,7 +122,9 @@ export function undoable<
       ...next,
       history: {
         steps: [...steps, snapshot(state)].slice(-UNDO_LIMIT),
+        redo: [],
         open: true,
+        displaced: state.history.redo,
       },
     };
   };
@@ -121,21 +137,51 @@ function continued<S extends Undoable<T>, T>(
 ): S {
   const opening = steps.at(-1);
   return opening !== undefined && endsWhereItBegan(opening)
-    ? closed(next, steps.slice(0, -1))
+    ? closed(next, steps.slice(0, -1), next.history.displaced)
     : next;
 }
 
-function undone<S extends Undoable<T>, T extends Partial<S>>(state: S): S {
-  const { steps } = state.history;
+function undone<S extends Undoable<T>, T extends Partial<S>>(
+  state: S,
+  snapshot: (state: S) => T,
+): S {
+  const { steps, redo } = state.history;
   const step = steps.at(-1);
   if (state.status !== "playing" || step === undefined) {
     return state;
   }
-  return unlit(closed({ ...state, ...step }, steps.slice(0, -1)));
+  return unlit(
+    closed({ ...state, ...step }, steps.slice(0, -1), [
+      ...redo,
+      snapshot(state),
+    ]),
+  );
 }
 
-function closed<S extends Undoable<T>, T>(state: S, steps: readonly T[]): S {
-  return { ...state, history: { steps, open: false } };
+function redone<S extends Undoable<T>, T extends Partial<S>>(
+  state: S,
+  snapshot: (state: S) => T,
+): S {
+  const { steps, redo } = state.history;
+  const step = redo.at(-1);
+  if (state.status !== "playing" || step === undefined) {
+    return state;
+  }
+  return unlit(
+    closed(
+      { ...state, ...step },
+      [...steps, snapshot(state)].slice(-UNDO_LIMIT),
+      redo.slice(0, -1),
+    ),
+  );
+}
+
+function closed<S extends Undoable<T>, T>(
+  state: S,
+  steps: readonly T[],
+  redo: readonly T[] = state.history.redo,
+): S {
+  return { ...state, history: { steps, redo, open: false, displaced: [] } };
 }
 
 function sameFields(a: StepFields, b: StepFields): boolean {

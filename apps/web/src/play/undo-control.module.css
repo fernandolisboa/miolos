@@ -1,4 +1,11 @@
+.pair {
+  flex: none;
+  display: inline-flex;
+  margin-left: -5px;
+}
+
 .control {
+  --tilt: -3deg;
   position: relative;
   box-sizing: border-box;
   flex: none;
@@ -7,7 +14,6 @@
   justify-content: center;
   width: var(--touch-target-min);
   height: var(--touch-target-min);
-  margin-left: -5px;
   padding: 0;
   background: none;
   border: none;
@@ -26,7 +32,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 22%, transparent);
-  transform: rotate(-3deg);
+  transform: rotate(var(--tilt));
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -38,13 +44,17 @@
 }
 
 .control:hover svg {
-  transform: rotate(-3deg) translate(-1px, -1px);
+  transform: rotate(var(--tilt)) translate(-1px, -1px);
   box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 22%, transparent);
 }
 
 .control:active svg {
-  transform: rotate(-3deg) translate(2px, 2px);
+  transform: rotate(var(--tilt)) translate(2px, 2px);
   box-shadow: none;
+}
+
+.control + .control {
+  --tilt: 3deg;
 }
 
 .control:not(button) {
@@ -57,7 +67,7 @@
 }
 
 .control[aria-disabled="true"] svg {
-  transform: rotate(-3deg);
+  transform: rotate(var(--tilt));
   background: transparent;
   box-shadow: none;
 }
@@ -95,6 +105,16 @@
 .control[aria-disabled="false"]:hover::after {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+@media (max-width: 1023px) {
+  .pair {
+    margin-left: -3px;
+  }
+
+  .control {
+    width: 40px;
+  }
 }
 
 @media (hover: none) {

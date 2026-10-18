@@ -473,6 +473,7 @@
   .reset {
     grid-column: 1 / -1;
     align-self: center;
+    gap: 0;
     margin-top: var(--space-3);
     padding-bottom: 0;
   }
@@ -543,11 +544,21 @@
 }
 
 @media (max-width: 374px) {
-  .reset {
-    gap: 0;
-  }
-
   .hint {
     padding-inline: var(--space-3);
+  }
+}
+
+/* Under 360px the undo pair, Recomeçar and Ajustes fill the row, so the hint
+   takes its own row below them, as it does beside a desktop board. */
+@media (max-width: 359px) {
+  .page {
+    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-areas:
+      "bar   bar"
+      "title title"
+      "board board"
+      "reset reset"
+      "hint  hint";
   }
 }
