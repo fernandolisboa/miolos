@@ -10,7 +10,7 @@ import { pressOf, type Press } from "./brush";
 import { capturePointer, cellIndexAt } from "./cell-index-at";
 import { useContextMenuNet } from "./use-context-menu-net";
 
-type PressKind = Press | "middle";
+export type PressKind = Press | "middle";
 
 const LONG_PRESS_MS = 350;
 const TAP_SLOP_PX = 10;
@@ -28,13 +28,14 @@ interface ActivePress {
   readonly kind: PressKind;
   readonly x: number;
   readonly y: number;
+  readonly shift: boolean;
   both: boolean;
   spent: boolean;
   timer: ReturnType<typeof setTimeout> | undefined;
 }
 
 interface CellPressInput {
-  readonly onActivate: (index: number) => void;
+  readonly onActivate: (index: number, press: Press) => void;
   readonly onMark: (index: number) => void;
   readonly onChord: (index: number) => void;
 }
@@ -48,9 +49,15 @@ interface CellPressHandlers {
   readonly onContextMenu: (e: ReactMouseEvent<HTMLDivElement>) => void;
 }
 
+export interface HeldPress {
+  readonly index: number;
+  readonly kind: PressKind;
+  readonly chord: boolean;
+}
+
 export interface CellPress {
   readonly handlers: CellPressHandlers;
-  readonly heldAt: number | null;
+  readonly held: HeldPress | null;
 }
 
 const BOTH_BUTTONS = 3;
@@ -59,10 +66,14 @@ function bothHeld(event: { readonly buttons: number }): boolean {
   return (event.buttons & BOTH_BUTTONS) === BOTH_BUTTONS;
 }
 
+function chords(press: ActivePress): boolean {
+  return press.both || press.shift || press.kind === "middle";
+}
+
 export function useCellPress(input: CellPressInput): CellPress {
   const latest = useRef(input);
   const active = useRef<ActivePress | null>(null);
-  const [heldAt, setHeldAt] = useState<number | null>(null);
+  const [held, setHeld] = useState<HeldPress | null>(null);
   const armContextNet = useContextMenuNet();
 
   useEffect(() => {
@@ -78,13 +89,29 @@ export function useCellPress(input: CellPressInput): CellPress {
   const settle = () => {
     clearTimeout(active.current?.timer);
     active.current = null;
-    setHeldAt(null);
+    setHeld(null);
   };
 
   const spend = (press: ActivePress) => {
     clearTimeout(press.timer);
     press.spent = true;
-    setHeldAt(null);
+    setHeld(null);
+  };
+
+  const hold = (press: ActivePress, index: number | null) => {
+    if (press.kind === "right" && !press.both) {
+      return;
+    }
+    const chord = chords(press);
+    setHeld((current) =>
+      index === null
+        ? null
+        : current?.index === index &&
+            current.kind === press.kind &&
+            current.chord === chord
+          ? current
+          : { index, kind: press.kind, chord },
+    );
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -109,6 +136,7 @@ export function useCellPress(input: CellPressInput): CellPress {
       kind,
       x: event.clientX,
       y: event.clientY,
+      shift: kind === "left" && event.shiftKey,
       both: bothHeld(event),
       spent: false,
       timer: undefined,
@@ -117,9 +145,7 @@ export function useCellPress(input: CellPressInput): CellPress {
     if (kind === "right" || press.both) {
       armContextNet();
     }
-    if (kind !== "right" || press.both) {
-      setHeldAt(index);
-    }
+    hold(press, index);
     if (kind === "right") {
       latest.current.onMark(index);
     } else if (kind === "tap" && !press.both) {
@@ -156,9 +182,7 @@ export function useCellPress(input: CellPressInput): CellPress {
       }
       return;
     }
-    if (press.kind !== "right" || press.both) {
-      setHeldAt(index);
-    }
+    hold(press, index);
   };
 
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -171,10 +195,10 @@ export function useCellPress(input: CellPressInput): CellPress {
     if (index === null || press.spent) {
       return;
     }
-    if (press.both || press.kind === "middle") {
+    if (chords(press)) {
       latest.current.onChord(index);
-    } else if (press.kind !== "right") {
-      latest.current.onActivate(index);
+    } else if (press.kind !== "right" && press.kind !== "middle") {
+      latest.current.onActivate(index, press.kind);
     }
   };
 
@@ -195,6 +219,6 @@ export function useCellPress(input: CellPressInput): CellPress {
         event.preventDefault();
       },
     },
-    heldAt,
+    held,
   };
 }

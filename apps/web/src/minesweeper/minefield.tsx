@@ -1,4 +1,4 @@
-import { chordTargets, type MinesweeperState } from "@miolos/games/minesweeper";
+import { chordBlock, type MinesweeperState } from "@miolos/games/minesweeper";
 import {
   memo,
   useCallback,
@@ -117,7 +117,10 @@ export const Minefield = memo(function Minefield({
   const fieldRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(0);
   const press = useCellPress({
-    onActivate: (index) => {
+    onActivate: (index, kind) => {
+      if (game.open[index] && kind === "left") {
+        return;
+      }
       if (tapMode === "flag" && !game.open[index]) {
         onMark(index);
       } else {
@@ -127,11 +130,19 @@ export const Minefield = memo(function Minefield({
     onMark,
     onChord,
   });
-  const { heldAt } = press;
-  const pressed = useMemo(
-    () => new Set(heldAt === null ? [] : chordTargets(game, heldAt)),
-    [game, heldAt],
-  );
+  const { held } = press;
+  const pressed = useMemo(() => {
+    if (held === null) {
+      return new Set<number>();
+    }
+    const block = chordBlock(game, held.index);
+    if (held.chord || (held.kind === "tap" && game.open[held.index])) {
+      return new Set(block);
+    }
+    return new Set(
+      tapMode === "flag" ? [] : block.filter((n) => n === held.index),
+    );
+  }, [game, held, tapMode]);
 
   const onCellClick = useCallback(
     (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
