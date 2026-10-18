@@ -15,10 +15,15 @@ export interface HeldTap {
   readonly before: unknown;
 }
 
+export interface ParkedHold {
+  readonly hold: HeldTap;
+  readonly depth: number;
+}
+
 export interface MistakeState {
   readonly cells: readonly number[];
   readonly held: HeldTap | null;
-  readonly parked: HeldTap | null;
+  readonly parked: ParkedHold | null;
   readonly stroke: boolean;
 }
 
@@ -105,8 +110,8 @@ export function withMistakes<S extends Editable, A extends MistakeAction>(
   return (state, action) => unparked(step(state, action));
 }
 
-// Undo parks a hold it took back and its redo re-arms it, so Desfazer then
-// Refazer never makes a held write free (ADR-0142).
+// Undo parks a hold it took back at that redo entry's depth, and only the redo
+// of that entry re-arms it, so Desfazer then Refazer never frees a held write.
 function travelled(
   mistakes: MistakeState,
   next: Editable,
@@ -117,17 +122,26 @@ function travelled(
     return settled(mistakes, next);
   }
   if (direction === REDO) {
-    return parked !== null && !isBefore(next, parked)
-      ? { ...mistakes, held: parked, parked: null }
+    return parked !== null &&
+      next.history.redo.length === parked.depth - 1 &&
+      !isBefore(next, parked.hold)
+      ? { ...mistakes, held: parked.hold, parked: null }
       : mistakes;
   }
   return held !== null && isBefore(next, held)
-    ? { ...mistakes, held: null, parked: held }
+    ? {
+        ...mistakes,
+        held: null,
+        parked: { hold: held, depth: next.history.redo.length },
+      }
     : mistakes;
 }
 
 function unparked<S extends Editable>(state: S): S {
-  return state.mistakes.parked === null || state.history.redo.length > 0
+  const { redo, displaced } = state.history;
+  return state.mistakes.parked === null ||
+    redo.length >= state.mistakes.parked.depth ||
+    displaced.length >= state.mistakes.parked.depth
     ? state
     : marked(state, { ...state.mistakes, parked: null });
 }

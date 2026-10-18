@@ -397,15 +397,15 @@ describe("redo neither counts a mistake nor refunds one, and a frozen board has 
     const redone = sudoku(held, UNDO, { type: "select", index: S3 }, REDO);
     expect(redone.entries[S0]).toBe(wrongDigit(S0));
     expect(redone.mistakes.held).toEqual({ index: S0, before: null });
-    expect(
-      sudoku(redone, ...write(S1, rightDigit(S1) as SudokuDigit)).mistakes
-        .cells,
-    ).toEqual([S0]);
+    expect(sudoku(redone, ...write(S1, rightDigit(S1))).mistakes.cells).toEqual(
+      [S0],
+    );
 
     const moved = sudoku(
       held,
       UNDO,
-      ...write(S1, rightDigit(S1) as SudokuDigit),
+      ...write(S1, rightDigit(S1)),
+      ...write(S2, rightDigit(S2)),
     );
     expect(moved.mistakes).toMatchObject({
       cells: [],
@@ -414,10 +414,47 @@ describe("redo neither counts a mistake nor refunds one, and a frozen board has 
     });
   });
 
+  it("re-arms only on the redo of the held write, never an older one", () => {
+    const written = sudoku(
+      sudokuBoard(),
+      ...write(S0, wrongDigit(S0)),
+      { type: "clear-cell" },
+      ...write(S0, ((wrongDigit(S0) % 9) + 1) as SudokuDigit, true),
+    );
+    expect(written.mistakes.cells).toEqual([S0]);
+    const older = sudoku(written, UNDO, UNDO, UNDO, REDO);
+    expect(older.entries[S0]).toBe(wrongDigit(S0));
+    expect(older.mistakes.held).toBeNull();
+    expect(sudoku(older, ...write(S1, rightDigit(S1))).mistakes.cells).toEqual([
+      S0,
+    ]);
+  });
+
+  it("keeps a parked hold across a Número fixo double tap that gives redo back", () => {
+    const held = sudoku(sudokuBoard(), ...write(S0, wrongDigit(S0), true));
+    const undone = sudoku(held, UNDO);
+    const tapped = sudoku(
+      undone,
+      ...write(S0, rightDigit(S0), true),
+      { type: "unlock" },
+      {
+        type: "lock-digit",
+        digit: rightDigit(S0),
+        undo: { index: S0, value: null, notes: undone.notes },
+      },
+    );
+    expect(tapped.history.redo).toHaveLength(1);
+    const redone = sudoku(tapped, REDO);
+    expect(redone.entries[S0]).toBe(wrongDigit(S0));
+    expect(sudoku(redone, ...write(S1, rightDigit(S1))).mistakes.cells).toEqual(
+      [S0],
+    );
+  });
+
   it("clears redo on a Recomeçar that only reset the count", () => {
     const undone = sudoku(
       sudokuBoard(),
-      ...write(S1, rightDigit(S1) as SudokuDigit),
+      ...write(S1, rightDigit(S1)),
       ...write(S0, wrongDigit(S0)),
       UNDO,
       UNDO,
