@@ -321,6 +321,7 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
 
   it("draws the tint as an overlay, and the copies as the accent fill", () => {
     expect(unitShare).toBeGreaterThan(0);
+    expect(decl(bodyOf(css, ".notes"), "color")).toBe("var(--ink-2)");
     expect(decl(bodyOf(css, ".cellEntered.cellUnit"), "color")).toBe(
       "var(--accent-sudoku-text)",
     );
@@ -354,7 +355,7 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
     }
   });
 
-  it("clears >= 4.5:1 for a given and an entered digit on the tint, and for a copy on its fill, in both themes", () => {
+  it("clears >= 4.5:1 for a given, an entered digit and a note on the tint, and for a copy on its fill, in both themes", () => {
     for (const [theme, tools] of [
       ["light", LIGHT],
       ["dark", DARK],
@@ -372,6 +373,10 @@ describe("the Sudoku selection's reach keeps every digit readable (T-WEB-S497)",
       expect(
         contrast(entered, deskTint),
         `${theme} entered`,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrast(tools.hexOf("--ink-2"), deskTint),
+        `${theme} note`,
       ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrast(tools.pair("sudoku").ink, accent),

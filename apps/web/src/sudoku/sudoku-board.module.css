@@ -158,8 +158,8 @@
    it, hence the -text token. These rules must follow .cellGiven/.cellEntered. */
 .cellUnit {
   background-image: linear-gradient(
-    color-mix(in srgb, var(--accent) 8%, transparent),
-    color-mix(in srgb, var(--accent) 8%, transparent)
+    color-mix(in srgb, var(--accent) 7%, transparent),
+    color-mix(in srgb, var(--accent) 7%, transparent)
   );
 }
 
