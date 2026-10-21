@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S982`    | `S981`         | `T-WEB-23`            |
+| `T-WEB`  | `S983`    | `S982`         | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#62 (Binairo's `withEntry` returns the state it was given when the cell already holds the value) spent **`T-WEB-S982`** in `binairo-state.test.ts`. Next free is `S983`.
 
 #386 (Cores strikes a coloured clue number its marks place, ADR-0104 on tone runs) spent **`T-WEB-S980…S981`** in `colored-nonogram-placed-clues.test.tsx`: `S980` (a run a different tone closes is struck and named "feito", the run still open is not; the strikes follow the marks across re-renders; a column strikes from its decided end; the empty line's "0" is never struck and no chip takes the Clássico class; the setting off strikes nothing) and `S981` (`.chipPlaced` is a 2 px line-through and sets nothing that recolours or resizes the chip). Next free is `S982`.
 
