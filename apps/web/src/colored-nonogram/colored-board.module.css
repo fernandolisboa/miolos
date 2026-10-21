@@ -37,6 +37,11 @@
   text-align: center;
 }
 
+.chipPlaced {
+  text-decoration-line: line-through;
+  text-decoration-thickness: 2px;
+}
+
 /* see ADR-0132 decision 7 */
 .dense > button {
   width: 36px;

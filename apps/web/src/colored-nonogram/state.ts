@@ -1,7 +1,6 @@
 import {
-  coloredRuns,
+  formsColoredClue,
   type ColoredNonogramClues,
-  type ColoredRun,
 } from "@miolos/games/colored-nonogram";
 
 import { lineCrossing, lineCrossModes } from "../nonogram/line-cross";
@@ -87,22 +86,11 @@ const COLORED_RULES: BinaryGridRules<
   hint: (state) => nextColoredHint(state.clues, state.solution, state.entries),
 };
 
-export function coloredFormed(
-  entries: readonly (number | null)[],
-  runs: readonly ColoredRun[],
-): boolean {
-  const blocks = coloredRuns(entries.map((entry) => entry ?? 0));
-  return (
-    blocks.length === runs.length &&
-    blocks.every(
-      ({ tone, length }, at) =>
-        tone === runs[at]?.tone && length === runs[at].length,
-    )
-  );
-}
-
 export const coloredNonogramReducers = lineCrossModes((crossing) =>
-  undoable(lineCrossing(playColored, coloredFormed, crossing), pictureSnapshot),
+  undoable(
+    lineCrossing(playColored, formsColoredClue, crossing),
+    pictureSnapshot,
+  ),
 );
 
 function playColored(

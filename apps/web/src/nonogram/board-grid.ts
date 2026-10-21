@@ -25,6 +25,16 @@ export function numbersOf(runs: readonly number[]): readonly number[] {
   return runs.length === 0 ? EMPTY_LINE : runs;
 }
 
+export function sameStrikes(
+  before: readonly boolean[],
+  after: readonly boolean[],
+): boolean {
+  return (
+    before.length === after.length &&
+    before.every((struck, at) => struck === after[at])
+  );
+}
+
 export function ruleClasses(row: number, column: number, size: number): string {
   return [
     row % GROUP === 0 ? styles.cellRuleTop : "",
