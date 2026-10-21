@@ -652,7 +652,7 @@ describe("stats and streak gate on the claim, one GET /stats, honest `em X/6` (T
 });
 
 describe("the remote swap announces itself — ADR-0043 decision 10's live region (T-WEB-S282)", () => {
-  it("carries the completed sentence over a mid-play swap, and the played one on a loss", async () => {
+  it("carries the completed sentence over a mid-play swap, and the played one on a loss, each written once", async () => {
     writePlayRecord(inProgressSudoku());
     stubApi({
       day: () =>
@@ -677,6 +677,9 @@ describe("the remote swap announces itself — ADR-0043 decision 10's live regio
     });
     const region = first.getByRole("status");
     expect(region).toHaveTextContent(messages.conclusion.remote.completedBody);
+    expect(
+      first.getAllByText(messages.conclusion.remote.completedBody),
+    ).toEqual([region]);
     first.unmount();
 
     vi.resetModules();
@@ -698,6 +701,9 @@ describe("the remote swap announces itself — ADR-0043 decision 10's live regio
     expect(playedRegion).not.toHaveTextContent(
       messages.conclusion.remote.completedBody,
     );
+    expect(second.getAllByText(messages.conclusion.remote.playedBody)).toEqual([
+      playedRegion,
+    ]);
   });
 });
 

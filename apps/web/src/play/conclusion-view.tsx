@@ -278,13 +278,10 @@ export function RemoteConclusionView({
           )}
         </div>
 
-        <p role="status" className={styles.announcer}>
-          {played ? remote.playedBody : remote.completedBody}
-        </p>
         <p className={styles.remoteNote}>
           {played ? remote.playedNote : remote.completedNote}
         </p>
-        <p className={styles.remoteBody}>
+        <p role="status" className={styles.remoteBody}>
           {played ? remote.playedBody : remote.completedBody}
         </p>
 
