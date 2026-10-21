@@ -6,8 +6,10 @@ describe("@miolos/games exports map", () => {
     expect(Object.keys(mod).sort()).toEqual([
       "CONFUSABLE_TONE_PAIRS",
       "coloredRuns",
+      "formsColoredClue",
       "generateColoredNonogram",
       "nextColoredStep",
+      "placedColoredClues",
     ]);
   });
 });

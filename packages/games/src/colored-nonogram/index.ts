@@ -1,6 +1,7 @@
 export { coloredRuns } from "./clues";
 export { CONFUSABLE_TONE_PAIRS } from "./pool";
 export { generateColoredNonogram } from "./generate";
+export { formsColoredClue, placedColoredClues } from "./placed";
 export { nextColoredStep } from "./step";
 export type { PictureTone } from "../nonogram/tones";
 export type {

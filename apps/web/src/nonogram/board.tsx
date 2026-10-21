@@ -20,6 +20,7 @@ import {
   numbersOf,
   rowRailId,
   ruleClasses,
+  sameStrikes,
 } from "./board-grid";
 import { cellStateOf } from "./engine";
 import styles from "./nonogram-board.module.css";
@@ -30,7 +31,13 @@ import {
 } from "./state";
 import { usePictureWrongCells } from "./use-picture-wrong-cells";
 
-export { SIZE_CLASS, columnRailId, rowRailId, ruleClasses } from "./board-grid";
+export {
+  SIZE_CLASS,
+  columnRailId,
+  rowRailId,
+  ruleClasses,
+  sameStrikes,
+} from "./board-grid";
 
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
@@ -201,8 +208,7 @@ function sameRail(before: ClueRailProps, after: ClueRailProps): boolean {
     before.kind === after.kind &&
     before.index === after.index &&
     before.runs === after.runs &&
-    before.placed.length === after.placed.length &&
-    before.placed.every((struck, at) => struck === after.placed[at])
+    sameStrikes(before.placed, after.placed)
   );
 }
 

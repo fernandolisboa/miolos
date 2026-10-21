@@ -3,7 +3,8 @@
 **Status:** Accepted — 2026-10-14 (issue #324)
 **Depends on:** [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0095](./0095-three-free-hints-per-puzzle.md), [ADR-0101](./0101-the-grid-game-hints-reveal-the-next-logical-step.md)
 **Amends:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 2 (the Nonogram gains a second setting, on by default).
-**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: Cores strikes no numbers yet, so *Riscar números resolvidos* does nothing there.
+**Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: the setting is keyed under the Nonogram, so it reaches Cores; Cores struck nothing until #386.
+**Amended at #386:** decisions 1 and 2 hold on Cores' tone runs (`placedColoredRuns`, `packages/games/src/colored-nonogram/placed.ts`). A block is closed by a cross, the edge or a cell painted in another tone. Decision 2's checks on cell counts and block length count per tone; the group check is one count across all tones, with groups split by ✕ or a change of tone.
 **Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — the whole-line consequence is now written for the player by default: a line whose fills form its clue gets ✕ on the rest, even with *Riscar números resolvidos* off.
 
 ## Context

@@ -14,27 +14,10 @@ import { solveLine } from "../../src/nonogram/solve";
 import type { NonogramCellState } from "../../src/nonogram/types";
 import { FC_SEED } from "../daily-arbitraries";
 import { propertyRuns } from "../property-runs";
+import { fittingLines } from "./fixtures";
 
 const OPEN = 0b111;
 const run = (tone: number, length: number): ColoredRun => ({ tone, length });
-
-function fittingLines(
-  domains: readonly number[],
-  runs: readonly ColoredRun[],
-): number[][] {
-  const lines: number[][] = [[]];
-  for (const domain of domains) {
-    const tones = [0, 1, 2, 3].filter((tone) => (domain >> tone) & 1);
-    lines.splice(
-      0,
-      lines.length,
-      ...lines.flatMap((line) => tones.map((tone) => [...line, tone])),
-    );
-  }
-  return lines.filter(
-    (line) => JSON.stringify(coloredRuns(line)) === JSON.stringify(runs),
-  );
-}
 
 const lineCaseArb = fc
   .integer({ min: 1, max: 3 })

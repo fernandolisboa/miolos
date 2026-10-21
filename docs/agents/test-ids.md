@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S980`    | `S978`         | `T-WEB-23`            |
+| `T-WEB`  | `S982`    | `S981`         | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#386 (Cores strikes a coloured clue number its marks place, ADR-0104 on tone runs) spent **`T-WEB-S980…S981`** in `colored-nonogram-placed-clues.test.tsx`: `S980` (a run a different tone closes is struck and named "feito", the run still open is not; the strikes follow the marks across re-renders; a column strikes from its decided end; the empty line's "0" is never struck and no chip takes the Clássico class; the setting off strikes nothing) and `S981` (`.chipPlaced` is a 2 px line-through and sets nothing that recolours or resizes the chip). Next free is `S982`.
 
 #402 (the Nonogram crosses a line its fills complete, ADR-0143) spent **`T-WEB-S970…S978`**. In `nonogram-line-cross.test.ts`: `S970` (the transition crosses, one undo takes it back and redo puts it back; a cell a row and a column share; a changed cell is the player's; a line with no runs never claims; the solving move crosses nothing), `S971` (restore and Recomeçar measure no transition), `S972` (*Desligado* still releases, a mode switch crosses no formed line, *Só se estiver certa* with and without a solution, `flag` shares `always`'s reducer), `S973` (a drag is one undo step; an automatic ✕ is never a mistake), `S974` (Cores by tone and length) and `S975` (the hint corrects a wrong fill before a wrong ✕). `S976` is in `settings.test.tsx` (the four values and the fallback to `always`). In `nonogram-line-cross-board.test.tsx`: `S977` (the choice in Ajustes, its order, default, wrap class, and a mounted board following it) and `S978` (*Sempre e mostrar o erro* on both boards). `S979` is **burned**. `T-WEB-S580` was widened in place for the new default; `S44` and `S498a` in `nonogram-screen.test.tsx` now run with the setting off. With redo's `S966…S969` left unused inside its reservation, every id below `S980` is spent, burned or reserved, so next free is `S980`.
 

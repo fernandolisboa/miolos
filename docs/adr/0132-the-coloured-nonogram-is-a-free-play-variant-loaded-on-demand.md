@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0011](./0011-free-play-is-generated-on-the-client.md), [ADR-0021](./0021-nonogram-pictures-are-a-curated-motif-library.md), [ADR-0047](./0047-bundle-markers-are-route-scoped.md), [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md), [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md), [ADR-0121](./0121-the-solved-nonogram-picture-is-painted-in-its-motifs-tones.md), [ADR-0135](./0135-termo-free-play-offers-dueto-and-quarteto.md)
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 2 and 3; [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) decisions 4 and 5; [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md) decision 3; [ADR-0121](./0121-the-solved-nonogram-picture-is-painted-in-its-motifs-tones.md) decision 3; [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md) decision 4; [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 7; [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md) (copy home); [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 3 (the wrong-cell flag); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (re-measured, no budget changed).
 **Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — Cores crosses a line whose tones form its clue, under the same setting as Clássico.
+**Amended at #386:** Cores strikes a chip its marks place, under *Riscar números resolvidos* (ADR-0104 on tone runs), with a 2 px line-through in the chip's `--cell-ink`.
 
 ## Context
 
@@ -24,7 +25,6 @@ Fernando asked for a colour variant of the Nonogram (issue #372). The curated mo
 ## Consequences
 
 - In `apps/web/app` and `apps/web/src`, the ESLint wall bans `@miolos/games/colored-nonogram` outside `src/colored-nonogram/**` and `use-free-colored-nonogram.ts`, static and dynamic, and the Cores modules by relative path outside `src/free-play/**`, `src/colored-nonogram/**` and tests; `src/colored-nonogram/**` carries the free-play I/O wall.
-- The *Riscar números resolvidos* switch does nothing in Cores. Striking coloured numbers is #386.
 - A new motif joins a Cores pool only if it passes decision 4; a changed `PICTURE_TONES` value must re-run the pair test.
 - `/nonogram` keeps 0.2 KB of headroom; the `playRecordSchema` split stays the next relief (ADR-0112).
 

@@ -1,12 +1,15 @@
 import type { NonogramSize } from "@miolos/core";
-import type {
-  ColoredNonogramClues,
-  ColoredRun,
-  PictureTone,
+import {
+  formsColoredClue,
+  placedColoredClues,
+  type ColoredNonogramClues,
+  type ColoredRun,
+  type PictureTone,
 } from "@miolos/games/colored-nonogram";
 import {
   Fragment,
   memo,
+  useMemo,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from "react";
@@ -17,6 +20,7 @@ import {
   columnRailId,
   rowRailId,
   ruleClasses,
+  sameStrikes,
 } from "../nonogram/board";
 import boardStyles from "../nonogram/nonogram-board.module.css";
 import type { Press } from "../play/brush";
@@ -28,7 +32,6 @@ import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
 import styles from "./colored-board.module.css";
 import { coloredCopy, runLabel, toneName } from "./copy";
-import { coloredFormed } from "./state";
 
 const NONE_PLACED: readonly boolean[] = Object.freeze([]);
 
@@ -77,9 +80,14 @@ export const ColoredBoard = memo(function ColoredBoard({
     solution,
     entries,
     mistakes,
-    coloredFormed,
+    formsColoredClue,
   );
-  const { straightDrag } = useSettings().games.nonogram;
+  const { strikePlacedRuns: strike, straightDrag } =
+    useSettings().games.nonogram;
+  const placed = useMemo(
+    () => (strike ? placedColoredClues(clues, entries) : null),
+    [strike, clues, entries],
+  );
   const board = useBinaryBoard({
     size,
     selected,
@@ -106,6 +114,7 @@ export const ColoredBoard = memo(function ColoredBoard({
           index={column}
           runs={runs}
           palette={clues.palette}
+          placed={placed?.cols[column] ?? NONE_PLACED}
         />
       ))}
 
@@ -116,6 +125,7 @@ export const ColoredBoard = memo(function ColoredBoard({
             index={row}
             runs={runs}
             palette={clues.palette}
+            placed={placed?.rows[row] ?? NONE_PLACED}
           />
           {Array.from({ length: size }, (_unused, column) => {
             const index = row * size + column;
@@ -144,17 +154,21 @@ export const ColoredBoard = memo(function ColoredBoard({
   );
 });
 
+interface ChipRailProps {
+  readonly kind: "row" | "column";
+  readonly index: number;
+  readonly runs: readonly ColoredRun[];
+  readonly palette: readonly PictureTone[];
+  readonly placed: readonly boolean[];
+}
+
 const ChipRail = memo(function ChipRail({
   kind,
   index,
   runs,
   palette,
-}: {
-  readonly kind: "row" | "column";
-  readonly index: number;
-  readonly runs: readonly ColoredRun[];
-  readonly palette: readonly PictureTone[];
-}) {
+  placed,
+}: ChipRailProps) {
   const copy = messages.games.nonogram.play;
   const row = kind === "row";
   const named = runs.map((run) => runLabel(palette, run));
@@ -164,8 +178,8 @@ const ChipRail = memo(function ChipRail({
       role="group"
       aria-label={
         row
-          ? copy.rowCluesAria(index + 1, named, NONE_PLACED)
-          : copy.columnCluesAria(index + 1, named, NONE_PLACED)
+          ? copy.rowCluesAria(index + 1, named, placed)
+          : copy.columnCluesAria(index + 1, named, placed)
       }
       className={row ? boardStyles.clueRow : boardStyles.clueCol}
       style={
@@ -185,7 +199,11 @@ const ChipRail = memo(function ChipRail({
             <span
               aria-hidden
               key={at}
-              className={styles.chip}
+              className={
+                placed[at] === true
+                  ? `${styles.chip} ${styles.chipPlaced}`
+                  : styles.chip
+              }
               style={letter === undefined ? undefined : toneStyle(letter)}
             >
               {run.length}
@@ -195,7 +213,17 @@ const ChipRail = memo(function ChipRail({
       )}
     </div>
   );
-});
+}, sameRail);
+
+function sameRail(before: ChipRailProps, after: ChipRailProps): boolean {
+  return (
+    before.kind === after.kind &&
+    before.index === after.index &&
+    before.runs === after.runs &&
+    before.palette === after.palette &&
+    sameStrikes(before.placed, after.placed)
+  );
+}
 
 const ColoredCell = memo(function ColoredCell({
   index,
