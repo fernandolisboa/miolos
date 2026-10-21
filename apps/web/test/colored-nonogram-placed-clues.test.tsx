@@ -38,13 +38,13 @@ const ENTRIES: readonly (number | null)[] = [
   new Array<null>(5).fill(null),
 ].flat();
 
-function renderBoard() {
-  return render(
+function board(entries: readonly (number | null)[]) {
+  return (
     <ColoredBoard
       size={5}
       clues={CLUES}
       solution={null}
-      entries={ENTRIES}
+      entries={entries}
       mistakes={NO_MISTAKES}
       selected={null}
       hintIndex={null}
@@ -56,8 +56,12 @@ function renderBoard() {
       onEnterValue={vi.fn()}
       onClear={vi.fn()}
       onPaintOver={vi.fn()}
-    />,
+    />
   );
+}
+
+function renderBoard() {
+  return render(board(ENTRIES));
 }
 
 function rowRail(container: HTMLElement, row: number) {
@@ -97,6 +101,20 @@ describe("a Cores chip its marks already place is struck, and named done (T-WEB-
       copy.rowCluesAria(1, ["3 vermelho", "2 azul"], [true, false]),
     );
     expect(rail.getAttribute("aria-label")).toContain("3 vermelho feito, 2");
+  });
+
+  it("follows the marks as they change, striking and unstriking", () => {
+    const view = renderBoard();
+    const struck = () =>
+      rowRail(view.container, 0).numbers.map((number) =>
+        number.classList.contains(placedClass),
+      );
+
+    expect(struck()).toEqual([true, false]);
+    view.rerender(board([null, null, 1, 2, 2, ...ENTRIES.slice(5)]));
+    expect(struck()).toEqual([false, true]);
+    view.rerender(board(ENTRIES));
+    expect(struck()).toEqual([true, false]);
   });
 
   it("strikes a column's runs from its decided end", () => {

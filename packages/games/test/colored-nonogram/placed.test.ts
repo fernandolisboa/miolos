@@ -296,6 +296,7 @@ describe("placedColoredRuns", () => {
     { runs: "B1 A1", marks: "AB?", placed: [false, false] },
     { runs: "A1 B1", marks: "A?B", placed: [true, true] },
     { runs: "A3 A1", marks: "?xAxA", placed: [false, true] },
+    { runs: "A3 A1", marks: "A?AxA", placed: [false, true] },
     { runs: "", marks: "??x", placed: [] },
   ])("strikes $placed for $runs on $marks", ({ runs, marks, placed }) => {
     expect(placedColoredRuns(line(marks), clue(runs))).toEqual(placed);
