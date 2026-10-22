@@ -79,7 +79,7 @@ jobs:
             # see ADR-0084
             { gh label create answer-list-alert -R "$REPO" --color d93f0b \
                 --description "Termo answer list running low (opened by the buffer-alert workflow)" --force &&
-              open_or_bump answer-list-alert "Termo answer list running low: $remaining left" "The Termo answer list has $remaining unused answers left (or this is a forced drill run). Each daily spends one, and at zero Termo goes dark. Extend the list with the ADR-0015 harness (content/termo/pipeline.py, select_answers.py) in a code and content PR. This is not a cron failure. See docs/adr/0084." "Answer list still low: $remaining unused answers left."
+              open_or_bump answer-list-alert "Termo answer list running low: $remaining left" "The Termo answer list has $remaining answers left that were not a daily in the last 365 days (or this is a forced drill run). Each daily holds its answer for 365 days, and at zero Termo goes dark. Extend the list with the ADR-0015 harness (content/termo/pipeline.py, select_answers.py) in a code and content PR, taking the new answers out of the free pool. This is not a cron failure. See docs/adr/0147 and docs/adr/0084." "Answer list still low: $remaining eligible answers left."
             } || status=1
           fi
           exit "$status"

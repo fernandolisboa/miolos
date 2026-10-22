@@ -30,13 +30,18 @@ export async function listBufferedDates(
   return rows.map((row) => row.date);
 }
 
-export async function listUsedTermoAnswers(db: Db): Promise<string[]> {
+export async function listUsedTermoAnswers(
+  db: Db,
+  fromDate: string,
+): Promise<string[]> {
   const rows = await db
     .select({
       answer: sql<string | null>`${dailyPuzzles.content} ->> 'normalized'`,
     })
     .from(dailyPuzzles)
-    .where(eq(dailyPuzzles.game, "termo"));
+    .where(
+      and(eq(dailyPuzzles.game, "termo"), gte(dailyPuzzles.date, fromDate)),
+    );
   return rows
     .map((row) => row.answer)
     .filter((answer): answer is string => answer !== null);

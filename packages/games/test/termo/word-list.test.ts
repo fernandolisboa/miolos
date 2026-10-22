@@ -20,7 +20,7 @@ const repoRoot = join(testDir, "..", "..", "..", "..");
 const contentDir = join(repoRoot, "content", "termo");
 const gamesDir = join(testDir, "..", "..");
 
-const ANSWER_COUNT = 400;
+const ANSWER_COUNT = 626;
 const VALIDATION_COUNT = 5408;
 const NORMALIZED_SHAPE = /^[a-z]{5}$/;
 
