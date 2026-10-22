@@ -8,23 +8,13 @@ import {
   getAttachAccountState,
   mintAttachToken,
 } from "../../../src/attach/service";
-import {
-  corsHeaders,
-  isJsonContentType,
-  preflightResponse,
-} from "../../../src/cors";
+import { corsHeaders, preflightResponse } from "../../../src/cors";
 import { errorResponse } from "../../../src/http/responses";
-import { getDb } from "../../../src/db";
+import { writePreamble } from "../../../src/http/write-preamble";
 import {
   isEmailConfigured,
   sendMagicLinkEmail,
 } from "../../../src/email/transport";
-import { SESSION_COOKIE_NAME } from "../../../src/session/cookie";
-import {
-  isCrossSiteWrite,
-  warnIfGuardDegraded,
-} from "../../../src/session/origin-guard";
-import { requireUserId } from "../../../src/session/service";
 import {
   generateSessionToken,
   hashSessionToken,
@@ -39,44 +29,11 @@ export function OPTIONS(): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  warnIfGuardDegraded();
-
-  if (
-    isCrossSiteWrite(
-      {
-        secFetchSite: request.headers.get("sec-fetch-site"),
-        origin: request.headers.get("origin"),
-      },
-      process.env.WEB_ORIGIN,
-    )
-  ) {
-    return errorResponse(403, "cross-site");
+  const context = await writePreamble(request, attachRequestSchema);
+  if (context.failure) {
+    return context.failure;
   }
-
-  if (!isJsonContentType(request.headers.get("content-type"))) {
-    return errorResponse(415, "unsupported-media-type");
-  }
-
-  const db = getDb();
-  const userId = await requireUserId(
-    db,
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (!userId) {
-    return errorResponse(401, "no-session");
-  }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return errorResponse(400, "invalid-body");
-  }
-  const parsed = attachRequestSchema.safeParse(raw);
-  if (!parsed.success) {
-    return errorResponse(400, "invalid-body");
-  }
-  const body = parsed.data;
+  const { db, userId, body } = context;
 
   const webOrigin = process.env.WEB_ORIGIN;
   if (!isEmailConfigured() || !webOrigin) {
