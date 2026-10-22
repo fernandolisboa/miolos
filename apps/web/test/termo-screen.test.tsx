@@ -18,9 +18,6 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   afterEach,
@@ -88,8 +85,6 @@ const SECOND = validationWord(1);
 const INVALID = "zzzzz";
 
 const TILES: TileStates = ["correct", "present", "absent", "absent", "absent"];
-
-const here = path.dirname(fileURLToPath(import.meta.url));
 
 function concludedRecord(): TermoPlayRecord {
   return {
@@ -907,10 +902,13 @@ describe("geometry, as stylesheet text (T-WEB-S91)", () => {
     );
   });
 
-  it("declares this module's own `.placeholder`, AFTER `.key` and `.tile`", () => {
+  it("declares this module's own `.placeholder`, AFTER `.key` and `.tile`, and `.tileSkeleton` after `.tile`", () => {
     expect(decl(bodyOf(css, ".placeholder"), "pointer-events")).toBe("none");
     expect(css.indexOf(".placeholder")).toBeGreaterThan(css.indexOf(".key {"));
     expect(css.indexOf(".placeholder")).toBeGreaterThan(css.indexOf(".tile {"));
+    expect(css.indexOf(".tileSkeleton")).toBeGreaterThan(
+      css.indexOf(".tile {"),
+    );
   });
 });
 
@@ -1128,51 +1126,71 @@ describe("the first paint of /termo (T-WEB-S356)", () => {
 });
 
 describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
-  const header = readFileSync(
-    path.join(here, "..", "src/termo/termo-board.module.css"),
-    "utf8",
-  ).split("RECORDED DESIGN-SYSTEM DEVIATIONS")[1];
+  const css = stylesheet("src/termo/termo-board.module.css");
+  const shadow =
+    "var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent)";
+  const ring = "2px solid var(--ink)";
+  type Fact = readonly [selector: string, property: string, value: string];
+  const deviations: readonly { n: number; facts: readonly Fact[] }[] = [
+    { n: 1, facts: [[".pageTermo", "--board-max", "360px"]] },
+    {
+      n: 2,
+      facts: [
+        [".keyboard", "grid-template-columns", "repeat(22, minmax(0, 1fr))"],
+        [".keyboard", "grid-template-rows", "repeat(3, 48px)"],
+      ],
+    },
+    {
+      n: 3,
+      facts: [
+        [".tilePresent", "text-decoration", "underline"],
+        [".tileAbsent", "text-decoration", "line-through"],
+        [".keyPresent", "text-decoration", "underline"],
+        [".keyAbsent", "text-decoration", "line-through"],
+      ],
+    },
+    { n: 4, facts: [[".key", "box-shadow", shadow]] },
+    {
+      n: 5,
+      facts: [
+        [".tile", "color", "var(--ink)"],
+        [".tile", "font-weight", "600"],
+      ],
+    },
+    {
+      n: 6,
+      facts: [
+        [".key:focus-visible", "outline", ring],
+        [".tileEditable:focus-visible", "outline", ring],
+        [".noticeRetry:focus-visible", "outline", ring],
+      ],
+    },
+    {
+      n: 7,
+      facts: [
+        [".keyPresent", "text-underline-offset", "3px"],
+        [".noticeRetry", "text-underline-offset", "3px"],
+      ],
+    },
+  ];
 
-  it("declares exactly seven numbered items", () => {
-    expect(header).toBeDefined();
-    const items = [...(header ?? "").matchAll(/^ {5}(\d)\. /gm)];
-    expect(items.map((item) => item[1])).toEqual([
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-    ]);
-  });
-
-  it("carries the arithmetic that identifies each one", () => {
-    const items = (header ?? "").split(/^ {5}\d\. /gm).slice(1);
-    expect(items).toHaveLength(7);
-    const tokens = [
-      "49px",
-      "24 × 24",
-      "text-decoration",
-      "10 %",
-      "600",
-      "15.0124",
-      "3px",
-    ];
-    for (const [index, tokenText] of tokens.entries()) {
-      expect(items[index], `deviation ${String(index + 1)}`).toContain(
-        tokenText,
-      );
+  it("holds each one's identifying declaration in the stylesheet", () => {
+    for (const { n, facts } of deviations) {
+      for (const [selector, property, value] of facts) {
+        expect(
+          decl(bodyOf(css, selector), property),
+          `deviation ${String(n)}: ${selector} ${property}`,
+        ).toBe(value);
+      }
     }
   });
 
   it("names every off-4pt length the STYLESHEET actually ships", () => {
-    const sheet = stylesheet("src/termo/termo-board.module.css");
     const declarations =
       /(?:^|[\s;{])(?:gap|row-gap|column-gap|margin(?:-[a-z]+)?|padding(?:-[a-z-]+)?|text-underline-offset)\s*:\s*([^;{}]+)/g;
 
     const offScale = new Set<string>();
-    for (const [, value] of sheet.matchAll(declarations)) {
+    for (const [, value] of css.matchAll(declarations)) {
       for (const [, length] of (value ?? "").matchAll(/(-?\d+)px/g)) {
         const px = Number(length);
         if (px > 0 && px % 4 !== 0) {
@@ -1184,9 +1202,11 @@ describe("the stylesheet's SEVEN recorded deviations (T-WEB-S102)", () => {
     expect(offScale.size).toBeGreaterThan(0);
     expect([...offScale].sort()).toEqual(["3px"]);
 
-    const deviation = (header ?? "").split(/^ {5}\d\. /gm)[7] ?? "";
+    const named = new Set(
+      (deviations[6]?.facts ?? []).map(([, , value]) => value),
+    );
     for (const length of offScale) {
-      expect(deviation, `deviation 7 must name ${length}`).toContain(length);
+      expect(named, `deviation 7 must name ${length}`).toContain(length);
     }
   });
 });
