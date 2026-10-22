@@ -123,6 +123,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.doUnmock("../src/play/conclusion-view");
+  vi.doUnmock("../src/play/remote-conclusion-view");
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.useRealTimers();
@@ -371,4 +372,24 @@ describe("every screen root warms the conclusion chunk on mount (T-WEB-S289)", (
     },
     20_000,
   );
+});
+
+describe("the daily screen's preload also warms the remote conclusion, which no longer rides in the local chunk (T-WEB-S1003)", () => {
+  it("loads remote-conclusion-view when only the local conclusion is stubbed out", async () => {
+    const remote = { loads: 0 };
+    vi.doMock("../src/play/conclusion-view", () => ({
+      ConclusionView: () => null,
+    }));
+    vi.doMock("../src/play/remote-conclusion-view", async () => {
+      remote.loads += 1;
+      return await vi.importActual("../src/play/remote-conclusion-view");
+    });
+    const { preloadConclusionView } = await loadLazyModule();
+
+    preloadConclusionView();
+
+    await waitFor(() => {
+      expect(remote.loads).toBe(1);
+    });
+  });
 });

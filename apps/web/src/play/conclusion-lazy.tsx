@@ -179,11 +179,15 @@ const local = resilientConclusion<ConclusionViewProps>(
   localConclusionFallback,
 );
 
-export const ConclusionView = local.Conclusion;
-export const preloadConclusionView = local.preload;
+const remote = resilientConclusion<RemoteConclusionViewProps>(
+  async () => (await import("./remote-conclusion-view")).RemoteConclusionView,
+  remoteConclusionFallback,
+);
 
-export const RemoteConclusionView =
-  resilientConclusion<RemoteConclusionViewProps>(
-    async () => (await import("./remote-conclusion-view")).RemoteConclusionView,
-    remoteConclusionFallback,
-  ).Conclusion;
+export const ConclusionView = local.Conclusion;
+export const RemoteConclusionView = remote.Conclusion;
+
+export function preloadConclusionView(): void {
+  local.preload();
+  remote.preload();
+}

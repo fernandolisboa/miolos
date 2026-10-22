@@ -97,7 +97,7 @@ the loss.
    untouched and still normative: a loss does not settle.** Only the
    mechanism moved. `OutcomeStamp` reads `const lost = outcome.state ===
    "lost"` and composes `.stampLost` and `.stampStill` from it (in
-   `apps/web/src/play/conclusion-view.tsx`), which makes the pairing
+   `apps/web/src/play/conclusion-chrome.tsx`), which makes the pairing
    unfalsifiable rather than merely conventional — a still `"result"` stamp
    is now unrepresentable instead of untested. The shipped interface is
    `ConclusionOutcome` in `apps/web/src/play/types.ts`. A game that
@@ -214,7 +214,7 @@ the loss.
    rests on colour. Without the chaining change a lost Termo is offered as
    the next pending daily forever, from every game's conclusion, and —
    because `DAY_GAMES` puts termo first
-   (in `apps/web/src/play/conclusion-view.tsx`) — as the **default** target.
+   (in `apps/web/src/play/day-games.ts`) — as the **default** target.
 
    **Corrected at #27's step 6, on two counts.** This decision was written
    before the screen existed and got the border and the arithmetic wrong.

@@ -7,7 +7,7 @@ const REMOTE = "apps/web/src/play/remote-conclusion-view.tsx";
 function playModules(): ReadonlySet<string> {
   const modules = new Set<string>();
   for (const path of closureOf(REMOTE)) {
-    const match = /\/src\/(play\/[^/]+?)\.(?:tsx?|css)$/.exec(path);
+    const match = /\/src\/(play\/[^/]+?)\.tsx?$/.exec(path);
     if (match?.[1] !== undefined) {
       modules.add(match[1]);
     }
