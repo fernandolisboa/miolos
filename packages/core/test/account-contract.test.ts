@@ -4,6 +4,10 @@ import {
   accountDetachEmailResponseSchema,
   accountDetachEmailSchema,
   accountStateResponseSchema,
+  gameSettingsPayloadSchema,
+  gameSettingsStateResponseSchema,
+  gameSettingsWriteResponseSchema,
+  gameSettingsWriteSchema,
   reminderConsentResponseSchema,
   reminderConsentSchema,
   telemetryChoiceSchema,
@@ -103,5 +107,77 @@ describe("the telemetry choice contract (#37, ADR-0148)", () => {
       { sending: 0 },
       { sending: true, userId: "u" },
     ]);
+  });
+});
+
+describe("the game-settings sync contract (#317, ADR-0149)", () => {
+  const settings = {
+    showClock: true,
+    mistakeLimit: false,
+    games: {
+      binairo: { showErrors: false, firstValue: 1 },
+      nonogram: { lineCross: "always" },
+    },
+  };
+
+  it("T-CORE-S211: the payload is a bounded object of three levels whose leaves are booleans, finite numbers or short strings", () => {
+    expect(gameSettingsPayloadSchema.parse(settings)).toEqual(settings);
+    expect(gameSettingsPayloadSchema.parse({})).toEqual({});
+    const hostile = gameSettingsPayloadSchema.parse(
+      JSON.parse('{"__proto__": {"polluted": true}, "showClock": true}'),
+    );
+    expect(Object.keys(hostile)).toEqual(["showClock"]);
+    expect(Object.getPrototypeOf(hostile)).toBe(Object.prototype);
+    rejects(gameSettingsPayloadSchema, [
+      null,
+      [],
+      "showClock",
+      { showClock: null },
+      { showClock: [true] },
+      { showClock: Number.POSITIVE_INFINITY },
+      { lineCross: "x".repeat(33) },
+      { a: { b: { c: { d: true } } } },
+      { "1game": true },
+      { "show-clock": true },
+      { ["k".repeat(33)]: true },
+      Object.fromEntries(
+        Array.from({ length: 41 }, (_, index) => [`k${String(index)}`, true]),
+      ),
+    ]);
+  });
+
+  it("T-CORE-S212: a payload over 4 KB is refused even when every level is within its key count", () => {
+    const wide = Object.fromEntries(
+      Array.from({ length: 40 }, (_, index) => [
+        `g${String(index)}`,
+        Object.fromEntries(
+          Array.from({ length: 10 }, (_, inner) => [
+            `k${String(inner)}`,
+            "x".repeat(10),
+          ]),
+        ),
+      ]),
+    );
+    rejects(gameSettingsPayloadSchema, [wide]);
+  });
+
+  it("T-CORE-S213: the read is a strict {settings} that may be null, the write a strict {settings} answered by the literal {saved: true}", () => {
+    expect(gameSettingsStateResponseSchema.parse({ settings: null })).toEqual({
+      settings: null,
+    });
+    expect(gameSettingsStateResponseSchema.parse({ settings })).toEqual({
+      settings,
+    });
+    rejects(gameSettingsStateResponseSchema, [{}, { settings, userId: "u" }]);
+    expect(gameSettingsWriteSchema.parse({ settings })).toEqual({ settings });
+    rejects(gameSettingsWriteSchema, [
+      {},
+      { settings: null },
+      { settings, extra: 1 },
+    ]);
+    expect(gameSettingsWriteResponseSchema.parse({ saved: true })).toEqual({
+      saved: true,
+    });
+    rejects(gameSettingsWriteResponseSchema, [{ saved: false }, {}]);
   });
 });

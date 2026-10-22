@@ -722,6 +722,9 @@ export const messages = {
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
 
+      gameSettings:
+        "Os ajustes dos jogos, somente se você ligar Sincronizar com a conta em Ajustes: ficam guardados na sua conta para valer nos outros aparelhos em que a opção estiver ligada. Desligar para de enviar a partir dali; excluir a conta apaga essa cópia.",
+
       push: "O lembrete no navegador, somente se você ativar: guardamos o endereço técnico da inscrição e as chaves que o navegador gera, usados só para avisar quando a sua sequência estiver em risco. Para parar, desligue o lembrete em Ajustes, em cada aparelho — a inscrição sai dos nossos registros na hora. Revogar a permissão de notificações no navegador também para os avisos, e a inscrição, que deixa de funcionar, é removida. Excluir a conta apaga tudo.",
     },
     why: {
@@ -820,6 +823,10 @@ export const messages = {
     games: {
       heading: "Jogos",
       lead: "Como os jogos aparecem neste aparelho.",
+      sync: {
+        label: "Sincronizar com a conta",
+        hint: "Os ajustes dos jogos passam a valer em todos os aparelhos da sua conta com esta opção ligada. Ao ligar, este aparelho usa os ajustes já guardados na conta, se houver.",
+      },
       general: "Em todos os jogos",
       on: "Ligado",
       off: "Desligado",
@@ -898,7 +905,7 @@ export const messages = {
       dialog: {
         trigger: "Ajustes",
         title: "Ajustes do jogo",
-        note: "Valem para este aparelho.",
+        note: "Valem para este aparelho, ou para a conta se a sincronização estiver ligada em Ajustes.",
         close: "Fechar",
       },
     },

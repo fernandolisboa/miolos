@@ -1,3 +1,4 @@
+import type { GameSettingsPayload } from "@miolos/core";
 import { eq, sql, users, type Db } from "@miolos/db";
 
 export async function getAccountState(
@@ -43,6 +44,28 @@ export async function setTelemetrySending(
         : sql`coalesce(${users.telemetryOptOutAt}, now())`,
       updatedAt: sql`now()`,
     })
+    .where(eq(users.id, userId));
+}
+
+export async function readGameSettings(
+  db: Db,
+  userId: string,
+): Promise<unknown> {
+  const rows = await db
+    .select({ gameSettings: users.gameSettings })
+    .from(users)
+    .where(eq(users.id, userId));
+  return rows[0]?.gameSettings ?? null;
+}
+
+export async function writeGameSettings(
+  db: Db,
+  userId: string,
+  settings: GameSettingsPayload,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({ gameSettings: settings, updatedAt: sql`now()` })
     .where(eq(users.id, userId));
 }
 

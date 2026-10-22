@@ -1,6 +1,7 @@
 import { messages } from "../../src/i18n";
 import { GameSettings } from "../../src/settings/game-settings";
 import styles from "./page.module.css";
+import { SyncToggle } from "./sync-toggle";
 
 const GAMES = [
   "sudoku",
@@ -19,6 +20,7 @@ export function GamesSection() {
         {copy.heading}
       </h2>
       <p className={styles.body}>{copy.lead}</p>
+      <SyncToggle />
       <GameSettings games={GAMES} clock />
     </section>
   );

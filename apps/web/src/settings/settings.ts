@@ -82,6 +82,10 @@ function safely<T>(read: () => T, fallback: T): T {
   }
 }
 
+export function settingsFrom(value: unknown): Settings {
+  return schema.parse(value);
+}
+
 function parse(raw: string | null): Settings {
   return schema.parse(
     raw === null
@@ -101,7 +105,18 @@ export function readSettings(): Settings {
   return cache.settings;
 }
 
+export function hasStoredSettings(): boolean {
+  return safely(() => localStorage.getItem(STORAGE_KEY), null) !== null;
+}
+
 const listeners = new Set<() => void>();
+
+export function subscribeInTab(onChange: () => void): () => void {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
 
 export function writeSettings(next: Settings): void {
   safely(() => {
@@ -113,10 +128,10 @@ export function writeSettings(next: Settings): void {
 }
 
 function subscribeToSettings(onChange: () => void): () => void {
-  listeners.add(onChange);
+  const leave = subscribeInTab(onChange);
   window.addEventListener("storage", onChange);
   return () => {
-    listeners.delete(onChange);
+    leave();
     window.removeEventListener("storage", onChange);
   };
 }

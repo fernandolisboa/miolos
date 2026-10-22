@@ -1210,6 +1210,75 @@ describe("mergeAccounts — the measurements opt-out (#37, ADR-0148)", () => {
   });
 });
 
+describe("mergeAccounts — the synced game settings (#317, ADR-0149)", () => {
+  const MINE = { showClock: false };
+  const THEIRS = { showClock: true, games: { sudoku: { lockDigit: true } } };
+
+  async function settingsOf(userId: string): Promise<unknown> {
+    const rows = await ctx.db
+      .select({ settings: users.gameSettings })
+      .from(users)
+      .where(eq(users.id, userId));
+    const row = rows[0];
+    if (!row) {
+      throw new Error(`no users row for ${userId}`);
+    }
+    return row.settings;
+  }
+
+  async function store(userId: string, settings: object): Promise<void> {
+    await ctx.db
+      .update(users)
+      .set({ gameSettings: settings })
+      .where(eq(users.id, userId));
+  }
+
+  it("T-DB-S151: the winner keeps its own copy, takes the loser's only when it has none (even with no other column moving), and two empty accounts stay empty", async () => {
+    for (const reversed of [false, true]) {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await store(loser, THEIRS);
+      const result = reversed
+        ? await mergeAccounts(ctx.db, loser, winner)
+        : await mergeAccounts(ctx.db, winner, loser);
+      expect(result).toEqual({ winnerId: winner, loserId: loser });
+      expect(await settingsOf(winner)).toEqual(THEIRS);
+      await reset();
+    }
+
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await store(winner, MINE);
+      await store(loser, THEIRS);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await settingsOf(winner)).toEqual(MINE);
+      await reset();
+    }
+
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await settingsOf(winner)).toBeNull();
+    }
+  });
+
+  it("T-DB-S152: the tombstone keeps no copy, and a re-run changes nothing", async () => {
+    const winner = await createUser(OLDER);
+    const loser = await createUser(NEWER);
+    await store(winner, MINE);
+    await store(loser, THEIRS);
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(await settingsOf(loser)).toBeNull();
+
+    const afterFirst = await snapshotState();
+    await mergeAccounts(ctx.db, winner, loser);
+    expect(await snapshotState()).toEqual(afterFirst);
+    expect(await settingsOf(winner)).toEqual(MINE);
+  });
+});
+
 describe("consent_events across a merge (ADR-0050 decision 8, ADR-0082)", () => {
   it("T-DB-S97: both accounts' events survive — the winner's stay on the winner, the loser's stay on the tombstone beside its consent timestamps, and a re-run changes nothing", async () => {
     const winner = await createUser(OLDER);

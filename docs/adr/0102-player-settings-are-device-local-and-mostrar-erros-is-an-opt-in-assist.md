@@ -14,6 +14,7 @@
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 3: the *Mostrar erros* flag gains an edge stop in the label ink, so it reads on a tone fill (`T-WEB-S594`).
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 2 gains Campo Minado's *Marcas (?)*, a switch, off by default.
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — decision 2 gains *Limite de 3 erros* (off), top-level, in the general group of every grid game's dialog and hidden where no game counts; decision 3: a counted mistake shows the wrong mark without *Mostrar erros*, and the held cell never does; the counted cells are kept in the local play record, never sent.
+**Amended by:** [ADR-0149](./0149-game-settings-follow-the-account-on-devices-that-opt-in.md) (#317) — decision 1: a device that turns on *Sincronizar com a conta* keeps the settings on the account too.
 **Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 2 gains the Nonogram's *Marcar ✕ ao completar a linha*, a four-value choice (*Sempre*, *Sempre e mostrar o erro*, *Só se estiver certa*, *Desligado*), default *Sempre*; the consequence that every default leaves the boards as ADR-0037 and ADR-0032 describe no longer holds for the Nonogram, which now writes ✕ for the player by default.
 
 ## Context

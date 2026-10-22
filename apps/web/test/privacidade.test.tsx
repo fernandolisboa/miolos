@@ -97,3 +97,36 @@ describe("the deletion island (T-WEB-S142)", () => {
     expect(await screen.findByText(messages.deleteAccount.error)).toBeVisible();
   });
 });
+
+describe("a deleted account takes this device's sync flag with it (T-WEB-S1032)", () => {
+  it("clears miolos-settings-sync only once the deletion succeeded, so the fresh anonymous account is not seeded", async () => {
+    window.localStorage.setItem(
+      "miolos-settings-sync",
+      JSON.stringify({ on: true, pending: true }),
+    );
+    deleteAccountMock.mockResolvedValue(false);
+    render(<DeleteAccount />);
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.deleteAccount.start }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.deleteAccount.confirm }),
+    );
+    await waitFor(() => {
+      expect(deleteAccountMock).toHaveBeenCalledTimes(1);
+    });
+    expect(window.localStorage.getItem("miolos-settings-sync")).not.toBeNull();
+
+    deleteAccountMock.mockResolvedValue(true);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: messages.deleteAccount.confirm,
+      }),
+    );
+    expect(await screen.findByText(messages.deleteAccount.done)).toBeVisible();
+    expect(window.localStorage.getItem("miolos-settings-sync")).toBeNull();
+    expect(messages.privacy.collected.gameSettings).toContain(
+      messages.settings.games.sync.label,
+    );
+  });
+});
