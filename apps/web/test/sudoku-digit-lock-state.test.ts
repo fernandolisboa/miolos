@@ -55,6 +55,26 @@ function tapCell(index: number): SudokuPlayAction {
   return { type: "tap-cell", index, cleanNotes: true };
 }
 
+describe("a double tap on a filled cell writes nothing when it locks (T-WEB-S983)", () => {
+  it("keeps the same entries array, so the record does not persist again", () => {
+    const filled = play(
+      FRESH,
+      { type: "select", index: FIRST },
+      { type: "enter-digit", digit: 3, cleanNotes: true },
+    );
+
+    const locked = play(filled, {
+      type: "lock-digit",
+      digit: 3,
+      undo: { index: FIRST, value: 3, notes: filled.notes },
+    });
+
+    expect(locked.locked).toBe(3);
+    expect(locked.entries).toBe(filled.entries);
+    expect(locked.violating).toBe(filled.violating);
+  });
+});
+
 describe("the Sudoku digit lock in the reducer (T-WEB-S591)", () => {
   it("starts unlocked", () => {
     expect(FRESH.locked).toBeNull();

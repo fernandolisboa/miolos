@@ -279,6 +279,36 @@ describe("stroke-start and paint-over — the drag path (T-WEB-S506a)", () => {
   });
 });
 
+describe("a drag over a cell already holding the value writes nothing (T-WEB-S982)", () => {
+  it("returns the same state object, so nothing re-renders or persists", () => {
+    const started = playReducer(brushed(1), {
+      type: "stroke-start",
+      index: 6,
+      press: "tap",
+    });
+    const painted = playReducer(started, { type: "paint-over", index: 7 });
+
+    expect(playReducer(painted, { type: "paint-over", index: 7 })).toBe(
+      painted,
+    );
+    expect(playReducer(painted, { type: "paint-over", index: 6 })).toBe(
+      painted,
+    );
+  });
+
+  it("still writes the cells that change", () => {
+    const started = playReducer(brushed(1), {
+      type: "stroke-start",
+      index: 6,
+      press: "tap",
+    });
+    const painted = playReducer(started, { type: "paint-over", index: 7 });
+
+    expect(painted).not.toBe(started);
+    expect(painted.entries.slice(6, 8)).toEqual([1, 1]);
+  });
+});
+
 describe("set-mode takes the digit (T-WEB-S501)", () => {
   it("returns to cycle when the active brush is pressed again", () => {
     const zeros = brushed(0);

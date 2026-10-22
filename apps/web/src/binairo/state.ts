@@ -292,6 +292,9 @@ function withEntry(
   if (state.status !== "playing") {
     return state;
   }
+  if ((state.entries[index] ?? null) === value) {
+    return unlit(state);
+  }
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
