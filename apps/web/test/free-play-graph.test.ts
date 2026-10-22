@@ -54,11 +54,13 @@ function union(closures: readonly ReadonlySet<string>[]): readonly string[] {
 }
 
 const SETTINGS_STORE = "apps/web/src/settings/settings.ts";
+const MINESWEEPER_STORE = "apps/web/src/free-play/minesweeper-store.ts";
+const STORES = [SETTINGS_STORE, MINESWEEPER_STORE];
 
 function doesIo(module: string): boolean {
   const source = withoutComments(readFileSync(join(REPO_ROOT, module), "utf8"));
   return IO.test(
-    module === SETTINGS_STORE ? source.replaceAll("localStorage", "") : source,
+    STORES.includes(module) ? source.replaceAll("localStorage", "") : source,
   );
 }
 
@@ -125,11 +127,11 @@ vi.setConfig({ testTimeout: 40_000 });
 const entries = freePlayEntries();
 const valueGraph = union(entries.map(valueClosureOf));
 
-describe("free play's runtime graph reaches no I/O beyond the settings store's localStorage, and no walled source (T-WEB-S374)", () => {
-  it("no module on it does network or storage I/O beyond the settings store's localStorage, or lives in packages/db/src or packages/games/src/termo-answers", () => {
+describe("free play's runtime graph reaches no I/O beyond the localStorage of the settings and Campo Minado stores, and no walled source (T-WEB-S374)", () => {
+  it("no module on it does network or storage I/O beyond those two stores' localStorage, or lives in packages/db/src or packages/games/src/termo-answers", () => {
     expect({
       io: valueGraph.filter(doesIo),
-      reachesSettingsStore: valueGraph.includes(SETTINGS_STORE),
+      reachesStores: STORES.map((store) => valueGraph.includes(store)),
       walled: valueGraph.filter((m) => WALLED_SOURCE.test(m)),
       reachesChrome: valueGraph.includes("apps/web/src/play/screen-chrome.tsx"),
       reachesBinairo: valueGraph.includes(
@@ -172,7 +174,7 @@ describe("free play's runtime graph reaches no I/O beyond the settings store's l
         .sort(),
     }).toEqual({
       io: [],
-      reachesSettingsStore: true,
+      reachesStores: [true, true],
       walled: [],
       reachesChrome: true,
       reachesBinairo: true,

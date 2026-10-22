@@ -1,13 +1,29 @@
 /* floor = columns × (24px cell + 1px gap) + card chrome; see ADR-0136 */
+.pageMinefield,
+.customSize {
+  --floor: calc(var(--columns) * var(--pitch) + var(--chrome));
+  --board-floor-side: var(--floor);
+}
+
 .pageMinefield {
   --pitch: 25px;
   --chrome: calc(2 * var(--space-4) + 4px);
-  --floor: calc(var(--columns) * var(--pitch) + var(--chrome));
   --board-below: 6px;
-  --board-floor-side: var(--floor);
   --board-min: var(--floor);
   --grid-card-rot: 0deg;
   --grid-card-pad: var(--space-4);
+}
+
+/* --rows and --columns come inline; see ADR-0150 */
+.customSize {
+  --board-min: calc(var(--rows) * var(--pitch) + var(--chrome));
+  --board-aspect: calc(var(--columns) / var(--rows));
+  --board-max: max(
+    var(--floor),
+    min(620px, calc(var(--columns) * 40px + var(--chrome)))
+  );
+
+  display: contents;
 }
 
 .pageMinefield :has(> [data-board-card]) {

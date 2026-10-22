@@ -13,6 +13,7 @@
 **Amended by:** [ADR-0131](./0131-sudoku-free-play-offers-diagonal-and-formas.md) (#371) — for Sudoku, decisions 2 and 3 gain a _Variante_ picker (Clássico, Diagonal or Formas) beside the level; its state is `{seed, level, variant}`, in component state, never the URL.
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 2 gains a *Variante* (Clássico or Cores) beside the Nonogram level; decision 3: the Cores state is `{seed, size}`.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 1 gains `/modo-livre/campo-minado`; decisions 2 and 3 give it Windows' three levels, default Iniciante, and a seed per game; decision 6: this game has a clock.
+**Amended by:** [ADR-0150](./0150-free-play-campo-minado-keeps-a-best-time-per-level-and-offers-a-custom-size.md) (#425) — decision 4: free-play Campo Minado also writes `miolos-minesweeper`, a best time per level and the last custom size, on the device only.
 
 ## Context
 

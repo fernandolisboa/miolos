@@ -2,34 +2,44 @@
 
 import {
   MINESWEEPER_LEVELS,
-  type MinesweeperLevel,
+  type MinesweeperSize,
 } from "@miolos/games/minesweeper";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-import { messages } from "../i18n";
+import { formatElapsed, messages } from "../i18n";
+import { minesweeperFreeMessages } from "../minesweeper/free-messages";
 import { minesweeperMessages } from "../minesweeper/messages";
 import { FinishedMinefield } from "../minesweeper/finished-minefield";
 import { Minefield, type TapMode } from "../minesweeper/minefield";
 import minefield from "../minesweeper/minefield.module.css";
+import type { MinesweeperFreeLevel } from "../minesweeper/state";
 import { TapModeToggle } from "../minesweeper/tap-mode";
-import {
-  useMinesweeper,
-  type MinesweeperDeps,
-} from "../minesweeper/use-minesweeper";
 import { BoardCard } from "../play/board-card";
 import { EndingStage } from "../play/ending-stage";
 import { TimerReadout } from "../play/timer-readout";
 import { choice, type Choice } from "./choice";
 import { FreePlayChrome } from "./chrome";
+import { MinesweeperSizeForm } from "./minesweeper-size-form";
+import styles from "./minesweeper-free.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
+import {
+  useFreeMinesweeper,
+  type BestTime,
+  type MinesweeperDeps,
+} from "./use-free-minesweeper";
 
-const copy = minesweeperMessages;
+const copy = minesweeperFreeMessages;
 
-const LEVELS = Object.keys(MINESWEEPER_LEVELS) as readonly MinesweeperLevel[];
+const LEVELS: readonly MinesweeperFreeLevel[] = [
+  "beginner",
+  "intermediate",
+  "expert",
+  "custom",
+];
 
 const LEVEL_CLASSES: Readonly<
   Record<
-    MinesweeperLevel,
+    MinesweeperFreeLevel,
     { readonly page: string | undefined; readonly field: string | undefined }
   >
 > = {
@@ -39,11 +49,12 @@ const LEVEL_CLASSES: Readonly<
     field: minefield.intermediate,
   },
   expert: { page: minefield.pageExpert, field: minefield.expert },
+  custom: { page: undefined, field: undefined },
 };
 
 function minesweeperLevelChoice(
-  level: MinesweeperLevel,
-  onSelect: (level: MinesweeperLevel) => void,
+  level: MinesweeperFreeLevel,
+  onSelect: (level: MinesweeperFreeLevel) => void,
 ): Choice {
   return choice({
     label: copy.levels.label,
@@ -51,6 +62,9 @@ function minesweeperLevelChoice(
     selected: level,
     optionLabel: (option) => copy.levels[option],
     optionAria: (option) => {
+      if (option === "custom") {
+        return copy.levels.customAria;
+      }
       const { rows, columns, mines } = MINESWEEPER_LEVELS[option];
       return copy.levels.aria(copy.levels[option], rows, columns, mines);
     },
@@ -58,14 +72,51 @@ function minesweeperLevelChoice(
   });
 }
 
+function SizeVars({
+  level,
+  size,
+  children,
+}: {
+  readonly level: MinesweeperFreeLevel;
+  readonly size: MinesweeperSize;
+  readonly children: ReactNode;
+}) {
+  if (level !== "custom") {
+    return children;
+  }
+  return (
+    <div
+      className={minefield.customSize}
+      style={{ "--rows": size.rows, "--columns": size.columns }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function BestTimeLine({ bestTime }: { readonly bestTime: BestTime | null }) {
+  if (bestTime?.isNew === true) {
+    return <p className={styles.bestTimeNew}>{copy.best.isNew}</p>;
+  }
+  if (bestTime?.best == null) {
+    return null;
+  }
+  return (
+    <p className={styles.bestTime}>
+      {copy.best.line(formatElapsed(bestTime.best * 1000))}
+    </p>
+  );
+}
+
 export function MinesweeperFreeScreen({
   deps,
 }: {
   readonly deps?: MinesweeperDeps;
 }) {
-  const mines = useMinesweeper(deps);
+  const mines = useFreeMinesweeper(deps);
   const [tapMode, setTapMode] = useState<TapMode>("open");
   const { game, level, seed } = mines.play;
+  const { rows, columns } = game.size;
   const classes = LEVEL_CLASSES[level];
   const choices = [minesweeperLevelChoice(level, mines.chooseLevel)];
 
@@ -81,11 +132,14 @@ export function MinesweeperFreeScreen({
           onAgain={mines.newGame}
           picture={
             <div className={minefield.finishedField}>
-              <FinishedMinefield game={game} sizeClass={classes.field} />
+              <SizeVars level={level} size={game.size}>
+                <FinishedMinefield game={game} sizeClass={classes.field} />
+              </SizeVars>
               <TimerReadout
                 className={minefield.finishedTime}
                 elapsedMs={mines.elapsedMs}
               />
+              <BestTimeLine bestTime={mines.bestTime} />
             </div>
           }
         />
@@ -99,25 +153,30 @@ export function MinesweeperFreeScreen({
         state={{
           kind: "playing",
           readouts: {
-            progressShort: copy.progressShort(mines.minesLeft),
-            progressLong: copy.progressLong(mines.minesLeft),
+            progressShort: minesweeperMessages.progressShort(mines.minesLeft),
+            progressLong: minesweeperMessages.progressLong(mines.minesLeft),
             hint: null,
             onReset: game.status === "ready" ? null : mines.newGame,
             resetCopy: messages.games.minesweeper.play.reset,
           },
         }}
       >
-        <BoardCard>
-          <Minefield
-            key={`${level}:${String(seed)}`}
-            game={game}
-            sizeClass={classes.field}
-            tapMode={tapMode}
-            onActivate={mines.activate}
-            onMark={mines.mark}
-            onChord={mines.chord}
-          />
-        </BoardCard>
+        {level === "custom" && (
+          <MinesweeperSizeForm size={game.size} onPlay={mines.playCustom} />
+        )}
+        <SizeVars level={level} size={game.size}>
+          <BoardCard>
+            <Minefield
+              key={`${String(rows)}×${String(columns)}×${String(game.size.mines)}:${String(seed)}`}
+              game={game}
+              sizeClass={classes.field}
+              tapMode={tapMode}
+              onActivate={mines.activate}
+              onMark={mines.mark}
+              onChord={mines.chord}
+            />
+          </BoardCard>
+        </SizeVars>
         <TapModeToggle mode={tapMode} onChange={setTapMode} />
       </FreePlayChrome>
     </EndingStage>

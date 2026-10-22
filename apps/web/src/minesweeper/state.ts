@@ -1,18 +1,28 @@
 import {
-  MINESWEEPER_LEVELS,
   chordMinesweeper,
   cycleMinesweeperMark,
   newMinesweeperGame,
   openMinesweeperCell,
   type MinesweeperLevel,
+  type MinesweeperSize,
   type MinesweeperState,
 } from "@miolos/games/minesweeper";
 
 import { applyTimerAction, type TimerState } from "../play/timer";
 
-export interface MinesweeperPlay {
-  readonly level: MinesweeperLevel;
+export type MinesweeperFreeLevel = MinesweeperLevel | "custom";
+
+export interface MinesweeperDeal {
+  readonly level: MinesweeperFreeLevel;
+  readonly size: MinesweeperSize;
   readonly seed: number;
+  readonly best: number | null;
+}
+
+export interface MinesweeperPlay {
+  readonly level: MinesweeperFreeLevel;
+  readonly seed: number;
+  readonly best: number | null;
   readonly game: MinesweeperState;
   readonly timer: TimerState;
   readonly now: number;
@@ -30,24 +40,19 @@ export type MinesweeperMove =
 export type MinesweeperAction =
   | MinesweeperMove
   | { readonly type: "tick"; readonly now: number }
-  | {
-      readonly type: "new";
-      readonly level: MinesweeperLevel;
-      readonly seed: number;
-      readonly now: number;
-    };
+  | ({ readonly type: "new"; readonly now: number } & MinesweeperDeal);
 
 const STOPPED: TimerState = { accumulatedMs: 0, runningSince: null };
 
 export function initMinesweeper(
-  level: MinesweeperLevel,
-  seed: number,
+  { level, size, seed, best }: MinesweeperDeal,
   now: number,
 ): MinesweeperPlay {
   return {
     level,
     seed,
-    game: newMinesweeperGame(MINESWEEPER_LEVELS[level], seed),
+    best,
+    game: newMinesweeperGame(size, seed),
     timer: STOPPED,
     now,
   };
@@ -114,6 +119,6 @@ export function minesweeperReducer(
     case "tick":
       return { ...play, now: action.now };
     case "new":
-      return initMinesweeper(action.level, action.seed, action.now);
+      return initMinesweeper(action, action.now);
   }
 }

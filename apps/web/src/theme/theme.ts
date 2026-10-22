@@ -1,3 +1,5 @@
+import { safely } from "../safely";
+
 export const THEME_CHOICES = ["system", "light", "dark"] as const;
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
 
@@ -8,14 +10,6 @@ const DATASET_VALUES = THEME_CHOICES.filter((choice) => choice !== "system");
 export const themeScript = `(function(){try{var v=localStorage.getItem(${JSON.stringify(
   STORAGE_KEY,
 )});if(${JSON.stringify(DATASET_VALUES)}.indexOf(v)!==-1){document.documentElement.dataset.theme=v;}}catch(e){}})();`;
-
-function safely<T>(read: () => T, fallback: T): T {
-  try {
-    return read();
-  } catch {
-    return fallback;
-  }
-}
 
 export function readThemeChoice(): ThemeChoice {
   const stored = safely(() => localStorage.getItem(STORAGE_KEY), null);

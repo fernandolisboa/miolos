@@ -5,10 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MinesweeperPage from "../app/modo-livre/campo-minado/page";
 import { MinesweeperFreeScreen } from "../src/free-play/minesweeper-free-screen";
 import { messages, routes } from "../src/i18n";
+import { minesweeperFreeMessages } from "../src/minesweeper/free-messages";
 import { minesweeperMessages } from "../src/minesweeper/messages";
 import { readSettings, writeSettings } from "../src/settings/settings";
 
-const copy = { ...messages.games.minesweeper.play, ...minesweeperMessages };
+const copy = {
+  ...messages.games.minesweeper.play,
+  ...minesweeperMessages,
+  ...minesweeperFreeMessages,
+};
 const SEED = 20_261_015;
 const FIRST = 40;
 const NEXT_SEED = 20_261_016;
@@ -73,7 +78,7 @@ afterEach(() => {
   fetchSpy.mockClear();
 });
 
-describe("the Campo Minado screen is a static page that plays and records nothing (T-WEB-S887)", () => {
+describe("the Campo Minado screen is a static page that plays, fetches nothing and keeps only its best times (T-WEB-S887)", () => {
   it("draws the beginner board at once, with the counter, the clock and no hint or undo", () => {
     mount();
 
@@ -309,7 +314,7 @@ describe("the Campo Minado screen is a static page that plays and records nothin
     expect(name()).toMatch(new RegExp(`${copy.cell.hidden}$`));
   });
 
-  it("fetches nothing and writes nothing but the settings, through a whole game", () => {
+  it("fetches nothing and writes nothing through a lost game", () => {
     mount();
     open(FIRST);
     const mine = layMines({
@@ -321,6 +326,14 @@ describe("the Campo Minado screen is a static page that plays and records nothin
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(window.localStorage.length).toBe(0);
+  });
+
+  it("fetches nothing and writes only miolos-minesweeper through a won game", () => {
+    mount();
+    win(SEED);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(Object.keys(window.localStorage)).toEqual(["miolos-minesweeper"]);
   });
 
   it("is mounted by the page, with no props and no generation step", () => {
