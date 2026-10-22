@@ -398,7 +398,7 @@ function withEntry(
   value: SudokuCellValue,
   cleanNotes: boolean,
 ): SudokuPlayState {
-  if (state.status !== "playing") {
+  if (state.status !== "playing" || (state.entries[index] ?? null) === value) {
     return state;
   }
   const entries = state.entries.map((entry, at) =>
