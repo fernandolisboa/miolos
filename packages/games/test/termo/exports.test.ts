@@ -14,7 +14,7 @@ describe("@miolos/games exports map", () => {
 
   it("resolves the ./termo-answers subpath", async () => {
     const mod = await import("@miolos/games/termo-answers");
-    expect(mod.TERMO_ANSWERS).toHaveLength(400);
+    expect(mod.TERMO_ANSWERS).toHaveLength(626);
   });
 
   it("resolves the ./termo-free subpath", async () => {

@@ -202,8 +202,8 @@ describe("Termo's share carries the grid and the genre's own score line (T-WEB-S
 });
 
 describe("the day's answer never reaches the share (T-WEB-S190)", () => {
-  it("no canonical answer appears in the composed text, over all 400 of them", () => {
-    expect(TERMO_ANSWERS.length).toBe(400);
+  it("no canonical answer appears in the composed text, over every curated answer", () => {
+    expect(TERMO_ANSWERS.length).toBe(626);
 
     const offenders: string[] = [];
     let swept = 0;
@@ -230,7 +230,7 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
       }
     }
 
-    expect(swept).toBe(800);
+    expect(swept).toBe(TERMO_ANSWERS.length * 2);
     expect(offenders).toEqual([]);
   });
 

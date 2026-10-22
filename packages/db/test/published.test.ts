@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { addDays } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sql } from "drizzle-orm";
 import fc from "fast-check";
@@ -565,7 +566,7 @@ describe("the wall holds for the fourth game (#27, plan 022 §9)", () => {
   });
 });
 
-describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
+describe("listUsedTermoAnswers (ADR-0147's 365-day window)", () => {
   async function insertTermoRow(options: {
     date: string;
     normalized: string;
@@ -585,61 +586,89 @@ describe("listUsedTermoAnswers (#27, ADR-0040's no-repeat rule)", () => {
     });
   }
 
-  it("T-DB-S10: returns killed AND unpublished AND past answers — an answer is spent forever", async () => {
+  it("T-DB-S10: returns killed AND unpublished AND past answers inside the window", async () => {
+    const today = await saoPauloToday();
     await insertTermoRow({
-      date: "2026-07-01",
+      date: addDays(today, -30),
       normalized: "passe",
       publishedAt: sql`now() - interval '30 days'`,
     });
     await insertTermoRow({
-      date: "2026-08-01",
+      date: addDays(today, -1),
       normalized: "morto",
       publishedAt: sql`now() - interval '1 hour'`,
       killedAt: sql`now()`,
     });
     await insertTermoRow({
-      date: "2126-01-01",
+      date: addDays(today, 36_500),
       normalized: "adiar",
       publishedAt: sql`now() + interval '100 years'`,
     });
 
-    const used = await listUsedTermoAnswers(ctx.db);
+    const used = await listUsedTermoAnswers(ctx.db, addDays(today, -364));
     expect([...used].sort()).toEqual(["adiar", "morto", "passe"]);
   });
 
   it("T-DB-S10: a binairo row is NOT returned (the anti-vacuity half)", async () => {
+    const today = await saoPauloToday();
     await insertRow({
       game: "binairo",
-      date: "2026-08-01",
+      date: addDays(today, -3),
       publishedAt: sql`now() - interval '1 hour'`,
     });
     await insertRow({
       game: "nonogram",
-      date: "2026-08-02",
+      date: addDays(today, -2),
       publishedAt: sql`now() - interval '1 hour'`,
     });
     await insertTermoRow({
-      date: "2026-08-03",
+      date: addDays(today, -1),
       normalized: "sarau",
       publishedAt: sql`now() - interval '1 hour'`,
     });
 
-    expect(await listUsedTermoAnswers(ctx.db)).toEqual(["sarau"]);
+    expect(await listUsedTermoAnswers(ctx.db, addDays(today, -364))).toEqual([
+      "sarau",
+    ]);
   });
 
   it("T-DB-S10: an empty table returns an empty list, never a null", async () => {
-    expect(await listUsedTermoAnswers(ctx.db)).toEqual([]);
+    const today = await saoPauloToday();
+    expect(await listUsedTermoAnswers(ctx.db, addDays(today, -364))).toEqual(
+      [],
+    );
   });
 
   it("T-DB-S10: reads `normalized` and not `canonical` — the ASCII form is the key", async () => {
+    const today = await saoPauloToday();
     await ctx.db.insert(dailyPuzzles).values({
       game: "termo",
-      date: "2026-08-01",
+      date: addDays(today, -1),
       seed: 1,
       content: { canonical: "então", normalized: "entao" },
       publishedAt: sql`now() - interval '1 hour'`,
     });
-    expect(await listUsedTermoAnswers(ctx.db)).toEqual(["entao"]);
+    expect(await listUsedTermoAnswers(ctx.db, addDays(today, -364))).toEqual([
+      "entao",
+    ]);
+  });
+
+  it("T-DB-S146: a row dated on fromDate is used, a row the day before is not", async () => {
+    const today = await saoPauloToday();
+    const fromDate = addDays(today, -364);
+    await insertTermoRow({
+      date: fromDate,
+      normalized: "perto",
+      publishedAt: sql`now() - interval '364 days'`,
+    });
+    await insertTermoRow({
+      date: addDays(fromDate, -1),
+      normalized: "longe",
+      publishedAt: sql`now() - interval '365 days'`,
+      killedAt: sql`now()`,
+    });
+
+    expect(await listUsedTermoAnswers(ctx.db, fromDate)).toEqual(["perto"]);
   });
 });
 

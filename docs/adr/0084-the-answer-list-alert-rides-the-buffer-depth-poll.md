@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-09-26 (issue #74)
 **Depends on:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md)
 **Amends:** [ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md) decision 7, by discharging its follow-up alert and making its clocks precise; [ADR-0059](./0059-the-property-proof-splits-from-the-per-pr-gate.md) decision 5, for this label only
+**Superseded in part by:** [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md) (#200) — decision 1's count: `termoAnswersRemaining` counts the answers eligible today, from `eligibleTermoAnswers`.
 
 ## Context
 

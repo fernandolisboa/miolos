@@ -530,8 +530,8 @@ describe("nonogramDailyContentSchema", () => {
 });
 
 describe("termoDailyContentSchema", () => {
-  it("T-CORE-S17: all 400 curated answers parse, round-trip unchanged, and agree with normalizeWord", () => {
-    expect(TERMO_ANSWERS.length).toBe(400);
+  it("T-CORE-S17: every curated answer parses, round-trips unchanged, and agrees with normalizeWord", () => {
+    expect(TERMO_ANSWERS.length).toBe(626);
     for (const answer of TERMO_ANSWERS) {
       const parsed = termoDailyContentSchema.parse(answer);
       expect(parsed).toEqual({
@@ -623,7 +623,7 @@ describe("stripDailyContent (termo)", () => {
     expect(dailyPuzzleResponseSchema.parse(stripped)).toEqual(stripped);
   });
 
-  it("T-CORE-S19: carries no forbidden daily key at any depth, over all 400 answers", () => {
+  it("T-CORE-S19: carries no forbidden daily key at any depth, over every curated answer", () => {
     for (const answer of TERMO_ANSWERS) {
       const stripped = stripDailyContent("termo", "2026-08-03", answer);
       const keys = collectKeys(stripped);

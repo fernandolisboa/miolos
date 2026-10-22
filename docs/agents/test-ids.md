@@ -38,10 +38,12 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
 | `T-CORE` | `S206`    | `S204`         | never used            |
-| `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
-| `T-API`  | `S342`    | `S341`         | `T-API-16`            |
+| `T-DB`   | `S148`    | `S146`         | `T-DB-21`             |
+| `T-API`  | `S347`    | `S346`         | `T-API-16`            |
 | `T-WEB`  | `S1008`   | `S1006`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#200 (a Termo answer may return after 365 days, ADR-0147) spent **`T-DB-S146`** in `published.test.ts` (`listUsedTermoAnswers` counts a row dated on `fromDate` and not one the day before) and **`T-API-S342…S346`**: in `publishing-service.test.ts`, `S342` (an answer last drawn 365 days ago is drawn again; 364 days ago, the run fails with the exhaustion reason), `S343` (with every window day drawn and every other answer drawn before it, a clamp-depth run writes 30 rows and repeats nothing inside 365 days), `S344` (the list minus the fullest window, 364 + the `bufferDepth` maximum, is not low) and `S346` (the list minus the cooldown is at least 100, ADR-0004's mixing floor); in `buffer-depth.test.ts`, `S345` (the remaining count follows the window). Re-aimed in place: the four `T-DB-S10` cases (dates relative to today, title); `T-API-S5`, `S22`, `S34b`, `S224`, `S240`, `S341`, `S217`, `S219`, `S32` and `S44` (counts derived from `TERMO_ANSWERS.length`, answers spent with `spendAnswers`); `S31` and `S218` (retitled); `T-CORE-S17`, `S19` and `T-WEB-S190`'s sweep (retitled, 626). `T-DB-S147` is **burned**, unspent. Next free is `T-DB-S148` and `T-API-S347`.
 
 #415 (per-game time buckets, ADR-0146) spent **`T-CORE-S204`** in `packages/core/test/stats.test.ts` (the per-game table in minutes; each timed game's bounds are ascending whole minutes; `timeBucketIndex` is half-open at both ends; 150 000 ms is Sudoku 0, Rainhas 2, Campo Minado 1) and **`T-WEB-S1006`** in `stats-page.test.tsx` and `conclusion-stats.test.tsx` (Campo Minado and Sudoku render their own labels and spoken names on both histograms; Rainhas starts at "menos de 1 minuto"; 2:30 lights `2–3` on Campo Minado and `<4` on Sudoku). Re-aimed in place: `T-CORE-S65`, `S136`, `T-API-S85`, `T-WEB-S154` and `S157` (new bucket values); `T-LINT-S31` names `../stats/time-buckets`. `T-CORE-S205` and `T-WEB-S1007` are **burned**, unspent. Next free is `T-CORE-S206` and `T-WEB-S1008`.
 

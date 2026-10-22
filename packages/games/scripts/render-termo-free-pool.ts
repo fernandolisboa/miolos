@@ -9,25 +9,23 @@ export function renderTermoFreePoolModule(
   lexiconTsv: string,
   validationTxt: string,
   answersCsv: string,
-  reserveTxt: string,
 ): string {
   const guessable = new Set(parseWordLines("validation.txt", validationTxt));
-  const excluded = new Set([
-    ...parseAnswersCsv(answersCsv).map((row) => row.normalized),
-    ...parseWordLines("reserve.txt", reserveTxt),
-  ]);
+  const answers = new Set(
+    parseAnswersCsv(answersCsv).map((row) => row.normalized),
+  );
   const pool = parseTsv("lexicon.tsv", lexiconTsv, LEXICON_COLUMNS)
     .filter(
       ([normalized = ""]) =>
         normalized.length === 5 &&
         guessable.has(normalized) &&
-        !excluded.has(normalized),
+        !answers.has(normalized),
     )
     .map(([, canonical = ""]) => canonical);
   return renderWordsModule(
-    "content/crossword/lexicon.tsv, content/termo/validation.txt, answers.csv and reserve.txt",
+    "content/crossword/lexicon.tsv, content/termo/validation.txt and answers.csv",
     "FREE_POOL_CANONICALS",
-    "canonical five-letter lexicon words that are guesses, never answers and never reserved, lexicon.tsv order",
+    "canonical five-letter lexicon words that are guesses and never answers, lexicon.tsv order",
     pool,
   );
 }

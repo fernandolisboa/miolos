@@ -1,12 +1,16 @@
 import { bufferDepthResponseSchema, GAMES, type Game } from "@miolos/core";
-import { bufferDepth, getRemoteConfig } from "@miolos/db/publishing";
+import {
+  bufferDepth,
+  getRemoteConfig,
+  todaySaoPaulo,
+} from "@miolos/db/publishing";
 
 import { corsHeaders } from "../../src/cors";
 import { getDb } from "../../src/db";
 import {
   effectiveThreshold,
+  eligibleTermoAnswers,
   isTermoAnswerListLow,
-  unusedTermoAnswers,
 } from "../../src/publishing/service";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +24,9 @@ export async function GET(): Promise<Response> {
   );
   const depths = Object.fromEntries(depthEntries) as Record<Game, number>;
   const threshold = effectiveThreshold(config.bufferDepth);
-  const termoAnswersRemaining = (await unusedTermoAnswers(db)).length;
+  const termoAnswersRemaining = (
+    await eligibleTermoAnswers(db, await todaySaoPaulo(db))
+  ).length;
   const body = bufferDepthResponseSchema.parse({
     depths,
     threshold,

@@ -99,14 +99,14 @@ async function topUpBuffer(
   db: Db,
   game: Game,
   depth: number,
-  startRun: () => CoverDate | Promise<CoverDate>,
+  startRun: (today: string) => CoverDate | Promise<CoverDate>,
 ): Promise<TopUpResult> {
   let generated = 0;
   const failures: { date: string; reason: string }[] = [];
   try {
     const today = await todaySaoPaulo(db);
     const existing = new Set(await listBufferedDates(db, game, today));
-    const coverDate = await startRun();
+    const coverDate = await startRun(today);
 
     for (let offset = 0; offset < depth; offset += 1) {
       const target = addDays(today, offset);
@@ -426,8 +426,18 @@ export function topUpMinesweeperBuffer(
 
 const LOW_ANSWER_LIST_WARNING = 30;
 
-export async function unusedTermoAnswers(db: Db): Promise<TermoAnswer[]> {
-  const used = new Set(await listUsedTermoAnswers(db));
+export const TERMO_ANSWER_COOLDOWN_DAYS = 365;
+
+export async function eligibleTermoAnswers(
+  db: Db,
+  today: string,
+): Promise<TermoAnswer[]> {
+  const used = new Set(
+    await listUsedTermoAnswers(
+      db,
+      addDays(today, 1 - TERMO_ANSWER_COOLDOWN_DAYS),
+    ),
+  );
   return TERMO_ANSWERS.filter((answer) => !used.has(answer.normalized));
 }
 
@@ -435,8 +445,7 @@ export function isTermoAnswerListLow(remaining: number): boolean {
   return remaining <= LOW_ANSWER_LIST_WARNING;
 }
 
-const ANSWER_LIST_EXHAUSTED =
-  "answer list exhausted: every curated Termo answer is already used";
+const ANSWER_LIST_EXHAUSTED = `answer list exhausted: every curated Termo answer was a daily in the last ${String(TERMO_ANSWER_COOLDOWN_DAYS)} days`;
 
 const MAX_UNIFORM_DRAW_ATTEMPTS = 64;
 
@@ -469,8 +478,8 @@ export async function topUpTermoBuffer(
   db: Db,
   depth: number,
 ): Promise<TopUpResult> {
-  return topUpBuffer(db, "termo", depth, async () => {
-    const pool = await unusedTermoAnswers(db);
+  return topUpBuffer(db, "termo", depth, async (today) => {
+    const pool = await eligibleTermoAnswers(db, today);
 
     if (isTermoAnswerListLow(pool.length)) {
       console.error(

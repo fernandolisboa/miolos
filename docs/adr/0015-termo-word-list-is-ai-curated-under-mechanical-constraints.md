@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-07-30
 **Depends on:** [ADR-0005](./0005-all-content-is-free.md)
 **Amends:** [`docs/handoffs/001-handoff-project-foundation.md`](../handoffs/001-handoff-project-foundation.md) — the M2 note *"curadoria da lista de palavras corre em paralelo, é trabalho não-técnico"* and pendência não-técnica 3, both of which assumed hand curation by Fernando.
-**Superseded in part by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — the consequence "Termo remains excluded from free play": the answer list stays unspent because free play draws from a separate pool.
+**Superseded in part by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — the consequence "Termo remains excluded from free play": the answer list stays unspent because free play draws from a separate pool. [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md) (#200) — the 400 target: the list is all 626 picks, and an answer may return after 365 days.
 
 ## Context
 

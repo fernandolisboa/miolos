@@ -65,7 +65,7 @@ describe("cronPublishResponseSchema", () => {
               date: "2026-08-10",
 
               reason:
-                "answer list exhausted: every curated Termo answer is already used",
+                "answer list exhausted: every curated Termo answer was a daily in the last 365 days",
             },
           ],
           error: null,
