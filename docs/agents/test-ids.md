@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S1002`   | `S1000`        | `T-WEB-23`            |
+| `T-WEB`  | `S1004`   | `S1003`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#206 cluster 14's second half (the local and remote conclusions split into `conclusion-view.tsx`, `remote-conclusion-view.tsx` and `conclusion-chrome.tsx`) spent **`T-WEB-S1002`** in `remote-conclusion-closure.test.ts` (the remote view's import closure never reaches `sync`, `share-button`, `share-text`, `push-prompt-card`, `ending-flourish` or `conclusion-view`, and does reach `conclusion-chrome` and `conclusion-stats`) and **`T-WEB-S1003`** in `conclusion-lazy.test.tsx` (the daily preload also loads the remote chunk). `T-LINT-S16` and `S17` (the two new modules are walled off free play, statically and dynamically), `T-WEB-S183` and `S364` (the archive graph), the `route-envelopes` `CONCLUSION` regex and the `nonogram-motif-name` source read were widened in place. Next free is `S1004`.
 
 #410 (Binairo onto `BinaryGridState` and `binaryGridReducer`, plus the shared `cellProps` in `play/use-binary-board.ts`) spent **`T-WEB-S1000`** in `binairo-state.test.ts` (a caret write or clear on a given returns the same state; rewriting the hinted cell drops `hint.lastIndex`; no solution means no hint; a Binairo record restores through `restoreBinaryRecord` and another game's does not). `S1001` is **burned**, unspent, so next free is `S1002`.
 
