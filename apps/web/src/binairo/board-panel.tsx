@@ -1,5 +1,3 @@
-import type { BinairoSolvedGrid } from "@miolos/games/binairo";
-
 import { BoardCard } from "../play/board-card";
 import { Controls } from "./controls";
 import { Grid } from "./grid";
@@ -8,11 +6,9 @@ import type { BinairoControls } from "./use-binairo-controls";
 
 export function BoardPanel({
   state,
-  solution,
   controls,
 }: {
   readonly state: PlayState;
-  readonly solution: BinairoSolvedGrid | null;
   readonly controls: BinairoControls;
 }) {
   return (
@@ -23,7 +19,7 @@ export function BoardPanel({
     >
       <Grid
         givens={state.givens}
-        solution={solution}
+        solution={state.solution}
         entries={state.entries}
         mistakes={state.mistakes}
         violating={state.violating}

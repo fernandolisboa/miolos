@@ -1,20 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { BoardPanel } from "../binairo/board-panel";
 import { ControlsSkeleton } from "../binairo/controls";
 import { binairoHintExplanation } from "../binairo/hint";
-import {
-  binairoMistakes,
-  canHint,
-  initPlayState,
-  playReducer,
-} from "../binairo/state";
+import { BINAIRO_MISTAKES, initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
 import { EndingStage } from "../play/ending-stage";
+import { canHint } from "../play/binary-grid";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
@@ -84,15 +80,11 @@ function BinairoFreeBoard({
   readonly puzzle: FreeBinairoPuzzle;
   readonly onNext: () => void;
 }) {
-  const rules = useMemo(
-    () => binairoMistakes(puzzle.solution, puzzle.daily.givens),
-    [puzzle],
-  );
   const [state, dispatch] = usePlayReducer(
     playReducer,
-    puzzle.daily,
-    initPlayState,
-    rules,
+    puzzle,
+    ({ daily, solution }) => initPlayState(daily, solution),
+    BINAIRO_MISTAKES,
   );
   const controls = useBinairoControls(dispatch);
   const allowance = useFreeHintsPerPuzzle();
@@ -111,9 +103,9 @@ function BinairoFreeBoard({
 
   const revealHint = useCallback(() => {
     if (canHint(stateRef.current, allowance)) {
-      dispatch({ type: "use-hint", solution: puzzle.solution });
+      dispatch({ type: "use-hint" });
     }
-  }, [dispatch, puzzle.solution, allowance]);
+  }, [dispatch, allowance]);
 
   const edits = useBoardEdits(state, dispatch);
 
@@ -147,11 +139,7 @@ function BinairoFreeBoard({
           },
         }}
       >
-        <BoardPanel
-          state={state}
-          solution={puzzle.solution}
-          controls={controls}
-        />
+        <BoardPanel state={state} controls={controls} />
       </FreePlayChrome>
     </EndingStage>
   );

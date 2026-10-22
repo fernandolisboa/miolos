@@ -141,7 +141,7 @@ const CROSSWORD_FRESH = initCrosswordPlayState(
 describe("Recomeçar forgets the reason and the spotlight in every reducer (T-WEB-S562)", () => {
   const cases = [
     resetCase("sudoku", SUDOKU_FRESH, 1, sudokuPlayReducer),
-    resetCase("binairo", initPlayState(BINAIRO_DAILY), 1, playReducer),
+    resetCase("binairo", initPlayState(BINAIRO_DAILY, null), 1, playReducer),
     resetCase(
       "nonogram",
       initNonogramPlayState(
@@ -203,7 +203,7 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
   });
 
   it("clears it on a Binairo tap", () => {
-    const binairo = initPlayState(BINAIRO_DAILY);
+    const binairo = initPlayState(BINAIRO_DAILY, null);
     const index = BINAIRO.givens.findIndex((given) => given === null);
     const tapped = playReducer(
       { ...binairo, hint: LIT },
@@ -225,7 +225,7 @@ describe("the next board action puts the spotlight out (T-WEB-S562)", () => {
     expect(repainted.entries).toEqual(painting.entries);
     expect(repainted.hint.spotlight).toEqual([]);
 
-    const binairo = { ...initPlayState(BINAIRO_DAILY), hint: LIT };
+    const binairo = { ...initPlayState(BINAIRO_DAILY, null), hint: LIT };
     const given = BINAIRO.givens.findIndex((cell) => cell !== null);
     const brushed = playReducer(binairo, { type: "set-mode", value: 1 });
     for (const [state, action] of [

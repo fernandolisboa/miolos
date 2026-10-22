@@ -47,7 +47,7 @@ export function PlayView({
         },
       }}
     >
-      <BoardPanel state={state} solution={play.solution} controls={play} />
+      <BoardPanel state={state} controls={play} />
     </DailyPlayChrome>
   );
 }

@@ -1,11 +1,15 @@
 import { BINAIRO_SIZE, type BinairoGrid } from "@miolos/games/binairo";
-import { memo, type MouseEvent as ReactMouseEvent } from "react";
+import { memo } from "react";
 
 import { messages } from "../i18n";
 import type { BinaryMark } from "../play/binary-grid";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
-import { useBinaryBoard } from "../play/use-binary-board";
+import {
+  cellProps,
+  useBinaryBoard,
+  type CellWiring,
+} from "../play/use-binary-board";
 import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
@@ -110,7 +114,6 @@ const Cell = memo(function Cell({
   onCellFocus,
   onCellClick,
 }: {
-  readonly index: number;
   readonly given: CellValue;
   readonly value: CellValue;
   readonly invalid: boolean;
@@ -118,24 +121,12 @@ const Cell = memo(function Cell({
   readonly hinted: boolean;
   readonly spotlit: boolean;
   readonly selected: boolean;
-  readonly tabbable: boolean;
-  readonly onCellFocus: (index: number) => void;
-  readonly onCellClick: (
-    index: number,
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => void;
-}) {
+} & CellWiring) {
   const row = Math.floor(index / BINAIRO_SIZE) + 1;
   const column = (index % BINAIRO_SIZE) + 1;
   const tint = spotlit ? ` ${spotlightStyles.spotlit}` : "";
   const caret = selected ? ` ${styles.cellSelected}` : "";
-  const handlers = {
-    "data-cell-index": index,
-    tabIndex: tabbable ? 0 : -1,
-    onFocus: () => onCellFocus(index),
-    onClick: (event: ReactMouseEvent<HTMLButtonElement>) =>
-      onCellClick(index, event),
-  };
+  const handlers = cellProps({ index, tabbable, onCellFocus, onCellClick });
   if (given !== null) {
     return (
       <button

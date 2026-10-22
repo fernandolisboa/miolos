@@ -22,6 +22,28 @@ export interface BinaryBoard {
   ) => void;
 }
 
+export interface CellWiring {
+  readonly index: number;
+  readonly tabbable: boolean;
+  readonly onCellFocus: (index: number) => void;
+  readonly onCellClick: BinaryBoard["onCellClick"];
+}
+
+export function cellProps({
+  index,
+  tabbable,
+  onCellFocus,
+  onCellClick,
+}: CellWiring) {
+  return {
+    "data-cell-index": index,
+    tabIndex: tabbable ? 0 : -1,
+    onFocus: () => onCellFocus(index),
+    onClick: (event: ReactMouseEvent<HTMLButtonElement>) =>
+      onCellClick(index, event),
+  };
+}
+
 const DEFAULT_KEYS: ReadonlyMap<string, BinaryMark | null> = new Map([
   ["1", 1],
   ["2", 0],

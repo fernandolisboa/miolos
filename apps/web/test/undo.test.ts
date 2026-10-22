@@ -291,7 +291,7 @@ describe("Binairo and Nonogram undo a drag and keep the brush (T-WEB-S823)", () 
       size: 8,
       givens: [...puzzle.givens],
     };
-    const board = binairo(initPlayState(daily), RESTORE, {
+    const board = binairo(initPlayState(daily, null), RESTORE, {
       type: "set-mode",
       value: 1,
     });

@@ -150,7 +150,7 @@ const BINAIRO_PLAYABLE = BINAIRO.givens.flatMap((cell, index) =>
 
 function binairoCase(): BoardCase<PlayState> {
   const reduce = playReducer;
-  const start = initPlayState(BINAIRO_DAILY);
+  const start = initPlayState(BINAIRO_DAILY, BINAIRO_SOLUTION);
   const [first = 0, second = 1] = BINAIRO_PLAYABLE;
   const played = run(reduce, start, [
     { type: "resume", now: 1000 },
@@ -158,7 +158,7 @@ function binairoCase(): BoardCase<PlayState> {
     { type: "set-mode", value: 1 },
     { type: "tap", index: first, press: "tap", first: 1 },
     { type: "tap", index: second, press: "tap", first: 1 },
-    { type: "use-hint", solution: BINAIRO_SOLUTION },
+    { type: "use-hint" },
     ...BINAIRO_PLAYABLE.filter(
       (index) => index < BINAIRO_SIDE && index !== first && index !== second,
     ).map((index) => ({
@@ -184,8 +184,7 @@ function binairoCase(): BoardCase<PlayState> {
       },
     }),
     reduce,
-    useHint: (state) =>
-      reduce(state, { type: "use-hint", solution: BINAIRO_SOLUTION }),
+    useHint: (state) => reduce(state, { type: "use-hint" }),
     flagged: (state) => state.violating.size,
     kept: (state) => [state.givens, state.paint],
   };

@@ -1,16 +1,15 @@
 import type { NonogramSize } from "@miolos/core";
 import { placedClues, type NonogramClues } from "@miolos/games/nonogram";
-import {
-  Fragment,
-  memo,
-  useMemo,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
+import { Fragment, memo, useMemo } from "react";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
-import { useBinaryBoard } from "../play/use-binary-board";
+import {
+  cellProps,
+  useBinaryBoard,
+  type CellWiring,
+} from "../play/use-binary-board";
 import type { MistakeState } from "../play/mistakes";
 import { WrongMark } from "../play/wrong-mark";
 import { useSettings } from "../settings/settings";
@@ -226,7 +225,6 @@ const Cell = memo(function Cell({
   onCellFocus,
   onCellClick,
 }: {
-  readonly index: number;
   readonly row: number;
   readonly column: number;
   readonly size: NonogramSize;
@@ -236,14 +234,7 @@ const Cell = memo(function Cell({
   readonly spotlit: boolean;
 
   readonly selected: boolean;
-
-  readonly tabbable: boolean;
-  readonly onCellFocus: (index: number) => void;
-  readonly onCellClick: (
-    index: number,
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => void;
-}) {
+} & CellWiring) {
   const label = messages.games.nonogram.play.cellAria(
     row + 1,
     column + 1,
@@ -262,15 +253,11 @@ const Cell = memo(function Cell({
         selected,
       })}
       style={{ gridColumn: column + 2, gridRow: row + 2 }}
-      data-cell-index={index}
-      tabIndex={tabbable ? 0 : -1}
+      {...cellProps({ index, tabbable, onCellFocus, onCellClick })}
 
       aria-label={wrong ? messages.play.wrongCell(label) : label}
 
       aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
-
-      onFocus={() => onCellFocus(index)}
-      onClick={(event) => onCellClick(index, event)}
     >
       {wrong ? <WrongMark /> : null}
     </button>

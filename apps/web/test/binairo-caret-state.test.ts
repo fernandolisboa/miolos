@@ -3,7 +3,7 @@ import { generateBinairo, solveBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
 import {
-  binairoMistakes,
+  BINAIRO_MISTAKES,
   initPlayState,
   playReducer,
   type PlayAction,
@@ -40,11 +40,11 @@ function run(
   return actions.reduce(playReducer, state);
 }
 
-const fresh = () => initPlayState(DAILY);
+const fresh = () => initPlayState(DAILY, SOLUTION);
 
 const judged = withMistakes<PlayState, PlayAction | UndoAction>(
   playReducer,
-  binairoMistakes(SOLUTION, PUZZLE.givens),
+  BINAIRO_MISTAKES,
   true,
 );
 
@@ -118,7 +118,7 @@ describe("the Binairo caret is state: select, move, enter, clear (T-WEB-S990)", 
   });
 
   it("clears the hint spotlight on a select but not when a refused write changes nothing", () => {
-    const hinted = run(fresh(), { type: "use-hint", solution: SOLUTION });
+    const hinted = run(fresh(), { type: "use-hint" });
     expect(hinted.hint.spotlight.length).toBeGreaterThan(0);
     expect(run(hinted, select(A)).hint.spotlight).toEqual([]);
     const onGiven = run(hinted, select(GIVEN));
