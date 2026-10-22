@@ -1,4 +1,4 @@
-import { dailyTermoResponseSchema } from "@miolos/core";
+import { addDays, dailyTermoResponseSchema, isoWeekdayOf } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { eq, sql } from "@miolos/db";
 import {
@@ -21,7 +21,6 @@ import {
 } from "vitest";
 
 import { GET } from "../app/daily/termo/route";
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 

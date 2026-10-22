@@ -1,6 +1,8 @@
 import {
+  addDays,
   binairoDailyContentSchema,
   crosswordDailyContentSchema,
+  isoWeekdayOf,
   minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
@@ -51,8 +53,6 @@ import {
   validateSudoku,
 } from "@miolos/games/sudoku";
 import { TERMO_ANSWERS, type TermoAnswer } from "@miolos/games/termo-answers";
-
-import { addDays, isoWeekdayOf } from "./dates";
 
 export interface TopUpResult {
   generated: number;

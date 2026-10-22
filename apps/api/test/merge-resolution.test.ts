@@ -1,4 +1,4 @@
-import { streakResponseSchema } from "@miolos/core";
+import { addDays, streakResponseSchema } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -15,7 +15,6 @@ import {
 } from "vitest";
 
 import { GET } from "../app/streak/route";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { requireUserId } from "../src/session/service";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";

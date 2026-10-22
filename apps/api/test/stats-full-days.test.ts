@@ -1,4 +1,8 @@
-import { fullDaysResponseSchema, medalsResponseSchema } from "@miolos/core";
+import {
+  addDays,
+  fullDaysResponseSchema,
+  medalsResponseSchema,
+} from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -18,7 +22,6 @@ import {
 import { GET } from "../app/stats/full-days/route";
 import { GET as medalsGet } from "../app/medals/route";
 import { publishDaily } from "./lineup-helpers";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 

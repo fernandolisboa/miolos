@@ -1,3 +1,4 @@
+import { addDays, isoWeekdayOf } from "@miolos/core";
 import { sessions, sql, users } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -17,7 +18,6 @@ import {
 } from "vitest";
 
 import { POST } from "../app/completions/route";
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import {

@@ -16,8 +16,10 @@ export {
   type FeatureFlags,
 } from "./feature-flags";
 export {
+  addDays,
   dateFromEpochDay,
   epochDay,
+  isoWeekdayOf,
   MAX_EPOCH_DAY,
   MIN_EPOCH_DAY,
 } from "./date";

@@ -1,4 +1,4 @@
-import { termoGuessResponseSchema } from "@miolos/core";
+import { addDays, termoGuessResponseSchema } from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
 import {
   dailyPuzzles,
@@ -23,7 +23,6 @@ import {
 
 import { POST as completionsPost } from "../app/completions/route";
 import { OPTIONS, POST } from "../app/termo/guess/route";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 

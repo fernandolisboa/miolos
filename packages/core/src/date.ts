@@ -28,3 +28,11 @@ export function dateFromEpochDay(day: number): string {
   }
   return new Date(day * 86_400_000).toISOString().slice(0, 10);
 }
+
+export function addDays(date: string, days: number): string {
+  return dateFromEpochDay(epochDay(date) + days);
+}
+
+export function isoWeekdayOf(date: string): number {
+  return ((new Date(epochDay(date) * 86_400_000).getUTCDay() + 6) % 7) + 1;
+}

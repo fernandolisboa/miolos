@@ -1,4 +1,4 @@
-import { dailyQueensResponseSchema } from "@miolos/core";
+import { addDays, dailyQueensResponseSchema, isoWeekdayOf } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
 import { sql } from "@miolos/db";
 import { insertDailyPuzzle, todaySaoPaulo } from "@miolos/db/publishing";
@@ -16,7 +16,6 @@ import {
 } from "vitest";
 
 import { GET } from "../app/daily/queens/route";
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 

@@ -1,8 +1,10 @@
 import {
+  addDays,
   type BufferDepthResponse,
-  type Game,
   bufferDepthResponseSchema,
+  type Game,
   GAMES,
+  isoWeekdayOf,
   recordFor,
   sudokuDailyContentSchema,
   termoDailyContentSchema,
@@ -33,7 +35,6 @@ import {
 } from "vitest";
 
 import { GET } from "../app/buffer-depth/route";
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 

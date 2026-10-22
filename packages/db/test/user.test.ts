@@ -1,3 +1,4 @@
+import { addDays } from "@miolos/core";
 import { eq, sql } from "drizzle-orm";
 import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
@@ -57,15 +58,6 @@ async function createUser(): Promise<string> {
     throw new Error("users insert returned no row");
   }
   return user.id;
-}
-
-function addDaysLocal(date: string, days: number): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) {
-    throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
-  }
-  const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 describe("surface tripwire (ADR-0026, plan 017 D17)", () => {
@@ -193,7 +185,7 @@ describe("recordCompletion (write-once, plan 017 D15)", () => {
     const onYesterday = await recordCompletion(ctx.db, {
       userId,
       game: "binairo",
-      date: addDaysLocal(today, -1),
+      date: addDays(today, -1),
       outcome: "won",
       elapsedMs: 1_000,
       hintsUsed: 0,
@@ -292,7 +284,7 @@ describe("listCompletionsForStreak (plan 027 D3, ADR-0009)", () => {
   it("T-DB-S13: returns every row of the user — lost and late included — with the STORED onTime (#58), date descending", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
-    const yesterday = addDaysLocal(today, -1);
+    const yesterday = addDays(today, -1);
 
     await recordCompletion(ctx.db, {
       userId,
@@ -397,7 +389,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
       ...Array.from({ length: 49 }, (_unused, index) => ({
         userId,
         game: "binairo" as const,
-        date: addDaysLocal("2026-01-01", index),
+        date: addDays("2026-01-01", index),
         outcome: "won" as const,
         completedAt: new Date("2026-08-10T12:00:00Z"),
         elapsedMs: 1_000,
@@ -476,7 +468,7 @@ describe("the late-write ceiling (#31, ADR-0053 decision 13)", () => {
 
     const results = await Promise.all(
       Array.from({ length: 20 }, (_unused, index) =>
-        lateWrite(userId, addDaysLocal("2026-04-01", index), {
+        lateWrite(userId, addDays("2026-04-01", index), {
           day: today,
           max: 10,
         }),
@@ -569,7 +561,7 @@ describe("grantedHintsToday (DORMANT, plan 017 D22)", () => {
 
     await ctx.db
       .update(hintGrants)
-      .set({ date: addDaysLocal(today, -1) })
+      .set({ date: addDays(today, -1) })
       .where(eq(hintGrants.userId, userId));
 
     expect(await grantedHintsToday(ctx.db, userId)).toBe(0);
@@ -581,7 +573,7 @@ describe("grantedHintsToday (DORMANT, plan 017 D22)", () => {
     const today = await todaySaoPaulo(ctx.db);
     await grantHints(ctx.db, {
       userId,
-      date: addDaysLocal(today, 1),
+      date: addDays(today, 1),
       source: "rewarded-ad",
       hints: 4,
     });
@@ -600,7 +592,7 @@ describe("grantedHintsToday (DORMANT, plan 017 D22)", () => {
     });
     await grantHints(ctx.db, {
       userId,
-      date: addDaysLocal(today, -1),
+      date: addDays(today, -1),
       source: "rewarded-ad",
       hints: 3,
     });
@@ -772,7 +764,7 @@ describe("listCompletionsForDay (#83, ADR-0060)", () => {
     const userId = await createUser();
     const other = await createUser();
     const today = await todaySaoPaulo(ctx.db);
-    const yesterday = addDaysLocal(today, -1);
+    const yesterday = addDays(today, -1);
 
     await recordCompletion(ctx.db, {
       userId,
@@ -995,9 +987,7 @@ describe("seen days (#58, ADR-0066)", () => {
     expect(rows).toEqual([{ userId, date: today }]);
 
     expect(await wasSeenOn(ctx.db, userId, today)).toBe(true);
-    expect(await wasSeenOn(ctx.db, userId, addDaysLocal(today, -1))).toBe(
-      false,
-    );
+    expect(await wasSeenOn(ctx.db, userId, addDays(today, -1))).toBe(false);
     const other = await createUser();
     expect(await wasSeenOn(ctx.db, other, today)).toBe(false);
   });
@@ -1007,9 +997,9 @@ describe("seen days (#58, ADR-0066)", () => {
     const today = await todaySaoPaulo(ctx.db);
     await ctx.db.insert(userSeenDays).values([
       { userId, date: today },
-      { userId, date: addDaysLocal(today, -1) },
-      { userId, date: addDaysLocal(today, -2) },
-      { userId, date: addDaysLocal(today, -40) },
+      { userId, date: addDays(today, -1) },
+      { userId, date: addDays(today, -2) },
+      { userId, date: addDays(today, -40) },
     ]);
 
     await pruneSeenDays(ctx.db);
@@ -1018,7 +1008,7 @@ describe("seen days (#58, ADR-0066)", () => {
     )
       .map((row) => row.date)
       .sort();
-    expect(survivorDates).toEqual([addDaysLocal(today, -1), today].sort());
+    expect(survivorDates).toEqual([addDays(today, -1), today].sort());
 
     await pruneSeenDays(ctx.db);
     expect(await ctx.db.select().from(userSeenDays)).toHaveLength(2);
@@ -1027,7 +1017,7 @@ describe("seen days (#58, ADR-0066)", () => {
   it("T-DB-S72: both arms store the supplied onTime VERBATIM and every reader projects the stored value — pinned by rows whose stored value contradicts the old derivation", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
-    const yesterday = addDaysLocal(today, -1);
+    const yesterday = addDays(today, -1);
 
     await recordCompletion(ctx.db, {
       userId,
@@ -1071,13 +1061,13 @@ describe("seen days (#58, ADR-0066)", () => {
   it("T-DB-S75: a credited row never consumes the ceiling, and a user AT the ceiling still lands the credited flush — the exemption pinned at the ceiling, not just the count", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
-    const yesterday = addDaysLocal(today, -1);
+    const yesterday = addDays(today, -1);
 
     await ctx.db.insert(completions).values(
       Array.from({ length: 3 }, (_unused, index) => ({
         userId,
         game: "binairo" as const,
-        date: addDaysLocal(today, -(index + 2)),
+        date: addDays(today, -(index + 2)),
         outcome: "won" as const,
         elapsedMs: 1_000,
         hintsUsed: 0,
@@ -1090,7 +1080,7 @@ describe("seen days (#58, ADR-0066)", () => {
       {
         userId,
         game: "sudoku",
-        date: addDaysLocal(today, -10),
+        date: addDays(today, -10),
         outcome: "won",
         elapsedMs: 1_000,
         hintsUsed: 0,
@@ -1117,7 +1107,7 @@ describe("seen days (#58, ADR-0066)", () => {
       {
         userId,
         game: "termo",
-        date: addDaysLocal(today, -20),
+        date: addDays(today, -20),
         outcome: "lost",
         elapsedMs: 1_000,
         hintsUsed: 0,

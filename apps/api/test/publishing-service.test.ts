@@ -1,5 +1,7 @@
 import {
+  addDays,
   crosswordDailyContentSchema,
+  isoWeekdayOf,
   minesweeperDailyContentSchema,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
@@ -32,7 +34,6 @@ import {
   vi,
 } from "vitest";
 
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import {
   drawUniformIndex,
   MAX_BINAIRO_SEED_RETRIES_PER_DATE,

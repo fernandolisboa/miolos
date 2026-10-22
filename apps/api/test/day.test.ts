@@ -1,10 +1,12 @@
 import {
+  addDays,
   completionResponseSchema,
-  dayResponseSchema,
   type DayResponse,
+  dayResponseSchema,
   type Game,
   GAMES,
   HINTS_PER_PUZZLE_CEILING,
+  isoWeekdayOf,
   recordFor,
 } from "@miolos/core";
 import { collectKeys, FORBIDDEN_DAILY_KEYS } from "@miolos/core/testing";
@@ -30,7 +32,6 @@ import {
 
 import { POST } from "../app/completions/route";
 import { GET } from "../app/day/route";
-import { addDays, isoWeekdayOf } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
