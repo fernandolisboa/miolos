@@ -64,6 +64,7 @@ describe("the daily table", () => {
 });
 
 describe("generateMinesweeperDaily", () => {
+  // ADR-0055: CI gate 4862 ms × 4 → 20_000.
   it("P1 — every field is 16×10, on the ramp, clear around the start and solved from it without a guess", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
@@ -98,7 +99,7 @@ describe("generateMinesweeperDaily", () => {
       }),
       { seed: FC_SEED, numRuns: 200 },
     );
-  });
+  }, 20_000);
 
   it("P1 — Monday lays 20 mines and Sunday 32", () => {
     const sunday = generateMinesweeperDaily({ seed: 20_261_025, weekday: 7 });
@@ -124,6 +125,7 @@ describe("generateMinesweeperDaily", () => {
     ]);
   });
 
+  // ADR-0055: CI gate 2119 ms × 4 → 10_000.
   it("P2 — determinism: same (seed, weekday) yields a deep-equal field", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
@@ -133,7 +135,7 @@ describe("generateMinesweeperDaily", () => {
       }),
       { seed: FC_SEED, numRuns: 100 },
     );
-  });
+  }, 10_000);
 
   it("P3 — seed normalization: seeds alias modulo 2^32", () => {
     fc.assert(
@@ -146,11 +148,12 @@ describe("generateMinesweeperDaily", () => {
     );
   });
 
+  // ADR-0055: CI gate 3537 ms × 4 → 15_000.
   it("generates every Sunday of 200 fixed seeds within the attempt cap", () => {
     for (let seed = 0; seed < 200; seed += 1) {
       expect(generateMinesweeperDaily({ seed, weekday: 7 }).seed).toBe(seed);
     }
-  });
+  }, 15_000);
 
   it("rejects a weekday outside 1..7", () => {
     expect(() =>
