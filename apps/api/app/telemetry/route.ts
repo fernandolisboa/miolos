@@ -74,6 +74,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   runAfterResponse(() =>
     captureEvent({
+      db,
       distinctId: userId,
       event: "puzzle_started",
       properties: { game, date, archive },

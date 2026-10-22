@@ -178,6 +178,8 @@ export async function mergeAccounts(
              least(w.attach_prompt_dismissed_at, l.attach_prompt_dismissed_at),
            push_prompt_dismissed_at =
              least(w.push_prompt_dismissed_at, l.push_prompt_dismissed_at),
+           telemetry_opt_out_at =
+             least(w.telemetry_opt_out_at, l.telemetry_opt_out_at),
            updated_at = now()
       from users l
      where w.id = ${winnerId}::uuid
@@ -192,6 +194,9 @@ export async function mergeAccounts(
           or (l.push_prompt_dismissed_at is not null
               and (w.push_prompt_dismissed_at is null
                    or l.push_prompt_dismissed_at < w.push_prompt_dismissed_at))
+          or (l.telemetry_opt_out_at is not null
+              and (w.telemetry_opt_out_at is null
+                   or l.telemetry_opt_out_at < w.telemetry_opt_out_at))
            )
   `);
 

@@ -62,12 +62,14 @@ type GoogleSessions = {
 };
 
 async function createGoogleUser(db: Db, sub: string): Promise<string> {
-  const created = await db.insert(users).values({ googleId: sub }).returning();
-  const fresh = created[0];
-  if (!fresh) {
+  const created = await db.execute(
+    sql`insert into users (google_id) values (${sub}) returning id`,
+  );
+  const id = created.rows[0]?.["id"];
+  if (typeof id !== "string") {
     throw new Error("google sign-in: users insert returned no row");
   }
-  return fresh.id;
+  return id;
 }
 
 async function assertHolder(db: Db, sub: string, userId: string) {
