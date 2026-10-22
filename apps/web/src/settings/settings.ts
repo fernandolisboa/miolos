@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
 
+import { safely } from "../safely";
+
 const STORAGE_KEY = "miolos-settings";
 
 const flag = (fallback: boolean) => z.boolean().catch(fallback);
@@ -73,14 +75,6 @@ export type Settings = z.infer<typeof schema>;
 export type SettingsGame = keyof Settings["games"];
 
 const DEFAULTS: Settings = schema.parse(undefined);
-
-function safely<T>(read: () => T, fallback: T): T {
-  try {
-    return read();
-  } catch {
-    return fallback;
-  }
-}
 
 function parse(raw: string | null): Settings {
   return schema.parse(

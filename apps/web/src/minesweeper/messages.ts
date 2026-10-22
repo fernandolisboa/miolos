@@ -3,14 +3,6 @@ export const minesweeperMessages = {
     `${left} ${Math.abs(left) === 1 ? "mina restante" : "minas restantes"}`,
   progressShort: (left: number) =>
     `${left} ${Math.abs(left) === 1 ? "mina" : "minas"}`,
-  levels: {
-    label: "Nível",
-    beginner: "Iniciante",
-    intermediate: "Intermediário",
-    expert: "Especialista",
-    aria: (name: string, rows: number, columns: number, mines: number) =>
-      `Nível: ${name}, ${rows} por ${columns}, ${mines} minas`,
-  },
   boardAria: (rows: number, columns: number) =>
     `campo minado, ${rows} por ${columns}`,
   finishedAria: (won: boolean) =>
