@@ -94,16 +94,15 @@ def main() -> None:
 
     usable = [w for w in picks if w in pool and w in validation]
     usable.sort(key=lambda w: -pool[w][0])
-    answers = usable
-    print(f"kept: {len(answers)}")
+    print(f"kept: {len(usable)}")
 
     with open(f"{BASE}/answers.csv", "w", encoding="utf-8") as f:
         f.write("canonical,normalized\n")
-        for w in answers:
+        for w in usable:
             f.write(f"{pool[w][1]},{w}\n")
 
     # frequency floor of the kept set
-    print("lowest-frequency kept:", [(w, pool[w][0]) for w in answers[-5:]])
+    print("lowest-frequency kept:", [(w, pool[w][0]) for w in usable[-5:]])
 
 
 if __name__ == "__main__":

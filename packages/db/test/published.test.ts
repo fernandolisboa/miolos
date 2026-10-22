@@ -665,7 +665,6 @@ describe("listUsedTermoAnswers (ADR-0147's 365-day window)", () => {
       date: addDays(fromDate, -1),
       normalized: "longe",
       publishedAt: sql`now() - interval '365 days'`,
-      killedAt: sql`now()`,
     });
 
     expect(await listUsedTermoAnswers(ctx.db, fromDate)).toEqual(["perto"]);

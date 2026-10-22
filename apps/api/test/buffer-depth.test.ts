@@ -34,7 +34,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/buffer-depth/route";
-import { seedTermoAnswers, spendAnswers } from "./termo-answer-helpers";
+import { seedTermoAnswers, spendTermoAnswers } from "./termo-answer-helpers";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -248,7 +248,7 @@ describe("GET /buffer-depth", () => {
   });
 
   it("T-API-S217: reports the eligible answer count, and flags it low AT 30 and not at 31", async () => {
-    await spendAnswers(
+    await spendTermoAnswers(
       ctx.db,
       TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 31),
     );
@@ -258,7 +258,7 @@ describe("GET /buffer-depth", () => {
     });
 
     await ctx.db.execute(sql`truncate table daily_puzzles`);
-    await spendAnswers(
+    await spendTermoAnswers(
       ctx.db,
       TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 30),
     );
@@ -288,7 +288,7 @@ describe("GET /buffer-depth", () => {
     });
 
     await seedDays("termo", 7);
-    await spendAnswers(
+    await spendTermoAnswers(
       ctx.db,
       TERMO_ANSWERS.slice(7, TERMO_ANSWERS.length - 23),
     );

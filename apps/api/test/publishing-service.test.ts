@@ -3,7 +3,6 @@ import {
   crosswordDailyContentSchema,
   isoWeekdayOf,
   minesweeperDailyContentSchema,
-  remoteConfigField,
   nonogramDailyContentSchema,
   queensDailyContentSchema,
   stripDailyContent,
@@ -56,7 +55,12 @@ import {
   topUpTermoBuffer,
   uniformDrawLimit,
 } from "../src/publishing/service";
-import { seedTermoAnswers, spendAnswers } from "./termo-answer-helpers";
+import {
+  FULLEST_TERMO_WINDOW,
+  MAX_BUFFER_DEPTH,
+  seedTermoAnswers,
+  spendTermoAnswers,
+} from "./termo-answer-helpers";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -858,7 +862,7 @@ describe("topUpTermoBuffer", () => {
 
   it("T-API-S32: exhaustion FAILS CLOSED — uncovered dates carry the exhaustion reason", async () => {
     const spent = TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 5);
-    await spendAnswers(ctx.db, spent);
+    await spendTermoAnswers(ctx.db, spent);
 
     const result = await topUpTermoBuffer(ctx.db, 10);
 
@@ -891,7 +895,7 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S44: the low-pool warning fires AT 30 remaining, and is silent at 31", async () => {
-    await spendAnswers(
+    await spendTermoAnswers(
       ctx.db,
       TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 31),
     );
@@ -912,7 +916,7 @@ describe("topUpTermoBuffer", () => {
     if (returning === undefined) {
       throw new Error("unreachable: the answer list is empty");
     }
-    await spendAnswers(ctx.db, others);
+    await spendTermoAnswers(ctx.db, others);
     const today = await todaySaoPaulo(ctx.db);
     const lastUse = (daysAgo: number) =>
       seedTermoAnswers(ctx.db, [
@@ -940,7 +944,7 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S343: with every window day drawn and every other answer drawn once before it, a clamp-depth run fills every date and repeats nothing inside 365 days", async () => {
-    const depth = remoteConfigField("bufferDepth").maxValue ?? Number.NaN;
+    const depth = MAX_BUFFER_DEPTH;
     const today = await todaySaoPaulo(ctx.db);
     await seedTermoAnswers(
       ctx.db,
@@ -975,19 +979,15 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S344: the fullest possible window, a year of dailies plus a clamp-depth buffer, leaves the list not low", () => {
-    const fullestWindow =
-      TERMO_ANSWER_COOLDOWN_DAYS -
-      1 +
-      (remoteConfigField("bufferDepth").maxValue ?? Number.NaN);
-    expect(isTermoAnswerListLow(TERMO_ANSWERS.length - fullestWindow)).toBe(
-      false,
-    );
+    expect(
+      isTermoAnswerListLow(TERMO_ANSWERS.length - FULLEST_TERMO_WINDOW),
+    ).toBe(false);
   });
 
-  it("T-API-S346: an unpublished answer stays mixed with at least 100 others (ADR-0004)", () => {
-    expect(
-      TERMO_ANSWERS.length - TERMO_ANSWER_COOLDOWN_DAYS,
-    ).toBeGreaterThanOrEqual(100);
+  it("T-API-S346: a buffered answer stays mixed with at least 100 others (ADR-0114, ADR-0147)", () => {
+    expect(TERMO_ANSWERS.length - FULLEST_TERMO_WINDOW).toBeGreaterThanOrEqual(
+      100,
+    );
   });
 
   it("T-API-S32: an already-covered date is skipped before the pool is consulted", async () => {
