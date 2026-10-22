@@ -22,7 +22,7 @@
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 4px;
   /* Scoped to the board so a paint drag never fights the page scroll, and
-     the rest of the screen still scrolls normally (§8.2). */
+     the rest of the screen still scrolls normally. */
   touch-action: none;
   --spotlight-strength: 12%;
 }
@@ -52,9 +52,10 @@
   transform: translate(1px, 1px);
 }
 
+.cellSelected,
 .cell:focus-visible {
-  outline: 2px solid var(--accent-binairo);
-  outline-offset: 2px;
+  outline: 2px solid var(--ink);
+  outline-offset: -5px;
 }
 
 .cellGiven {
@@ -69,8 +70,7 @@
   font-weight: 500;
 }
 
-/* The pre-hydration placeholder cell (finding
-   `binairo-reload-flashes-a-blank-board-over-a-finished-day`). Colour only:
+/* The pre-hydration placeholder cell. Colour only:
    every dimension still comes from .cell and .grid above, so the placeholder
    board is the real board's size on every viewport by construction. Static —
    DESIGN.md has no shimmer. */
@@ -80,11 +80,10 @@
   cursor: default;
 }
 
-/* Undrawn in the frames — designed here (deviation 10). --accent-app is
-   scoped to "streak, promo" in DESIGN.md, so using the sealing-wax red as
-   the error colour is a third role: it is the only red in the palette, and
-   it is paired with aria-invalid and a doubled hairline so colour is never
-   the sole carrier. */
+/* --accent-app is scoped to "streak, promo" in DESIGN.md, so using the
+   sealing-wax red as the error colour is a third role: it is the only red in
+   the palette. A doubled hairline and the cell's accessible name keep colour
+   from being the sole carrier. */
 .cellViolating {
   border-color: var(--accent-app);
   color: var(--accent-app);
@@ -178,12 +177,10 @@
 
 /* ── pre-hydration placeholders ──────────────────────────────────────── */
 
-/* This module's own copy of the shared sheet's `.placeholder` (plan 018
-   §12.2): the skeleton's control row borrows `.control`, and a class hashed
-   in `../play/screen.module.css` cannot override one hashed here — the two
-   would resolve by injection order (landmine 24). It has to sit AFTER
-   .control: same specificity, later wins (finding
-   `play-skeleton-is-not-at-final-dimensions`). */
+/* This module's own copy of the shared sheet's `.placeholder`: the skeleton's
+   control row borrows `.control`, and a class hashed in
+   `../play/screen.module.css` cannot override one hashed here. It has to sit
+   AFTER .control: same specificity, later wins. */
 .placeholder {
   cursor: default;
   pointer-events: none;

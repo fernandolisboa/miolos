@@ -6,6 +6,7 @@
 **Superseded in part by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — decision 5, for a cell counted under the opt-in *Limite de 3 erros*: it gets the same corner flag while it stays wrong.
 **Superseded in part by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 5, for the opt-in *Sempre e mostrar o erro* (a wrong cell of a line that forms its clue gets the corner flag) and *Só se estiver certa* (a formed line left uncrossed says it is wrong).
 **Amended by:** [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) (#299) — decision 1 for all inputs (the brush has two modes, `apagar` is gone, and a tap or a stroke starting on a cell already holding the brush mark clears) and consequence (a) (the hook's surface: `Press`, `clickPress`, required `onStrokeStart`, `onContextMenu`).
+**Amended by:** [ADR-0145](./0145-the-binairo-board-is-a-composite-widget-where-0-and-1-write-their-digit.md) (#61) — decision 2's "Binairo omits `onStrokeEnd`" no longer holds, and consequence (b) is discharged: Binairo adopts `onStrokeEnd` through `useBinaryBoard`.
 **Amended by:** [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (#372) — decision 4: in Cores, key 1 paints the current tone.
 
 ## Context

@@ -4,10 +4,10 @@ import {
   canHint,
   type BinaryGridAction,
   type BinaryGridState,
-  type BinaryMark,
 } from "./binary-grid";
 import { useFreeHintsPerPuzzle } from "./free-hints";
 import type { ResetAction } from "./reset-board";
+import { useCaretControls, type CaretControls } from "./use-caret-controls";
 import {
   useBoardEdits,
   type BoardEdits,
@@ -15,12 +15,8 @@ import {
   type UndoAction,
 } from "./undo";
 
-export interface BinaryGridControls {
+export interface BinaryGridControls extends CaretControls {
   readonly hintReady: boolean;
-  readonly selectCell: (index: number) => void;
-  readonly moveSelection: (rows: number, columns: number) => void;
-  readonly enterValue: (value: BinaryMark) => void;
-  readonly clearCell: () => void;
   readonly revealHint: () => void;
   readonly edits: BoardEdits;
 }
@@ -30,36 +26,12 @@ export function useBinaryGridControls(
   dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
 ): BinaryGridControls {
   const allowance = useFreeHintsPerPuzzle();
+  const caret = useCaretControls(dispatch);
 
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   });
-
-  const selectCell = useCallback(
-    (index: number) => {
-      dispatch({ type: "select", index });
-    },
-    [dispatch],
-  );
-
-  const moveSelection = useCallback(
-    (rows: number, columns: number) => {
-      dispatch({ type: "move-selection", rows, columns });
-    },
-    [dispatch],
-  );
-
-  const enterValue = useCallback(
-    (value: BinaryMark) => {
-      dispatch({ type: "enter-value", value });
-    },
-    [dispatch],
-  );
-
-  const clearCell = useCallback(() => {
-    dispatch({ type: "clear-cell" });
-  }, [dispatch]);
 
   const revealHint = useCallback(() => {
     if (canHint(stateRef.current, allowance)) {
@@ -70,11 +42,8 @@ export function useBinaryGridControls(
   const edits = useBoardEdits(state, dispatch);
 
   return {
+    ...caret,
     hintReady: canHint(state, allowance),
-    selectCell,
-    moveSelection,
-    enterValue,
-    clearCell,
     revealHint,
     edits,
   };

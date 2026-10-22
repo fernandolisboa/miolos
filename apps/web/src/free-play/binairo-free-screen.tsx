@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
-import { Controls, ControlsSkeleton } from "../binairo/controls";
-import { Grid } from "../binairo/grid";
+import { BoardPanel } from "../binairo/board-panel";
+import { ControlsSkeleton } from "../binairo/controls";
 import { binairoHintExplanation } from "../binairo/hint";
 import {
   binairoMistakes,
@@ -94,8 +94,7 @@ function BinairoFreeBoard({
     initPlayState,
     rules,
   );
-  const { tapCell, strokeStart, paintOver, toggleMode } =
-    useBinairoControls(dispatch);
+  const controls = useBinairoControls(dispatch);
   const allowance = useFreeHintsPerPuzzle();
 
   const stateRef = useRef(state);
@@ -148,23 +147,11 @@ function BinairoFreeBoard({
           },
         }}
       >
-        <BoardCard
-          below={<Controls paint={state.paint} onToggleMode={toggleMode} />}
-        >
-          <Grid
-            givens={state.givens}
-            solution={puzzle.solution}
-            entries={state.entries}
-            mistakes={state.mistakes}
-            violating={state.violating}
-            hintIndex={state.hint.lastIndex}
-            spotlight={state.hint.spotlight}
-            painting={state.paint.kind !== "cycle"}
-            onTap={tapCell}
-            onStrokeStart={strokeStart}
-            onPaintOver={paintOver}
-          />
-        </BoardCard>
+        <BoardPanel
+          state={state}
+          solution={puzzle.solution}
+          controls={controls}
+        />
       </FreePlayChrome>
     </EndingStage>
   );

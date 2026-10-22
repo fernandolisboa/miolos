@@ -2,7 +2,7 @@ import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 
 import { toggled } from "./brush";
 import type { Revealed } from "./grid-hint";
-import { movedSelection } from "./grid-selection";
+import { onBoard, withCaret, type CaretWriteAction } from "./grid-selection";
 import { hasHintLeft } from "./hint-allowance";
 import { idleHint, spentHint, unlit } from "./hint-state";
 import type {
@@ -35,14 +35,7 @@ export interface BinaryGridState<
 export type BinaryGridAction<M extends number = BinaryMark> =
   | LifecycleAction
   | ResetAction
-  | { readonly type: "select"; readonly index: number }
-  | {
-      readonly type: "move-selection";
-      readonly rows: number;
-      readonly columns: number;
-    }
-  | { readonly type: "enter-value"; readonly value: M }
-  | { readonly type: "clear-cell" }
+  | CaretWriteAction<M>
   | { readonly type: "use-hint" };
 
 export interface BinaryGridRules<
@@ -66,19 +59,8 @@ export function binaryGridReducer<
       return { ...state, now: action.now, hydrated: true };
 
     case "select":
-      if (binaryCellValue(state, action.index) === undefined) {
-        return state;
-      }
-      return state.selected === action.index
-        ? state
-        : { ...unlit(state), selected: action.index };
-
-    case "move-selection": {
-      const next = movedSelection(state.selected, action, state.size);
-      return state.selected === next
-        ? state
-        : { ...unlit(state), selected: next };
-    }
+    case "move-selection":
+      return withCaret(state, action, state.size);
 
     case "enter-value": {
       const current = binaryCellValue(state, state.selected);
@@ -139,12 +121,7 @@ export function binaryCellValue<M extends number>(
   state: BinaryGridState<unknown, M>,
   index: number | null,
 ): M | null | undefined {
-  if (
-    index === null ||
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= state.entries.length
-  ) {
+  if (index === null || !onBoard(state.entries, index)) {
     return undefined;
   }
   return state.entries[index] ?? null;

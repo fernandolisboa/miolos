@@ -3,6 +3,7 @@ import {
   type DailyBinairoResponse,
 } from "@miolos/core";
 import {
+  BINAIRO_SIZE,
   findBinairoViolations,
   isValidBinairoSolution,
   type BinairoCell,
@@ -10,6 +11,7 @@ import {
   type BinairoSolvedGrid,
 } from "@miolos/games/binairo";
 
+import type { BinaryMark } from "../play/binary-grid";
 import {
   cycled,
   painted,
@@ -19,9 +21,11 @@ import {
   type Press,
   type StrokeEffect,
 } from "../play/brush";
+import { withCaret, type CaretWriteAction } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
 import {
+  caretPress,
   NO_MISTAKES,
   type CellPress,
   type MistakeRules,
@@ -52,6 +56,7 @@ export interface PlayState extends PlayCore {
   readonly entries: readonly CellValue[];
   readonly paint: PaintMode;
   readonly stroke: StrokeEffect | null;
+  readonly selected: number | null;
   readonly hint: HintState<BinairoHintReason>;
 
   readonly violating: ReadonlySet<number>;
@@ -60,11 +65,13 @@ export interface PlayState extends PlayCore {
   readonly mistakes: MistakeState;
 }
 
-type BinairoSnapshot = Pick<PlayState, "entries" | "violating" | "hint">;
+type BinairoSnapshot = Pick<PlayState, "entries" | "violating" | "hint"> &
+  Partial<Pick<PlayState, "selected">>;
 
 export type PlayAction =
   | LifecycleAction
   | ResetAction
+  | CaretWriteAction<BinaryMark>
   | {
       readonly type: "tap";
       readonly index: number;
@@ -91,6 +98,7 @@ export function initPlayState(daily: DailyBinairoResponse): PlayState {
     entries: derived.entries,
     paint: { kind: "cycle" },
     stroke: null,
+    selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
     violating: derived.violating,
@@ -124,6 +132,9 @@ function binairoPress(
     case "stroke-start":
     case "paint-over":
       return { index: action.index, held: false };
+    case "enter-value":
+    case "clear-cell":
+      return caretPress(state.selected);
     default:
       return null;
   }
@@ -131,9 +142,10 @@ function binairoPress(
 
 export const playReducer = undoable(
   playBinairo,
-  ({ entries, violating, hint }): BinairoSnapshot => ({
+  ({ entries, violating, selected, hint }): BinairoSnapshot => ({
     entries,
     violating,
+    ...(selected === null ? {} : { selected }),
     hint,
   }),
 );
@@ -142,6 +154,16 @@ function playBinairo(state: PlayState, action: PlayAction): PlayState {
   switch (action.type) {
     case "restore":
       return restore(state, action.record, action.now);
+
+    case "select":
+    case "move-selection":
+      return withCaret(state, action, BINAIRO_SIZE);
+
+    case "enter-value":
+      return writtenAtCaret(state, (current) => toggled(current, action.value));
+
+    case "clear-cell":
+      return writtenAtCaret(state, () => null);
 
     case "tap": {
       const current = playableValue(state, action.index);
@@ -240,6 +262,20 @@ function playableValue(state: PlayState, index: number): CellValue | undefined {
     return undefined;
   }
   return state.entries[index] ?? null;
+}
+
+function writtenAtCaret(
+  state: PlayState,
+  next: (current: CellValue) => CellValue,
+): PlayState {
+  const { selected } = state;
+  if (selected === null) {
+    return state;
+  }
+  const current = playableValue(state, selected);
+  return current === undefined
+    ? state
+    : withEntry(state, selected, next(current));
 }
 
 function tapped(
