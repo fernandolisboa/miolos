@@ -2,7 +2,7 @@ import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 
 import { toggled } from "./brush";
 import type { Revealed } from "./grid-hint";
-import { movedSelection } from "./grid-selection";
+import { onBoard, withCaret, type CaretWriteAction } from "./grid-selection";
 import { hasHintLeft } from "./hint-allowance";
 import { idleHint, spentHint, unlit } from "./hint-state";
 import type {
@@ -32,20 +32,10 @@ export interface BinaryGridState<
   readonly status: "playing" | "solved";
 }
 
-export type CaretAction =
-  | { readonly type: "select"; readonly index: number }
-  | {
-      readonly type: "move-selection";
-      readonly rows: number;
-      readonly columns: number;
-    };
-
 export type BinaryGridAction<M extends number = BinaryMark> =
   | LifecycleAction
   | ResetAction
-  | CaretAction
-  | { readonly type: "enter-value"; readonly value: M }
-  | { readonly type: "clear-cell" }
+  | CaretWriteAction<M>
   | { readonly type: "use-hint" };
 
 export interface BinaryGridRules<
@@ -114,31 +104,6 @@ export function binaryGridReducer<
         now: action.now,
       };
   }
-}
-
-export function withCaret<
-  S extends {
-    readonly entries: readonly unknown[];
-    readonly selected: number | null;
-    readonly hint: HintState<unknown>;
-  },
->(state: S, action: CaretAction, size: number): S {
-  const next =
-    action.type === "select"
-      ? onBoard(state.entries, action.index)
-        ? action.index
-        : state.selected
-      : movedSelection(state.selected, action, size);
-  return state.selected === next ? state : { ...unlit(state), selected: next };
-}
-
-function onBoard(entries: readonly unknown[], index: number | null): boolean {
-  return (
-    index !== null &&
-    Number.isInteger(index) &&
-    index >= 0 &&
-    index < entries.length
-  );
 }
 
 export function canHint<M extends number>(

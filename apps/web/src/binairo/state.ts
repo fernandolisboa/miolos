@@ -3,6 +3,7 @@ import {
   type DailyBinairoResponse,
 } from "@miolos/core";
 import {
+  BINAIRO_SIZE,
   findBinairoViolations,
   isValidBinairoSolution,
   type BinairoCell,
@@ -10,7 +11,7 @@ import {
   type BinairoSolvedGrid,
 } from "@miolos/games/binairo";
 
-import { withCaret, type CaretAction } from "../play/binary-grid";
+import type { BinaryMark } from "../play/binary-grid";
 import {
   cycled,
   painted,
@@ -20,6 +21,7 @@ import {
   type Press,
   type StrokeEffect,
 } from "../play/brush";
+import { withCaret, type CaretWriteAction } from "../play/grid-selection";
 import { hasHintLeft } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
 import {
@@ -42,8 +44,6 @@ import {
 import { mergeGrid } from "./engine";
 import { nextBinairoHint, type BinairoHintReason } from "./hint";
 
-export const COLUMNS = 8;
-
 export type CellValue = BinairoCell;
 
 export type PaintMode =
@@ -65,17 +65,13 @@ export interface PlayState extends PlayCore {
   readonly mistakes: MistakeState;
 }
 
-type BinairoSnapshot = Pick<
-  PlayState,
-  "entries" | "violating" | "selected" | "hint"
->;
+type BinairoSnapshot = Pick<PlayState, "entries" | "violating" | "hint"> &
+  Partial<Pick<PlayState, "selected">>;
 
 export type PlayAction =
   | LifecycleAction
   | ResetAction
-  | CaretAction
-  | { readonly type: "enter-value"; readonly value: 0 | 1 }
-  | { readonly type: "clear-cell" }
+  | CaretWriteAction<BinaryMark>
   | {
       readonly type: "tap";
       readonly index: number;
@@ -149,7 +145,7 @@ export const playReducer = undoable(
   ({ entries, violating, selected, hint }): BinairoSnapshot => ({
     entries,
     violating,
-    selected,
+    ...(selected === null ? {} : { selected }),
     hint,
   }),
 );
@@ -161,7 +157,7 @@ function playBinairo(state: PlayState, action: PlayAction): PlayState {
 
     case "select":
     case "move-selection":
-      return withCaret(state, action, COLUMNS);
+      return withCaret(state, action, BINAIRO_SIZE);
 
     case "enter-value":
       return writtenAtCaret(state, (current) => toggled(current, action.value));
@@ -260,11 +256,9 @@ export function isSolvedGrid(grid: BinairoGrid): grid is BinairoSolvedGrid {
   return grid.every((cell) => cell !== null);
 }
 
-function playableValue(
-  state: PlayState,
-  index: number | null,
-): CellValue | undefined {
-  if (index === null || state.givens[index] !== null) {
+function playableValue(state: PlayState, index: number): CellValue | undefined {
+  const given = state.givens[index];
+  if (given === undefined || given !== null) {
     return undefined;
   }
   return state.entries[index] ?? null;
@@ -275,8 +269,11 @@ function writtenAtCaret(
   next: (current: CellValue) => CellValue,
 ): PlayState {
   const { selected } = state;
+  if (selected === null) {
+    return state;
+  }
   const current = playableValue(state, selected);
-  return current === undefined || selected === null
+  return current === undefined
     ? state
     : withEntry(state, selected, next(current));
 }

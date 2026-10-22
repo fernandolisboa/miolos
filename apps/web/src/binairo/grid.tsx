@@ -1,4 +1,4 @@
-import type { BinairoGrid } from "@miolos/games/binairo";
+import { BINAIRO_SIZE, type BinairoGrid } from "@miolos/games/binairo";
 import { memo, type MouseEvent as ReactMouseEvent } from "react";
 
 import { messages } from "../i18n";
@@ -10,7 +10,7 @@ import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
 import styles from "./binairo-screen.module.css";
-import { COLUMNS, type CellValue } from "./state";
+import type { CellValue } from "./state";
 
 const copy = messages.games.binairo.play;
 
@@ -57,7 +57,7 @@ export function Grid({
   readonly onClear: () => void;
 }) {
   const board = useBinaryBoard({
-    size: COLUMNS,
+    size: BINAIRO_SIZE,
     selected,
     painting,
     keys: KEYS,
@@ -125,8 +125,8 @@ const Cell = memo(function Cell({
     event: ReactMouseEvent<HTMLButtonElement>,
   ) => void;
 }) {
-  const row = Math.floor(index / COLUMNS) + 1;
-  const column = (index % COLUMNS) + 1;
+  const row = Math.floor(index / BINAIRO_SIZE) + 1;
+  const column = (index % BINAIRO_SIZE) + 1;
   const tint = spotlit ? ` ${spotlightStyles.spotlit}` : "";
   const caret = selected ? ` ${styles.cellSelected}` : "";
   const handlers = {

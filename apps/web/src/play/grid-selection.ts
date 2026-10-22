@@ -1,3 +1,6 @@
+import { unlit } from "./hint-state";
+import type { HintState } from "./types";
+
 export interface GridMove {
   readonly rows: number;
   readonly columns: number;
@@ -52,4 +55,45 @@ export function keyMove(
     default:
       return null;
   }
+}
+
+export type CaretAction =
+  | { readonly type: "select"; readonly index: number }
+  | {
+      readonly type: "move-selection";
+      readonly rows: number;
+      readonly columns: number;
+    };
+
+export type CaretWriteAction<M extends number> =
+  | CaretAction
+  | { readonly type: "enter-value"; readonly value: M }
+  | { readonly type: "clear-cell" };
+
+export function withCaret<
+  S extends {
+    readonly entries: readonly unknown[];
+    readonly selected: number | null;
+    readonly hint: HintState<unknown>;
+  },
+>(state: S, action: CaretAction, size: number): S {
+  const next =
+    action.type === "select"
+      ? onBoard(state.entries, action.index)
+        ? action.index
+        : state.selected
+      : movedSelection(state.selected, action, size);
+  return state.selected === next ? state : { ...unlit(state), selected: next };
+}
+
+export function onBoard(
+  entries: readonly unknown[],
+  index: number | null,
+): boolean {
+  return (
+    index !== null &&
+    Number.isInteger(index) &&
+    index >= 0 &&
+    index < entries.length
+  );
 }

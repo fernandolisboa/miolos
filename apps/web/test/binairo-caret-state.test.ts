@@ -1,4 +1,4 @@
-import { type DailyBinairoResponse } from "@miolos/core";
+import type { DailyBinairoResponse } from "@miolos/core";
 import { generateBinairo, solveBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
@@ -164,6 +164,21 @@ describe("undo restores the caret and a select is never a step (T-WEB-S991)", ()
     expect(tapped.selected).toBe(B);
     const focused = run(tapped, select(A));
     expect(run(focused, UNDO).selected).toBe(B);
+  });
+
+  it("keeps the current caret when undo reaches a step taken with nothing selected", () => {
+    const tapped = run(fresh(), {
+      type: "tap",
+      index: A,
+      press: "tap",
+      first: FIRST,
+    });
+    expect(tapped.selected).toBeNull();
+    const focused = run(tapped, select(A));
+    const back = run(focused, UNDO);
+    expect(back.entries[A]).toBeNull();
+    expect(back.selected).toBe(A);
+    expect(run(back, REDO).selected).toBe(A);
   });
 
   it("keeps selected out of the step fields, so a select between two writes does not split them", () => {

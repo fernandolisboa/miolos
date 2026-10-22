@@ -430,6 +430,26 @@ describe("free play has the same widget (T-WEB-S993)", () => {
   });
 });
 
+describe("undo leaves the caret where the player is (T-WEB-S991)", () => {
+  it("a key still writes after Ctrl+Z undid the first tap on a board with no caret before it", () => {
+    render(<BinairoScreen daily={DAILY} />);
+    stubElementFromPoint(boardOf());
+    const board = boardOf();
+    const at = { clientX: B, clientY: 0, pointerId: 1, pointerType: "mouse" };
+
+    fireEvent.pointerDown(board, at);
+    fireEvent.pointerUp(board, at);
+    expect(cellAt(B).textContent).toBe("1");
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    expect(cellAt(B).textContent).toBe("");
+
+    expect(document.activeElement).toBe(cellAt(B));
+    expect(tabStops()).toEqual([B]);
+    key(B, "1");
+    expect(cellAt(B).textContent).toBe("1");
+  });
+});
+
 describe("the saved record carries no caret (T-WEB-S991)", () => {
   it("stores the entries only, and the schema still reads the record back", () => {
     render(<BinairoScreen daily={DAILY} />);

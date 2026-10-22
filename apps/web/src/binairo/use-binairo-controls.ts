@@ -4,7 +4,7 @@ import type { Press } from "../play/brush";
 import {
   useCaretControls,
   type CaretControls,
-} from "../play/use-binary-grid-controls";
+} from "../play/use-caret-controls";
 import { useSettings } from "../settings/settings";
 import {
   useStrokeControls,
