@@ -76,29 +76,26 @@ export type PlayAction =
       readonly press: Press;
     }
   | { readonly type: "paint-over"; readonly index: number }
-  | { readonly type: "set-mode"; readonly value: 0 | 1 }
-  | { readonly type: "mark-synced" };
+  | { readonly type: "set-mode"; readonly value: 0 | 1 };
 
 export function initPlayState(
   daily: DailyBinairoResponse,
   solution: BinairoSolvedGrid | null,
 ): PlayState {
   const givens: BinairoGrid = daily.givens;
+  const entries = givens.map(() => null);
   return {
     date: daily.date,
     size: BINAIRO_SIZE,
     solution,
     givens,
-    entries: givens.map(() => null),
+    entries,
     paint: { kind: "cycle" },
     stroke: null,
     selected: null,
     timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
-    violating: violationsOf(
-      givens,
-      givens.map(() => null),
-    ),
+    violating: violationsOf(givens, entries),
     status: "playing",
     pendingSync: false,
     now: 0,
@@ -170,7 +167,8 @@ function playBinairo(state: PlayState, action: PlayAction): PlayState {
 
     case "enter-value":
     case "clear-cell":
-      return state.selected !== null && state.givens[state.selected] !== null
+      return state.selected !== null &&
+        playableValue(state, state.selected) === undefined
         ? state
         : binaryGridReducer(state, action, BINAIRO_RULES);
 
@@ -226,9 +224,6 @@ function playBinairo(state: PlayState, action: PlayAction): PlayState {
             ? { kind: "cycle" }
             : { kind: "paint", value: action.value },
       };
-
-    case "mark-synced":
-      return state.pendingSync ? { ...state, pendingSync: false } : state;
 
     default:
       return binaryGridReducer(state, action, BINAIRO_RULES);

@@ -6,6 +6,7 @@ import {
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
+import { canHint } from "../src/play/binary-grid";
 import type { Press } from "../src/play/brush";
 import type { BinairoPlayRecord } from "../src/play/play-record";
 import { elapsedMs } from "../src/play/timer";
@@ -617,20 +618,6 @@ describe("restore (T-WEB-14b)", () => {
   });
 });
 
-describe("mark-synced", () => {
-  it("clears the pending flag without touching the grid", () => {
-    const solved = playReducer(initPlayState(daily(), null), {
-      type: "restore",
-      record: record({ pendingSync: true }),
-      now: 1,
-    });
-    const state = playReducer(solved, { type: "mark-synced" });
-
-    expect(state.pendingSync).toBe(false);
-    expect(state.entries).toEqual(solved.entries);
-  });
-});
-
 describe("isSolvedGrid", () => {
   it("narrows only a grid with no empty cell", () => {
     expect(isSolvedGrid([...REAL_PUZZLE.solution])).toBe(true);
@@ -665,6 +652,13 @@ describe("the shared binary-grid reducer serves Binairo's givens, hint mark and 
     expect(rewritten.entries[index]).toBe(other);
     expect(rewritten.hint.lastIndex).toBeNull();
     expect(rewritten.hint.used).toBe(1);
+  });
+
+  it("offers no hint without a solution, and a hint press is inert", () => {
+    const unsolved = initPlayState(daily(givens), null);
+
+    expect(canHint(unsolved, null)).toBe(false);
+    expect(playReducer(unsolved, { type: "use-hint" })).toBe(unsolved);
   });
 
   it("restores a Binairo record and ignores another game's", () => {

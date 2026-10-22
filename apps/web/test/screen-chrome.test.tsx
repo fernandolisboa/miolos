@@ -107,7 +107,6 @@ const noop = () => undefined;
 
 const BINAIRO_PLAY = {
   state: initPlayState(BINAIRO_DAILY, null),
-  solution: null,
   elapsed: ELAPSED,
   filled: 12,
   hintReady: true,
