@@ -36,6 +36,7 @@ export async function mintSession(
   db: Db,
   tokenHash: string,
 ): Promise<SessionResponse> {
+  // see ADR-0148: never list every users column here
   const inserted = await db.execute(
     sql`insert into users default values returning id`,
   );

@@ -201,7 +201,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       },
     });
   });
-  it("T-API-S362: an opted-out account and a missing account send nothing; the same event for a sending account goes out (ADR-0148)", async () => {
+  it("T-API-S362: an opted-out account, a missing account and a failed read send nothing; the same event for a sending account goes out (ADR-0148)", async () => {
     vi.stubEnv("POSTHOG_KEY", "phc_test_key");
     const fetchMock = vi.fn(() => Promise.resolve(new Response("{}")));
     vi.stubGlobal("fetch", fetchMock);
@@ -221,6 +221,9 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       ...event,
       distinctId: "00000000-0000-4000-8000-0000000000ff",
     });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await captureEvent({ ...event, distinctId: "not-a-uuid" });
     expect(fetchMock).not.toHaveBeenCalled();
 
     await captureEvent({ ...event, distinctId: USER_1 });

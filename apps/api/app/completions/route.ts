@@ -205,13 +205,13 @@ export async function POST(request: NextRequest): Promise<Response> {
         },
       });
       try {
-        if (!counted) {
-          return;
-        }
-        const broken = deriveStreakBroken(
-          await listCompletionsForStreak(db, userId),
-          body.date,
-        );
+        const broken = counted
+          ? deriveStreakBroken(
+              await listCompletionsForStreak(db, userId),
+              body.date,
+            )
+          : null;
+        await completed;
         if (broken !== null) {
           await captureEvent({
             db,

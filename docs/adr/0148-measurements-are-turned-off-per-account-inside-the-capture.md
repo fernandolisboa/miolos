@@ -19,6 +19,7 @@ The five PostHog events (ADR-0069) are keyed to the account and leave Brazil. LG
 - One extra primary-key read per event, after the response.
 - A new anonymous device starts sending until it signs in to an account that opted out.
 - The switch stops future events only. Rows PostHog already holds still need `privacidade@miolos.app` (the deletion residual in ADR-0069 decision 5); `/privacidade` says so.
+- Migration 0018 also adds `users.game_settings` (jsonb), unread here: Fernando ran both `ALTER`s together, so the file and snapshot describe the database as it is. #317 (settings sync) gives it its reader and its own ADR.
 - `mintSession` and `createGoogleUser` insert with `returning id` only, so a database missing a later `users` column breaks that feature, not every new session.
 
 ## Rejected
