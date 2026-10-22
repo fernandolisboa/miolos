@@ -38,9 +38,8 @@ encode them in **type**, which is what `PRODUCT.md` principle 1 asks of
 this system anyway.
 
 There is no reference frame for this screen. `/termo` is a just-in-time
-design in the situation `/nonogram` was in, and
-`apps/web/src/nonogram/nonogram-board.module.css`'s header is the template
-for recording its deviations with their arithmetic.
+design in the situation `/nonogram` was in; its deviations are recorded
+with their arithmetic in T-WEB-S102 (`apps/web/test/termo-screen.test.tsx`).
 
 ## Decision
 

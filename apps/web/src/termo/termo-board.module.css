@@ -1,113 +1,7 @@
-/* The /termo BOARD and KEYBOARD — everything the shared play layout in
-   `../play/screen.module.css` deliberately does not own (ADR-0029, plan 022
-   §12). There is no reference frame for this screen: §12 is its just-in-time
-   design, defensible as a sibling of f3-binairo-desktop and f4-binairo-mobile
-   within the recorded system, the situation /nonogram was already in.
+/* File order is load-bearing: test/css-source.ts `bodyOf` is first-match, so every
+   top-level rule comes first, then the geometry media block, the chrome one,
+   reduced motion; exactly one top-level `.tile` and one `.key`. */
 
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector (`a:hover`, `button`)
-   either fails the build or leaks globally (plan 017 risk 15).
-
-   `var(--accent)` here is `--accent-termo` (deep mustard #8D6212 since #161
-   / ADR-0067; the original #C08A1E measured 2.7311:1 on desk and cleared no
-   floor), set on the screen's root by `play/accent.ts` — the same mechanism
-   the shared sheet uses, so one screen never has two accent sources. The
-   deep value measures 4.8433:1 on --paper-desk and 5.0542:1 on --paper-card,
-   so the constraints that shaped this sheet are no longer FORCED — but the
-   design they forced is kept on its own merits: the accent still does
-   exactly ONE job on this screen, FILLING the tile and the key whose letter
-   is in the right place, and every distinction a player has to make is still
-   carried by a mark that clears 3:1 in neutral ink. Colour reinforces; it
-   never carries alone.
-
-   FILE ORDER IS LOAD-BEARING (§12.6), because `test/css-source.ts`'s `bodyOf`
-   is first-match and THROWS on a miss: every top-level rule first, then the
-   geometry `@media (max-width: 768px)`, then the chrome one, then
-   `@media (prefers-reduced-motion: reduce)`. There is exactly ONE top-level
-   `.tile` rule and one top-level `.key` rule. Reordering makes an assertion
-   read the wrong block and pass vacuously.
-
-   RECORDED DESIGN-SYSTEM DEVIATIONS (§12.1), each with its arithmetic. There
-   are SEVEN and T-WEB-S102 counts them, so deleting one for tidiness reds
-   rather than passing quietly:
-     1. The board stops at a 360px ceiling, where the other games reach
-        580-600px, and its tile is a fluid square below it (ADR-0103): 49px at
-        the 280px floor, about 62px at the ceiling. The keyboard stack under
-        the board, not the width, binds it, and a taller board would push the
-        keyboard off a 768px-tall desktop.
-     2. Touch targets fall below 44px on the HORIZONTAL axis, consciously.
-        11 x 44 = 484px exceeds the 350px available at the reference phone
-        BEFORE any gap, so PRODUCT.md:39 / DESIGN.md:40's >=44px is
-        arithmetically unreachable for a keyboard whose top row is ten letters
-        and apagar. A key is 28.2 x 48 at 390px and 21.8 x 48 at 320px, so
-        WCAG 2.5.8's 24 × 24 floor is met at 320px through its spacing
-        exception: the key pitch is 25.8px, and a 24px circle on each key
-        reaches no neighbour. The vertical axis is held above 44px because
-        rows are 48px and it is free. WCAG 2.5.5/2.5.8's essential-
-        presentation exception applies: a keyboard whose keys are 44px wide
-        is not a keyboard on a phone. ADR-0035 decision 7's argument,
-        inherited rather than re-derived; ADR-0042 decisions 6 and 7.
-     3. text-decoration is a state carrier, and DESIGN.md:22's list does not
-        contain one. That line reads "every state they mark is also carried by
-        a chip, border, or label" — three carrier kinds. Termo adds a FOURTH:
-        a typographic mark (underline for `present`, line-through for
-        `absent`, on the board and on the keyboard). It is a deviation in KIND
-        and not in effect — the marks clear 1.4.11's 3:1 against the paper
-        they are drawn on by 15.0124:1 and 13.9929:1 — and they are the reason
-        --accent never has to become a boundary.
-     4. The key shadow is --ink at 10 %, not DESIGN.md:36's
-        rgba(accent, 0.2-0.3). Inherited, not invented: Sudoku's `apagar`
-        key ships this exact colour as a neutral control. A letter key is likewise neutral until it is judged,
-        and 28 mustard shadows under a 608px keyboard would make the accent
-        the loudest thing on a screen whose accent has exactly one job. The
-        blur is 0 and N is 3, 2 or 1, so the rest of the token's shape holds.
-     5. Tile glyphs are --ink at weight 600, where DESIGN.md:50 says "player
-        cells on desk paper with accent numerals wt 500". The colour half was
-        FORCED when written (the old mustard measured 2.7311:1 on desk against
-        a 4.5 floor); since ADR-0067 deepened the token, #8D6212 on desk is
-        4.8433:1 — inside decision 1's exception condition — so the colour
-        half is now a JUDGEMENT, made and kept: a Termo glyph is typed before
-        it is judged, and painting the unjudged letters in the judgement's own
-        colour would give the accent a second job on the one screen where it
-        has exactly one. The weight half is a judgement too: DESIGN.md:50's
-        500/600 split separates a GIVEN from a PLAYER entry, and a Termo board
-        has no givens — every glyph on it is the player's — so the split has
-        no second term and the legible weight is the one that ships. --ink 600
-        on --paper-desk is 15.0124:1.
-     6. The focus ring is --ink. After ADR-0041 decision 8 that is the repo's
-        rule for a SHARED sheet rather than a Termo divergence — that decision
-        converted screen.module.css's `.hint:focus-visible` because
-        `outline-offset: 2px` puts --paper-desk on both sides of the ring and
-        the OLD mustard measured 2.7311:1 there against 1.4.11's 3:1 floor.
-        The deep #8D6212 measures 4.8433:1 on desk, so a per-game accent ring
-        would now be legal here (sudoku 7.5113:1 / 7.8385:1 and binairo
-        5.3066:1 / 5.5377:1 are the shipped precedents) — it stays --ink at
-        15.0124:1 on desk and 15.6663:1 on card as a kept judgement, matching
-        the shared `.hint` ring on this same screen so one screen never shows
-        two focus treatments. nonogram-board.module.css ships the same ring.
-     7. Off-4pt lengths, against DESIGN.md:40's "Spacing on a 4pt scale". ONE
-        VALUE, and `T-WEB-S102` reads it off the stylesheet rather than out
-        of this prose, so the count cannot drift.
-        - `text-underline-offset: 3px`, on `.keyPresent` and on
-          `.noticeRetry`. A decoration offset on a 17px glyph, not spacing
-          between boxes; the BOARD's own offsets are 4px at both viewports,
-          deviation-free, precisely so the scale holds where it governs.
-        - `gap: 3px` on `.grid` and `.row` at <=768px. This IS spacing between
-          boxes and it is the honest half of the item. The VALUE is inherited
-          rather than invented — sudoku-board.module.css and
-          binairo-screen.module.css already ship a 3px mobile grid gap. */
-
-/* ── page root ───────────────────────────────────────────────────────── */
-
-/* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page`: custom properties only, never a redeclared `.gridCard`
-   (ADR-0029). The card is 5 tiles wide by 6 rows tall plus padding, a
-   width-over-height of 0.841 to 0.845 at every size; 0.83 keeps it, and its
-   rotation, inside the well. --board-min is the card HEIGHT at the narrowest
-   phone (280px wide).
-
-   A FOURTH distinct rotation signature, beside Binairo's, Sudoku's and
-   Nonogram's. */
 .pageTermo {
   --grid-card-rot: 0.7deg;
   --stats-card-rot: -0.9deg;
@@ -117,18 +11,6 @@
   --board-min: 338px;
 }
 
-/* ── board ───────────────────────────────────────────────────────────── */
-
-/* Six REAL flex row boxes, never `display: contents`: a role-bearing element
-   with `display: contents` has a long, documented history of being dropped
-   from the accessibility tree (ADR-0030's Rejected list), and here there is no
-   reason to risk it — every tile is a fixed square, so rows cost nothing
-   geometrically. ADR-0035's "never a wrapper element" rule protects a single
-   flat grid whose TRACKS compute the geometry, and does not transfer.
-
-   NO `touch-action` here: `manipulation` would cost double-tap-to-zoom on
-   glyphs that are 24px on a phone, the one element a low-vision player wants
-   to enlarge. A tap on a cell only moves the cursor, so no tap delay is paid. */
 .grid {
   --reveal-stagger: 60ms;
   --wave-lead: calc(var(--duration-fast) + var(--reveal-stagger) * 4);
@@ -165,8 +47,6 @@
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
-  /* Paint properties only — never width/height/padding/margin, which fire
-     impeccable's `layout-transition`. */
   transition:
     background-color var(--duration-fast) var(--ease-settle),
     border-color var(--duration-fast) var(--ease-settle),
@@ -175,29 +55,15 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* --ink-2 on --paper-desk is 5.0791:1, clearing 1.4.11's 3:1 with 69 % of
-   headroom. The glyph's presence is the state's second carrier. */
 .tileTyped {
   border-color: var(--ink-2);
 }
 
-/* The HELD turn — the sixth tile state, which ADR-0039 consequence (g)
-   creates and a "five states" reading drops. Its carrier is a SHAPE
-   difference from `typed` (solid -> dashed), this repo's shipped mark for
-   "not settled" (conclusion-view.module.css's `.chipMissing` ships
-   `border: 1.5px dashed var(--line)` for the same reason),
-   so it owes no ratio of its own. `border-style` is NOT an animatable
-   property, so this snaps at every motion setting and owes no reduced-motion
-   rule either. The glyph stays --ink 600: the letters are still the player's
-   and dimming them would read as a rejection. */
 .tileHeld {
   border-color: var(--ink-2);
   border-style: dashed;
 }
 
-/* A state class, so the caret shows whether or not the row holds focus; focus
-   only ever sits on the caret cell (ADR-0106), so the focus ring is the same
-   mark. */
 .tileCaret {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
@@ -212,22 +78,6 @@
   outline-offset: -2px;
 }
 
-/* The strike is --ink, NOT the glyph's own --ink-2: same-colour mark and
-   glyph is 1.0000:1, and on every letterform with a horizontal midstroke
-   (A, E, F, H, Fraunces' G) the mark merges into the glyph and `A` reads as
-   `Ⱥ` rather than as a struck `A`. --ink gives 13.9929:1 against the tint it
-   is drawn on — the 1.4.11 figure that governs — and 2.9557:1 against the
-   --ink-2 glyph it crosses, a plainly darker rule over a lighter letter.
-   ADR-0041 governs the ACCENT; --ink and --ink-2 are neutrals whose
-   relationship the design system already fixes, so nothing is reopened.
-
-   `--paper-tint` is NOT this state's carrier: against --paper-desk it is
-   1.0729:1 (235 against 242 in greyscale) and invisible. Named so a later
-   "simplification" cannot drop the strike and keep the tint. The border is
-   --line-soft rather than the keyboard's --ink-2, deliberately: on the BOARD
-   this tile is read beside `present` and `correct`, whose --ink borders are
-   12.2750:1 away, so --ink-2 would be 2.9557:1 from them and read as a THIRD
-   dark border in a column of six. */
 .tileAbsent {
   background: var(--paper-tint);
   border-color: var(--line-soft);
@@ -237,8 +87,6 @@
   text-decoration-thickness: 2px;
 }
 
-/* Offset 4px keeps the mark clear of the same-colour tile border on the
-   smallest tile, where a larger offset read as one doubled edge. */
 .tilePresent {
   border-color: var(--ink);
   text-decoration: underline;
@@ -247,28 +95,13 @@
   text-underline-offset: 4px;
 }
 
-/* The one job the accent has on this screen. `--ink-on-accent` resolves to
-   `var(--paper-desk)` for termo since #161 (ADR-0067) — 4.8433:1 on the deep
-   #8D6212, the same light-label treatment the other three games carry — and
-   the fallback matches (`--ink`, the old value's ink, is 3.0996:1 on the
-   deep fill and no longer legal on it). The fill is 4.8433:1 against the
-   desk paper around it — above 1.4.11's 3:1, where the old mustard's
-   2.7311:1 was below it — and is still NEVER the sole carrier: the border
-   steps from --line (1.3725:1) to --ink, a 12.2750:1 step away from
-   `absent`'s --line-soft, and this is the only judged tile with no
-   typographic mark. */
 .tileCorrect {
   background: var(--accent);
   border-color: var(--ink);
   color: var(--ink-on-accent, var(--paper-desk));
 }
 
-/* The row reveal, "tinta que assenta" applied to five tiles in sequence
-   (DESIGN.md:44). `transition-delay` is read from the DESTINATION state's
-   computed style, so a tile becoming `typed` (0ms) is unaffected and only a
-   judged tile picks up the stagger. Row settle = 150 + 4 x 60 = 390ms. This
-   is ADR-0034 decision 2's permitted per-entry paint feedback and MUST NOT be
-   described as the celebration. */
+/* Delay is read from the destination state, so only a judged tile staggers. */
 .tileJudged:nth-child(1) {
   transition-delay: 0ms;
 }
@@ -289,23 +122,11 @@
   transition-delay: calc(var(--reveal-stagger) * 4);
 }
 
-/* Declared AFTER `.tile` so same-specificity-later-wins retires the desk
-   paper; the pre-hydration board is a reserved box, not an empty one. */
 .tileSkeleton {
   background: var(--paper-tint);
 }
 
-/* ── the notice row — AC 3's surface, plus ADR-0039's retry ──────────── */
-
-/* ALWAYS rendered and reserved at its TALLEST state, so neither the notice
-   appearing nor the retry button appearing moves the keyboard. Tallest
-   content is the retry button: 14px x 1.5 line-height = 21px + 2 x 4px
-   padding = 29px, and `min-height: 36px` clears it with 7px to spare while
-   also clearing the 13px notice line (13 x 1.5 = 19.5px).
-
-   No background, no border, no outline and no shadow, so `cramped-padding`'s
-   flush branch (checks.mjs:3198-3341) returns on `anyVisible` before it can
-   look at a padding this row does not have. */
+/* Reserved at its tallest state (the retry button): neither the notice nor the retry moves the keyboard. */
 .noticeRow {
   display: flex;
   align-items: center;
@@ -315,9 +136,6 @@
   margin-top: var(--space-2);
 }
 
-/* Non-zero padding on BOTH axes: `cramped-padding`'s flush branch reads a
-   visible boundary and `padding <= 2`. screen.module.css's `.hint` records
-   the same reason. */
 .notice {
   margin: 0;
   padding: var(--space-1) var(--space-2);
@@ -327,35 +145,12 @@
   text-align: center;
 }
 
-/* The nonce marker (§13.1b item 6b). `role="status"` is implicitly
-   aria-atomic and React leaves a text node it rewrites identically alone, so
-   two identical consecutive rejections would be silent on the one channel
-   telling the player why the board is not moving. A zero-width space that
-   alternates in a SIBLING span is a real DOM mutation inside the atomic
-   region, which is what triggers the re-read.
-
-   NOT aria-hidden — an aria-hidden mutation is invisible to the live region,
-   which is the whole point of the element — and deliberately carrying NO
-   font-size, so it inherits `.notice`'s 13px and `undersized-ui-text` (which
-   needs fontSize < 11) cannot reach it however its content is measured.
-   `font-size: 0` would have been the obvious draft and is exactly the wrong
-   instinct here. `user-select: none` so the marker never lands in a copied
-   selection. */
+/* A zero-width space alternating in a sibling span re-triggers the atomic status
+   region's announcement. Not aria-hidden, and no font-size (`undersized-ui-text`). */
 .nonce {
   user-select: none;
 }
 
-/* ADR-0039's retry. A text-weight button rather than a filled CTA: it sits
-   under the board in the calm state PRODUCT.md principle 4 asks for, and a
-   solid accent button here would be the loudest thing on a screen whose
-   accent has one job. 21 + 8 = 29px tall, clearing WCAG 2.5.8's 24 x 24
-   floor; 2.5.5's 44px is the same essential-presentation trade deviation 2
-   already records for this screen's controls.
-
-   `cramped-padding` is out of reach twice over: its main branch needs
-   `borderCount >= 2 || hasBg` and this button has `border: 0` and
-   `background: none`, and its flush branch's FLUSH_SKIP_TAGS contains
-   BUTTON outright. */
 .noticeRetry {
   box-sizing: border-box;
   padding: var(--space-1) var(--space-2);
@@ -368,9 +163,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 2px;
-  /* --ink, not the accent: this underline IS the button's only affordance
-     (no border, no fill), so unlike the shared `.page a:hover` rule it is
-     load-bearing and owes 1.4.11's 3:1 floor. 15.0124:1. */
   text-decoration-color: var(--ink);
   cursor: pointer;
 }
@@ -380,33 +172,8 @@
   outline-offset: 2px;
 }
 
-/* ── keyboard ────────────────────────────────────────────────────────── */
-
-/* ONE flat grid of 22 equal columns, laid out by `qwertySlots` in
-   ../play/letter-keyboard.tsx: letter keys span 2, and each command runs from
-   its row's last letter to the right edge, where a physical keyboard has it.
-   Row 1 is 10 letters + apagar (span 2), row 2 is 9 letters inset one column
-   (the half-key stagger) + enviar (span 3), and row 3 is 7 letters centred,
-   4 + 14 + 4.
-
-   Inline `grid-column` placement is legal HERE and the distinction from
-   Sudoku is recorded rather than assumed: sudoku-board.module.css:265-269
-   refuses it because "an inline style would also apply at <=768px, where the
-   keypad is four fluid columns and these track numbers do not exist — a media
-   query cannot override a style attribute". Termo's template is IDENTICAL at
-   both viewports (only the gap and the row height change), so its track
-   numbers do exist at both, and the placement is a component-side table
-   rather than 28 `nth-child` rules.
-
-   `touch-action: manipulation` lives HERE, not on the board: 28 tap targets
-   is where the ~300ms double-tap wait is actually paid, and there is nothing
-   on a 48px key worth double-tapping to zoom. `none` would be wrong — it
-   would kill pinch-zoom on the page.
-
-   NO background, NO border, NO radius, NO shadow — `cramped-padding`'s flush
-   branch reads a visible boundary and `nested-cards` reads
-   isCardLikeFromProps (checks.mjs:227-230). Both return on their first
-   guard. */
+/* Inline `grid-column` placement is legal here (`qwertySlots`): the 22-column
+   template is identical at both viewports, unlike Sudoku's keypad. */
 .keyboard {
   display: grid;
   grid-template-columns: repeat(22, minmax(0, 1fr));
@@ -442,14 +209,8 @@
     color var(--duration-fast) var(--ease-settle);
 }
 
-/* The press splits in two, and the split is not cosmetic. `.key:active` is
-   (0,2,0) and `.keyAbsent` is (0,1,0), so a single
-   `.key:active { box-shadow }` OUTRANKS `.keyAbsent { box-shadow: none }` at
-   BOTH viewports and a spent key would grow a shadow the instant it is
-   pressed. `:not(.keyAbsent)` on the shadow half fixes it by not matching at
-   all; the translate stays on every key, because a spent key is still
-   pressable and still writes its letter. Press is DESIGN.md verbatim —
-   translate 1px toward the shadow, shadow shrinks 1px (--shadow-sm is 3px). */
+/* `.key:active` (0,2,0) outranks `.keyAbsent { box-shadow: none }`, so the shadow half
+   is `:not(.keyAbsent)`; the translate stays, a spent key is still pressable. */
 .key:active {
   transform: translate(1px, 1px);
 }
@@ -458,10 +219,6 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
 }
 
-/* --ink, not var(--accent): a kept judgement since ADR-0067 deepened the
-   accent (the old mustard was 2.7311:1 on desk, below WCAG 1.4.11's 3:1
-   focus floor; the deep value clears it) — one screen, one focus treatment,
-   matching the shared `.hint` ring. Deviation 6. */
 .key:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
@@ -478,31 +235,11 @@
   text-decoration: underline;
   text-decoration-color: var(--ink);
   text-decoration-thickness: 2px;
-  /* Deviation 7's second off-4pt length. */
   text-underline-offset: 3px;
 }
 
-/* The keyboard's `absent` is discriminated against UNTOUCHED, not against
-   present/correct, and that changes which carriers count. Untouched -> absent
-   measures 1.1196:1 on the fill (--paper-card 0.93262753 vs --paper-tint
-   0.82766867), 2.9557:1 on the glyph (--ink vs --ink-2) and 1.2129:1 at the
-   shadow's own edge — none of them clears 3:1. So the border steps to --ink-2:
-   (0.13539008 + 0.05) against --line's (0.63605722 + 0.05) is 3.7006:1, and
-   it is 5.0791:1 against the desk paper the keyboard sits on and 4.7342:1
-   against the tint it encloses. TWO carriers now clear 3:1 — the strike's
-   presence at 13.9929:1 on the tint, and this border step — with the fill,
-   the glyph and the shadow as reinforcement that is honestly labelled as
-   reinforcement.
-
-   A FILL step was rejected: 3:1 against --paper-card needs a luminance of
-   (0.93262753 + 0.05)/3 - 0.05 = 0.27754, greyscale ~145 — a mid-grey key in
-   a paper system, and a new colour token of exactly the kind ADR-0041's
-   rejected list refuses.
-
-   --ink-2 HERE and --line-soft on the board is deliberate, and a later
-   "unify the two absent rules" is the regression it looks like a tidy-up:
-   there is no --ink neighbour on the keyboard for --ink-2 to collide with,
-   because `present` and `correct` also carry a mark or a fill. */
+/* `--ink-2` is the absent key's 3:1 carrier against untouched keys; on the board it would be a
+   third dark border beside `--ink`, so `.tileAbsent` keeps `--line-soft`. Do not unify. */
 .keyAbsent {
   background: var(--paper-tint);
   border-color: var(--ink-2);
@@ -513,17 +250,12 @@
   text-decoration-thickness: 2px;
 }
 
-/* A sibling of `.keyboard`, never a child: the keyboard's grid places all
-   its keys explicitly, so an unplaced child would fall into an implicit row. */
 .affordance {
   display: flex;
   margin-top: var(--space-3);
 }
 
-/* THIS module's copy of `.placeholder`, and it must sit AFTER `.key` and
-   `.tile`: same specificity, later wins. A class hashed in
-   screen.module.css cannot reach one hashed here (landmine 10), so the
-   shared sheet's copy is unreachable from this file's classes. */
+/* After `.key` and `.tile` (same specificity, later wins); the shared sheet's copy cannot reach classes hashed here. */
 .placeholder {
   cursor: default;
   pointer-events: none;
@@ -533,11 +265,7 @@
   composes: hidden from "../components/visually-hidden.module.css";
 }
 
-/* ── <=768px, geometry ───────────────────────────────────────────────── */
-
 @media (max-width: 768px) {
-  /* The mark is stepped down on the smaller glyph: a 3px mark would end 3.1px
-     above the 1.5px border of the same colour (see `.tilePresent`). */
   .tilePresent {
     text-decoration-thickness: 2px;
   }
@@ -551,8 +279,6 @@
   }
 }
 
-/* ── <=768px, chrome ─────────────────────────────────────────────────── */
-
 @media (max-width: 768px) {
   .keyboard {
     box-sizing: border-box;
@@ -565,15 +291,7 @@
     font-size: 15px;
   }
 
-  /* `:not(.keyAbsent)` on BOTH shadow rules here. A bare
-     `.key { box-shadow }` in this block is (0,1,0) and sits LATER in the file
-     than `.keyAbsent { box-shadow: none }`, so at equal specificity it wins
-     and silently restores the shadow on every spent key at the PRIMARY
-     viewport — browser-verified before the fix: `none` at 1440,
-     `rgba(33,29,25,0.1) 2px 2px 0px` at 390. Pinned by a stylesheet-TEXT
-     assertion, because jsdom computes no cascade. The per-viewport step down
-     is the frame set's own move (screen.module.css's mobile `.gridCard` ships 5px 5px 0
-     against --shadow-lg's 6px). */
+  /* `:not(.keyAbsent)` again: this block sits after `.keyAbsent`, so a bare `.key` rule would win. */
   .key:not(.keyAbsent) {
     box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
   }
@@ -582,27 +300,18 @@
     box-shadow: 1px 1px 0 color-mix(in srgb, var(--ink) 10%, transparent);
   }
 
-  /* A phone has no keyboard to advertise. */
   .affordance {
     display: none;
   }
 }
 
-/* ── reduced motion ──────────────────────────────────────────────────── */
-
-/* In THIS module, and it has to be: CSS Modules hash per file, so the shared
-   sheet's own reduced-motion block covers its `.hint` and can never reach
-   `.tile` or `.key`. */
+/* CSS Modules hash per file: the shared sheet's reduced-motion block cannot reach `.tile` or `.key`. */
 @media (prefers-reduced-motion: reduce) {
   .tile,
   .key {
     transition: none;
   }
 
-  /* The stagger goes down WITH the transition. A delay on a paint that no
-     longer animates is 390ms of a reduced-motion user staring at a stale row
-     — the same class of subtlety conclusion-view.test.tsx's "stands both
-     settles down at the keyframe's END state" gates for the conclusion. */
   .tileJudged:nth-child(1),
   .tileJudged:nth-child(2),
   .tileJudged:nth-child(3),

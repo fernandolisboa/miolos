@@ -70,8 +70,8 @@ path: reopening it takes a new ADR, and this is it.
 
 4. **No accent-as-text site opens.** `#8D6212` on desk would satisfy
    ADR-0041 decision 1's measured exception (4.8433:1 ≥ 4.5), but the
-   Termo board's glyphs stay `--ink` 600 as a kept judgement, recorded at
-   `termo-board.module.css` deviation 5: a typed letter is not yet judged,
+   Termo board's glyphs stay `--ink` 600 as a kept judgement, recorded as
+   deviation 5 in T-WEB-S102 (`apps/web/test/termo-screen.test.tsx`): a typed letter is not yet judged,
    and the accent's one job on that screen is the `correct` fill. The
    shared sheets remain barred outright — `var(--accent)` has no fixed
    value, so decision 1 is untouched.

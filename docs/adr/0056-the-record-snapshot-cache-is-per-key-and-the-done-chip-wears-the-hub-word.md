@@ -110,8 +110,7 @@ projection was built to exclude (`DAY_STATUSES` in
    streak, time stats or Dia Perfeito"* — and it is the term for **every**
    completion this chip can render; `CONTEXT.md:11`'s `Conclusão` is the
    on-time one. The chip nonetheless says **`Feito`**, the hub's Game-card
-   word, for cross-surface consistency: `arquivo.module.css` declares this
-   card to be that register. It is acceptable because the chip is device state
+   word, for cross-surface consistency: this card is in that register. It is acceptable because the chip is device state
    claiming nothing about the streak, and because `messages.archive.play.note`
    says *"Não conta para a sequência nem para os seus tempos"* one screen
    away. **It is reversible in two lines and four
