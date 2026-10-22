@@ -1,5 +1,5 @@
 import type { SessionResponse } from "@miolos/core";
-import { eq, sessions, sql, users, type Db } from "@miolos/db";
+import { eq, sessions, sql, type Db } from "@miolos/db";
 import { recordSeenDay } from "@miolos/db/user";
 
 import { hashSessionToken } from "./token";
@@ -36,15 +36,18 @@ export async function mintSession(
   db: Db,
   tokenHash: string,
 ): Promise<SessionResponse> {
-  const inserted = await db.insert(users).values({}).returning();
-  const user = inserted[0];
-  if (!user) {
+  // see ADR-0148: never list every users column here
+  const inserted = await db.execute(
+    sql`insert into users default values returning id`,
+  );
+  const userId = inserted.rows[0]?.["id"];
+  if (typeof userId !== "string") {
     throw new Error("users insert returned no row");
   }
-  await db.insert(sessions).values({ tokenHash, userId: user.id });
+  await db.insert(sessions).values({ tokenHash, userId });
 
-  await recordSeenDay(db, user.id);
-  return { userId: user.id, created: true };
+  await recordSeenDay(db, userId);
+  return { userId, created: true };
 }
 
 export async function createSessionForUser(

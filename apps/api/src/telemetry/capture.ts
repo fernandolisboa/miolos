@@ -1,6 +1,9 @@
 import type { TelemetryEvent, TelemetryEventProperties } from "@miolos/core";
 import { telemetryEventPropertiesSchemas } from "@miolos/core";
+import type { Db } from "@miolos/db";
 import { after } from "next/server";
+
+import { telemetryOptedOut } from "../account/service";
 
 export const POSTHOG_INGESTION_URL = "https://us.i.posthog.com/i/v0/e/";
 
@@ -9,6 +12,7 @@ const CAPTURE_TIMEOUT_MS = 3_000;
 let warnedMissingKey = false;
 
 export async function captureEvent<E extends TelemetryEvent>(input: {
+  db: Db;
   distinctId: string;
   event: E;
   properties: TelemetryEventProperties[E];
@@ -27,6 +31,9 @@ export async function captureEvent<E extends TelemetryEvent>(input: {
     const properties = telemetryEventPropertiesSchemas[input.event].parse(
       input.properties,
     );
+    if (await telemetryOptedOut(input.db, input.distinctId)) {
+      return;
+    }
     const response = await fetch(POSTHOG_INGESTION_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },

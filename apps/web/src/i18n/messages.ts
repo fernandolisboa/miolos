@@ -717,7 +717,7 @@ export const messages = {
         "O código que identifica a sua conta Google, somente se você escolher entrar com o Google. Não recebemos do Google o seu nome, a sua foto nem o seu e-mail. Para desconectar, use Ajustes.",
 
       telemetry:
-        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
+        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Para parar de enviar, desligue as medições de uso em Ajustes: isso vale para as medições seguintes, nesta conta. Se você limpar o navegador, nasce uma conta anônima nova, com as medições ligadas, até você entrar de novo na sua conta. Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
 
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
@@ -915,6 +915,17 @@ export const messages = {
       blocked:
         "As notificações do Miolos estão bloqueadas neste navegador. Para liberar, abra as configurações do site no navegador e permita as notificações.",
       error: "Não deu certo agora. Tente de novo em instantes.",
+    },
+    telemetry: {
+      heading: "Medições de uso",
+      lead: "Contamos quando um puzzle começa e termina, e quanto tempo levou, para melhorar o Miolos. Nunca com o seu e-mail. Vale para a sua conta, em todos os aparelhos em que você entrar.",
+      toggle: "Enviar medições de uso",
+      on: "Ligado",
+      off: "Desligado",
+      busy: "Um instante…",
+      unavailable: "Não conseguimos carregar esta opção agora.",
+      error: "Não deu certo agora. Tente de novo em instantes.",
+      privacyLink: "O que é medido",
     },
     account: {
       heading: "Seu e-mail",

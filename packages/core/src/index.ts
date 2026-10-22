@@ -225,6 +225,7 @@ export {
   accountStateResponseSchema,
   reminderConsentResponseSchema,
   reminderConsentSchema,
+  telemetryChoiceSchema,
   type AccountDeleteRequest,
   type AccountDeleteResponse,
   type AccountDetachEmailRequest,
@@ -232,6 +233,7 @@ export {
   type AccountStateResponse,
   type ReminderConsentRequest,
   type ReminderConsentResponse,
+  type TelemetryChoice,
 } from "./contracts/account";
 export {
   accountGoogleResponseSchema,

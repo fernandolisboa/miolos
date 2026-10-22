@@ -248,6 +248,9 @@ construction instead.
    and the ORDERING that makes the deferral safe is written into the ledger
    item rather than left to memory: the privacy copy ships before the key
    does, and NOW §3 carries that as a hard precondition.
+   *Annotation (#37, 2026-10-22): the opt-out UI now exists — the
+   "Medições de uso" switch in Ajustes, enforced inside `captureEvent`
+   ([ADR-0148](./0148-measurements-are-turned-off-per-account-inside-the-capture.md)).*
 
 6. **`notification_opt_in` fires on a genuine first insert, not on
    `stored: true`.** The subscribe write is `INSERT … ON CONFLICT DO
