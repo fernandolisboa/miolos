@@ -1,10 +1,14 @@
 import type { QueensSize } from "@miolos/core";
-import { memo, useMemo, type MouseEvent as ReactMouseEvent } from "react";
+import { memo, useMemo } from "react";
 
 import { messages } from "../i18n";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
-import { useBinaryBoard } from "../play/use-binary-board";
+import {
+  cellProps,
+  useBinaryBoard,
+  type CellWiring,
+} from "../play/use-binary-board";
 import type { MistakeState } from "../play/mistakes";
 import { useWrongCells } from "../play/use-wrong-cells";
 import { WrongMark } from "../play/wrong-mark";
@@ -127,7 +131,6 @@ const Cell = memo(function Cell({
   onCellFocus,
   onCellClick,
 }: {
-  readonly index: number;
   readonly size: number;
   readonly regions: readonly number[];
   readonly region: number;
@@ -139,13 +142,7 @@ const Cell = memo(function Cell({
   readonly reached: boolean;
   readonly faded: boolean;
   readonly selected: boolean;
-  readonly tabbable: boolean;
-  readonly onCellFocus: (index: number) => void;
-  readonly onCellClick: (
-    index: number,
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => void;
-}) {
+} & CellWiring) {
   const row = Math.floor(index / size);
   const column = index % size;
   const label = messages.games.queens.play.cellAria(
@@ -172,11 +169,8 @@ const Cell = memo(function Cell({
         .filter((name) => name !== "")
         .join(" ")}
       style={regionFill(region)}
-      data-cell-index={index}
-      tabIndex={tabbable ? 0 : -1}
+      {...cellProps({ index, tabbable, onCellFocus, onCellClick })}
       aria-label={wrong ? messages.play.wrongCell(label) : label}
-      onFocus={() => onCellFocus(index)}
-      onClick={(event) => onCellClick(index, event)}
     >
       {value === 1 ? <QueenGlyph /> : null}
       {wrong ? <WrongMark /> : null}

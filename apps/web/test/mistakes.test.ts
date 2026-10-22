@@ -13,7 +13,7 @@ import { generateDailySudoku } from "@miolos/games/sudoku";
 import { describe, expect, it } from "vitest";
 
 import {
-  binairoMistakes,
+  BINAIRO_MISTAKES,
   initPlayState,
   playReducer,
   type PlayAction,
@@ -131,13 +131,14 @@ const BINAIRO_DAILY: DailyBinairoResponse = {
 const BINAIRO_SOLUTION = defined(solveBinairo(BINAIRO.givens), "solution");
 const binairo = limited<PlayState, PlayAction | UndoAction>(
   playReducer,
-  binairoMistakes(BINAIRO_SOLUTION, BINAIRO.givens),
+  BINAIRO_MISTAKES,
 );
 const BINAIRO_OPEN = BINAIRO.givens.flatMap((given, index) =>
   given === null ? [index] : [],
 );
 const [B0 = 0, B1 = 0] = BINAIRO_OPEN;
-const binairoBoard = () => binairo(initPlayState(BINAIRO_DAILY), RESTORE);
+const binairoBoard = () =>
+  binairo(initPlayState(BINAIRO_DAILY, BINAIRO_SOLUTION), RESTORE);
 const cycleTap = (index: number, first: 0 | 1): PlayAction => ({
   type: "tap",
   index,
@@ -525,7 +526,6 @@ describe("a held tap is judged when the player leaves its cell (T-WEB-S842)", ()
   it("judges the held cell first when a hint lands", () => {
     const hinted = binairo(binairoBoard(), cycleTap(B0, binairoWrong(B0)), {
       type: "use-hint",
-      solution: BINAIRO_SOLUTION,
     });
     expect(hinted.hint.used).toBe(1);
     expect(hinted.mistakes.cells).toEqual([B0]);

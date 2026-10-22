@@ -6,13 +6,7 @@ import {
   type ColoredRun,
   type PictureTone,
 } from "@miolos/games/colored-nonogram";
-import {
-  Fragment,
-  memo,
-  useMemo,
-  type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
+import { Fragment, memo, useMemo, type CSSProperties } from "react";
 
 import { messages } from "../i18n";
 import {
@@ -25,7 +19,11 @@ import {
 import boardStyles from "../nonogram/nonogram-board.module.css";
 import type { Press } from "../play/brush";
 import spotlightStyles from "../play/spotlight.module.css";
-import { useBinaryBoard } from "../play/use-binary-board";
+import {
+  cellProps,
+  useBinaryBoard,
+  type CellWiring,
+} from "../play/use-binary-board";
 import { usePictureWrongCells } from "../nonogram/use-picture-wrong-cells";
 import type { MistakeState } from "../play/mistakes";
 import { WrongMark } from "../play/wrong-mark";
@@ -240,7 +238,6 @@ const ColoredCell = memo(function ColoredCell({
   onCellFocus,
   onCellClick,
 }: {
-  readonly index: number;
   readonly row: number;
   readonly column: number;
   readonly size: number;
@@ -250,13 +247,7 @@ const ColoredCell = memo(function ColoredCell({
   readonly hinted: boolean;
   readonly spotlit: boolean;
   readonly selected: boolean;
-  readonly tabbable: boolean;
-  readonly onCellFocus: (index: number) => void;
-  readonly onCellClick: (
-    index: number,
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => void;
-}) {
+} & CellWiring) {
   const letter = value === null ? undefined : palette[value - 1];
   const painted = letter !== undefined;
   const label = painted
@@ -288,12 +279,9 @@ const ColoredCell = memo(function ColoredCell({
         gridRow: row + 2,
         ...(painted ? toneStyle(letter) : {}),
       }}
-      data-cell-index={index}
-      tabIndex={tabbable ? 0 : -1}
+      {...cellProps({ index, tabbable, onCellFocus, onCellClick })}
       aria-label={wrong ? messages.play.wrongCell(label) : label}
       aria-describedby={`${rowRailId(row)} ${columnRailId(column)}`}
-      onFocus={() => onCellFocus(index)}
-      onClick={(event) => onCellClick(index, event)}
     >
       {wrong ? <WrongMark /> : null}
     </button>

@@ -106,8 +106,7 @@ const NONOGRAM_DAILY: DailyNonogramResponse = dailyNonogramResponseSchema.parse(
 const noop = () => undefined;
 
 const BINAIRO_PLAY = {
-  state: initPlayState(BINAIRO_DAILY),
-  solution: null,
+  state: initPlayState(BINAIRO_DAILY, null),
   elapsed: ELAPSED,
   filled: 12,
   hintReady: true,

@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-22 (issue #61)
 **Depends on:** [ADR-0030](./0030-grid-games-are-composite-widgets-one-tab-stop-roving-focus.md), [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md), [ADR-0092](./0092-the-rainhas-board-tap-cycles-drag-crosses-conflicts-show.md), [ADR-0126](./0126-undo-steps-back-one-gesture-in-memory-never-past-a-hint.md), [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md)
 **Amends:** ADR-0030 decision 3 and consequence (b), and ADR-0037 decision 2 and consequence (b), for Binairo only.
+**Amended at #410:** decision 5 — Binairo now joins `BinaryGridState` and `binaryGridReducer`.
 
 ## Context
 
@@ -14,7 +15,7 @@ ADR-0030 (b) and ADR-0037 (b) owed Binairo the composite-widget retrofit: its 64
 2. Keys: the arrows, `Home`, `End`, `PageUp` and `PageDown` move through `keyMove`. `0` writes 0 and `1` writes 1; the same key again clears; `Backspace` and `Delete` clear. A key ignores the paint mode. Ctrl, ⌘ and Alt pass through, so undo keeps working.
 3. `Enter` and `Space` are the cell's tap, the browser's button activation with `detail` 0: the cycle from *Primeiro valor*, or the brush value in paint mode. Selecting a cell is focusing it: a pointer press or Tab selects through `onFocus`, the arrows move `selected` and focus follows, and undo restores it.
 4. `onStrokeEnd` comes through `useBinaryBoard`, as ADR-0037 decision 2 requires; no second focus fix exists. Under pointer capture the retargeted click never reaches a cell, so `onStrokeEnd` focuses the end cell of a paint stroke. In cycle mode (`painting: false`) nothing is captured, `pointerup` taps and `onStrokeEnd` focuses the cell.
-5. Binairo keeps its own reducer. It reuses `withCaret` and `useCaretControls`, and `caretPress` for the mistake rules, and does not join `BinaryGridState`, which would need `solution`, `size` and a given-aware restore (#410).
+5. ~~Binairo keeps its own reducer.~~ (**Amended at #410:** Binairo's `PlayState` extends `BinaryGridState` with `size` and `solution`; its reducer keeps only `tap`, `stroke-start`, `paint-over`, `set-mode` and a givens guard on `enter-value`/`clear-cell`, and hands the rest, the restore included, to `binaryGridReducer` and `restoreBinaryRecord` with `BINAIRO_RULES`. `caretPress` still feeds the mistake rules.)
 
 ## Consequences
 

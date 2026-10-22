@@ -2,26 +2,28 @@ import { useCallback, type Dispatch } from "react";
 
 import type { Press } from "../play/brush";
 import {
-  useCaretControls,
-  type CaretControls,
-} from "../play/use-caret-controls";
+  useBinaryGridControls,
+  type BinaryGridControls,
+} from "../play/use-binary-grid-controls";
 import { useSettings } from "../settings/settings";
 import {
   useStrokeControls,
   type StrokeControls,
 } from "../play/use-stroke-controls";
-import type { PlayAction } from "./state";
+import type { UndoAction } from "../play/undo";
+import type { PlayAction, PlayState } from "./state";
 
-export interface BinairoControls extends StrokeControls, CaretControls {
+export interface BinairoControls extends StrokeControls, BinaryGridControls {
   readonly tapCell: (index: number, press: Press) => void;
   readonly toggleMode: (value: 0 | 1) => void;
 }
 
 export function useBinairoControls(
-  dispatch: Dispatch<PlayAction>,
+  state: PlayState,
+  dispatch: Dispatch<PlayAction | UndoAction>,
 ): BinairoControls {
   const strokes = useStrokeControls(dispatch);
-  const caret = useCaretControls(dispatch);
+  const grid = useBinaryGridControls(state, dispatch);
   const first = useSettings().games.binairo.firstValue;
 
   const tapCell = useCallback(
@@ -38,5 +40,5 @@ export function useBinairoControls(
     [dispatch],
   );
 
-  return { ...strokes, ...caret, tapCell, toggleMode };
+  return { ...strokes, ...grid, tapCell, toggleMode };
 }

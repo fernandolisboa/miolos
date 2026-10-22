@@ -1,26 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import boardStyles from "../binairo/binairo-screen.module.css";
 import { BoardPanel } from "../binairo/board-panel";
 import { ControlsSkeleton } from "../binairo/controls";
 import { binairoHintExplanation } from "../binairo/hint";
-import {
-  binairoMistakes,
-  canHint,
-  initPlayState,
-  playReducer,
-} from "../binairo/state";
+import { BINAIRO_MISTAKES, initPlayState, playReducer } from "../binairo/state";
 import { useBinairoControls } from "../binairo/use-binairo-controls";
 import { messages } from "../i18n";
 import { EndingStage } from "../play/ending-stage";
 import { BoardCard } from "../play/board-card";
-import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { hintReadout } from "../play/hint-readout";
 import { usePlayReducer } from "../play/mistakes";
 import { countFilled } from "../play/progress";
-import { useBoardEdits } from "../play/undo";
 import { DEFAULT_FREE_PLAY_LEVEL, type FreePlayLevel } from "./catalog";
 import { levelChoice } from "./choice-picker";
 import { FreePlayChrome } from "./chrome";
@@ -84,38 +77,19 @@ function BinairoFreeBoard({
   readonly puzzle: FreeBinairoPuzzle;
   readonly onNext: () => void;
 }) {
-  const rules = useMemo(
-    () => binairoMistakes(puzzle.solution, puzzle.daily.givens),
-    [puzzle],
-  );
   const [state, dispatch] = usePlayReducer(
     playReducer,
-    puzzle.daily,
-    initPlayState,
-    rules,
+    puzzle,
+    ({ daily, solution }) => initPlayState(daily, solution),
+    BINAIRO_MISTAKES,
   );
-  const controls = useBinairoControls(dispatch);
-  const allowance = useFreeHintsPerPuzzle();
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
+  const controls = useBinairoControls(state, dispatch);
 
   useEffect(() => {
     dispatch({ type: "restore", record: undefined, now: Date.now() });
   }, [dispatch]);
 
   const filled = countFilled(state.givens, state.entries);
-  const hintReady = canHint(state, allowance);
-
-  const revealHint = useCallback(() => {
-    if (canHint(stateRef.current, allowance)) {
-      dispatch({ type: "use-hint", solution: puzzle.solution });
-    }
-  }, [dispatch, puzzle.solution, allowance]);
-
-  const edits = useBoardEdits(state, dispatch);
 
   const choices = [levelChoice(level, onLevelChange)];
   return (
@@ -140,18 +114,14 @@ function BinairoFreeBoard({
                 state.hint,
                 binairoHintExplanation(state.hint.reason),
               ),
-              ready: hintReady,
-              onReveal: revealHint,
+              ready: controls.hintReady,
+              onReveal: controls.revealHint,
             },
-            ...edits,
+            ...controls.edits,
           },
         }}
       >
-        <BoardPanel
-          state={state}
-          solution={puzzle.solution}
-          controls={controls}
-        />
+        <BoardPanel state={state} controls={controls} />
       </FreePlayChrome>
     </EndingStage>
   );

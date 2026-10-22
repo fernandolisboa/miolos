@@ -6,6 +6,7 @@ import { onBoard, withCaret, type CaretWriteAction } from "./grid-selection";
 import { hasHintLeft } from "./hint-allowance";
 import { idleHint, spentHint, unlit } from "./hint-state";
 import type {
+  BinairoPlayRecord,
   NonogramPlayRecord,
   PlayRecord,
   QueensPlayRecord,
@@ -18,7 +19,7 @@ export type BinaryMark = 0 | 1;
 
 export type BinaryCellValue = BinaryMark | null;
 
-type BinaryRecord = NonogramPlayRecord | QueensPlayRecord;
+type BinaryRecord = BinairoPlayRecord | NonogramPlayRecord | QueensPlayRecord;
 
 export interface BinaryGridState<
   R = unknown,
@@ -179,7 +180,6 @@ export function restoreBinaryRecord<S extends BinaryGridState<R>, R>(
   if (
     !isBinaryRecord(record) ||
     record.game !== game ||
-    record.size !== state.size ||
     record.entries.length !== state.entries.length
   ) {
     return { ...state, now, hydrated: true };
@@ -197,5 +197,9 @@ export function restoreBinaryRecord<S extends BinaryGridState<R>, R>(
 function isBinaryRecord(
   record: PlayRecord | undefined,
 ): record is BinaryRecord {
-  return record?.game === "nonogram" || record?.game === "queens";
+  return (
+    record?.game === "binairo" ||
+    record?.game === "nonogram" ||
+    record?.game === "queens"
+  );
 }

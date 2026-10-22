@@ -222,11 +222,11 @@ describe("use-hint records the reason and the spotlight (T-WEB-S565)", () => {
     size: 8,
     givens: [...PUZZLE.givens],
   };
-  const STATE = initPlayState(DAILY);
+  const STATE = initPlayState(DAILY, PUZZLE.solution);
   const STEP = nextBinairoStep(PUZZLE.givens);
 
   function hinted(from: PlayState = STATE): PlayState {
-    return playReducer(from, { type: "use-hint", solution: PUZZLE.solution });
+    return playReducer(from, { type: "use-hint" });
   }
 
   const free = PUZZLE.givens.flatMap((given, index) =>

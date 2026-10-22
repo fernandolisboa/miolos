@@ -6,6 +6,7 @@ import {
 import { generateBinairo } from "@miolos/games/binairo";
 import { describe, expect, it } from "vitest";
 
+import { canHint } from "../src/play/binary-grid";
 import type { Press } from "../src/play/brush";
 import type { BinairoPlayRecord } from "../src/play/play-record";
 import { elapsedMs } from "../src/play/timer";
@@ -46,7 +47,7 @@ function press(state: PlayState, kind: Press, ...indices: number[]): PlayState {
 }
 
 function brushed(value: 0 | 1): PlayState {
-  return playReducer(initPlayState(daily()), {
+  return playReducer(initPlayState(daily(), null), {
     type: "set-mode",
     value,
   });
@@ -71,7 +72,7 @@ function record(overrides: Partial<BinairoPlayRecord> = {}): BinairoPlayRecord {
 
 describe("initPlayState", () => {
   it("is the deterministic server snapshot: no record, no clock (D28)", () => {
-    const state = initPlayState(daily());
+    const state = initPlayState(daily(), null);
 
     expect(state.hydrated).toBe(false);
     expect(state.date).toBe("2026-07-30");
@@ -94,7 +95,7 @@ describe("initPlayState", () => {
 
 describe("tap — the cell state machine (D7)", () => {
   it("cycles empty → 1 → 0 → empty in cycle mode, by default", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
 
     state = tap(state, 5);
     expect(state.entries[5]).toBe(1);
@@ -107,14 +108,14 @@ describe("tap — the cell state machine (D7)", () => {
   it("never changes a given", () => {
     const givens = [...EMPTY_GIVENS];
     givens[0] = 1;
-    const state = tap(initPlayState(daily(givens)), 0, 0, 0);
+    const state = tap(initPlayState(daily(givens), null), 0, 0, 0);
 
     expect(state.entries[0]).toBeNull();
     expect(mergedGrid(state)[0]).toBe(1);
   });
 
   it("sets the value directly in paint mode and clears it on a re-tap", () => {
-    let state = playReducer(initPlayState(daily()), {
+    let state = playReducer(initPlayState(daily(), null), {
       type: "set-mode",
       value: 1,
     });
@@ -128,7 +129,7 @@ describe("tap — the cell state machine (D7)", () => {
 
 describe("a mouse press writes a value (T-WEB-S506)", () => {
   it("left writes 1 and right writes 0 in cycle mode, and the same press again clears", () => {
-    const start = initPlayState(daily());
+    const start = initPlayState(daily(), null);
 
     const one = press(start, "left", 5);
     expect(one.entries[5]).toBe(1);
@@ -142,7 +143,7 @@ describe("a mouse press writes a value (T-WEB-S506)", () => {
   });
 
   it("a tap still cycles in cycle mode", () => {
-    expect(tap(initPlayState(daily()), 5, 5).entries[5]).toBe(0);
+    expect(tap(initPlayState(daily(), null), 5, 5).entries[5]).toBe(0);
   });
 
   it("left and a tap use the brush, right the other value", () => {
@@ -161,7 +162,7 @@ describe("a mouse press writes a value (T-WEB-S506)", () => {
   it("never changes a given, whatever the press", () => {
     const givens = [...EMPTY_GIVENS];
     givens[0] = 1;
-    const state = initPlayState(daily(givens));
+    const state = initPlayState(daily(givens), null);
 
     for (const kind of ["tap", "left", "right"] as const) {
       expect(press(state, kind, 0).entries[0]).toBeNull();
@@ -189,7 +190,7 @@ describe("Primeiro valor drives the tap and the mouse alike (T-WEB-S608)", () =>
   ] as const)(
     "with %i first, a tap cycles to it, then to %i, then clears",
     (first, other) => {
-      const start = initPlayState(daily());
+      const start = initPlayState(daily(), null);
 
       expect(pressWith(start, "tap", first, 5).entries[5]).toBe(first);
       expect(pressWith(start, "tap", first, 5, 5).entries[5]).toBe(other);
@@ -203,7 +204,7 @@ describe("Primeiro valor drives the tap and the mouse alike (T-WEB-S608)", () =>
   ] as const)(
     "with %i first, left writes it and right writes %i",
     (first, other) => {
-      const start = initPlayState(daily());
+      const start = initPlayState(daily(), null);
 
       expect(pressWith(start, "left", first, 5).entries[5]).toBe(first);
       expect(pressWith(start, "right", first, 5).entries[5]).toBe(other);
@@ -234,7 +235,7 @@ describe("stroke-start and paint-over — the drag path (T-WEB-S506a)", () => {
   }
 
   it("is a no-op in cycle mode: cycling on drag is chaos (D8)", () => {
-    const state = stroke(initPlayState(daily()), "left", 4, 5, 6);
+    const state = stroke(initPlayState(daily(), null), "left", 4, 5, 6);
 
     expect(state.entries).toEqual(EMPTY_GIVENS);
   });
@@ -263,7 +264,7 @@ describe("stroke-start and paint-over — the drag path (T-WEB-S506a)", () => {
   it("(a) a stroke starting on a given writes, and the next stroke replaces a clearing latch", () => {
     const givens = [...EMPTY_GIVENS];
     givens[2] = 0;
-    let state = playReducer(initPlayState(daily(givens)), {
+    let state = playReducer(initPlayState(daily(givens), null), {
       type: "set-mode",
       value: 1,
     });
@@ -326,7 +327,7 @@ describe("set-mode takes the digit (T-WEB-S501)", () => {
   });
 
   it("swaps the sticky paint mode without touching the grid", () => {
-    const filled = tap(initPlayState(daily()), 1);
+    const filled = tap(initPlayState(daily(), null), 1);
     const state = playReducer(filled, {
       type: "set-mode",
       value: 1,
@@ -360,7 +361,7 @@ describe("a stroke that starts nowhere (T-WEB-S502)", () => {
 
 describe("local validation (D11, T-WEB-12)", () => {
   it("flags a third identical digit the moment it lands and clears it on removal", () => {
-    let state = tap(initPlayState(daily()), 0, 1, 2);
+    let state = tap(initPlayState(daily(), null), 0, 1, 2);
 
     expect([...state.violating].toSorted()).toEqual([0, 1, 2]);
 
@@ -369,7 +370,7 @@ describe("local validation (D11, T-WEB-12)", () => {
   });
 
   it("never blocks further entry while a violation stands", () => {
-    let state = tap(initPlayState(daily()), 0, 1, 2);
+    let state = tap(initPlayState(daily(), null), 0, 1, 2);
     expect(state.violating.size).toBeGreaterThan(0);
 
     state = tap(state, 3);
@@ -380,7 +381,7 @@ describe("local validation (D11, T-WEB-12)", () => {
 describe("completion detection (D12, T-WEB-13)", () => {
   function fillFromSolution(indices: readonly number[]): PlayState {
     const givens = [...REAL_PUZZLE.givens];
-    let state = initPlayState(daily(givens));
+    let state = initPlayState(daily(givens), null);
     for (const index of indices) {
       const target = REAL_PUZZLE.solution[index];
       if (REAL_PUZZLE.givens[index] !== null || target === undefined) {
@@ -433,10 +434,12 @@ describe("completion detection (D12, T-WEB-13)", () => {
 describe("use-hint (§10.3)", () => {
   it("writes the solution's value, spends a free hint and marks the cell", () => {
     const givens = [...REAL_PUZZLE.givens];
-    const first = playReducer(initPlayState(daily(givens)), {
-      type: "use-hint",
-      solution: REAL_PUZZLE.solution,
-    });
+    const first = playReducer(
+      initPlayState(daily(givens), REAL_PUZZLE.solution),
+      {
+        type: "use-hint",
+      },
+    );
 
     expect(first.hint.used).toBe(1);
     expect(first.hint.lastIndex).not.toBeNull();
@@ -446,12 +449,14 @@ describe("use-hint (§10.3)", () => {
 });
 
 describe("the reducer's hints stop at the ceiling (T-WEB-S511b)", () => {
-  const initial = initPlayState(daily([...REAL_PUZZLE.givens]));
+  const initial = initPlayState(
+    daily([...REAL_PUZZLE.givens]),
+    REAL_PUZZLE.solution,
+  );
 
   function hint(state: PlayState): PlayState {
     return playReducer(state, {
       type: "use-hint",
-      solution: REAL_PUZZLE.solution,
     });
   }
 
@@ -487,7 +492,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
     playReducer(state, { type: "pause", now });
 
   it("accumulates only the running segments", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
     state = running(state, 1_000);
     state = paused(state, 6_000);
     expect(elapsedMs(state.timer, 999_999)).toBe(5_000);
@@ -497,7 +502,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
   });
 
   it("resume is idempotent: a second resume never discards the running segment", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
     state = running(state, 1_000);
     state = running(state, 4_000);
     state = paused(state, 6_000);
@@ -506,7 +511,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
   });
 
   it("pause is idempotent: visibilitychange then pagehide must not double-count", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
     state = running(state, 1_000);
     state = paused(state, 6_000);
     state = paused(state, 9_000);
@@ -515,7 +520,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
   });
 
   it("pagehide then pageshow with no visibilitychange leaves the clock running (bfcache)", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
     state = running(state, 1_000);
     state = paused(state, 3_000);
     state = running(state, 60_000);
@@ -525,7 +530,7 @@ describe("timer (D10, §8.3, T-WEB-14)", () => {
   });
 
   it("tick moves the clock reference and never accumulates by itself", () => {
-    let state = initPlayState(daily());
+    let state = initPlayState(daily(), null);
     state = running(state, 1_000);
     const before = elapsedMs(state.timer, 5_000);
 
@@ -546,7 +551,7 @@ describe("restore (T-WEB-14b)", () => {
     entries[0] = 0;
     entries[1] = 0;
     entries[2] = 0;
-    const state = playReducer(initPlayState(daily()), {
+    const state = playReducer(initPlayState(daily(), null), {
       type: "restore",
       record: record({
         entries,
@@ -577,16 +582,19 @@ describe("restore (T-WEB-14b)", () => {
     const solvedEntries = REAL_PUZZLE.solution.map((value, index) =>
       REAL_PUZZLE.givens[index] === null ? value : null,
     );
-    const state = playReducer(initPlayState(daily([...REAL_PUZZLE.givens])), {
-      type: "restore",
-      record: record({
-        entries: solvedEntries,
-        concluded: true,
-        pendingSync: true,
-        elapsedMs: 272_000,
-      }),
-      now: 1,
-    });
+    const state = playReducer(
+      initPlayState(daily([...REAL_PUZZLE.givens]), null),
+      {
+        type: "restore",
+        record: record({
+          entries: solvedEntries,
+          concluded: true,
+          pendingSync: true,
+          elapsedMs: 272_000,
+        }),
+        now: 1,
+      },
+    );
 
     expect(state.status).toBe("solved");
     expect(state.timer.runningSince).toBeNull();
@@ -594,7 +602,7 @@ describe("restore (T-WEB-14b)", () => {
   });
 
   it("with no record flips hydration and nothing the player can see", () => {
-    const initial = initPlayState(daily());
+    const initial = initPlayState(daily(), null);
     const state = playReducer(initial, {
       type: "restore",
       record: undefined,
@@ -610,23 +618,83 @@ describe("restore (T-WEB-14b)", () => {
   });
 });
 
-describe("mark-synced", () => {
-  it("clears the pending flag without touching the grid", () => {
-    const solved = playReducer(initPlayState(daily()), {
-      type: "restore",
-      record: record({ pendingSync: true }),
-      now: 1,
-    });
-    const state = playReducer(solved, { type: "mark-synced" });
-
-    expect(state.pendingSync).toBe(false);
-    expect(state.entries).toEqual(solved.entries);
-  });
-});
-
 describe("isSolvedGrid", () => {
   it("narrows only a grid with no empty cell", () => {
     expect(isSolvedGrid([...REAL_PUZZLE.solution])).toBe(true);
     expect(isSolvedGrid([...REAL_PUZZLE.givens])).toBe(false);
+  });
+});
+
+describe("the shared binary-grid reducer serves Binairo's givens, hint mark and restore (T-WEB-S1000)", () => {
+  const givens = [...REAL_PUZZLE.givens];
+  const start = initPlayState(daily(givens), REAL_PUZZLE.solution);
+  const given = givens.findIndex((cell) => cell !== null);
+  const open = givens.findIndex((cell) => cell === null);
+
+  it("refuses a caret write or clear on a given, returning the same state", () => {
+    const onGiven = playReducer(start, { type: "select", index: given });
+    const lit = { ...onGiven, hint: { ...onGiven.hint, spotlight: [open] } };
+
+    expect(playReducer(lit, { type: "enter-value", value: 1 })).toBe(lit);
+    expect(playReducer(lit, { type: "clear-cell" })).toBe(lit);
+  });
+
+  it("drops the hint mark when the player rewrites the hinted cell", () => {
+    const hinted = playReducer(start, { type: "use-hint" });
+    const index = hinted.hint.lastIndex ?? -1;
+    const other = hinted.entries[index] === 1 ? 0 : 1;
+    const rewritten = playReducer(
+      playReducer(hinted, { type: "select", index }),
+      { type: "enter-value", value: other },
+    );
+
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(rewritten.entries[index]).toBe(other);
+    expect(rewritten.hint.lastIndex).toBeNull();
+    expect(rewritten.hint.used).toBe(1);
+  });
+
+  it("offers no hint without a solution, and a hint press is inert", () => {
+    const unsolved = initPlayState(daily(givens), null);
+
+    expect(canHint(unsolved, null)).toBe(false);
+    expect(playReducer(unsolved, { type: "use-hint" })).toBe(unsolved);
+  });
+
+  it("restores a Binairo record and ignores another game's", () => {
+    const entries = givens.map((_, index) => (index === open ? 1 : null));
+    const restored = playReducer(start, {
+      type: "restore",
+      record: record({
+        entries,
+        elapsedMs: 4200,
+        hintsUsed: 2,
+        pendingSync: true,
+      }),
+      now: 9,
+    });
+    const foreign = playReducer(start, {
+      type: "restore",
+      record: { ...record({ entries }), game: "nonogram", size: 8 },
+      now: 9,
+    });
+
+    expect({
+      entries: restored.entries,
+      elapsed: restored.timer.accumulatedMs,
+      hintsUsed: restored.hint.used,
+      pendingSync: restored.pendingSync,
+      hydrated: restored.hydrated,
+      foreignEntries: foreign.entries,
+      foreignHydrated: foreign.hydrated,
+    }).toEqual({
+      entries,
+      elapsed: 4200,
+      hintsUsed: 2,
+      pendingSync: true,
+      hydrated: true,
+      foreignEntries: start.entries,
+      foreignHydrated: true,
+    });
   });
 });

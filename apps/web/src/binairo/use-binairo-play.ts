@@ -1,17 +1,13 @@
 import type { DailyBinairoResponse } from "@miolos/core";
-import { solveBinairo, type BinairoSolvedGrid } from "@miolos/games/binairo";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { solveBinairo } from "@miolos/games/binairo";
 
-import { useFreeHintsPerPuzzle } from "../play/free-hints";
 import { mistakeRecord, usePlayReducer } from "../play/mistakes";
 import { recordHeader, type BinairoPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
 import { elapsedMs } from "../play/timer";
 import { usePlayLifecycle } from "../play/use-play-lifecycle";
-import { useBoardEdits, type BoardEdits } from "../play/undo";
 import {
-  binairoMistakes,
-  canHint,
+  BINAIRO_MISTAKES,
   initPlayState,
   isSolvedGrid,
   mergedGrid,
@@ -25,39 +21,21 @@ import {
 
 export interface BinairoPlay extends BinairoControls {
   readonly state: PlayState;
-  readonly solution: BinairoSolvedGrid | null;
-
   readonly elapsed: number;
-
   readonly filled: number;
-
-  readonly hintReady: boolean;
-  readonly revealHint: () => void;
-  readonly edits: BoardEdits;
 }
 
 export function useBinairoPlay(
   daily: DailyBinairoResponse,
   remotelyClaimed = false,
 ): BinairoPlay {
-  const solution = useMemo(() => solveBinairo(daily.givens), [daily.givens]);
-  const rules = useMemo(
-    () => binairoMistakes(solution, daily.givens),
-    [solution, daily.givens],
-  );
   const [state, dispatch] = usePlayReducer(
     playReducer,
     daily,
-    initPlayState,
-    rules,
+    (init) => initPlayState(init, solveBinairo(init.givens)),
+    BINAIRO_MISTAKES,
   );
-  const allowance = useFreeHintsPerPuzzle();
-  const controls = useBinairoControls(dispatch);
-
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
+  const controls = useBinairoControls(state, dispatch);
 
   const { givens, entries, timer } = state;
   const hintsUsed = state.hint.used;
@@ -75,24 +53,7 @@ export function useBinairoPlay(
     persistDeps: [givens, entries, hintsUsed, state.mistakes.cells],
   });
 
-  const revealHint = useCallback(() => {
-    if (solution !== null && canHint(stateRef.current, allowance)) {
-      dispatch({ type: "use-hint", solution });
-    }
-  }, [dispatch, solution, allowance]);
-
-  const edits = useBoardEdits(state, dispatch);
-
-  return {
-    ...controls,
-    state,
-    solution,
-    elapsed,
-    filled,
-    hintReady: solution !== null && canHint(state, allowance),
-    revealHint,
-    edits,
-  };
+  return { ...controls, state, elapsed, filled };
 }
 
 function buildRecord(
