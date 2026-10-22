@@ -20,11 +20,11 @@ import { TimerReadout } from "../play/timer-readout";
 import { choice, type Choice } from "./choice";
 import { FreePlayChrome } from "./chrome";
 import { MinesweeperSizeForm } from "./minesweeper-size-form";
+import type { BestTime } from "./minesweeper-store";
 import styles from "./minesweeper-free.module.css";
 import { FreePlaySolvedCard } from "./solved-card";
 import {
   useFreeMinesweeper,
-  type BestTime,
   type MinesweeperDeps,
 } from "./use-free-minesweeper";
 

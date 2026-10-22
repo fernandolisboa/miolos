@@ -3,6 +3,7 @@
 import {
   MINESWEEPER_CUSTOM_LIMITS,
   customMinesweeperSize,
+  maxCustomMines,
   type MinesweeperSize,
 } from "@miolos/games/minesweeper";
 import { useId, useState } from "react";
@@ -24,14 +25,11 @@ function asText(size: MinesweeperSize): Record<Field, string> {
   };
 }
 
-function clamped(
-  values: Record<Field, string>,
-  mines = Number(values.mines),
-): MinesweeperSize {
+function clamped(values: Record<Field, string>): MinesweeperSize {
   return customMinesweeperSize(
     Number(values.rows),
     Number(values.columns),
-    mines,
+    Number(values.mines),
   );
 }
 
@@ -44,12 +42,13 @@ export function MinesweeperSizeForm({
 }) {
   const id = useId();
   const [values, setValues] = useState(() => asText(size));
+  const { rows, columns } = clamped(values);
   const limits = {
     rows: MINESWEEPER_CUSTOM_LIMITS.rows,
     columns: MINESWEEPER_CUSTOM_LIMITS.columns,
     mines: {
       min: MINESWEEPER_CUSTOM_LIMITS.mines.min,
-      max: clamped(values, Infinity).mines,
+      max: maxCustomMines(rows, columns),
     },
   };
 

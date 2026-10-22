@@ -11,6 +11,10 @@ function clamp(value: number, min: number, max: number): number {
   return Number.isNaN(whole) ? min : Math.min(max, Math.max(min, whole));
 }
 
+export function maxCustomMines(rows: number, columns: number): number {
+  return (rows - 1) * (columns - 1);
+}
+
 export function customMinesweeperSize(
   rows: number,
   columns: number,
@@ -22,6 +26,6 @@ export function customMinesweeperSize(
   return {
     rows: r,
     columns: c,
-    mines: clamp(mines, limits.mines.min, (r - 1) * (c - 1)),
+    mines: clamp(mines, limits.mines.min, maxCustomMines(r, c)),
   };
 }

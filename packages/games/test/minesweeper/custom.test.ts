@@ -122,7 +122,7 @@ describe("customMinesweeperSize", () => {
     });
   });
 
-  it("deals every clamped size with a safe first open and exactly its mines", () => {
+  it("deals every clamped size deterministically, with a safe first open and exactly its mines", () => {
     fc.assert(
       fc.property(
         anyNumber,
@@ -142,6 +142,9 @@ describe("customMinesweeperSize", () => {
           expect(opened.open[start]).toBe(true);
           expect(opened.field?.mines.filter(Boolean)).toHaveLength(size.mines);
           expect(opened.field?.mines[start]).toBe(false);
+          expect(
+            openMinesweeperCell(newMinesweeperGame(size, seed), start),
+          ).toEqual(opened);
         },
       ),
       { numRuns: 300 },

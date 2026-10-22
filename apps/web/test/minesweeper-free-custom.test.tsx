@@ -358,15 +358,18 @@ describe("the screen renders without storage on the server and hydrates over a s
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
+    const recovered: unknown[] = [];
 
     act(() => {
       hydrateRoot(
         container,
         <MinesweeperFreeScreen deps={{ pickSeed: () => SEED }} />,
+        { onRecoverableError: (cause) => recovered.push(cause) },
       );
     });
 
     expect(error).not.toHaveBeenCalled();
+    expect(recovered).toEqual([]);
     expect(
       within(container).getByRole("radio", {
         checked: true,
@@ -465,8 +468,14 @@ describe("the size form is a labelled, keyboard-ready form with 44px targets (T-
     expect(decl(bodyOf(css, ".sizeInput"), "min-height")).toBe(
       "var(--touch-target-min)",
     );
-    expect(decl(bodyOf(css, ".sizePlay"), "min-height")).toBe(
-      "var(--touch-target-min)",
+    expect(decl(bodyOf(css, ".sizePlay"), "composes")).toBe(
+      'again from "./free-play.module.css"',
     );
+    expect(
+      decl(
+        bodyOf(stylesheet("src/free-play/free-play.module.css"), ".again"),
+        "min-height",
+      ),
+    ).toBe("var(--touch-target-min)");
   });
 });

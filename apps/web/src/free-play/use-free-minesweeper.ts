@@ -22,6 +22,7 @@ import { elapsedMs } from "../play/timer";
 import { pickSeed } from "./catalog";
 import {
   bestTimeAfter,
+  type BestTime,
   readBestTime,
   readCustomSize,
   saveBestTime,
@@ -30,11 +31,6 @@ import {
 
 export interface MinesweeperDeps {
   readonly pickSeed?: () => number;
-}
-
-export interface BestTime {
-  readonly best: number | null;
-  readonly isNew: boolean;
 }
 
 export interface FreeMinesweeper extends MinesweeperMoves {

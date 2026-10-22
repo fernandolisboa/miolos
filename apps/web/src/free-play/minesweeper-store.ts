@@ -51,8 +51,7 @@ export function readBestTime(level: MinesweeperLevel): number | null {
 
 export function saveBestTime(level: MinesweeperLevel, time: number): void {
   const stored = read();
-  const previous = stored.best?.[level];
-  if (previous === undefined || time < previous) {
+  if (bestTimeAfter(stored.best?.[level] ?? null, time).isNew) {
     write({ ...stored, best: { ...stored.best, [level]: time } });
   }
 }
@@ -65,10 +64,15 @@ export function saveCustomSize(size: MinesweeperSize): void {
   write({ ...read(), custom: size });
 }
 
+export interface BestTime {
+  readonly best: number | null;
+  readonly isNew: boolean;
+}
+
 export function bestTimeAfter(
   previous: number | null,
   won: number | null,
-): { readonly best: number | null; readonly isNew: boolean } {
+): BestTime {
   if (won !== null && (previous === null || won < previous)) {
     return { best: won, isNew: true };
   }

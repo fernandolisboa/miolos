@@ -56,32 +56,9 @@
 }
 
 .sizePlay {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--touch-target-min);
-  min-width: 84px;
+  composes: again from "./free-play.module.css";
+
   margin-top: calc(11px + var(--space-1));
-  padding: var(--space-2) var(--space-4);
-  background: var(--accent);
-  border: 1.5px solid var(--accent);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm)
-    color-mix(in srgb, var(--accent) 25%, transparent);
-  color: var(--ink-on-accent, var(--paper-desk));
-  font: var(--text-button);
-  cursor: pointer;
-}
-
-.sizePlay:active {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-.sizePlay:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
 }
 
 .bestTime {

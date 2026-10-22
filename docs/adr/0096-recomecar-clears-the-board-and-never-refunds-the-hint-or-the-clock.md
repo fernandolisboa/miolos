@@ -8,6 +8,7 @@
 **Amended by:** [ADR-0127](./0127-sudoku-notes-are-a-local-per-cell-mask.md) (#368) — a Sudoku board that holds only notes is resettable: decision 1 clears the notes, and `onReset` stays on while any exist.
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — Recomeçar also clears the counted mistakes and unfreezes the board; `onReset` stays on while any are counted, on an empty board too.
 **Amended by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — decision 3: `PlayChromeReadouts.onReset` is optional; the daily Campo Minado has no Recomeçar, so its reset area holds no `ResetControl`.
+**Amended by:** [ADR-0150](./0150-free-play-campo-minado-keeps-a-best-time-per-level-and-offers-a-custom-size.md) (#425) — decision 2's "free play still writes nothing" also excepts `miolos-minesweeper`, written at a Campo Minado win and from *Jogar*, never from a reset.
 
 ## Context
 

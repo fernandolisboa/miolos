@@ -15,6 +15,7 @@ describe("@miolos/games exports map", () => {
       "cycleMinesweeperMark",
       "generateMinesweeperDaily",
       "layMines",
+      "maxCustomMines",
       "minesweeperField",
       "newMinesweeperGame",
       "openMinesweeperCell",
