@@ -1,8 +1,3 @@
-/* Hoje — placeholder state, desktop-first per f1-hoje-desktop, mobile per
-   f2-hoje-mobile. Token variables everywhere; per-card accent arrives via
-   the --accent custom property set inline on each card. Rotations are
-   static transforms, never animation. */
-
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
@@ -90,13 +85,7 @@
 
 .streakNumeral {
   font: var(--text-numeral-lg);
-  /* After the shorthand, because `font:` resets font-variant-numeric. The
-     declaration is INERT and kept deliberately: `--text-numeral-lg` is
-     ADR-0036 decision 2's sanctioned single, non-aligning Fraunces numeral,
-     and Fraunces has no tabular figures — so this changes nothing and stays
-     only so the property is not left silently reset. The token comment it
-     used to cite as "mandating" tabular-nums now says the opposite for this
-     exact token (step-6 round-4 finding ADR-0036-UNAMENDED-LINES). */
+  /* After `font:`, which resets font-variant-numeric. */
   font-variant-numeric: tabular-nums;
   color: var(--accent-app);
 }
@@ -122,20 +111,12 @@
   display: flex;
   flex-direction: column;
   min-height: 250px;
-  /* ONE reserved box for the card's action area, read by both `.cta` and
-     `.done` so they are identical by construction rather than by measurement
-     (plan 018 §11.3). 38px is `.cta`'s own computed desktop height:
-     var(--space-3) 12px padding + the 14px `--text-button` line box + 12px.
-     The done state is a structurally different element — an outlined stamp
-     chip plus a tabular result — so without this the card would change height
-     the moment a game is finished. */
   --cta-box-min-height: 38px;
   padding: var(--space-11) var(--space-6) var(--space-6);
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  /* 5px 5px 0 is intentional: the F1 frame draws the desktop card shadow
-     between --shadow-md and --shadow-lg; no token carries that value. */
+  /* 5px 5px 0 sits between --shadow-md and --shadow-lg; no token carries it. */
   box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
@@ -199,15 +180,8 @@
   flex: 1;
 }
 
-/* One kicker per game card, each with its own `--accent` — so this rule was a
-   LIVE AA failure on the Termo card before ADR-0041, not a future one: the
-   old mustard #C08A1E on `--paper-card` was 2.8501:1 at 11px against
-   PRODUCT.md's 4.5 floor. ADR-0067 later deepened `--accent-termo`, but the
-   rule this comment records is ADR-0041 decision 1's and does not reopen:
-   `var(--accent)` in a shared rule has no fixed value, so it colours no
-   word. `--ink-2` #6E6659 (L 0.13539008) on card is (0.93262753 + 0.05) /
-   (0.13539008 + 0.05) = **5.3003:1**. The accent stays on each card's washi
-   tape and hard shadow, which are shapes. */
+/* A shared rule's `var(--accent)` has no fixed contrast, so it colours no
+   word (see ADR-0041). */
 .kicker {
   margin: 0;
   font: var(--text-kicker);
@@ -237,29 +211,12 @@
   min-height: var(--cta-box-min-height);
   padding: var(--space-3) 0;
   background: var(--accent);
-  /* Per card, from the same `play/accent.ts` pair `page.tsx` already sets
-     `--accent` from, with the shipped desk ink as the fallback. All four
-     labels are a light paper on a deep fill since #161 (ADR-0067) — the
-     harmonization Fernando asked for. Nonogram: desk on terracotta is
-     4.318:1, an AA failure at 14px/600, so it reads `--paper-card` at
-     4.5063:1 (step-6 finding ISS-A2 — the same one-token remedy as
-     `nonogram-board.module.css:461-463`). Termo: the old mustard #C08A1E
-     cleared no paper (desk **2.7311:1**, card **2.8501:1** — #68's headline
-     row) and carried `--ink` at 5.4968:1, the dark-label odd-one-out #161
-     is about; ADR-0067 deepens the token to #8D6212 and `--paper-desk` ON
-     it is **4.8433:1**. Sudoku (7.5113:1) and Binairo (5.3066:1) keep
-     `var(--paper-desk)` and are unchanged to the byte. */
   color: var(--ink-on-accent, var(--paper-desk));
   font: var(--text-button);
   border-radius: var(--radius);
   text-decoration: none;
-  /* No cursor: pointer while the anchor is href-less; it returns when real
-     hrefs land. */
 }
 
-/* Only a game with a play route gets an href — Binairo (#18) and Sudoku
-   (#23) today, per `playRoutes`. The attribute selector is what keeps the
-   pointer off the remaining placeholders without a second class. */
 .cta[href] {
   cursor: pointer;
 }
@@ -272,10 +229,6 @@
   display: none;
 }
 
-/* The done state (DESIGN.md "Game card"): an outlined "Feito" stamp chip plus
-   the tabular result, in the same reserved box as the pending button. It is a
-   link where F1 draws an inert span (deviation 12) — the chip and the result
-   are visually unchanged. */
 .done {
   display: inline-flex;
   align-items: center;
@@ -285,14 +238,7 @@
   text-decoration: none;
 }
 
-/* The RING keeps the accent and the WORD does not (ADR-0041 decisions 1 and
-   5). The ring outlines "Feito" beside a tabular result, which carries the
-   whole message, so WCAG 1.4.11's decorative exemption applies; its worst
-   case moved from the old mustard's **2.8501:1** on card paper to the deep
-   #8D6212's **5.0542:1** (ADR-0067), so every ring now also clears 3:1 —
-   written down rather than left to be rediscovered. The text was 2.8501:1 at
-   11px under the old mustard and is `--ink` #211D19 (L 0.01272250):
-   (0.93262753 + 0.05) / (0.01272250 + 0.05) = **15.6663:1**. */
+/* The ring keeps the accent; the word does not (see ADR-0041). */
 .doneChip {
   border: 1.5px solid var(--accent);
   border-radius: var(--radius);
@@ -301,8 +247,6 @@
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  /* A stamp, pressed slightly crooked — the system's static rotation, never
-     an animation (DESIGN.md). */
   transform: rotate(-3deg);
 }
 
@@ -432,8 +376,6 @@
 
   .streakLabel {
     margin-top: var(--space-1);
-    /* Stays at the desktop 11px/0.14em: 11px is the legibility floor for
-       functional text, same rule the kicker follows below. */
   }
 
   .games {
@@ -451,8 +393,6 @@
     padding: var(--space-4) 18px;
     box-shadow: var(--shadow-md)
       color-mix(in srgb, var(--accent) 22%, transparent);
-    /* Re-pointed once, so the touch-target floor reaches the done state too:
-       both action variants read this one property (§11.3). */
     --cta-box-min-height: var(--touch-target-min);
   }
 
@@ -482,8 +422,6 @@
     height: 18px;
   }
 
-  /* DESIGN.md tape rotation range is ±3–5deg; keep the desktop alternating
-     rhythm within it. */
   .card:nth-child(6n + 1) .tape {
     transform: rotate(-4deg);
   }
@@ -504,8 +442,7 @@
   }
 
   .kicker {
-    /* F2 draws these at 10px; 11px is the legibility floor the
-       impeccable-detect gate enforces for functional text. */
+    /* 11px is the floor impeccable-detect enforces for functional text. */
     font-size: 11px;
     letter-spacing: 0.14em;
   }
@@ -533,21 +470,15 @@
     display: inline;
   }
 
-  /* F2:36-38 puts the result BEFORE the chip on the mobile row; the DOM keeps
-     the desktop order so the accessible name (composed in the messages
-     module) never depends on a media query. */
+  /* The DOM keeps the desktop order so the accessible name never depends on
+     a media query. */
   .done {
     flex-direction: row-reverse;
-    /* F2:36 draws 10px; snapped to the 8px token, the same way the mobile
-       card's own gap is. */
     gap: var(--space-2);
     margin-top: 0;
   }
 
   .doneChip {
-    /* F2:38's tighter box (4px 9px). Its 10px type is deliberately NOT
-       taken: 11px is the legibility floor for functional text, the same rule
-       the kicker follows above. */
     padding: var(--space-1) 9px;
   }
 

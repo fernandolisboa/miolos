@@ -1,8 +1,6 @@
-/* Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector fails the build or leaks.
-   Games set custom properties on the page element, never redeclare a class
-   here: hashed names resolve by injection order, which Next does not
-   guarantee. Board sizing and the fold: ADR-0103. */
+/* Games set custom properties on the page element and never redeclare a
+   class here: Next does not guarantee stylesheet injection order (see
+   ADR-0041). Board sizing and the fold: ADR-0103. */
 .page {
   box-sizing: border-box;
   min-height: 100svh;
@@ -19,8 +17,6 @@
   padding: var(--space-8) clamp(40px, 6vw, 80px);
 }
 
-/* Per-screen hover accent — anchored on .page, never a bare `a:hover`,
-   which would turn Hoje's hover green. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -28,8 +24,6 @@
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
-
-/* ── top bar ─────────────────────────────────────────────────────────── */
 
 .topBar {
   grid-area: bar;
@@ -78,8 +72,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── title block ─────────────────────────────────────────────────────── */
-
 .titleBlock {
   display: var(--title-display, block);
   grid-area: title;
@@ -94,9 +86,8 @@
   color: var(--ink-2);
 }
 
-/* The wrapper is structural, not cosmetic: it makes
-   `h1.previousElementSibling` null, which is what stands impeccable's
-   hero-eyebrow-chip and kicker-above-heading rules down. */
+/* The wrapper is structural: it makes `h1.previousElementSibling` null,
+   which stands impeccable's hero-eyebrow-chip and kicker-above-heading down. */
 .titleRow {
   display: flex;
   align-items: baseline;
@@ -137,7 +128,6 @@
   text-wrap: pretty;
 }
 
-/* Unconditional, so a card left open across the fold stays a card. */
 .rules:popover-open {
   position: fixed;
   inset: var(--space-3) var(--space-3) auto;
@@ -156,8 +146,6 @@
   border-color: var(--ink);
   color: var(--ink);
 }
-
-/* ── stats card ──────────────────────────────────────────────────────── */
 
 .statsCard {
   position: relative;
@@ -217,13 +205,10 @@
   align-self: center;
 }
 
-/* ── reset ───────────────────────────────────────────────────────────── */
-
-/* The 1fr `reset` row pins .hint to the sidebar bottom; Termo renders no
-   reset node, so there the row stays an empty spacer. Undo, Recomeçar and
-   Ajustes share one line. While the confirm is open it covers the whole row
-   and the .hint under it (see reset-control.module.css), hidden so they
-   leave the tab order and the accessibility tree with it. */
+/* The 1fr `reset` row pins .hint to the sidebar bottom; with no reset node
+   it stays an empty spacer. While the confirm is open it covers the row and
+   the .hint under it, hidden so they leave the tab order and the
+   accessibility tree. */
 .reset {
   position: relative;
   grid-area: reset;
@@ -238,8 +223,6 @@
 .reset:has([role="group"]) + .hint {
   visibility: hidden;
 }
-
-/* ── hint ────────────────────────────────────────────────────────────── */
 
 .hint {
   grid-area: hint;
@@ -305,8 +288,6 @@
     filter var(--duration-base) var(--ease-settle);
 }
 
-/* ── board ───────────────────────────────────────────────────────────── */
-
 .board {
   position: relative;
   grid-area: board;
@@ -317,11 +298,11 @@
   padding-top: 32px;
 }
 
-/* --board-below is the height of what the game draws under the card inside the
-   well, --board-aspect the card's width over its height where it is not
+/* --board-below is the height of what the game draws under the card inside
+   the well, --board-aspect the card's width over its height where it is not
    square. --board-side is not registered: its cq units must resolve where it
-   is read, inside the container, not on the container itself.
-   --board-floor-side lets a card outgrow its well; see ADR-0136. */
+   is read, inside the container. --board-floor-side lets a card outgrow its
+   well (see ADR-0136). */
 .boardWell {
   --board-side: max(
     min(
@@ -382,10 +363,9 @@
   composes: hidden from "../components/visually-hidden.module.css";
 }
 
-/* ── pre-hydration placeholders ──────────────────────────────────────── */
-
-/* The skeleton's hint bar borrows .hint for its size; this retires the cursor
-   and the press. It must sit after .hint: same specificity, later wins. */
+/* The skeleton's hint bar borrows .hint for its size; this retires the
+   cursor and the press, so it must sit after .hint (equal specificity, later
+   wins). */
 .placeholder {
   cursor: default;
   pointer-events: none;

@@ -1,11 +1,5 @@
-/* Estatísticas — the statistics screen (#29, ADR-0051). The /privacidade
-   editorial register on the chrome: ink on desk paper, quiet headings. The
-   data surfaces (stat rows, histograms) follow F5's main-card
-   vocabulary — paper cards, hairline separators, tabular numerals, bars in
-   each game's accent — and every WORD stays --ink/--ink-2 (ADR-0041:
-   accents colour shapes, never words). */
-
-/* Block flow, not a flex column: `impeccable detect` misreads a tall flex column as column overflow. */
+/* Block flow, not a flex column: `impeccable detect` misreads a tall flex
+   column as column overflow. */
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
@@ -14,10 +8,6 @@
   margin-inline: auto;
 }
 
-/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
-   mode). The state's carrier is the underline — the accent may colour the
-   rule, never the word (ADR-0041). App accent, not a game's: this screen
-   belongs to no single game. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -34,15 +24,6 @@
   margin: 0;
   font: var(--text-screen-title);
 }
-
-/* ——— summaries: Dias Cheios, Dias Perfeitos ———————————————————————————
-   The streak stamp's register (DESIGN.md "Streak stamp card"): desk paper,
-   1.5px app-accent border, hard sealing-wax shadow, a subtle static
-   rotation. The accent stays on the border and shadow — SHAPES — and both
-   words are ink (ADR-0041; the hub stamp's accent TEXT is a named,
-   measured exception this card does not take). The numeral is Instrument
-   Sans + tabular-nums, NOT Fraunces: it sits beside the per-game counts
-   it must read consistently with (ADR-0036). */
 
 .summaries {
   display: flex;
@@ -72,7 +53,7 @@
 .summaryNumeral {
   font: 600 40px/1 var(--font-ui);
   color: var(--ink);
-  /* After the shorthand, because `font:` resets font-variant-numeric. */
+  /* After `font:`, which resets font-variant-numeric. */
   font-variant-numeric: tabular-nums;
   /* One numeral wide at minimum, so the skeleton's blank holds the box. */
   min-width: 1ch;
@@ -85,11 +66,6 @@
   text-transform: uppercase;
   color: var(--ink-2);
 }
-
-/* ——— the per-game blocks ———————————————————————————————————————
-   The hub card's chrome (page.module.css "Game card" register): card
-   paper, hairline border, hard shadow in the game's accent at 22%, washi
-   tape, alternating static rotations. */
 
 .games {
   display: grid;
@@ -160,8 +136,6 @@
   transform: translateX(-50%) rotate(3deg);
 }
 
-/* The hub kicker's post-ADR-0041 form: --ink-2 (5.3003:1 on card paper),
-   never the accent. */
 .cardKicker {
   margin: 0;
   font: var(--text-kicker);
@@ -174,8 +148,6 @@
   margin: var(--space-2) 0 0;
   font: var(--text-card-title);
 }
-
-/* ——— stat rows — F5's register (f5-conclusao-desktop:33-35) ————————— */
 
 .statRows {
   display: flex;
@@ -210,12 +182,9 @@
   text-align: right;
 }
 
-/* ——— histogram — DESIGN.md's component, all-time form —————————————————
-   The BAR carries the accent; the label is ink, because a histogram is
-   chrome that renders whichever accent the game supplies and so has no
-   ratio to measure (ADR-0041 decision 1). No "today" exists on this
-   screen, so every bar is solid; the conclusion's copy is the one that
-   highlights a bucket. */
+/* The bar carries the accent; the label is ink, since a histogram renders
+   whichever accent the game supplies and has no ratio to measure (see
+   ADR-0041). */
 
 .histogram {
   display: flex;
@@ -250,8 +219,6 @@
   color: var(--ink);
   white-space: nowrap;
 }
-
-/* ——— Termo's guess distribution — 7 horizontal rows, fail row last ——— */
 
 .distribution {
   display: flex;

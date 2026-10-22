@@ -1,11 +1,6 @@
-/* A separate sheet from
-   `conclusion-view.module.css` on purpose — importing that sheet here would
-   put the conclusion's full CSS back into every play route's first paint,
-   and CSS Modules hash per file anyway (the `hub-day-state.tsx` reason).
-
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector either fails the build
-   or leaks globally. */
+/* A separate sheet from `conclusion-view.module.css` on purpose: importing
+   that one would put the conclusion's full CSS back into every play route's
+   first paint. */
 
 .page {
   box-sizing: border-box;
@@ -16,9 +11,6 @@
   padding: var(--space-11) var(--space-6);
 }
 
-/* The same card silhouette as `conclusion-view.module.css`'s
-   `.skeletonCard`, minus the accent-tinted shadow — this sheet is
-   accent-free, which `ink-on-accent.test.ts` now gates. */
 .skeletonCard {
   box-sizing: border-box;
   width: 100%;

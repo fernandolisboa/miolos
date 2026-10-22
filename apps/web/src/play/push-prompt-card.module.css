@@ -1,28 +1,3 @@
-/* The push pre-prompt card (ADR-0064): card paper, 1px line border,
-   hard single-color offset shadow in the APP accent at 25% — the register
-   of the side column's other app-accent surface (the streak card above it)
-   and of the hub-onboarding card, never the game accent: the streak this
-   card asks to protect is app identity.
-   Washi tape in the same accent, subtle static rotation — never animated
-   per interaction. Accent colours SHAPES only (ADR-0041): every text run
-   is --ink or --ink-2 on paper except the accept button's, which is the
-   shipped solid-ink CTA treatment (--paper-desk on --ink, the
-   conclusion-view .cta pair) — ink on paper inverted, not an accent.
-
-   Named .prompt/.promptTape rather than the sibling sheets' .card/.tape on
-   purpose: CSS Modules hash per file, but the visual gate for this surface
-   is a NON-SCOPED fixture emission (the #35 ritual) that links this sheet
-   beside conclusion-view.module.css, which owns generic names.
-
-   Hub-onboarding's 200ms @starting-style settle is REFUSED here, not
-   forgotten: that card mounts at the end of the hub with nothing after it,
-   while this one appears mid-visit on the conclusion — a surface whose only
-   motion is the win settle, already over by then. A second, unrelated
-   entrance animation would compete with it for the "one settle per screen"
-   budget (DESIGN.md), so the card simply IS there on its render, and with no
-   transition and no animation it owes no prefers-reduced-motion block
-   either. */
-
 .prompt {
   position: relative;
   background: var(--paper-card);
@@ -89,10 +64,8 @@
   outline-offset: 2px;
 }
 
-/* Explicit colours rather than an opacity fade: a whole-button opacity
-   washes the label below AA (the step-7 detect run caught exactly that),
-   while a lightened fill keeps --paper-desk text readable and the lost
-   shadow is what reads as "not pressable" in this system. */
+/* Explicit colours, not an opacity fade: whole-button opacity washes the
+   label below AA. */
 .promptAccept:disabled,
 .promptDecline:disabled {
   cursor: default;

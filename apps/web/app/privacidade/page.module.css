@@ -1,24 +1,13 @@
-/* Privacidade — the policy page (#21, ADR-0012). The modo-livre editorial
-   register on a text page: ink on desk paper, one measure, quiet headings.
-   The deletion section is deliberately UNDERSTATED — ink and words, never a
-   red alarm (ADR-0041: accents colour shapes, and no accent belongs here). */
-
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding: var(--space-11) 80px var(--space-12);
-  /* The measure is CENTRED, the archive's idiom (plan 037 §7.5, #160):
-     a max-width sheet without `margin-inline: auto` hugs the left edge of
-     every viewport wider than it. */
   max-width: 860px;
   margin-inline: auto;
 }
 
-/* Anchored on the local class, never a bare `a:hover` (CSS Modules pure
-   mode). The state's carrier is the underline — the accent may colour the
-   rule, never the word (ADR-0041). */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -89,8 +78,6 @@
   line-height: 1.6;
   color: var(--ink-2);
 }
-
-/* ——— the deletion island (D13): a quiet, ink-ruled closing section ——— */
 
 .deleteSection {
   margin-top: var(--space-12);

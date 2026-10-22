@@ -131,8 +131,6 @@
   color: var(--ink-2);
 }
 
-/* ── chromatic cell states, exactly one per cell ─────────────────────── */
-
 .cellBlock {
   background: var(--ink);
   border-color: var(--ink);

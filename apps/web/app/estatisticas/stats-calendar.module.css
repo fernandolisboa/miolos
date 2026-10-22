@@ -1,15 +1,13 @@
 /* Per-date states ride geometry first and colour second, so they survive
-   greyscale: filled (on the day), accent ring (later), hairline ring
-   (missed), bare numeral (outside the tracked range, or today while it is
-   still playable). The Dia Cheio ring and the Dia Perfeito diamond are
-   shapes, never words (ADR-0041). */
+   greyscale; the Dia Cheio ring and Dia Perfeito diamond are shapes, never
+   words (see ADR-0041). */
 
 .calendar {
   margin-top: var(--space-12);
 }
 
 /* Reserved dimensions for the unsettled state, so the enumeration landing
-   shifts nothing above it (#37). */
+   shifts nothing above it. */
 .calendarSkeleton {
   min-height: 300px;
 }
@@ -36,8 +34,6 @@
   border-radius: 4px;
 }
 
-/* Side by side, newest first, as many per row as the measure holds; one
-   column on a phone. */
 .months {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -45,7 +41,6 @@
   margin-top: var(--space-6);
 }
 
-/* The neutral hard shadow: the months are a ledger, not a celebration. */
 .month {
   background: var(--paper-card);
   border: 1px solid var(--line);
