@@ -17,6 +17,7 @@ import {
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
+import { jsonResponse, stubSessionFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -92,13 +93,6 @@ const requestInitSchema = z.strictObject({
   body: z.string(),
 });
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 function okBody(game: string, overrides: Record<string, unknown> = {}) {
   return {
     game,
@@ -112,21 +106,7 @@ function okBody(game: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stubFetch(respond: (url: string) => Response) {
-  const fetchMock = vi.fn((...args: unknown[]) => {
-    const url = String(args[0]);
-    if (url.endsWith("/session")) {
-      return Promise.resolve(
-        jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
-      );
-    }
-    return Promise.resolve(respond(url));
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-function completionBodies(fetchMock: ReturnType<typeof stubFetch>) {
+function completionBodies(fetchMock: ReturnType<typeof stubSessionFetch>) {
   return fetchMock.mock.calls
     .filter((call) => String(call[0]).endsWith("/completions"))
     .map((call) => {
@@ -154,7 +134,9 @@ afterEach(() => {
 describe("the termo completion body (T-WEB-S76)", () => {
   it("posts the guess WORDS, oldest first, and no verdict at all", async () => {
     writePlayRecord(pendingTermoRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody("termo")));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(200, okBody("termo")),
+    );
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -186,7 +168,9 @@ describe("the termo completion body (T-WEB-S76)", () => {
       },
     });
     try {
-      const fetchMock = stubFetch(() => jsonResponse(200, okBody("termo")));
+      const fetchMock = stubSessionFetch(() =>
+        jsonResponse(200, okBody("termo")),
+      );
       const { flushPendingCompletions } = await freshSync();
 
       await flushPendingCompletions(pendingTermoRecord({ elapsedMs: -5 }));
@@ -212,7 +196,9 @@ describe("the termo completion body (T-WEB-S76)", () => {
     writePlayRecord(pendingBinairoRecord());
     writePlayRecord(pendingSudokuRecord());
     writePlayRecord(pendingTermoRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody("termo")));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(200, okBody("termo")),
+    );
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -234,7 +220,7 @@ describe("the termo completion body (T-WEB-S76)", () => {
       .split("")
       .map((letter) => ({ guess: letter.repeat(5), tiles: [...MISS] }));
     writePlayRecord(pendingTermoRecord({ guesses, outcome: "lost" }));
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(200, okBody("termo", { outcome: "lost" })),
     );
 

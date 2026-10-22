@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HubStreak } from "../app/hub-streak";
 import { messages } from "../src/i18n";
+import { jsonResponse, stubFetch } from "./fetch-stub";
 
 const bootstrapMock = vi.hoisted(() => ({
   ensureSession: vi.fn<() => Promise<void>>(() => Promise.resolve()),
@@ -12,18 +13,6 @@ vi.mock("../src/session/bootstrap", async (importOriginal) => {
     await importOriginal<typeof import("../src/session/bootstrap")>();
   return { ...actual, ensureSession: bootstrapMock.ensureSession };
 });
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function stubFetch(
-  factory: () => Response | Promise<Response>,
-): ReturnType<typeof vi.fn> {
-  const fetchMock = vi.fn(() => Promise.resolve(factory()));
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test");

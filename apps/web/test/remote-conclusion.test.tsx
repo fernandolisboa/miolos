@@ -20,6 +20,7 @@ import {
 } from "../src/play/play-record";
 import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";
@@ -87,14 +88,6 @@ function statsBody(overrides: Partial<StatsResponse> = {}): StatsResponse {
 
 function streakBody(): StreakResponse {
   return { date: DATE, streak: 3, todayCounts: true };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubApi(routes: {

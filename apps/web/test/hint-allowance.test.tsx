@@ -33,6 +33,7 @@ import type { HintState } from "../src/play/types";
 import { useQueensPlay } from "../src/queens/use-queens-play";
 import { solutionDigits } from "../src/sudoku/engine";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
+import { jsonResponse, stubFetch } from "./fetch-stub";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -297,16 +298,6 @@ function storedRecord(game: PlayRecord["game"]): PlayRecord {
     throw new Error(`no ${game} record was written`);
   }
   return playRecordSchema.parse(JSON.parse(raw));
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function stubFetch(answer: () => Promise<Response>) {
-  const fetchMock = vi.fn(answer);
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 function deferredFetch() {

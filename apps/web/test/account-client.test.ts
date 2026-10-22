@@ -4,18 +4,9 @@ import {
   detachAccountEmail,
   setReminderConsent,
 } from "../src/account/account-client";
+import { jsonResponse, stubFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function stubFetch(respond: () => Promise<Response>) {
-  const fetchMock = vi.fn(respond);
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);

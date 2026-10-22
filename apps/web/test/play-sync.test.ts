@@ -21,6 +21,7 @@ import {
   type QueensPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
+import { jsonResponse, stubSessionFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -126,13 +127,6 @@ const requestInitSchema = z.strictObject({
   body: z.string(),
 });
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 function okBody(overrides: Record<string, unknown> = {}) {
   return {
     game: "binairo",
@@ -146,28 +140,13 @@ function okBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stubFetch(respond: (attempt: number) => Response | Promise<Response>) {
-  let attempt = 0;
-  const fetchMock = vi.fn((...args: unknown[]) => {
-    if (String(args[0]).endsWith("/session")) {
-      return Promise.resolve(
-        jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
-      );
-    }
-    attempt += 1;
-    return Promise.resolve(respond(attempt));
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-function completionCalls(fetchMock: ReturnType<typeof stubFetch>) {
+function completionCalls(fetchMock: ReturnType<typeof stubSessionFetch>) {
   return fetchMock.mock.calls.filter((call) =>
     String(call[0]).endsWith("/completions"),
   );
 }
 
-function sessionCalls(fetchMock: ReturnType<typeof stubFetch>) {
+function sessionCalls(fetchMock: ReturnType<typeof stubSessionFetch>) {
   return fetchMock.mock.calls.filter((call) =>
     String(call[0]).endsWith("/session"),
   );
@@ -203,7 +182,7 @@ afterEach(() => {
 describe("flushPendingCompletions", () => {
   it("posts a body built from the record's solved grid alone", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -235,7 +214,7 @@ describe("flushPendingCompletions", () => {
       ...pendingSudokuRecord(),
       notes: Array.from({ length: 81 }, () => 511),
     });
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(200, okBody({ game: "sudoku", elapsedMs: 411_000 })),
     );
 
@@ -255,7 +234,7 @@ describe("flushPendingCompletions", () => {
 
   it("mints the session before the first POST, so a fast solve never races it", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -269,7 +248,7 @@ describe("flushPendingCompletions", () => {
 
   it("clears the queue on 200 and records the outcome", async () => {
     writePlayRecord(pendingRecord());
-    stubFetch(() => jsonResponse(200, okBody()));
+    stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -282,7 +261,7 @@ describe("flushPendingCompletions", () => {
 
   it("writes the server's stored statistics back on recorded: false", async () => {
     writePlayRecord(pendingRecord());
-    stubFetch(() =>
+    stubSessionFetch(() =>
       jsonResponse(
         200,
         okBody({ recorded: false, elapsedMs: 195_000, hintsUsed: 0 }),
@@ -322,7 +301,7 @@ describe("flushPendingCompletions", () => {
 
   it("posts once when two triggers fire concurrently", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await Promise.all([flushPendingCompletions(), flushPendingCompletions()]);
@@ -393,7 +372,7 @@ describe("flushPendingCompletions", () => {
         throw new DOMException("access denied", "SecurityError");
       },
     });
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     try {
       const { flushPendingCompletions } = await freshSync();
@@ -429,7 +408,7 @@ describe("flushPendingCompletions", () => {
         throw new DOMException("access denied", "SecurityError");
       },
     });
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     try {
       const { flushPendingCompletions } = await freshSync();
@@ -490,7 +469,7 @@ describe("flushPendingCompletions", () => {
     writePlayRecord(pendingSudokuRecord());
     writePlayRecord(pendingNonogramRecord());
     writePlayRecord(pendingQueensRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -552,7 +531,7 @@ describe("flushPendingCompletions", () => {
   });
 
   it("does nothing when there is nothing queued", async () => {
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -563,7 +542,7 @@ describe("flushPendingCompletions", () => {
   it("never falls back to a relative fetch when the api origin is unset", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { flushPendingCompletions } = await freshSync();
@@ -577,7 +556,7 @@ describe("flushPendingCompletions", () => {
 
   it("drops an unbuildable pending record instead of retrying it forever", async () => {
     writePlayRecord(pendingRecord({ grid: undefined }));
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { flushPendingCompletions } = await freshSync();
@@ -598,7 +577,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     "stops retrying on %i and marks the result rejected",
     async (status) => {
       writePlayRecord(pendingRecord());
-      stubFetch(() => jsonResponse(status, { error: "nope" }));
+      stubSessionFetch(() => jsonResponse(status, { error: "nope" }));
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const { flushPendingCompletions } = await freshSync();
@@ -617,7 +596,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     "keeps the record pending on %i",
     async (status) => {
       writePlayRecord(pendingRecord());
-      stubFetch(() => jsonResponse(status, { error: "boom" }));
+      stubSessionFetch(() => jsonResponse(status, { error: "boom" }));
 
       const { flushPendingCompletions } = await freshSync();
       await flushPendingCompletions();
@@ -680,7 +659,9 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
     for (const date of ["2026-07-01", "2026-07-02", "2026-07-03"]) {
       writePlayRecord(pendingRecord({ date }));
     }
-    const fetchMock = stubFetch(() => jsonResponse(429, { error: "cap" }));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(429, { error: "cap" }),
+    );
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -701,7 +682,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
 
   it("re-mints once on a 401 and retries once, then stops for this page load", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(401, { error: "no-session" }),
     );
 
@@ -723,7 +704,7 @@ describe("terminal versus retryable statuses (T-WEB-16b)", () => {
 
   it("accepts the completion when the re-mint fixes the 401", async () => {
     writePlayRecord(pendingRecord());
-    stubFetch((attempt) =>
+    stubSessionFetch((attempt) =>
       attempt === 1
         ? jsonResponse(401, { error: "no-session" })
         : jsonResponse(200, okBody()),
@@ -773,7 +754,9 @@ describe("startCompletionSync", () => {
 
   it("stops flushing once it has been torn down", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(503, { error: "boom" }),
+    );
 
     const { startCompletionSync } = await freshSync();
     const stop = startCompletionSync();
@@ -790,7 +773,9 @@ describe("startCompletionSync", () => {
 
   it("a retry armed by a flush lives on this file's virtual clock, so it cannot outlive the test (T-WEB-S359)", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(503, { error: "boom" }),
+    );
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -809,7 +794,7 @@ describe("startCompletionSync", () => {
         resolve(jsonResponse(503, { error: "boom" }));
       };
     });
-    const fetchMock = stubFetch(() => held);
+    const fetchMock = stubSessionFetch(() => held);
 
     const { startCompletionSync } = await freshSync();
     const stop = startCompletionSync();
@@ -832,7 +817,7 @@ describe("startCompletionSync", () => {
         resolve(jsonResponse(503, { error: "boom" }));
       };
     });
-    const fetchMock = stubFetch(() => held);
+    const fetchMock = stubSessionFetch(() => held);
 
     const { startCompletionSync, flushPendingCompletions } = await freshSync();
     const stop = startCompletionSync();
@@ -855,7 +840,7 @@ describe("startCompletionSync", () => {
         resolve(jsonResponse(503, { error: "boom" }));
       };
     });
-    const fetchMock = stubFetch(() => held);
+    const fetchMock = stubSessionFetch(() => held);
 
     const { startCompletionSync } = await freshSync();
     const first = startCompletionSync();
@@ -877,7 +862,9 @@ describe("startCompletionSync", () => {
 
   it("one consumer's teardown does not cancel the retry another is still waiting on (T-WEB-S360d)", async () => {
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() => jsonResponse(503, { error: "boom" }));
+    const fetchMock = stubSessionFetch(() =>
+      jsonResponse(503, { error: "boom" }),
+    );
 
     const { startCompletionSync } = await freshSync();
     const first = startCompletionSync();
@@ -900,7 +887,7 @@ describe("startCompletionSync", () => {
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
     let status = 503;
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       status === 503
         ? jsonResponse(503, { error: "boom" })
         : jsonResponse(200, okBody()),
@@ -948,7 +935,7 @@ describe("the late-sync credit needs NO client change (#58, ADR-0066) (T-WEB-S28
   it("posts a queued yesterday record byte-unchanged in shape and settles recorded on the credited 200", async () => {
     const YESTERDAY = "2026-08-13";
     writePlayRecord(pendingRecord({ date: YESTERDAY }));
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(200, okBody({ date: YESTERDAY, onTime: true })),
     );
 
@@ -980,7 +967,7 @@ describe("422 multi-date-sync settles the record with no retry (#58, ADR-0066) (
   it("marks the record rejected and never re-posts it", async () => {
     vi.useFakeTimers();
     writePlayRecord(pendingRecord());
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(422, { error: "multi-date-sync" }),
     );
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -1026,7 +1013,7 @@ describe("the Rainhas record is sized and its body carries queens only (T-WEB-S4
 
   it("posts the 0/1 queens grid, never the marks or the size", async () => {
     writePlayRecord(pendingQueensRecord());
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(200, okBody({ game: "queens" })),
     );
 

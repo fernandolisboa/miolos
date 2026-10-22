@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { jsonResponse, stubSessionFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -10,13 +11,6 @@ const TILES = {
   miss: ["absent", "present", "absent", "absent", "present"],
   win: ["correct", "correct", "correct", "correct", "correct"],
 } as const;
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 function judgedBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -29,33 +23,12 @@ function judgedBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stubFetch(
-  respond: (attempt: number) => Response | Promise<Response> | never,
-) {
-  let attempt = 0;
-  const fetchMock = vi.fn((...args: unknown[]) => {
-    if (String(args[0]).endsWith("/session")) {
-      return Promise.resolve(
-        jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
-      );
-    }
-    attempt += 1;
-    try {
-      return Promise.resolve(respond(attempt));
-    } catch (error) {
-      return Promise.reject(error instanceof Error ? error : new Error("nope"));
-    }
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-const guessCalls = (fetchMock: ReturnType<typeof stubFetch>) =>
+const guessCalls = (fetchMock: ReturnType<typeof stubSessionFetch>) =>
   fetchMock.mock.calls.filter((call) =>
     String(call[0]).endsWith("/termo/guess"),
   );
 
-const sessionCalls = (fetchMock: ReturnType<typeof stubFetch>) =>
+const sessionCalls = (fetchMock: ReturnType<typeof stubSessionFetch>) =>
   fetchMock.mock.calls.filter((call) => String(call[0]).endsWith("/session"));
 
 async function freshClient() {
@@ -75,7 +48,7 @@ afterEach(() => {
 
 describe("a judged turn (T-WEB-S83)", () => {
   it("posts the whole guess list and returns the parsed verdict", () => {
-    const fetchMock = stubFetch(() => jsonResponse(200, judgedBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, judgedBody()));
 
     return freshClient()
       .then(({ postGuesses }) => postGuesses(DATE, GUESSES))
@@ -119,7 +92,7 @@ describe("a judged turn (T-WEB-S83)", () => {
       { not: "a judgement" },
       "definitely not json object",
     ]) {
-      stubFetch(() => jsonResponse(200, body));
+      stubSessionFetch(() => jsonResponse(200, body));
 
       expect(await postGuesses(DATE, GUESSES)).toEqual({
         kind: "held",
@@ -132,7 +105,7 @@ describe("a judged turn (T-WEB-S83)", () => {
 
 describe("the failure table, row by row (T-WEB-S83)", () => {
   it("HOLDS the turn when the fetch itself rejects", async () => {
-    stubFetch(() => {
+    stubSessionFetch(() => {
       throw new TypeError("Failed to fetch");
     });
     const { postGuesses } = await freshClient();
@@ -144,7 +117,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it.each([500, 502, 503, 429])("HOLDS the turn on %i", async (status) => {
-    stubFetch(() => jsonResponse(status, { error: "nope" }));
+    stubSessionFetch(() => jsonResponse(status, { error: "nope" }));
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -154,7 +127,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("says `offline` on a 5xx when the browser itself reports no connection", async () => {
-    stubFetch(() => jsonResponse(503, { error: "nope" }));
+    stubSessionFetch(() => jsonResponse(503, { error: "nope" }));
     const { postGuesses } = await freshClient();
 
     Object.defineProperty(navigator, "onLine", {
@@ -173,7 +146,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("re-mints ONCE on a 401 and re-posts silently", async () => {
-    const fetchMock = stubFetch((attempt) =>
+    const fetchMock = stubSessionFetch((attempt) =>
       attempt === 1
         ? jsonResponse(401, { error: "no-session" })
         : jsonResponse(200, judgedBody()),
@@ -189,7 +162,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("HOLDS the turn on a SECOND 401, rather than looping", async () => {
-    const fetchMock = stubFetch(() =>
+    const fetchMock = stubSessionFetch(() =>
       jsonResponse(401, { error: "no-session" }),
     );
     const { postGuesses } = await freshClient();
@@ -210,7 +183,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
 
   it("re-mints AGAIN for a later 401, once the first fresh identity worked", async () => {
     let phase = 0;
-    const fetchMock = stubFetch(() => {
+    const fetchMock = stubSessionFetch(() => {
       phase += 1;
 
       return phase === 2 || phase === 4
@@ -227,7 +200,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("returns `not-in-list` for a 422 whose code is `invalid-guess`", async () => {
-    stubFetch(() => jsonResponse(422, { error: "invalid-guess" }));
+    stubSessionFetch(() => jsonResponse(422, { error: "invalid-guess" }));
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -237,7 +210,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("returns `refused` for a 422 whose code is `board-closed`", async () => {
-    stubFetch(() => jsonResponse(422, { error: "board-closed" }));
+    stubSessionFetch(() => jsonResponse(422, { error: "board-closed" }));
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -248,7 +221,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
 
   it("returns `refused` for a 422 carrying any other code", async () => {
     for (const error of ["guess-mismatch", "", "invalid-guesses"]) {
-      stubFetch(() => jsonResponse(422, { error }));
+      stubSessionFetch(() => jsonResponse(422, { error }));
       const { postGuesses } = await freshClient();
       expect(await postGuesses(DATE, GUESSES)).toEqual({
         kind: "rejected",
@@ -258,7 +231,9 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   });
 
   it("returns `refused` for a 422 whose body cannot be read at all", async () => {
-    stubFetch(() => new Response("<html>gateway</html>", { status: 422 }));
+    stubSessionFetch(
+      () => new Response("<html>gateway</html>", { status: 422 }),
+    );
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -270,7 +245,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   it.each([400, 403, 415])(
     "returns `refused` on %i — the server never judged it",
     async (status) => {
-      stubFetch(() => jsonResponse(status, { error: "invalid-body" }));
+      stubSessionFetch(() => jsonResponse(status, { error: "invalid-body" }));
       const { postGuesses } = await freshClient();
 
       expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -281,7 +256,7 @@ describe("the failure table, row by row (T-WEB-S83)", () => {
   );
 
   it("returns `gone` on 404 — the day is over", async () => {
-    stubFetch(() => jsonResponse(404, { error: "no-puzzle" }));
+    stubSessionFetch(() => jsonResponse(404, { error: "no-puzzle" }));
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({ kind: "gone" });
@@ -292,7 +267,7 @@ describe("the request is parsed before it leaves", () => {
   it("HOLDS the turn, and posts nothing, when the api origin is unset", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fetchMock = stubFetch(() => jsonResponse(200, judgedBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, judgedBody()));
     const { postGuesses } = await freshClient();
 
     expect(await postGuesses(DATE, GUESSES)).toEqual({
@@ -305,7 +280,7 @@ describe("the request is parsed before it leaves", () => {
 
   it("refuses a body the request contract would not accept, without posting", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fetchMock = stubFetch(() => jsonResponse(200, judgedBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, judgedBody()));
     const { postGuesses } = await freshClient();
 
     for (const guesses of [

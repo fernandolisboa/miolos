@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiGet, apiPost, apiPostRaw } from "../src/api/client";
 import { webCodeOf, webSources } from "./ts-source";
+import { jsonResponse } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 
@@ -13,10 +14,6 @@ function modulesContaining(needle: string): string[] {
     .filter((module) => webCodeOf(module).includes(needle))
     .map((module) => module.replace(/^src\//, ""))
     .sort();
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
 }
 
 beforeEach(() => {
