@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchStats, fetchStatsCalendar } from "../src/stats/stats-client";
+import { jsonResponse } from "./fetch-stub";
 
 function statsBody(): Record<string, unknown> {
   const timed = {
@@ -37,10 +38,6 @@ function calendarBody(): Record<string, unknown> {
       { date: "2026-08-13", state: "onTime", perfect: false },
     ],
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
 }
 
 beforeEach(() => {

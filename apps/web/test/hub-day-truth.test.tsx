@@ -16,6 +16,7 @@ import {
   type BinairoPlayRecord,
   type SudokuPlayRecord,
 } from "../src/play/play-record";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const SUDOKU_PUZZLE = generateDailySudoku({ seed: 20_260_731, weekday: 1 });
 
@@ -82,14 +83,6 @@ function dayBody(
       ...games,
     },
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubFetchByUrl(day: () => Response | Promise<Response>) {

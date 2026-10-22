@@ -9,6 +9,7 @@ import AdminPage, { metadata } from "../app/admin/page";
 import settingsStyles from "../app/ajustes/page.module.css";
 import { messages } from "../src/i18n";
 import { bodyOf, decl, stylesheet } from "./css-source";
+import { jsonResponse } from "./fetch-stub";
 
 vi.mock("../src/session/bootstrap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/session/bootstrap")>()),
@@ -39,10 +40,6 @@ const superuser = (members: readonly AdminMember[] = MEMBERS) => ({
   members,
 });
 const copy = messages.admin;
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
 
 function serve(
   state: unknown,

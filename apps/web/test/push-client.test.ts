@@ -8,10 +8,7 @@ import {
   postPushSubscription,
 } from "../src/push/push-client";
 import { webCodeOf } from "./ts-source";
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
+import { jsonResponse } from "./fetch-stub";
 
 const ENDPOINT = "https://push.example.org/send/abc";
 

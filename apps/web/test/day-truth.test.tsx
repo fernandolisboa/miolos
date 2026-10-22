@@ -6,6 +6,7 @@ import { StrictMode, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { withoutComments } from "./ts-source";
+import { jsonResponse, stubFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -24,16 +25,6 @@ function payload(overrides: Partial<DayResponse["games"]> = {}): DayResponse {
       ...overrides,
     },
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function stubFetch(answer: () => Response | Promise<Response>) {
-  const fetchMock = vi.fn(() => Promise.resolve(answer()));
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 async function loadStore() {

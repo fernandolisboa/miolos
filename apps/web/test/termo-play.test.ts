@@ -10,6 +10,7 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import { useTermoPlay } from "../src/termo/use-termo-play";
+import { jsonResponse } from "./fetch-stub";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -27,13 +28,6 @@ const GUESSES = ["abaco", "banho", "cerca", "dorme", "festa", "gente"] as const;
 type Tiles = TermoPlayRecord["guesses"][number]["tiles"];
 const MISS: Tiles = ["absent", "present", "absent", "absent", "present"];
 const WIN: Tiles = ["correct", "correct", "correct", "correct", "correct"];
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 function stubJudge(winOn: number | null) {
   const fetchMock = vi.fn((...args: unknown[]) => {

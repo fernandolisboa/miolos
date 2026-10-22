@@ -1,6 +1,7 @@
 import type { DayResponse } from "@miolos/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-08-22";
@@ -28,14 +29,6 @@ function payload(overrides: Partial<DayResponse["games"]> = {}): DayResponse {
       ...overrides,
     },
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubApi(day: () => Response) {

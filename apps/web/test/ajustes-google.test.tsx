@@ -18,6 +18,7 @@ import {
   unlinkGoogle,
 } from "../src/account/google-client";
 import { messages } from "../src/i18n";
+import { jsonResponse } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const copy = messages.settings.google;
@@ -26,10 +27,6 @@ vi.mock("../src/session/bootstrap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/session/bootstrap")>()),
   ensureSession: () => Promise.resolve(),
 }));
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
 
 function stubFetch(respond: (url: string) => Promise<Response>) {
   const fetchMock = vi.fn(respond);

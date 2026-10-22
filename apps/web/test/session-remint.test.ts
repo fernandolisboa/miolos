@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BinairoPlayRecord } from "../src/play/play-record";
+import { jsonResponse } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -24,13 +25,6 @@ function pendingRecord(): BinairoPlayRecord {
     pendingSync: true,
     syncOutcome: "pending",
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 async function settle(): Promise<void> {

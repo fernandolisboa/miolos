@@ -2,12 +2,9 @@ import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchDayTruth } from "../src/day/day-client";
+import { jsonResponse } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
 
 const validBody = {
   date: "2026-08-19",

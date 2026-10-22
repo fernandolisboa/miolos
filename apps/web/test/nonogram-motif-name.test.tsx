@@ -20,6 +20,7 @@ import {
 import type { NonogramMark } from "../src/nonogram/state";
 import { bodyOf, decl, stylesheet } from "./css-source";
 import { withoutComments } from "./ts-source";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const DATE = "2026-08-01";
 const API_URL = "https://api.example.test";
@@ -97,14 +98,6 @@ function completedClaim(motifName?: string): DayResponse["games"]["nonogram"] {
     hintsUsed: 0,
     ...(motifName === undefined ? {} : { motifName }),
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubApi(day: () => Response) {

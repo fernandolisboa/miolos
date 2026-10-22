@@ -18,6 +18,7 @@ import { formatElapsed, messages } from "../src/i18n";
 import { playRecordKey, type SudokuPlayRecord } from "../src/play/play-record";
 import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const chunk = { loads: 0 };
 
@@ -82,14 +83,6 @@ function concludedSudoku(): SudokuPlayRecord {
     pendingSync: false,
     syncOutcome: "recorded",
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubApi(day?: () => Response) {

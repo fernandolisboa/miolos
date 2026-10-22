@@ -11,6 +11,7 @@ import {
   writePlayRecord,
   type CrosswordPlayRecord,
 } from "../src/play/play-record";
+import { jsonResponse, stubSessionFetch } from "./fetch-stub";
 
 const API_URL = "https://api.example.test";
 const DATE = "2026-07-30";
@@ -45,13 +46,6 @@ const requestInitSchema = z.strictObject({
   body: z.string(),
 });
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 function okBody(overrides: Record<string, unknown> = {}) {
   return {
     game: "crossword",
@@ -65,21 +59,7 @@ function okBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stubFetch(respond: (url: string) => Response) {
-  const fetchMock = vi.fn((...args: unknown[]) => {
-    const url = String(args[0]);
-    if (url.endsWith("/session")) {
-      return Promise.resolve(
-        jsonResponse(200, { userId: crypto.randomUUID(), created: true }),
-      );
-    }
-    return Promise.resolve(respond(url));
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-function completionBodies(fetchMock: ReturnType<typeof stubFetch>) {
+function completionBodies(fetchMock: ReturnType<typeof stubSessionFetch>) {
   return fetchMock.mock.calls
     .filter((call) => String(call[0]).endsWith("/completions"))
     .map((call) => {
@@ -162,7 +142,7 @@ describe("a 7x7 day syncs its 49 cells (T-WEB-S733)", () => {
     writePlayRecord(
       pendingCrosswordRecord({ entries: SEVEN_GRID, grid: SEVEN_GRID }),
     );
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -182,7 +162,7 @@ describe("a 7x7 day syncs its 49 cells (T-WEB-S733)", () => {
 describe("the crossword completion body (T-WEB-S418)", () => {
   it("posts the solved grid, blocks included as null, with no seed and no clues", async () => {
     writePlayRecord(pendingCrosswordRecord());
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -204,7 +184,7 @@ describe("the crossword completion body (T-WEB-S418)", () => {
 
   it("clears the queue on 200 and records the outcome", async () => {
     writePlayRecord(pendingCrosswordRecord());
-    stubFetch(() => jsonResponse(200, okBody()));
+    stubSessionFetch(() => jsonResponse(200, okBody()));
 
     const { flushPendingCompletions } = await freshSync();
     await flushPendingCompletions();
@@ -217,7 +197,7 @@ describe("the crossword completion body (T-WEB-S418)", () => {
 
   it("drops an unbuildable pending record instead of retrying it forever", async () => {
     writePlayRecord(pendingCrosswordRecord({ grid: undefined }));
-    const fetchMock = stubFetch(() => jsonResponse(200, okBody()));
+    const fetchMock = stubSessionFetch(() => jsonResponse(200, okBody()));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { flushPendingCompletions } = await freshSync();

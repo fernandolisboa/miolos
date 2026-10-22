@@ -9,6 +9,7 @@ import {
   type SudokuPlayRecord,
   type TermoPlayRecord,
 } from "../src/play/play-record";
+import { jsonResponse, urlOf } from "./fetch-stub";
 
 const DATE = "2026-07-31";
 const OTHER_DATE = "2026-07-30";
@@ -99,14 +100,6 @@ function statsBody(date: string, guesses: number | null): unknown {
     perfectDays: 0,
     todayTermoGuesses: guesses,
   };
-}
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function urlOf(input: RequestInfo | URL): string {
-  return input instanceof Request ? input.url : String(input);
 }
 
 function stubFetchByUrl(stats: () => Response | Promise<Response>) {
