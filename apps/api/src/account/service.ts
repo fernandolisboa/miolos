@@ -1,4 +1,7 @@
-import type { GameSettingsPayload } from "@miolos/core";
+import {
+  gameSettingsPayloadSchema,
+  type GameSettingsPayload,
+} from "@miolos/core";
 import { eq, sql, users, type Db } from "@miolos/db";
 
 export async function getAccountState(
@@ -50,12 +53,13 @@ export async function setTelemetrySending(
 export async function readGameSettings(
   db: Db,
   userId: string,
-): Promise<unknown> {
+): Promise<GameSettingsPayload | null> {
   const rows = await db
     .select({ gameSettings: users.gameSettings })
     .from(users)
     .where(eq(users.id, userId));
-  return rows[0]?.gameSettings ?? null;
+  const stored = gameSettingsPayloadSchema.safeParse(rows[0]?.gameSettings);
+  return stored.success ? stored.data : null;
 }
 
 export async function writeGameSettings(

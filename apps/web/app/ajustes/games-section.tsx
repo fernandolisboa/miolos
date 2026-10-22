@@ -20,7 +20,9 @@ export function GamesSection() {
         {copy.heading}
       </h2>
       <p className={styles.body}>{copy.lead}</p>
-      <SyncToggle />
+      <div className={styles.sync}>
+        <SyncToggle />
+      </div>
       <GameSettings games={GAMES} clock />
     </section>
   );

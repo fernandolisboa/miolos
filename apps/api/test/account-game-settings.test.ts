@@ -89,7 +89,7 @@ const SETTINGS = {
 };
 
 describe("GET /account/game-settings/state and POST /account/game-settings (#317, ADR-0149)", () => {
-  it("T-API-S364: a fresh account holds no copy; a write replaces the whole copy and the read returns it", async () => {
+  it("T-API-S364: a fresh account holds no copy; a write replaces the whole copy and the read returns it; a stored copy out of bounds reads as none", async () => {
     const { token, userId } = await createSession();
 
     const fresh = await readState(token);
@@ -114,6 +114,14 @@ describe("GET /account/game-settings/state and POST /account/game-settings (#317
     expect(await (await readState(token)).json()).toEqual({
       settings: { showClock: true },
     });
+
+    await ctx.db
+      .update(users)
+      .set({ gameSettings: [1, 2] })
+      .where(eq(users.id, userId));
+    const odd = await readState(token);
+    expect(odd.status).toBe(200);
+    expect(await odd.json()).toEqual({ settings: null });
   });
 
   it("T-API-S365: the write takes the shared preamble, refuses a payload over its bounds, and writes nothing; the read is 401 without a session", async () => {

@@ -1,6 +1,7 @@
 import { gameSettingsStateResponseSchema } from "@miolos/core";
 
 import { apiGet, apiPostRaw } from "../api/client";
+import { ensureSession } from "../session/bootstrap";
 import {
   hasStoredSettings,
   readSettings,
@@ -60,28 +61,33 @@ function onLocalChange(): void {
   }, PUSH_DELAY_MS);
 }
 
-async function reconcile(baseline: string): Promise<void> {
+async function reconcile(baseline: string): Promise<boolean> {
+  await ensureSession();
   if (readSyncState().pending) {
     await push();
-    return;
+    return true;
   }
   const remote = await apiGet(
     "/account/game-settings/state",
     gameSettingsStateResponseSchema,
     ABSENCE,
   );
-  if (remote === undefined || !readSyncState().on || current() !== baseline) {
-    return;
+  if (remote === undefined) {
+    return false;
+  }
+  if (!readSyncState().on || current() !== baseline) {
+    return true;
   }
   if (remote.settings === null) {
     if (hasStoredSettings()) {
       await push();
     }
-    return;
+    return true;
   }
   const settings = settingsFrom(remote.settings);
   lastSynced = JSON.stringify(settings);
   writeSettings(settings);
+  return true;
 }
 
 export function startSettingsSync(): Promise<void> {
@@ -91,15 +97,23 @@ export function startSettingsSync(): Promise<void> {
   const leave = subscribeInTab(onLocalChange);
   const baseline = current();
   lastSynced = baseline;
-  running = {
-    ready: reconcile(baseline),
-    stop: () => {
-      leave();
-      clearTimeout(timer);
+  const stop = () => {
+    leave();
+    clearTimeout(timer);
+    if (running === run) {
       running = null;
-    },
+    }
   };
-  return running.ready;
+  const run = {
+    ready: reconcile(baseline).then((read) => {
+      if (!read) {
+        stop();
+      }
+    }),
+    stop,
+  };
+  running = run;
+  return run.ready;
 }
 
 export function turnSyncOn(): Promise<void> {

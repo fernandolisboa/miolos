@@ -182,3 +182,8 @@
     margin-top: var(--space-8);
   }
 }
+
+.sync {
+  max-width: 30rem;
+  padding-bottom: var(--space-4);
+}

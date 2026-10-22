@@ -1,3 +1,4 @@
+import { gameSettingsWriteSchema } from "@miolos/core";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,9 +9,13 @@ const API_URL = "https://api.example.test";
 const SETTINGS_KEY = "miolos-settings";
 const SYNC_KEY = "miolos-settings-sync";
 
+const session = vi.hoisted(() => ({
+  ready: Promise.resolve(),
+}));
+
 vi.mock("../src/session/bootstrap", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/session/bootstrap")>()),
-  ensureSession: () => Promise.resolve(),
+  ensureSession: () => session.ready,
 }));
 
 interface Account {
@@ -81,6 +86,7 @@ function storedSync(): unknown {
 }
 
 beforeEach(() => {
+  session.ready = Promise.resolve();
   window.localStorage.clear();
   vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
 });
@@ -199,6 +205,9 @@ describe("a change made while the account is read wins over the read (T-WEB-S102
     const { turnSyncOn, readSettings, writeSettings } = await load();
 
     const started = turnSyncOn();
+    await vi.waitFor(() => {
+      expect(stub.fetchMock).toHaveBeenCalled();
+    });
     writeSettings({ ...readSettings(), showClock: false });
     expect(storedSync()).toEqual({ on: true, pending: true });
     stub.releaseRead();
@@ -323,5 +332,97 @@ describe("the Sincronizar com a conta switch in Ajustes (T-WEB-S1031)", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(storedSync()).toBeNull();
+  });
+});
+
+function flipped(value: unknown): unknown {
+  if (typeof value === "boolean") {
+    return !value;
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, inner]) => [key, flipped(inner)]),
+    );
+  }
+  return value;
+}
+
+describe("every copy the web can hold is one the account accepts (T-WEB-S1033)", () => {
+  it("the defaults, every switch flipped, and every choice value pass the write schema", async () => {
+    const { settingsFrom, NONOGRAM_LINE_CROSSES, BINAIRO_FIRST_VALUES } =
+      await load();
+    const defaults = settingsFrom(undefined);
+    const copies = [defaults, settingsFrom(flipped(defaults))];
+    expect(copies[1]).toEqual(flipped(defaults));
+    for (const lineCross of NONOGRAM_LINE_CROSSES) {
+      for (const firstValue of BINAIRO_FIRST_VALUES) {
+        const games = {
+          ...defaults.games,
+          nonogram: { ...defaults.games.nonogram, lineCross },
+          binairo: { ...defaults.games.binairo, firstValue },
+        };
+        copies.push(settingsFrom({ ...defaults, games }));
+      }
+    }
+    expect(
+      copies.filter(
+        (settings) => !gameSettingsWriteSchema.safeParse({ settings }).success,
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("a failed account read at the start leaves the account copy to win later (T-WEB-S1034)", () => {
+  it("nothing is pushed until a later start reads the account and adopts it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    window.localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ showClock: true }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("offline"))),
+    );
+    const sync = await load();
+    await sync.turnSyncOn();
+    sync.writeSettings({ ...sync.readSettings(), endAnimation: false });
+    expect(storedSync()).toEqual({ on: true, pending: false });
+
+    const stub = stubAccount({ showClock: false });
+    await vi.advanceTimersByTimeAsync(800);
+    expect(stub.writes).toEqual([]);
+    await sync.startSettingsSync();
+    expect(sync.readSettings().showClock).toBe(false);
+    expect(stub.writes).toEqual([]);
+  });
+});
+
+describe("a change made while the session is minted is not lost to the account copy (T-WEB-S1035)", () => {
+  it("the bootstrap listens before the session exists, so the change is pending and pushed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    window.localStorage.setItem(
+      SYNC_KEY,
+      JSON.stringify({ on: true, pending: false }),
+    );
+    let minted: () => void = () => undefined;
+    session.ready = new Promise((resolve) => {
+      minted = resolve;
+    });
+    const stub = stubAccount({ showClock: true });
+    vi.resetModules();
+    const { SessionBootstrap } =
+      await import("../src/components/session-bootstrap");
+    const { readSettings, writeSettings } =
+      await import("../src/settings/settings");
+    render(<SessionBootstrap />);
+    await vi.dynamicImportSettled();
+
+    writeSettings({ ...readSettings(), showClock: false });
+    expect(storedSync()).toEqual({ on: true, pending: true });
+    minted();
+    await vi.advanceTimersByTimeAsync(800);
+    expect(readSettings().showClock).toBe(false);
+    expect(stub.account.settings).toEqual(readSettings());
+    expect(storedSync()).toEqual({ on: true, pending: false });
   });
 });

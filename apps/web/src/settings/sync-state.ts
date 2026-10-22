@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { safely } from "../safely";
+
 const STORAGE_KEY = "miolos-settings-sync";
 
 export interface SyncState {
@@ -8,14 +10,6 @@ export interface SyncState {
 }
 
 const OFF: SyncState = { on: false, pending: false };
-
-function safely<T>(run: () => T, fallback: T): T {
-  try {
-    return run();
-  } catch {
-    return fallback;
-  }
-}
 
 let cache: { readonly raw: string | null; readonly state: SyncState } | null =
   null;
