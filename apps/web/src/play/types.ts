@@ -53,6 +53,11 @@ export interface ConclusionCopy {
   readonly played?: ConclusionOutcome;
 }
 
+export interface ConclusionResult {
+  readonly elapsedMs: number;
+  readonly hintsUsed: number;
+}
+
 export interface ConclusionOutcome {
   readonly state: "result" | "lost";
 

@@ -1,47 +1,40 @@
 "use client";
 
-import {
-  TERMO_MAX_GUESSES,
-  type DayGameState,
-  type Game,
-  type StatsResponse,
-} from "@miolos/core";
+import type { Game } from "@miolos/core";
 import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 
-import {
-  formatElapsed,
-  formatLongDate,
-  formatShortDate,
-  messages,
-  playRoutes,
-  routes,
-  type Route,
-} from "../i18n";
-import { Wordmark } from "../components/brand-mark";
-import { useStats } from "../stats/use-stats";
-import { useStreak } from "../streak/use-streak";
+import { messages, playRoutes } from "../i18n";
 import { accentVars } from "./accent";
-import { ConclusionStats, ConclusionStatsBody } from "./conclusion-stats";
+import {
+  ConclusionAside,
+  ConclusionCardHead,
+  ConclusionTopBar,
+  nextPendingDaily,
+  OutcomeStamp,
+  playedOutcome,
+  ShippedStamp,
+} from "./conclusion-chrome";
+import { ConclusionStats } from "./conclusion-stats";
 import styles from "./conclusion-view.module.css";
-
 import {
   refreshServerDay,
   useDayState,
   useServerDayClaim,
   type DayEntry,
 } from "./day-state";
-import { DAY_GAMES } from "./day-games";
 import { EndingFlourish } from "./ending-flourish";
 import { PictureArt } from "./picture-art";
-import { BLANK_VALUE, ShareButton } from "./share-button";
+import { RemoteConclusionView } from "./remote-conclusion-view";
+import { ShareButton } from "./share-button";
 import { startCompletionSync } from "./sync";
 import type {
   ConclusionAnswer,
   ConclusionCopy,
   ConclusionOutcome,
   ConclusionPicture,
+  ConclusionResult,
 } from "./types";
 import { useRecordSnapshot } from "./use-record-snapshot";
 
@@ -49,11 +42,6 @@ const PushPromptCard = nextDynamic(
   () => import("./push-prompt-card").then((mod) => mod.PushPromptCard),
   { ssr: false },
 );
-
-export interface ConclusionResult {
-  readonly elapsedMs: number;
-  readonly hintsUsed: number;
-}
 
 export function ConclusionView({
   game,
@@ -233,85 +221,6 @@ export function ConclusionView({
   );
 }
 
-export function RemoteConclusionView({
-  game,
-  date,
-  copy,
-  claim,
-}: {
-  readonly game: Game;
-  readonly date: string;
-  readonly copy: ConclusionCopy;
-  readonly claim: DayGameState;
-}) {
-  const dayState = useDayState(date);
-  const stats = useStats();
-  const accent = accentVars(game);
-  const played = claim.status === "played";
-  const playedStamp = playedOutcome(copy, played);
-  const remote = messages.conclusion.remote;
-
-  const next = nextPendingDaily((dayGame) => dayState[dayGame]);
-
-  return (
-    <main
-      className={`${styles.page} ${styles.pageResult}`}
-      style={accent}
-      data-conclusion-state={played ? "lost" : "result"}
-      data-conclusion-remote=""
-    >
-      <ConclusionTopBar date={date} kicker={copy.kicker} />
-
-      <article className={styles.resultCard}>
-        <ConclusionCardHead copy={copy} />
-        <div className={styles.stampRow}>
-          {game === "termo" ? (
-            <RemoteTermoStamp
-              title={copy.title}
-              played={played}
-              guesses={remoteTermoGuesses(stats, date)}
-            />
-          ) : playedStamp !== undefined ? (
-            <OutcomeStamp outcome={playedStamp} />
-          ) : (
-            <RemoteShippedStamp title={copy.title} claim={claim} />
-          )}
-        </div>
-
-        <p className={styles.remoteNote}>
-          {played ? remote.playedNote : remote.completedNote}
-        </p>
-        <p role="status" className={styles.remoteBody}>
-          {played ? remote.playedBody : remote.completedBody}
-        </p>
-
-        {stats !== null && (
-          <ConclusionStatsBody
-            game={game}
-            date={date}
-            stats={stats}
-            elapsedMs={claim.elapsedMs}
-            lost={played}
-          />
-        )}
-      </article>
-
-      <ConclusionAside
-        streak
-        entryOf={(dayGame) => dayState[dayGame]}
-        next={next}
-      />
-    </main>
-  );
-}
-
-function playedOutcome(
-  copy: ConclusionCopy,
-  played: boolean,
-): ConclusionOutcome | undefined {
-  return played ? copy.played : undefined;
-}
-
 export function PictureFigure({
   picture,
 }: {
@@ -329,337 +238,5 @@ export function PictureFigure({
         </div>
       )}
     </>
-  );
-}
-
-function remoteTermoGuesses(
-  stats: StatsResponse | null | undefined,
-  date: string,
-): number | undefined {
-  return stats !== null &&
-    stats !== undefined &&
-    stats.date === date &&
-    stats.todayTermoGuesses !== null
-    ? stats.todayTermoGuesses
-    : undefined;
-}
-
-function RemoteShippedStamp({
-  title,
-  claim,
-}: {
-  readonly title: string;
-  readonly claim: DayGameState;
-}) {
-  if (claim.elapsedMs !== undefined && claim.hintsUsed !== undefined) {
-    return (
-      <ShippedStamp
-        title={title}
-        stamp={{ elapsedMs: claim.elapsedMs, hintsUsed: claim.hintsUsed }}
-      />
-    );
-  }
-  if (claim.elapsedMs === undefined) {
-    return (
-      <div
-        className={styles.stamp}
-        role="img"
-        aria-label={messages.conclusion.remote.stampBareAria(title)}
-      >
-        <span aria-hidden className={styles.stampLabel}>
-          {messages.conclusion.stampLabel}
-        </span>
-      </div>
-    );
-  }
-  const elapsed = formatElapsed(claim.elapsedMs);
-  return (
-    <div
-      className={styles.stamp}
-      role="img"
-      aria-label={messages.conclusion.remote.stampTimeAria(title, elapsed)}
-    >
-      <span aria-hidden className={styles.stampLabel}>
-        {messages.conclusion.stampLabel}
-      </span>
-      <span aria-hidden className={styles.stampTime}>
-        {elapsed}
-      </span>
-    </div>
-  );
-}
-
-function RemoteTermoStamp({
-  title,
-  played,
-  guesses,
-}: {
-  readonly title: string;
-  readonly played: boolean;
-  readonly guesses: number | undefined;
-}) {
-  const copy = messages.games.termo.outcome;
-  if (played) {
-    return (
-      <OutcomeStamp
-        outcome={{
-          state: "lost",
-          label: copy.lostLabel,
-          detail: copy.lostDetail(TERMO_MAX_GUESSES),
-          aria: copy.lostAria(TERMO_MAX_GUESSES),
-        }}
-      />
-    );
-  }
-  if (guesses === undefined) {
-    return (
-      <div
-        className={styles.stamp}
-        role="img"
-        aria-label={messages.conclusion.remote.stampBareAria(title)}
-      >
-        <span aria-hidden className={styles.stampLabel}>
-          {copy.wonLabel}
-        </span>
-      </div>
-    );
-  }
-  return (
-    <OutcomeStamp
-      outcome={{
-        state: "result",
-        label: copy.wonLabel,
-        detail: copy.wonDetail(guesses, TERMO_MAX_GUESSES),
-        aria: copy.wonAria(guesses, TERMO_MAX_GUESSES),
-      }}
-    />
-  );
-}
-
-function StreakCard() {
-  const streak = useStreak();
-  if (streak === null) {
-    return null;
-  }
-  const loaded = streak !== undefined;
-  return (
-    <section
-      className={styles.streakCard}
-      aria-label={
-        loaded ? messages.conclusion.streak.aria(streak.streak) : undefined
-      }
-      aria-hidden={loaded ? undefined : true}
-      data-streak-state={loaded ? "value" : "skeleton"}
-    >
-      <span aria-hidden className={styles.streakCardNumeral}>
-        {loaded ? streak.streak : BLANK_VALUE}
-      </span>
-      <span aria-hidden className={styles.streakCardLabel}>
-        {loaded ? messages.conclusion.streak.value(streak.streak) : BLANK_VALUE}
-        {loaded && streak.todayCounts && (
-          <>
-            <br />
-            <em className={styles.streakCardTail}>
-              {messages.conclusion.streak.maintained}
-            </em>
-          </>
-        )}
-      </span>
-    </section>
-  );
-}
-
-function ShippedStamp({
-  title,
-  stamp,
-}: {
-  readonly title: string;
-  readonly stamp: ConclusionResult;
-}) {
-  const elapsed = formatElapsed(stamp.elapsedMs);
-
-  return (
-    <div
-      className={styles.stamp}
-      role="img"
-      aria-label={messages.conclusion.stampAria(
-        title,
-        elapsed,
-        stamp.hintsUsed,
-      )}
-    >
-      <span aria-hidden className={styles.stampLabel}>
-        {messages.conclusion.stampLabel}
-      </span>
-      <span aria-hidden className={styles.stampTime}>
-        {elapsed}
-      </span>
-      <span aria-hidden className={styles.stampHints}>
-        {messages.conclusion.hints(stamp.hintsUsed)}
-      </span>
-    </div>
-  );
-}
-
-function OutcomeStamp({ outcome }: { readonly outcome: ConclusionOutcome }) {
-  const lost = outcome.state === "lost";
-  const chrome = [
-    styles.stamp,
-    lost ? styles.stampLost : "",
-    lost ? styles.stampStill : "",
-  ]
-    .filter((name) => name !== "")
-    .join(" ");
-
-  return (
-    <div className={chrome} role="img" aria-label={outcome.aria}>
-      <span aria-hidden className={styles.stampLabel}>
-        {outcome.label}
-      </span>
-      <span aria-hidden className={styles.stampGuesses}>
-        {outcome.detail}
-      </span>
-    </div>
-  );
-}
-
-function nextPendingDaily(
-  entryOf: (game: Game) => DayEntry,
-): { readonly game: Game; readonly route: Route } | undefined {
-  const game = DAY_GAMES.find(
-    (candidate) => entryOf(candidate).status === "pending",
-  );
-  return game === undefined ? undefined : { game, route: playRoutes[game] };
-}
-
-function ConclusionCardHead({ copy }: { readonly copy: ConclusionCopy }) {
-  return (
-    <>
-      <div aria-hidden className={styles.tape} />
-      <p className={styles.cardKicker}>{copy.kicker}</p>
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>{copy.title}</h1>
-      </div>
-    </>
-  );
-}
-
-function ConclusionAside({
-  streak,
-  entryOf,
-  next,
-  share,
-  prompt,
-}: {
-  readonly streak: boolean;
-  readonly entryOf: (game: Game) => DayEntry;
-  readonly next: { readonly game: Game; readonly route: Route } | undefined;
-  readonly share?: ReactNode;
-  readonly prompt?: ReactNode;
-}) {
-  return (
-    <aside className={styles.side}>
-      {streak && <StreakCard />}
-      <section className={styles.dayCard}>
-        <p className={styles.dayCardTitle}>
-          {messages.conclusion.dayCard.title}
-        </p>
-        <div className={styles.chips}>
-          {DAY_GAMES.map((dayGame) => (
-            <DayChip key={dayGame} game={dayGame} entry={entryOf(dayGame)} />
-          ))}
-        </div>
-      </section>
-      {next === undefined ? (
-        <Link className={styles.cta} href={routes.home}>
-          {messages.conclusion.ctaHome}
-        </Link>
-      ) : (
-        <Link
-          className={`${styles.cta} ${styles.ctaNext}`}
-          style={accentVars(next.game)}
-          href={next.route}
-        >
-          {messages.conclusion.ctaNext(messages.games[next.game].name)}
-        </Link>
-      )}
-      {share}
-
-      <Link className={styles.secondaryLink} href={routes.stats}>
-        {messages.conclusion.stats}
-      </Link>
-
-      {prompt}
-    </aside>
-  );
-}
-
-function ConclusionTopBar({
-  date,
-  kicker,
-}: {
-  readonly date: string;
-  readonly kicker: string;
-}) {
-  return (
-    <header className={styles.topBar}>
-      <Link
-        className={styles.back}
-        href={routes.home}
-        aria-label={messages.conclusion.backAria}
-      >
-        {messages.conclusion.back}
-      </Link>
-
-      <Wordmark className={styles.wordmark} />
-      <span className={styles.barKicker}>{kicker}</span>
-      <span className={styles.topDateLong}>{formatLongDate(date)}</span>
-      <span className={styles.topDateShort}>{formatShortDate(date)}</span>
-    </header>
-  );
-}
-
-function DayChip({
-  game,
-  entry,
-}: {
-  readonly game: (typeof DAY_GAMES)[number];
-  readonly entry: DayEntry;
-}) {
-  const done = entry.status === "completed";
-  const value =
-    done && entry.elapsedMs !== undefined
-      ? formatElapsed(entry.elapsedMs)
-      : done
-        ? messages.conclusion.dayCard.done
-        : entry.status === "played"
-          ? messages.conclusion.dayCard.played
-          : messages.conclusion.dayCard.missing;
-  return (
-    <div
-      className={`${styles.chip} ${
-        done
-          ? styles.chipDone
-          : entry.status === "played"
-            ? styles.chipPlayed
-            : styles.chipMissing
-      }`}
-    >
-      {game === "nonogram" ? (
-        <>
-          <span className={`${styles.chipName} ${styles.chipNameLong}`}>
-            {messages.conclusion.dayCard.games.nonogram}
-          </span>
-          <span className={`${styles.chipName} ${styles.chipNameShort}`}>
-            {messages.conclusion.dayCard.games.nonogramShort}
-          </span>
-        </>
-      ) : (
-        <span className={styles.chipName}>
-          {messages.conclusion.dayCard.games[game]}
-        </span>
-      )}
-      <span className={styles.chipValue}>{value}</span>
-    </div>
   );
 }

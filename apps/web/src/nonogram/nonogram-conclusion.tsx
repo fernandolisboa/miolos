@@ -1,13 +1,9 @@
 "use client";
 
 import { messages } from "../i18n";
-import {
-  ConclusionView,
-  PictureFigure,
-  type ConclusionResult,
-} from "../play/conclusion-view";
+import { ConclusionView, PictureFigure } from "../play/conclusion-view";
 import { useServerDayClaim } from "../play/day-state";
-import type { ConclusionPicture } from "../play/types";
+import type { ConclusionPicture, ConclusionResult } from "../play/types";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
 
 export function NonogramConclusion({

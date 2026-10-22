@@ -266,6 +266,8 @@ const freePlayBannedModuleGroups = [
       "**/play/day-state",
       "**/play/use-record-snapshot",
       "**/play/conclusion-view",
+      "**/play/conclusion-chrome",
+      "**/play/remote-conclusion-view",
 
       "**/play/conclusion-lazy",
 
@@ -383,7 +385,7 @@ const freePlayTermoModulePattern = freePlayTermoModules
   .join("|");
 
 const freePlayDynamicBannedModule = {
-  selector: `ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route|daily-screen)|(?<!^@miolos\\/games)(^|\\/)termo(\\/(?!(${freePlayTermoModulePattern})$)|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|crossword\\/(use-crossword-play|crossword-screen)|queens\\/(use-queens-play|queens-screen)|minesweeper\\/(daily-state|daily-record|use-minesweeper-play|minesweeper-screen|minesweeper-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]`,
+  selector: `ImportExpression > Literal[value=/(play\\/(sync|play-record|use-play-lifecycle|day-state|use-record-snapshot|conclusion-view|conclusion-chrome|remote-conclusion-view|conclusion-lazy|conclusion-stats|share-text|share-button|push-prompt-card|daily-route|daily-screen)|(?<!^@miolos\\/games)(^|\\/)termo(\\/(?!(${freePlayTermoModulePattern})$)|$)|session\\/bootstrap|components\\/session-bootstrap|binairo\\/(use-binairo-play|binairo-screen)|sudoku\\/(use-sudoku-play|sudoku-screen)|nonogram\\/(use-nonogram-play|nonogram-screen|nonogram-conclusion)|crossword\\/(use-crossword-play|crossword-screen)|queens\\/(use-queens-play|queens-screen)|minesweeper\\/(daily-state|daily-record|use-minesweeper-play|minesweeper-screen|minesweeper-conclusion)|streak(\\/|$)|hub-streak|attach(\\/|$)|hub-attach|onboarding(\\/|$)|hub-onboarding|\\/push(\\/|$)|stats(\\/|$)|medals(\\/|$)|\\/day(\\/|$)|\\/telemetry(\\/|$)|\\/api(\\/|$)|estatisticas|archive(\\/|$)|arquivo|app\\/page$|app\\/hub-day-state|(^|\\/)@miolos\\/db(\\/|$))/i]`,
   message:
     "free play records nothing, fetches nothing, fires no telemetry, never touches the daily Termo, the streak, the day, the statistics, the medals, the attach flow, the onboarding flow or the push opt-in: dynamic import of the banned modules is banned too (ADR-0011, ADR-0008 rule 5, ADR-0046, ADR-0048, ADR-0050, ADR-0051, ADR-0052, ADR-0060, ADR-0061, ADR-0064, ADR-0069).",
 };

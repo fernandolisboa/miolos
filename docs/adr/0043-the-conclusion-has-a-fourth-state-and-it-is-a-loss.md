@@ -241,7 +241,7 @@ the loss.
      border only tells the two non-done chips apart at a glance.
    - **Two values become FOUR, not three.** The draft counted a duration and
      `falta` going to three. `DayChip` ships a duration, `feito`, `jogado`
-     and `falta` (`DayChip` in `apps/web/src/play/conclusion-view.tsx`). The
+     and `falta` (`DayChip` in `apps/web/src/play/conclusion-chrome.tsx`). The
      fourth exists only because
      [ADR-0045](./0045-the-termo-screen-ships-no-hint-and-no-clock.md)
      decision 4 withholds a **won** Termo's duration — a consequence this

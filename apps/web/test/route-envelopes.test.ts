@@ -7,7 +7,8 @@ const GAME_ROUTE = "apps/web/src/archive/game-route.tsx";
 const SCREEN_MODULE =
   /\/src\/(binairo|sudoku|nonogram|termo|crossword|queens|minesweeper)\//;
 const ARCHIVE_SCREEN = /\/src\/archive\/.*-screen/;
-const CONCLUSION = /\/src\/play\/conclusion-view\.tsx$/;
+const CONCLUSION =
+  /\/src\/play\/(conclusion-view|conclusion-chrome|remote-conclusion-view)\.tsx$/;
 
 describe("the shared route envelopes are game-blind (T-WEB-S364)", () => {
   it.each([DAILY_ROUTE, GAME_ROUTE])(

@@ -356,7 +356,13 @@ describe("the name is composed once, in the wrapper (T-WEB-S326)", () => {
     expect(wrapper.split("namedAria")).toHaveLength(2);
     expect(wrapper.split("reveal.lead")).toHaveLength(2);
 
-    const shared = source("src/play/conclusion-view.tsx");
+    const shared = [
+      "src/play/conclusion-view.tsx",
+      "src/play/conclusion-chrome.tsx",
+      "src/play/remote-conclusion-view.tsx",
+    ]
+      .map(source)
+      .join("\n");
     expect(shared).not.toContain("messages.games.nonogram");
     expect(shared).toContain("messages.games.termo.outcome");
 

@@ -3,8 +3,12 @@
 import { MAX_GUESSES } from "@miolos/games/termo";
 
 import { messages } from "../i18n";
-import { ConclusionView, type ConclusionResult } from "../play/conclusion-view";
-import type { ConclusionAnswer, ConclusionOutcome } from "../play/types";
+import { ConclusionView } from "../play/conclusion-view";
+import type {
+  ConclusionAnswer,
+  ConclusionOutcome,
+  ConclusionResult,
+} from "../play/types";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
 
 const copy = messages.games.termo;

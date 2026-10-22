@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { archiveGameRoute, messages } from "../i18n";
 import { absoluteUrl } from "../site-origin";
+import { BLANK_VALUE } from "./blank-value";
 import {
   isPlayedRecord,
   playRecordsWritable,
@@ -16,8 +17,6 @@ import { buildShareText, type ShareSubject } from "./share-text";
 export interface ShareStamp {
   readonly elapsedMs: number;
 }
-
-export const BLANK_VALUE = "\u00a0";
 
 const SHARE_STATUS_MS = 5000;
 

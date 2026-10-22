@@ -4,8 +4,8 @@ import { timeBucketIndex, type Game, type StatsResponse } from "@miolos/core";
 
 import { formatElapsed, messages } from "../i18n";
 import { useStats } from "../stats/use-stats";
+import { BLANK_VALUE } from "./blank-value";
 import styles from "./conclusion-view.module.css";
-import { BLANK_VALUE } from "./share-button";
 
 export function ConclusionStats({
   game,

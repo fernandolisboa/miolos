@@ -447,6 +447,8 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
 
     const forbidden = [
       "conclusion-view",
+      "conclusion-chrome",
+      "remote-conclusion-view",
       "conclusion-stats",
       "termo-conclusion",
       "nonogram-conclusion",
