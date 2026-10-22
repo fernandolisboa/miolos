@@ -8,6 +8,7 @@ import "./globals.css";
 import { SessionBootstrap } from "../src/components/session-bootstrap";
 import { locale, messages } from "../src/i18n";
 import { OG_DEFAULTS } from "../src/og/defaults";
+import { registerServiceWorkerScript } from "../src/offline/register-script";
 import { siteOrigin } from "../src/site-origin";
 import { themeScript } from "../src/theme/theme";
 
@@ -66,6 +67,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SessionBootstrap />
         {children}
+        {process.env.NODE_ENV === "production" && (
+          <script
+            dangerouslySetInnerHTML={{ __html: registerServiceWorkerScript }}
+          />
+        )}
       </body>
     </html>
   );

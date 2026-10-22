@@ -6,6 +6,7 @@ import {
   accountStateResponseSchema,
   reminderConsentResponseSchema,
   reminderConsentSchema,
+  telemetryChoiceSchema,
 } from "../src/index";
 
 function rejects(
@@ -84,6 +85,23 @@ describe("the detach-email contract (ADR-0082 decision 4)", () => {
       { detached: false },
       {},
       { detached: true, extra: 1 },
+    ]);
+  });
+});
+
+describe("the telemetry choice contract (#37, ADR-0148)", () => {
+  it("T-CORE-S210: request and response are one strict {sending: boolean}", () => {
+    expect(telemetryChoiceSchema.parse({ sending: false })).toEqual({
+      sending: false,
+    });
+    expect(telemetryChoiceSchema.parse({ sending: true })).toEqual({
+      sending: true,
+    });
+    rejects(telemetryChoiceSchema, [
+      {},
+      { sending: "false" },
+      { sending: 0 },
+      { sending: true, userId: "u" },
     ]);
   });
 });

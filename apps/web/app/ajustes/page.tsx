@@ -8,6 +8,7 @@ import { GamesSection } from "./games-section";
 import { GoogleSection } from "./google-section";
 import styles from "./page.module.css";
 import { ReminderSection } from "./reminder-section";
+import { TelemetrySection } from "./telemetry-section";
 import { ThemeSection } from "./theme-section";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default function SettingsPage() {
         <div className={styles.row}>
           <AccountSection />
           <GoogleSection />
+          <TelemetrySection />
         </div>
       </div>
 

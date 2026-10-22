@@ -1,4 +1,4 @@
-import { sessions, sql, users } from "@miolos/db";
+import { eq, sessions, sql, users } from "@miolos/db";
 import { createTestDb } from "@miolos/db/testing";
 import {
   afterAll,
@@ -103,6 +103,25 @@ describe("POST /push/subscriptions — notification_opt_in (#33, ADR-0069)", () 
 
       properties: { $process_person_profile: false, $geoip_disable: true },
     });
+  });
+
+  it("T-API-S363: an account that turned measurements off subscribes and nothing reaches PostHog (ADR-0148)", async () => {
+    const { token, userId } = await createSession();
+    await ctx.db
+      .update(users)
+      .set({ telemetryOptOutAt: new Date("2026-10-22T12:00:00.000Z") })
+      .where(eq(users.id, userId));
+
+    const response = await POST(
+      subscriptionsRequest("POST", {
+        headers: jsonHeaders(token),
+        body: subscribeBody(),
+      }),
+    );
+    expect(response.status).toBe(200);
+    await telemetrySettled();
+
+    expect(capturedEvents()).toEqual([]);
   });
 
   it("T-API-S172: a re-post of an existing endpoint — the DO UPDATE arm, stored: true — is silent", async () => {
