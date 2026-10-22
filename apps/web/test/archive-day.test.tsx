@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -18,6 +18,7 @@ import { generateNonogram } from "@miolos/games/nonogram";
 
 import { formatLongDate, formatMonth, messages, playRoutes } from "../src/i18n";
 import { solutionMarks } from "../src/nonogram/engine";
+import { closureOf, REPO_ROOT, routeEntries } from "./module-graph";
 import { playRecordKey, readPlayRecord } from "../src/play/play-record";
 
 const spies = vi.hoisted(() => ({
@@ -389,61 +390,13 @@ describe("the three remaining archive roots gate the first paint too (T-WEB-S357
 });
 
 describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
-  function moduleGraph(entry: string): string[] {
-    const seen = new Set<string>();
-    const queue = [entry];
-    while (queue.length > 0) {
-      const current = queue.pop();
-      if (current === undefined || seen.has(current)) {
-        continue;
-      }
-      seen.add(current);
-      const source = readFileSync(current, "utf8");
-      for (const match of source.matchAll(
-        /(?:from|import)\s*\(?\s*"(\.[^"]*)"/g,
-      )) {
-        const resolved = resolveRelative(current, match[1] ?? "");
-        if (resolved !== undefined) {
-          queue.push(resolved);
-        }
-      }
-    }
-    return [...seen];
-  }
-
-  function resolveRelative(
-    from: string,
-    specifier: string,
-  ): string | undefined {
-    const base = join(dirname(from), specifier);
-    for (const candidate of [
-      base,
-      `${base}.ts`,
-      `${base}.tsx`,
-      join(base, "index.ts"),
-      join(base, "index.tsx"),
-    ]) {
-      if (existsSync(candidate) && statSync(candidate).isFile()) {
-        return candidate;
-      }
-    }
-    return undefined;
-  }
+  const archiveRoutes = () =>
+    routeEntries().filter((route) => route.startsWith("apps/web/app/arquivo/"));
 
   it("no archive page's module graph contains conclusion-view, termo-conclusion, nonogram-conclusion or readDayState", () => {
-    const entries = [
-      "app/arquivo/page.tsx",
-      "app/arquivo/mes/[mes]/page.tsx",
-      "app/arquivo/[data]/page.tsx",
-      "app/arquivo/[data]/binairo/page.tsx",
-      "app/arquivo/[data]/sudoku/page.tsx",
-      "app/arquivo/[data]/nonogram/page.tsx",
-      "app/arquivo/[data]/termo/page.tsx",
-      "app/arquivo/[data]/cruzadinha/page.tsx",
-      "app/arquivo/[data]/rainhas/page.tsx",
-    ].map((path) => join(import.meta.dirname, "..", path));
-
-    const graph = entries.flatMap((entry) => moduleGraph(entry));
+    const entries = archiveRoutes();
+    expect(entries.length).toBeGreaterThanOrEqual(10);
+    const graph = entries.flatMap((entry) => [...closureOf(entry)]);
 
     const forbidden = [
       "conclusion-view",
@@ -458,6 +411,8 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       "termo-screen",
       "crossword-screen",
       "queens-screen",
+      "minesweeper-screen",
+      "minesweeper-conclusion",
       "daily-screen",
     ];
     const leaks = Object.fromEntries(
@@ -466,7 +421,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
         graph.filter(
           (path) =>
             path.includes(`/src/play/${name}`) ||
-            (/\/src\/(?:binairo|sudoku|nonogram|termo|crossword|queens)\//.test(
+            (/\/src\/(?:binairo|sudoku|nonogram|termo|crossword|queens|minesweeper)\//.test(
               path,
             ) &&
               path.endsWith(`${name}.tsx`)),
@@ -481,19 +436,21 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       graph.filter((path) => path.includes("/src/play/day-state")),
     ).toEqual([]);
     for (const path of graph) {
-      expect(readFileSync(path, "utf8")).not.toContain("readDayState");
+      expect(readFileSync(join(REPO_ROOT, path), "utf8")).not.toContain(
+        "readDayState",
+      );
     }
 
     expect(graph.filter((path) => path.includes("/src/day/"))).toEqual([]);
     for (const path of graph) {
-      expect(readFileSync(path, "utf8")).not.toContain("useDayTruth");
+      expect(readFileSync(join(REPO_ROOT, path), "utf8")).not.toContain(
+        "useDayTruth",
+      );
     }
   });
 
   it("the walker is not vacuous — it really reaches the shared play layer", () => {
-    const graph = moduleGraph(
-      join(import.meta.dirname, "..", "app/arquivo/[data]/sudoku/page.tsx"),
-    );
+    const graph = [...closureOf("apps/web/app/arquivo/[data]/sudoku/page.tsx")];
 
     expect(graph.some((path) => path.includes("/src/archive/"))).toBe(true);
     expect(
@@ -503,9 +460,7 @@ describe("the archive never enters the conclusion tree (T-WEB-S183)", () => {
       graph.some((path) => path.endsWith("/src/play/use-play-lifecycle.ts")),
     ).toBe(true);
 
-    const dailyGraph = moduleGraph(
-      join(import.meta.dirname, "..", "app/sudoku/page.tsx"),
-    );
+    const dailyGraph = [...closureOf("apps/web/app/sudoku/page.tsx")];
     expect(
       dailyGraph.some((path) => path.endsWith("/src/play/conclusion-view.tsx")),
     ).toBe(true);

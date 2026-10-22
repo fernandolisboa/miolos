@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { TERMO_MAX_GUESSES } from "@miolos/core";
 import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
@@ -18,6 +18,7 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import { buildShareText } from "../src/play/share-text";
+import { closureFilesOf } from "./module-graph";
 
 const DATE = "2026-08-14";
 const SHORT_DATE = formatShortDate(DATE);
@@ -248,44 +249,6 @@ describe("the day's answer never reaches the share (T-WEB-S190)", () => {
   });
 });
 
-function moduleGraph(entry: string): string[] {
-  const seen = new Set<string>();
-  const queue = [entry];
-  while (queue.length > 0) {
-    const current = queue.pop();
-    if (current === undefined || seen.has(current)) {
-      continue;
-    }
-    seen.add(current);
-    const source = readFileSync(current, "utf8");
-    for (const match of source.matchAll(
-      /(?:from|import)\s*\(?\s*"(\.[^"]*)"/g,
-    )) {
-      const resolved = resolveRelative(current, match[1] ?? "");
-      if (resolved !== undefined) {
-        queue.push(resolved);
-      }
-    }
-  }
-  return [...seen];
-}
-
-function resolveRelative(from: string, specifier: string): string | undefined {
-  const base = join(dirname(from), specifier);
-  for (const candidate of [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
-  ]) {
-    if (existsSync(candidate) && statSync(candidate).isFile()) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
-
 describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
   it("composes header, elapsed, a blank line and the URL — and nothing else", () => {
     for (const record of [binairo(), sudoku(), nonogram()]) {
@@ -301,13 +264,13 @@ describe("the three grid games, and the exclusion list (T-WEB-S191)", () => {
   });
 
   it("(a) nothing under medals, streak, stats or day-state is reachable from the composer", () => {
-    const graph = moduleGraph(SHARE_TEXT);
+    const graph = closureFilesOf(SHARE_TEXT);
 
     for (const forbidden of [
-      join("src", "medals"),
-      join("src", "streak"),
-      join("src", "stats"),
-      join("src", "play", "day-state"),
+      join(SRC, "medals"),
+      join(SRC, "streak"),
+      join(SRC, "stats"),
+      join(SRC, "play", "day-state"),
     ]) {
       expect(
         graph.filter((path) => path.includes(forbidden)),
