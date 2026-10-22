@@ -909,6 +909,7 @@
 .bucketLabel {
   font-size: 11px;
   color: var(--ink);
+  white-space: nowrap;
 }
 
 .bucket[data-today] .bucketLabel {
@@ -981,5 +982,11 @@
 
   .closingLine {
     font-size: 13px;
+  }
+}
+
+@media (max-width: 359px) {
+  .histogram {
+    gap: var(--space-1);
   }
 }

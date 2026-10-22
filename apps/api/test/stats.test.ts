@@ -136,7 +136,7 @@ describe("GET /stats — the #29 aggregates (plan 033 §5, ADR-0051)", () => {
       bestMs: 272_000,
       averageMs: 272_000,
       averageSampleCount: 1,
-      histogram: [0, 1, 0, 0, 0, 0],
+      histogram: [0, 0, 0, 1, 0, 0],
     });
 
     expect(body.sudoku).toEqual({

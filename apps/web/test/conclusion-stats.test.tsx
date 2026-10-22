@@ -2,6 +2,7 @@ import { statsResponseSchema, type StatsResponse } from "@miolos/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ConclusionStatsBody } from "../src/play/conclusion-stats";
 import { ConclusionView } from "../src/play/conclusion-view";
 import {
   writePlayRecord,
@@ -187,10 +188,7 @@ describe("the conclusion stat block (T-WEB-S157)", () => {
     expect(today).not.toBeNull();
     expect(today).toHaveAttribute(
       "aria-label",
-      messages.stats.histogram.aria(
-        messages.stats.histogram.bucketNames[3] ?? "",
-        4,
-      ),
+      messages.stats.histogram.aria("entre 6 e 8 minutos", 1),
     );
 
     expect(
@@ -361,5 +359,46 @@ describe("a lost timed game decorates nothing as today's (T-WEB-S922c)", () => {
     expect(
       screen.queryByText(messages.conclusion.closingSlower),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("each timed game's conclusion histogram is in its own minutes (T-WEB-S1006)", () => {
+  it("Campo Minado and Sudoku carry their own labels and names, and 2:30 lights each game's own bar", () => {
+    const stats = statsWith(null, 0);
+    const cases = [
+      {
+        game: "minesweeper",
+        labels: ["<2", "2–3", "3–4", "4–6", "6–8", ">8"],
+        today: "2–3",
+        todayName: "entre 2 e 3 minutos",
+      },
+      {
+        game: "sudoku",
+        labels: ["<4", "4–6", "6–8", "8–12", "12–16", ">16"],
+        today: "<4",
+        todayName: "menos de 4 minutos",
+      },
+    ] as const;
+    for (const { game, labels, today, todayName } of cases) {
+      const { container, unmount } = render(
+        <ConclusionStatsBody
+          game={game}
+          date={DATE}
+          stats={{
+            ...stats,
+            [game]: { ...stats.binairo, histogram: [1, 1, 1, 1, 1, 1] },
+          }}
+          elapsedMs={150_000}
+          lost={false}
+        />,
+      );
+      const bars = [...container.querySelectorAll('[role="img"]')];
+      expect(bars.map((bar) => bar.textContent)).toEqual(labels);
+
+      const lit = container.querySelector("[data-today]");
+      expect(lit?.textContent).toBe(today);
+      expect(lit).toHaveAttribute("aria-label", `1 jogo — ${todayName}`);
+      unmount();
+    }
   });
 });

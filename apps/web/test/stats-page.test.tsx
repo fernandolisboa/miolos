@@ -150,10 +150,7 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
 
     expect(
       screen.getByLabelText(
-        messages.stats.histogram.aria(
-          messages.stats.histogram.bucketNames[2] ?? "",
-          5,
-        ),
+        messages.stats.histogram.aria("entre 6 e 8 minutos", 5),
       ),
     ).toBeInTheDocument();
 
@@ -166,6 +163,72 @@ describe("the fetched aggregates render (T-WEB-S154)", () => {
 
     const summary = screen.getByLabelText(messages.stats.perfectDays.aria(2));
     expect(summary).toHaveTextContent("2");
+  });
+});
+
+describe("each timed game's histogram is in its own minutes (T-WEB-S1006)", () => {
+  it("Campo Minado and Sudoku label and name their own buckets, and Rainhas starts under one minute", async () => {
+    clients.fetchStats.mockResolvedValue(STATS);
+    clients.fetchStatsCalendar.mockResolvedValue(CALENDAR);
+
+    render(<StatsPage />);
+    await screen.findByText(formatElapsed(238_000));
+
+    const bars = (game: "minesweeper" | "sudoku" | "queens") => [
+      ...(screen
+        .getByRole("heading", { name: messages.games[game].name })
+        .closest("article")
+        ?.querySelectorAll('[role="img"]') ?? []),
+    ];
+
+    expect(bars("minesweeper").map((bar) => bar.textContent)).toEqual([
+      "<2",
+      "2–3",
+      "3–4",
+      "4–6",
+      "6–8",
+      ">8",
+    ]);
+    expect(
+      bars("minesweeper").map((bar) => bar.getAttribute("aria-label")),
+    ).toEqual([
+      "0 jogos — menos de 2 minutos",
+      "0 jogos — entre 2 e 3 minutos",
+      "0 jogos — entre 3 e 4 minutos",
+      "0 jogos — entre 4 e 6 minutos",
+      "0 jogos — entre 6 e 8 minutos",
+      "0 jogos — mais de 8 minutos",
+    ]);
+
+    expect(bars("sudoku").map((bar) => bar.textContent)).toEqual([
+      "<4",
+      "4–6",
+      "6–8",
+      "8–12",
+      "12–16",
+      ">16",
+    ]);
+    expect(bars("sudoku").map((bar) => bar.getAttribute("aria-label"))).toEqual(
+      [
+        "1 jogo — menos de 4 minutos",
+        "0 jogos — entre 4 e 6 minutos",
+        "5 jogos — entre 6 e 8 minutos",
+        "0 jogos — entre 8 e 12 minutos",
+        "0 jogos — entre 12 e 16 minutos",
+        "1 jogo — mais de 16 minutos",
+      ],
+    );
+
+    const queens = bars("queens");
+    expect(queens[0]?.textContent).toBe("<1");
+    expect(queens[0]).toHaveAttribute(
+      "aria-label",
+      "0 jogos — menos de 1 minuto",
+    );
+    expect(queens[1]).toHaveAttribute(
+      "aria-label",
+      "0 jogos — entre 1 e 2 minutos",
+    );
   });
 });
 
