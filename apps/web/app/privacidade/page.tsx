@@ -21,6 +21,7 @@ export default function PrivacyPage() {
           <li>{messages.privacy.collected.google}</li>
           <li>{messages.privacy.collected.telemetry}</li>
           <li>{messages.privacy.collected.medals}</li>
+          <li>{messages.privacy.collected.gameSettings}</li>
           <li>{messages.privacy.collected.push}</li>
         </ul>
       </section>

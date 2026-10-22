@@ -49,7 +49,7 @@ describe("no caller can make useMountFetch refetch (T-WEB-S353)", () => {
 });
 
 describe("the mint-first mount fetch has ONE owner (T-WEB-S351)", () => {
-  it("`ensureSession` is named in code by exactly six modules — the declarer, the bootstrap island, the two write paths, the day-truth store and this hook", () => {
+  it("`ensureSession` is named in code by exactly seven modules — the declarer, the bootstrap island, the two write paths, the day-truth store, the settings sync and this hook", () => {
     const naming = webSources().filter((sourcePath) =>
       webCodeOf(sourcePath).includes("ensureSession"),
     );
@@ -60,6 +60,7 @@ describe("the mint-first mount fetch has ONE owner (T-WEB-S351)", () => {
       "src/day/day-truth.ts",
       "src/play/sync.ts",
       "src/session/bootstrap.ts",
+      "src/settings/account-sync.ts",
       "src/termo/guess-client.ts",
     ]);
   });
