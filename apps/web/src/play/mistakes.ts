@@ -44,6 +44,10 @@ export interface CellPress {
   readonly held: boolean;
 }
 
+export function caretPress(selected: number | null): CellPress | null {
+  return selected === null ? null : { index: selected, held: false };
+}
+
 export interface MistakeRules<S, A> {
   readonly judge: (state: S) => Judged | null;
   readonly cross?: number;

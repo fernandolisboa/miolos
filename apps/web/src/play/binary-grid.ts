@@ -32,15 +32,18 @@ export interface BinaryGridState<
   readonly status: "playing" | "solved";
 }
 
-export type BinaryGridAction<M extends number = BinaryMark> =
-  | LifecycleAction
-  | ResetAction
+export type CaretAction =
   | { readonly type: "select"; readonly index: number }
   | {
       readonly type: "move-selection";
       readonly rows: number;
       readonly columns: number;
-    }
+    };
+
+export type BinaryGridAction<M extends number = BinaryMark> =
+  | LifecycleAction
+  | ResetAction
+  | CaretAction
   | { readonly type: "enter-value"; readonly value: M }
   | { readonly type: "clear-cell" }
   | { readonly type: "use-hint" };
@@ -66,19 +69,8 @@ export function binaryGridReducer<
       return { ...state, now: action.now, hydrated: true };
 
     case "select":
-      if (binaryCellValue(state, action.index) === undefined) {
-        return state;
-      }
-      return state.selected === action.index
-        ? state
-        : { ...unlit(state), selected: action.index };
-
-    case "move-selection": {
-      const next = movedSelection(state.selected, action, state.size);
-      return state.selected === next
-        ? state
-        : { ...unlit(state), selected: next };
-    }
+    case "move-selection":
+      return withCaret(state, action, state.size);
 
     case "enter-value": {
       const current = binaryCellValue(state, state.selected);
@@ -124,6 +116,31 @@ export function binaryGridReducer<
   }
 }
 
+export function withCaret<
+  S extends {
+    readonly entries: readonly unknown[];
+    readonly selected: number | null;
+    readonly hint: HintState<unknown>;
+  },
+>(state: S, action: CaretAction, size: number): S {
+  const next =
+    action.type === "select"
+      ? onBoard(state.entries, action.index)
+        ? action.index
+        : state.selected
+      : movedSelection(state.selected, action, size);
+  return state.selected === next ? state : { ...unlit(state), selected: next };
+}
+
+function onBoard(entries: readonly unknown[], index: number | null): boolean {
+  return (
+    index !== null &&
+    Number.isInteger(index) &&
+    index >= 0 &&
+    index < entries.length
+  );
+}
+
 export function canHint<M extends number>(
   state: BinaryGridState<unknown, M>,
   limit: number | null,
@@ -139,12 +156,7 @@ export function binaryCellValue<M extends number>(
   state: BinaryGridState<unknown, M>,
   index: number | null,
 ): M | null | undefined {
-  if (
-    index === null ||
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= state.entries.length
-  ) {
+  if (index === null || !onBoard(state.entries, index)) {
     return undefined;
   }
   return state.entries[index] ?? null;

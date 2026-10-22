@@ -4,8 +4,8 @@ import { DailyPlayChrome } from "../play/daily-chrome";
 import { hintReadout } from "../play/hint-readout";
 import type { ArchivePlayChrome } from "../play/types";
 import styles from "./binairo-screen.module.css";
-import { Controls, ControlsSkeleton } from "./controls";
-import { Grid } from "./grid";
+import { BoardPanel } from "./board-panel";
+import { ControlsSkeleton } from "./controls";
 import { binairoHintExplanation } from "./hint";
 import type { BinairoPlay } from "./use-binairo-play";
 
@@ -47,23 +47,7 @@ export function PlayView({
         },
       }}
     >
-      <BoardCard
-        below={<Controls paint={state.paint} onToggleMode={play.toggleMode} />}
-      >
-        <Grid
-          givens={state.givens}
-          solution={play.solution}
-          entries={state.entries}
-          mistakes={state.mistakes}
-          violating={state.violating}
-          hintIndex={state.hint.lastIndex}
-          spotlight={state.hint.spotlight}
-          painting={state.paint.kind !== "cycle"}
-          onTap={play.tapCell}
-          onStrokeStart={play.strokeStart}
-          onPaintOver={play.paintOver}
-        />
-      </BoardCard>
+      <BoardPanel state={state} solution={play.solution} controls={play} />
     </DailyPlayChrome>
   );
 }

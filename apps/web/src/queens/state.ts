@@ -27,6 +27,7 @@ import { idleHint } from "../play/hint-state";
 import {
   NO_MISTAKES,
   SOLUTION_MISTAKES,
+  caretPress,
   type CellPress,
   type MistakeRules,
   type MistakeState,
@@ -107,7 +108,7 @@ function queensPress(
       return { index: action.index, held: false };
     case "enter-value":
     case "clear-cell":
-      return selected === null ? null : { index: selected, held: false };
+      return caretPress(selected);
     default:
       return null;
   }

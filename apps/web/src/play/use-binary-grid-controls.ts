@@ -5,6 +5,7 @@ import {
   type BinaryGridAction,
   type BinaryGridState,
   type BinaryMark,
+  type CaretAction,
 } from "./binary-grid";
 import { useFreeHintsPerPuzzle } from "./free-hints";
 import type { ResetAction } from "./reset-board";
@@ -15,27 +16,27 @@ import {
   type UndoAction,
 } from "./undo";
 
-export interface BinaryGridControls {
-  readonly hintReady: boolean;
+export interface CaretControls {
   readonly selectCell: (index: number) => void;
   readonly moveSelection: (rows: number, columns: number) => void;
   readonly enterValue: (value: BinaryMark) => void;
   readonly clearCell: () => void;
+}
+
+export interface BinaryGridControls extends CaretControls {
+  readonly hintReady: boolean;
   readonly revealHint: () => void;
   readonly edits: BoardEdits;
 }
 
-export function useBinaryGridControls(
-  state: BinaryGridState<unknown, number> & Editable,
-  dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
-): BinaryGridControls {
-  const allowance = useFreeHintsPerPuzzle();
+type CaretControlAction =
+  | CaretAction
+  | { readonly type: "enter-value"; readonly value: BinaryMark }
+  | { readonly type: "clear-cell" };
 
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  });
-
+export function useCaretControls(
+  dispatch: Dispatch<CaretControlAction>,
+): CaretControls {
   const selectCell = useCallback(
     (index: number) => {
       dispatch({ type: "select", index });
@@ -61,6 +62,21 @@ export function useBinaryGridControls(
     dispatch({ type: "clear-cell" });
   }, [dispatch]);
 
+  return { selectCell, moveSelection, enterValue, clearCell };
+}
+
+export function useBinaryGridControls(
+  state: BinaryGridState<unknown, number> & Editable,
+  dispatch: Dispatch<BinaryGridAction | ResetAction | UndoAction>,
+): BinaryGridControls {
+  const allowance = useFreeHintsPerPuzzle();
+  const caret = useCaretControls(dispatch);
+
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+
   const revealHint = useCallback(() => {
     if (canHint(stateRef.current, allowance)) {
       dispatch({ type: "use-hint" });
@@ -70,11 +86,8 @@ export function useBinaryGridControls(
   const edits = useBoardEdits(state, dispatch);
 
   return {
+    ...caret,
     hintReady: canHint(state, allowance),
-    selectCell,
-    moveSelection,
-    enterValue,
-    clearCell,
     revealHint,
     edits,
   };

@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S204`    | `S203`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S984`    | `S983`         | `T-WEB-23`            |
+| `T-WEB`  | `S1000`   | `S994`         | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#61 (the Binairo board as a composite widget, ADR-0145) spent **`T-WEB-S984…S994`**. In `binairo-board.test.tsx`: `S984` (one labelled group of 64 buttons, one tab stop, givens `aria-disabled` and inert), `S985` (arrows, Home, End, PageUp, PageDown, shortcuts and Tab pass through), `S986` (0 and 1 write their digit, the same key clears, Backspace and Delete clear, a given is never written, the brush is ignored), `S987` (Enter and Space are the tap in both modes), `S988` (a paint stroke and a cycle tap leave focus and the tab stop on the end cell), `S989` (one CSS block for the caret and `:focus-visible`, a negative offset), `S993` (free play has the same widget) and the saved-record case of `S991`. In `binairo-caret-state.test.ts`: `S990` (select, move, enter and clear, with their refusals), `S991` (undo restores the caret, a select adds no step) and `S992` (a typed wrong digit counts once, a held cycle tap and a key on one cell are judged once, a caret move keeps the hold). `S994` is in `binary-board-hook.test.tsx` (`painting: false` never captures and still focuses the end cell; the default key table is unchanged). `T-WEB-6` in `binairo-screen.test.tsx` was re-aimed in place: a given is a `BUTTON`. `S995…S999` are held for this ticket's review rounds, so next free is `S1000`.
 
 #62 (Binairo's and Sudoku's `withEntry` return the state they were given when the cell already holds the value) spent **`T-WEB-S982`** in `binairo-state.test.ts` and **`T-WEB-S983`** in `sudoku-digit-lock-state.test.ts` (a *Número fixo* double tap on a filled cell). Next free is `S984`.
 

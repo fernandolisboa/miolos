@@ -223,7 +223,7 @@ describe("the board and its readouts (T-WEB-6)", () => {
       throw new Error("the fixture puzzle has no givens");
     }
     const givenCell = cellAt(container, FIRST_GIVEN);
-    expect(givenCell.tagName).toBe("DIV");
+    expect(givenCell.tagName).toBe("BUTTON");
     expect(givenCell).toHaveAttribute("aria-disabled", "true");
     expect(givenCell).toHaveAttribute(
       "aria-label",

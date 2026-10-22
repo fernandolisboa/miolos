@@ -1283,13 +1283,14 @@ export const messages = {
           `${filled} de ${total} células`,
         progressShort: (filled: number, total: number) =>
           `${filled} de ${total}`,
+        boardAria: "grade do Binairo, 8 por 8",
         controls: {
           zero: "0",
           one: "1",
           zeroAria: "pintar zeros",
           oneAria: "pintar uns",
           affordance: (first: 0 | 1) =>
-            `No mouse, o botão esquerdo põe ${first} e o direito põe ${1 - first}; clicar de novo apaga.`,
+            `No mouse, o botão esquerdo põe ${first} e o direito põe ${1 - first}; clicar de novo apaga. No teclado: 0 e 1 escrevem, Backspace apaga.`,
         },
         cellAria,
         cellGivenAria: (row: number, column: number, value: 0 | 1) =>
