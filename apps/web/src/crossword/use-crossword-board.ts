@@ -2,12 +2,12 @@ import type { DailyCrosswordResponse } from "@miolos/core";
 import { useCallback, useEffect, useMemo, useRef, type Dispatch } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { hintAllowed } from "../play/hint-allowance";
 import { usePlayReducer } from "../play/mistakes";
 import { useBoardEdits, type BoardEdits } from "../play/undo";
 import { useSettings } from "../settings/settings";
 import { countAnswered } from "./grid";
 import {
-  canHint,
   CROSSWORD_MISTAKES,
   crosswordPlayReducer,
   initCrosswordPlayState,
@@ -97,7 +97,7 @@ export function useCrosswordBoard(
   }, [dispatch]);
 
   const revealHint = useCallback(() => {
-    if (canHint(stateRef.current, allowance)) {
+    if (hintAllowed(stateRef.current, allowance)) {
       dispatch({ type: "use-hint" });
     }
   }, [dispatch, allowance]);
@@ -109,7 +109,7 @@ export function useCrosswordBoard(
     dispatch,
     filled,
     total,
-    hintReady: canHint(state, allowance),
+    hintReady: hintAllowed(state, allowance),
     selectCell,
     selectEntry,
     toggleDirection,

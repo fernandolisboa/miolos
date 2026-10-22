@@ -142,10 +142,9 @@ describe("the Rainhas reducer (T-WEB-S451)", () => {
     expect(run(start, { type: "tap", index: -1, press: "tap" })).toBe(start);
   });
 
-  it("solves when the placement is valid, marks it for sync once, and then freezes the board", () => {
+  it("solves when the placement is valid, and then freezes the board", () => {
     const solved = run(hydrated(DAILY), ...queensAt(...solutionCells));
     expect(solved.status).toBe("solved");
-    expect(solved.pendingSync).toBe(true);
     const frozen = run(solved, {
       type: "tap",
       index: solutionCells[0] ?? 0,

@@ -3,7 +3,7 @@ import { HINTS_PER_PUZZLE_CEILING } from "@miolos/core";
 import { toggled } from "./brush";
 import type { Revealed } from "./grid-hint";
 import { onBoard, withCaret, type CaretWriteAction } from "./grid-selection";
-import { hasHintLeft } from "./hint-allowance";
+import { hintAllowed } from "./hint-allowance";
 import { idleHint, spentHint, unlit } from "./hint-state";
 import type {
   BinairoPlayRecord,
@@ -12,7 +12,7 @@ import type {
   QueensPlayRecord,
 } from "./play-record";
 import { resetBoard, type ResetAction } from "./reset-board";
-import { applyTimerAction } from "./timer";
+import { hydratedAt, restoredFrom, timed } from "./play-core";
 import type { HintState, LifecycleAction, PlayCore } from "./types";
 
 export type BinaryMark = 0 | 1;
@@ -57,7 +57,7 @@ export function binaryGridReducer<
 >(state: S, action: BinaryGridAction<M>, rules: BinaryGridRules<S, R, M>): S {
   switch (action.type) {
     case "restore":
-      return { ...state, now: action.now, hydrated: true };
+      return hydratedAt(state, action.now);
 
     case "select":
     case "move-selection":
@@ -99,11 +99,7 @@ export function binaryGridReducer<
     case "tick":
     case "pause":
     case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
+      return timed(state, action);
   }
 }
 
@@ -111,11 +107,7 @@ export function canHint<M extends number>(
   state: BinaryGridState<unknown, M>,
   limit: number | null,
 ): state is BinaryGridState<unknown, M> & { readonly solution: readonly M[] } {
-  return (
-    state.solution !== null &&
-    hasHintLeft(state.hint.used, limit) &&
-    state.status === "playing"
-  );
+  return state.solution !== null && hintAllowed(state, limit);
 }
 
 export function binaryCellValue<M extends number>(
@@ -164,7 +156,6 @@ export function settled<S extends BinaryGridState<unknown, number>>(
     ...state,
     entries,
     status: solved ? "solved" : "playing",
-    pendingSync: solved && state.status !== "solved" ? true : state.pendingSync,
   };
 }
 
@@ -182,15 +173,11 @@ export function restoreBinaryRecord<S extends BinaryGridState<R>, R>(
     record.game !== game ||
     record.entries.length !== state.entries.length
   ) {
-    return { ...state, now, hydrated: true };
+    return hydratedAt(state, now);
   }
   return {
-    ...rules.derive(state, record.entries),
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
+    ...restoredFrom(rules.derive(state, record.entries), record, now),
     hint: idleHint(record.hintsUsed),
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
   };
 }
 

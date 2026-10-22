@@ -465,7 +465,7 @@ describe("move-selection", () => {
   });
 });
 
-describe("status and pendingSync", () => {
+describe("status", () => {
   it("flips to solved only when the whole picture is painted, crossing nothing", () => {
     const solution = solutionOf(MONDAY_STATE);
     const pictureCells = solution.filter((mark) => mark === 1).length;
@@ -483,7 +483,6 @@ describe("status and pendingSync", () => {
 
     expect(pictureCells).toBeGreaterThan(1);
     expect(partial.status).toBe("playing");
-    expect(partial.pendingSync).toBe(false);
 
     const solved = nonogramReducers.off(partial, {
       type: "mark-cell",
@@ -492,7 +491,6 @@ describe("status and pendingSync", () => {
     });
 
     expect(solved.status).toBe("solved");
-    expect(solved.pendingSync).toBe(true);
   });
 
   it("stays playing while a cell outside the picture is painted", () => {
@@ -570,8 +568,6 @@ describe("status and pendingSync", () => {
         press: "tap",
       }).entries,
     ).toBe(solved.entries);
-
-    expect(solved.pendingSync).toBe(true);
   });
 
   it("keeps the clock frozen once the board closes, whatever lands after (T-WEB-S70)", () => {
@@ -672,7 +668,6 @@ describe("restore (T-WEB-S37)", () => {
 
     expect(restored.entries).toEqual(MONDAY_STATE.entries);
     expect(restored.status).toBe("playing");
-    expect(restored.pendingSync).toBe(false);
     expect(restored.hydrated).toBe(true);
   });
 
@@ -720,24 +715,6 @@ describe("restore (T-WEB-S37)", () => {
 
     expect(restored.hydrated).toBe(true);
     expect(restored.now).toBe(NOW);
-  });
-
-  it("carries a concluded record's pendingSync through rather than recomputing it", () => {
-    const solution = solutionOf(MONDAY_STATE);
-    const restored = play(MONDAY_STATE, {
-      type: "restore",
-      record: nonogramRecord({
-        entries: solution.map((mark) => (mark === 1 ? 1 : null)),
-        concluded: true,
-        pendingSync: false,
-        syncOutcome: "recorded",
-      }),
-      now: NOW,
-    });
-
-    expect(restored.status).toBe("solved");
-
-    expect(restored.pendingSync).toBe(false);
   });
 });
 

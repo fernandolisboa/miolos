@@ -275,7 +275,7 @@ describe("move-selection (T-WEB-S426)", () => {
 });
 
 describe("completion (T-WEB-S426)", () => {
-  it("is solved once every white cell matches, and marks pendingSync exactly on that transition", () => {
+  it("is solved once every white cell matches", () => {
     const solved = play(
       fresh(),
       { type: "select", index: 0 },
@@ -288,7 +288,6 @@ describe("completion (T-WEB-S426)", () => {
       { type: "type-letter", letter: "o", skipFilled: false },
     );
     expect(solved.status).toBe("solved");
-    expect(solved.pendingSync).toBe(true);
   });
 
   it("stays playing with a wrong letter", () => {
@@ -419,7 +418,6 @@ describe("restore (T-WEB-S428)", () => {
     expect(state.status).toBe("solved");
     expect(state.timer.accumulatedMs).toBe(12_000);
     expect(state.hint.used).toBe(1);
-    expect(state.pendingSync).toBe(false);
   });
 
   it("hydrates blank when there is no stored record, or it belongs to another game", () => {
@@ -450,7 +448,6 @@ describe("restore (T-WEB-S428)", () => {
     expect(otherGame.hydrated).toBe(true);
     expect(otherGame.timer.accumulatedMs).toBe(0);
     expect(otherGame.hint.used).toBe(0);
-    expect(otherGame.pendingSync).toBe(false);
   });
 });
 
@@ -482,7 +479,6 @@ describe("restore ignores a record sized for another board (T-WEB-S731)", () => 
       expect(restored.hydrated).toBe(true);
       expect(restored.entries).toEqual(state.entries);
       expect(restored.timer.accumulatedMs).toBe(0);
-      expect(restored.pendingSync).toBe(false);
     }
   });
 

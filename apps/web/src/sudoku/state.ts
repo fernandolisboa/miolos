@@ -18,11 +18,11 @@ import {
   type MistakeRules,
   type MistakeState,
 } from "../play/mistakes";
-import { hasHintLeft } from "../play/hint-allowance";
+import { hintAllowed } from "../play/hint-allowance";
 import { idleHint, spentHint, unlit } from "../play/hint-state";
-import type { PlayRecord, SudokuPlayRecord } from "../play/play-record";
+import type { PlayRecord } from "../play/play-record";
+import { freshCore, hydratedAt, restoredFrom, timed } from "../play/play-core";
 import { resetBoard, type ResetAction } from "../play/reset-board";
-import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
   NO_HISTORY,
@@ -114,8 +114,7 @@ export type SudokuPlayAction =
       readonly type: "use-hint";
       readonly solution: readonly SudokuDigit[];
       readonly cleanNotes: boolean;
-    }
-  | { readonly type: "mark-synced" };
+    };
 
 export function initSudokuPlayState(
   daily: DailySudokuResponse,
@@ -125,7 +124,7 @@ export function initSudokuPlayState(
   const entries: readonly SudokuCellValue[] = givens.map(() => null);
   const derived = derive(givens, layout, entries);
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     givens,
     layout,
     entries: derived.entries,
@@ -134,13 +133,9 @@ export function initSudokuPlayState(
     locked: null,
     noting: false,
     tier: daily.tier,
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
     violating: derived.violating,
     status: derived.status,
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };
@@ -284,7 +279,7 @@ function playSudoku(
     }
 
     case "use-hint": {
-      if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
+      if (!hintAllowed(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
       const hint = nextSudokuHint(
@@ -322,14 +317,7 @@ function playSudoku(
     case "tick":
     case "pause":
     case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
-
-    case "mark-synced":
-      return state.pendingSync ? { ...state, pendingSync: false } : state;
+      return timed(state, action);
   }
 }
 
@@ -413,7 +401,6 @@ function withEntry(
       value !== null && cleanNotes
         ? withoutPeerNote(own, index, value, state.layout)
         : own,
-    pendingSync: derived.status === "solved" ? true : state.pendingSync,
   };
 }
 
@@ -422,31 +409,17 @@ function restore(
   record: PlayRecord | undefined,
   now: number,
 ): SudokuPlayState {
-  if (!isSudokuRecord(record)) {
-    return { ...state, now, hydrated: true };
+  if (record?.game !== "sudoku") {
+    return hydratedAt(state, now);
   }
   const derived = derive(state.givens, state.layout, record.entries);
   const notes = (record.notes ?? NO_NOTES).map((mask, index) =>
     state.givens[index] !== 0 || record.entries[index] !== null ? 0 : mask,
   );
   return {
-    ...state,
+    ...restoredFrom(state, record, now),
     ...derived,
     notes,
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: idleHint(record.hintsUsed),
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
   };
-}
-
-function isSudokuRecord(
-  record: PlayRecord | undefined,
-): record is SudokuPlayRecord {
-  return record?.game === "sudoku";
-}
-
-export function canHint(state: SudokuPlayState, limit: number | null): boolean {
-  return hasHintLeft(state.hint.used, limit) && state.status === "playing";
 }

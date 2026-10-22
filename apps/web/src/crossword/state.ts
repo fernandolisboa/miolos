@@ -4,7 +4,7 @@ import {
 } from "@miolos/core";
 
 import { movedSelection } from "../play/grid-selection";
-import { hasHintLeft } from "../play/hint-allowance";
+import { hintAllowed } from "../play/hint-allowance";
 import { idleHint, spentHint } from "../play/hint-state";
 import {
   judgedBySolution,
@@ -12,9 +12,9 @@ import {
   type MistakeRules,
   type MistakeState,
 } from "../play/mistakes";
-import type { CrosswordPlayRecord, PlayRecord } from "../play/play-record";
+import type { PlayRecord } from "../play/play-record";
+import { freshCore, hydratedAt, restoredFrom, timed } from "../play/play-core";
 import { resetBoard, type ResetAction } from "../play/reset-board";
-import { applyTimerAction } from "../play/timer";
 import type { HintState, LifecycleAction, PlayCore } from "../play/types";
 import {
   NO_HISTORY,
@@ -80,8 +80,7 @@ export type CrosswordPlayAction =
       readonly skipFilled: boolean;
     }
   | { readonly type: "backspace" }
-  | { readonly type: "use-hint" }
-  | { readonly type: "mark-synced" };
+  | { readonly type: "use-hint" };
 
 export function initCrosswordPlayState(
   daily: DailyCrosswordResponse,
@@ -89,19 +88,14 @@ export function initCrosswordPlayState(
   const solution = flattenGrid(daily.grid);
   const entries: readonly CrosswordCellValue[] = solution.map(() => null);
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     size: daily.grid.length,
     solution,
     clues: daily.clues,
     entries,
     selected: null,
     direction: "across",
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };
@@ -195,7 +189,7 @@ function playCrossword(
     }
 
     case "use-hint": {
-      if (!canHint(state, HINTS_PER_PUZZLE_CEILING)) {
+      if (!hintAllowed(state, HINTS_PER_PUZZLE_CEILING)) {
         return state;
       }
       const hint = nextCrosswordHint(
@@ -219,14 +213,7 @@ function playCrossword(
     case "tick":
     case "pause":
     case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
-
-    case "mark-synced":
-      return state.pendingSync ? { ...state, pendingSync: false } : state;
+      return timed(state, action);
   }
 }
 
@@ -251,12 +238,10 @@ function withEntry(
   const entries = state.entries.map((entry, at) =>
     at === index ? value : entry,
   );
-  const solved = isSolved(state.solution, entries);
   return {
     ...state,
     entries,
-    status: solved ? "solved" : "playing",
-    pendingSync: solved ? true : state.pendingSync,
+    status: isSolved(state.solution, entries) ? "solved" : "playing",
   };
 }
 
@@ -266,32 +251,15 @@ function restore(
   now: number,
 ): CrosswordPlayState {
   if (
-    !isCrosswordRecord(record) ||
+    record?.game !== "crossword" ||
     record.entries.length !== state.entries.length
   ) {
-    return { ...state, now, hydrated: true };
+    return hydratedAt(state, now);
   }
   return {
-    ...state,
+    ...restoredFrom(state, record, now),
     entries: record.entries,
     status: isSolved(state.solution, record.entries) ? "solved" : "playing",
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
     hint: idleHint(record.hintsUsed),
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
   };
-}
-
-function isCrosswordRecord(
-  record: PlayRecord | undefined,
-): record is CrosswordPlayRecord {
-  return record?.game === "crossword";
-}
-
-export function canHint(
-  state: CrosswordPlayState,
-  limit: number | null,
-): boolean {
-  return hasHintLeft(state.hint.used, limit) && state.status !== "solved";
 }

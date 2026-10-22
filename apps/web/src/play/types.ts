@@ -5,7 +5,6 @@ export interface PlayCore {
   readonly date: string;
   readonly timer: TimerState;
   readonly status: "playing" | "solved" | "lost";
-  readonly pendingSync: boolean;
 
   readonly now: number;
 

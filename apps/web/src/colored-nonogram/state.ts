@@ -23,6 +23,7 @@ import {
 } from "../play/binary-grid";
 import { pressedMark, type Press, type StrokeEffect } from "../play/brush";
 import { idleHint } from "../play/hint-state";
+import { freshCore } from "../play/play-core";
 import { NO_MISTAKES, type MistakeState } from "../play/mistakes";
 import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { nextColoredHint, type ColoredHintReason } from "./hint";
@@ -56,7 +57,7 @@ export function initColoredNonogramState({
 }: ColoredNonogramBoard): ColoredNonogramState {
   const { size } = clues;
   return {
-    date,
+    ...freshCore(date),
     size,
     clues,
     solution,
@@ -66,12 +67,7 @@ export function initColoredNonogramState({
     tone: 1,
     stroke: null,
     autoCrossed: NO_AUTO_CROSSES,
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };

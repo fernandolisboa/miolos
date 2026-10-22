@@ -140,7 +140,6 @@ describe("initSudokuPlayState", () => {
     });
     expect(state.violating).toEqual(new Set());
     expect(state.status).toBe("playing");
-    expect(state.pendingSync).toBe(false);
   });
 });
 
@@ -317,21 +316,6 @@ describe("status", () => {
     );
     expect(full.status).toBe("playing");
     expect(full.violating.size).toBeGreaterThan(0);
-  });
-
-  it("latches pendingSync on the transition, and only on the transition", () => {
-    const solved = solve(initial);
-
-    expect(solved.pendingSync).toBe(true);
-
-    const synced = sudokuPlayReducer(solved, { type: "mark-synced" });
-
-    expect(synced.pendingSync).toBe(false);
-
-    expect(
-      sudokuPlayReducer(synced, { type: "select", index: 0 }).pendingSync,
-    ).toBe(false);
-    expect(sudokuPlayReducer(synced, { type: "mark-synced" })).toBe(synced);
   });
 });
 
@@ -718,7 +702,7 @@ describe("restore", () => {
     expect(restored.timer.accumulatedMs).toBe(0);
   });
 
-  it("restores a concluded record as solved and still pending sync", () => {
+  it("restores a concluded record as solved", () => {
     const restored = sudokuPlayReducer(initial, {
       type: "restore",
       record: record({
@@ -732,6 +716,5 @@ describe("restore", () => {
     });
 
     expect(restored.status).toBe("solved");
-    expect(restored.pendingSync).toBe(true);
   });
 });

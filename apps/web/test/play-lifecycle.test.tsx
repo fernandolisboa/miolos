@@ -26,7 +26,6 @@ const INITIAL: ProbeState = {
   date: DATE,
   timer: { accumulatedMs: 0, runningSince: null },
   status: "playing",
-  pendingSync: false,
   now: 0,
   hydrated: false,
   entries: Array.from({ length: 64 }, () => null),

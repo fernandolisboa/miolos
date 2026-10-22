@@ -28,7 +28,7 @@ import {
   nonogramReducers,
   type NonogramPlayState,
 } from "../src/nonogram/state";
-import { hasHintLeft } from "../src/play/hint-allowance";
+import { hintAllowed } from "../src/play/hint-allowance";
 import { resetBoard, type ResetAction } from "../src/play/reset-board";
 import {
   initQueensPlayState,
@@ -351,7 +351,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       }
     });
 
-    it("keeps the hint spent, the clock and the sync flag, and drops the hinted cell", () => {
+    it("keeps the hint spent and the clock, and drops the hinted cell", () => {
       expect(after.hint).toEqual({
         ...played.hint,
         lastIndex: null,
@@ -360,7 +360,6 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       });
       expect(after.timer).toBe(played.timer);
       expect(after.now).toBe(played.now);
-      expect(after.pendingSync).toBe(played.pendingSync);
     });
 
     it("does not refund a hint: the count carries on, and a spent cap stays spent", () => {
@@ -372,7 +371,7 @@ function registerCase<S extends Parameters<typeof resetBoard>[0]>(
       const cleared = board.reduce(spent, RESET);
       expect(cleared.status).toBe("playing");
       expect(cleared.hint.used).toBe(FREE_HINTS_PER_PUZZLE);
-      expect(hasHintLeft(cleared.hint.used, FREE_HINTS_PER_PUZZLE)).toBe(false);
+      expect(hintAllowed(cleared, FREE_HINTS_PER_PUZZLE)).toBe(false);
     });
 
     it("returns the same object when no cell is decided and on a solved board", () => {

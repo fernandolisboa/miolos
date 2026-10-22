@@ -89,7 +89,6 @@ describe("initPlayState", () => {
     });
     expect(state.violating.size).toBe(0);
     expect(state.status).toBe("playing");
-    expect(state.pendingSync).toBe(false);
   });
 });
 
@@ -403,7 +402,6 @@ describe("completion detection (D12, T-WEB-13)", () => {
 
     expect(isSolvedGrid(mergedGrid(state))).toBe(true);
     expect(state.status).toBe("solved");
-    expect(state.pendingSync).toBe(true);
   });
 
   it("stays playing on a full but wrong grid", () => {
@@ -427,7 +425,6 @@ describe("completion detection (D12, T-WEB-13)", () => {
 
     expect(state.violating.size).toBe(0);
     expect(state.status).toBe("playing");
-    expect(state.pendingSync).toBe(false);
   });
 });
 
@@ -573,7 +570,6 @@ describe("restore (T-WEB-14b)", () => {
       reason: null,
       spotlight: [],
     });
-    expect(state.pendingSync).toBe(true);
     expect([...state.violating].toSorted()).toEqual([0, 1, 2]);
     expect(state.status).toBe("playing");
   });
@@ -598,7 +594,6 @@ describe("restore (T-WEB-14b)", () => {
 
     expect(state.status).toBe("solved");
     expect(state.timer.runningSince).toBeNull();
-    expect(state.pendingSync).toBe(true);
   });
 
   it("with no record flips hydration and nothing the player can see", () => {
@@ -613,7 +608,6 @@ describe("restore (T-WEB-14b)", () => {
     expect(state.entries).toEqual(initial.entries);
     expect(state.timer).toEqual(initial.timer);
     expect(state.hint).toEqual(initial.hint);
-    expect(state.pendingSync).toBe(false);
     expect(state.status).toBe("playing");
   });
 });
@@ -683,7 +677,6 @@ describe("the shared binary-grid reducer serves Binairo's givens, hint mark and 
       entries: restored.entries,
       elapsed: restored.timer.accumulatedMs,
       hintsUsed: restored.hint.used,
-      pendingSync: restored.pendingSync,
       hydrated: restored.hydrated,
       foreignEntries: foreign.entries,
       foreignHydrated: foreign.hydrated,
@@ -691,7 +684,6 @@ describe("the shared binary-grid reducer serves Binairo's givens, hint mark and 
       entries,
       elapsed: 4200,
       hintsUsed: 2,
-      pendingSync: true,
       hydrated: true,
       foreignEntries: start.entries,
       foreignHydrated: true,

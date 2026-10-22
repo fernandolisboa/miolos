@@ -24,6 +24,7 @@ import {
   type BinaryMark,
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
+import { freshCore } from "../play/play-core";
 import {
   NO_MISTAKES,
   SOLUTION_MISTAKES,
@@ -72,7 +73,7 @@ export function initQueensPlayState(
   daily: DailyQueensResponse,
 ): QueensPlayState {
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     size: daily.size,
     regions: daily.regions,
     solution: solveQueens({ size: daily.size, regions: daily.regions }),
@@ -80,12 +81,7 @@ export function initQueensPlayState(
     conflicts: new Set(),
     autoCrossed: new Map(),
     selected: null,
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };

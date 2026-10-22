@@ -278,7 +278,6 @@ describe("useNonogramPlay", () => {
     });
 
     expect(result.current.state.status).toBe("solved");
-    expect(result.current.state.pendingSync).toBe(false);
     expect(result.current.elapsed).toBe(133_000);
 
     expect(sync.flushPendingCompletions).not.toHaveBeenCalled();
