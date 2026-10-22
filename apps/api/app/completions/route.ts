@@ -27,20 +27,10 @@ import {
 } from "@miolos/db/user";
 import type { NextRequest } from "next/server";
 
-import {
-  corsHeaders,
-  isJsonContentType,
-  preflightResponse,
-} from "../../src/cors";
+import { corsHeaders, preflightResponse } from "../../src/cors";
 import { errorResponse } from "../../src/http/responses";
-import { getDb } from "../../src/db";
+import { writePreamble } from "../../src/http/write-preamble";
 import { isLateDate, isWritableDate } from "../../src/publishing/dates";
-import { SESSION_COOKIE_NAME } from "../../src/session/cookie";
-import {
-  isCrossSiteWrite,
-  warnIfGuardDegraded,
-} from "../../src/session/origin-guard";
-import { requireUserId } from "../../src/session/service";
 import { captureEvent, runAfterResponse } from "../../src/telemetry/capture";
 import { deriveStreakBroken } from "../../src/telemetry/streak-broken";
 import { judgeGuessList } from "../../src/termo/judge";
@@ -132,44 +122,11 @@ export function OPTIONS(): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  warnIfGuardDegraded();
-
-  if (
-    isCrossSiteWrite(
-      {
-        secFetchSite: request.headers.get("sec-fetch-site"),
-        origin: request.headers.get("origin"),
-      },
-      process.env.WEB_ORIGIN,
-    )
-  ) {
-    return errorResponse(403, "cross-site");
+  const context = await writePreamble(request, completionRequestSchema);
+  if (context.failure) {
+    return context.failure;
   }
-
-  if (!isJsonContentType(request.headers.get("content-type"))) {
-    return errorResponse(415, "unsupported-media-type");
-  }
-
-  const db = getDb();
-  const userId = await requireUserId(
-    db,
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (!userId) {
-    return errorResponse(401, "no-session");
-  }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return errorResponse(400, "invalid-body");
-  }
-  const parsed = completionRequestSchema.safeParse(raw);
-  if (!parsed.success) {
-    return errorResponse(400, "invalid-body");
-  }
-  const body = parsed.data;
+  const { db, userId, body } = context;
 
   const existing = await getCompletion(db, userId, body.game, body.date);
   if (existing) {
