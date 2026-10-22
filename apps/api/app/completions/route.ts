@@ -192,29 +192,36 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (written.recorded) {
     const counted = outcome === "won" && onTime;
     runAfterResponse(async () => {
-      const [, rows] = await Promise.all([
-        captureEvent({
-          distinctId: userId,
-          event: "puzzle_completed",
-          properties: {
-            game: body.game,
-            date: body.date,
-            elapsed_ms: body.elapsedMs,
-            outcome,
-            on_time: onTime,
-          },
-        }),
-        counted ? listCompletionsForStreak(db, userId) : Promise.resolve(null),
-      ]);
-      if (rows !== null) {
-        const broken = deriveStreakBroken(rows, body.date);
+      const completed = captureEvent({
+        db,
+        distinctId: userId,
+        event: "puzzle_completed",
+        properties: {
+          game: body.game,
+          date: body.date,
+          elapsed_ms: body.elapsedMs,
+          outcome,
+          on_time: onTime,
+        },
+      });
+      try {
+        if (!counted) {
+          return;
+        }
+        const broken = deriveStreakBroken(
+          await listCompletionsForStreak(db, userId),
+          body.date,
+        );
         if (broken !== null) {
           await captureEvent({
+            db,
             distinctId: userId,
             event: "streak_broken",
             properties: broken,
           });
         }
+      } finally {
+        await completed;
       }
     });
   }

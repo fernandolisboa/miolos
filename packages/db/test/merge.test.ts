@@ -1146,6 +1146,70 @@ describe("mergeAccounts — push subscriptions and the push prompt (#145, ADR-00
   });
 });
 
+describe("mergeAccounts — the measurements opt-out (#37, ADR-0148)", () => {
+  const EARLIER = new Date("2026-07-01T12:00:00.000Z");
+  const LATER = new Date("2026-07-15T12:00:00.000Z");
+
+  async function optedOutAt(userId: string): Promise<Date | null> {
+    const rows = await ctx.db
+      .select({ at: users.telemetryOptOutAt })
+      .from(users)
+      .where(eq(users.id, userId));
+    const row = rows[0];
+    if (!row) {
+      throw new Error(`no users row for ${userId}`);
+    }
+    return row.at;
+  }
+
+  async function optOut(userId: string, at: Date): Promise<void> {
+    await ctx.db
+      .update(users)
+      .set({ telemetryOptOutAt: at })
+      .where(eq(users.id, userId));
+  }
+
+  it("T-DB-S150: an opt-out on either side survives even when no other timestamp moves, both-stamped keeps the earliest, and two sending accounts stay sending", async () => {
+    for (const reversed of [false, true]) {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await optOut(loser, LATER);
+      const result = reversed
+        ? await mergeAccounts(ctx.db, loser, winner)
+        : await mergeAccounts(ctx.db, winner, loser);
+      expect(result).toEqual({ winnerId: winner, loserId: loser });
+      expect(await optedOutAt(winner)).toEqual(LATER);
+      await reset();
+    }
+
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await optOut(winner, EARLIER);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await optedOutAt(winner)).toEqual(EARLIER);
+      await reset();
+    }
+
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await optOut(winner, LATER);
+      await optOut(loser, EARLIER);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await optedOutAt(winner)).toEqual(EARLIER);
+      await reset();
+    }
+
+    {
+      const winner = await createUser(OLDER);
+      const loser = await createUser(NEWER);
+      await mergeAccounts(ctx.db, winner, loser);
+      expect(await optedOutAt(winner)).toBeNull();
+    }
+  });
+});
+
 describe("consent_events across a merge (ADR-0050 decision 8, ADR-0082)", () => {
   it("T-DB-S97: both accounts' events survive — the winner's stay on the winner, the loser's stay on the tombstone beside its consent timestamps, and a re-run changes nothing", async () => {
     const winner = await createUser(OLDER);

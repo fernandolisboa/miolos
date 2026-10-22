@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S206`    | `S204`         | never used            |
-| `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
-| `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S1008`   | `S1006`        | `T-WEB-23`            |
+| `T-CORE` | `S215`    | `S210`         | never used            |
+| `T-DB`   | `S160`    | `S150`         | `T-DB-21`             |
+| `T-API`  | `S380`    | `S363`         | `T-API-16`            |
+| `T-WEB`  | `S1040`   | `S1022`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#37's telemetry opt-out (ADR-0148) spent **`T-CORE-S210`** (`account-contract.test.ts`: the strict `{sending}` choice), **`T-DB-S150`** (`merge.test.ts`: an opt-out on either side survives a merge, earliest wins), **`T-API-S360…S363`** (`account-telemetry.test.ts`: `S360` the round trip and the kept first instant, `S361` the write preamble and the 401 read; `telemetry-capture.test.ts`: `S362` an opted-out or missing account sends nothing; `telemetry-push.test.ts`: `S363` the push seam end to end) and **`T-WEB-S1020…S1022`** (`ajustes-telemetry.test.tsx`: the client, the card, the policy line). The frontier jumps past **`T-CORE-S211…S214`**, **`T-DB-S151…S159`**, **`T-API-S364…S379`** and **`T-WEB-S1023…S1039`**, reserved for #317 (settings sync); a range #317 leaves unspent is burned.
 
 #415 (per-game time buckets, ADR-0146) spent **`T-CORE-S204`** in `packages/core/test/stats.test.ts` (the per-game table in minutes; each timed game's bounds are ascending whole minutes; `timeBucketIndex` is half-open at both ends; 150 000 ms is Sudoku 0, Rainhas 2, Campo Minado 1) and **`T-WEB-S1006`** in `stats-page.test.tsx` and `conclusion-stats.test.tsx` (Campo Minado and Sudoku render their own labels and spoken names on both histograms; Rainhas starts at "menos de 1 minuto"; 2:30 lights `2–3` on Campo Minado and `<4` on Sudoku). Re-aimed in place: `T-CORE-S65`, `S136`, `T-API-S85`, `T-WEB-S154` and `S157` (new bucket values); `T-LINT-S31` names `../stats/time-buckets`. `T-CORE-S205` and `T-WEB-S1007` are **burned**, unspent. Next free is `T-CORE-S206` and `T-WEB-S1008`.
 

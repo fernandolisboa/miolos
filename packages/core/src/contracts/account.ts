@@ -41,3 +41,8 @@ export const accountDetachEmailResponseSchema = z.strictObject({
 export type AccountDetachEmailResponse = z.infer<
   typeof accountDetachEmailResponseSchema
 >;
+
+export const telemetryChoiceSchema = z.strictObject({
+  sending: z.boolean(),
+});
+export type TelemetryChoice = z.infer<typeof telemetryChoiceSchema>;

@@ -218,6 +218,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const merged = resolved.merged;
   runAfterResponse(() =>
     captureEvent({
+      db,
       distinctId: winnerId,
       event: "login_linked",
       properties: { merged },
