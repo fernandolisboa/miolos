@@ -1,6 +1,6 @@
-export function safely<T>(run: () => T, fallback: T): T {
+export function safely<T>(read: () => T, fallback: T): T {
   try {
-    return run();
+    return read();
   } catch {
     return fallback;
   }

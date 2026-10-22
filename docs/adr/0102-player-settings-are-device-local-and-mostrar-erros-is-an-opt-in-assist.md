@@ -16,6 +16,7 @@
 **Amended by:** [ADR-0128](./0128-the-three-mistake-limit-is-a-local-opt-in-challenge.md) (#369) — decision 2 gains *Limite de 3 erros* (off), top-level, in the general group of every grid game's dialog and hidden where no game counts; decision 3: a counted mistake shows the wrong mark without *Mostrar erros*, and the held cell never does; the counted cells are kept in the local play record, never sent.
 **Amended by:** [ADR-0149](./0149-game-settings-follow-the-account-on-devices-that-opt-in.md) (#317) — decision 1: a device that turns on *Sincronizar com a conta* keeps the settings on the account too.
 **Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — decision 2 gains the Nonogram's *Marcar ✕ ao completar a linha*, a four-value choice (*Sempre*, *Sempre e mostrar o erro*, *Só se estiver certa*, *Desligado*), default *Sempre*; the consequence that every default leaves the boards as ADR-0037 and ADR-0032 describe no longer holds for the Nonogram, which now writes ✕ for the player by default.
+**Amended by:** [ADR-0150](./0150-free-play-campo-minado-keeps-a-best-time-per-level-and-offers-a-custom-size.md) (#425) — decision 1: free play writes a second device key, `miolos-minesweeper`, beside the settings.
 
 ## Context
 

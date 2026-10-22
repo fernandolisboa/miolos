@@ -1194,6 +1194,7 @@ describe("the daily Campo Minado is walled off free play, statically and dynamic
       "../minesweeper/finished-minefield",
       "../minesweeper/state",
       "../minesweeper/use-minesweeper",
+      "../minesweeper/free-messages",
     ]) {
       expect
         .soft(wallHits(await lintProbe(FREE_PATH, `import "${door}";\n`)), door)
