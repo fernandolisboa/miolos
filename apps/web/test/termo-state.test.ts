@@ -238,13 +238,6 @@ describe("the ordering contract (T-WEB-S82)", () => {
       expect(Object.keys(state)).not.toContain("outcome");
     }
   });
-
-  it("marks the completion pending exactly when the board closes", () => {
-    expect(hydrated().pendingSync).toBe(false);
-    for (const state of closedStates()) {
-      expect(state.pendingSync).toBe(true);
-    }
-  });
 });
 
 function closedStates(): readonly TermoPlayState[] {

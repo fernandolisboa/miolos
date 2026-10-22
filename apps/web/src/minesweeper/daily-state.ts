@@ -6,7 +6,7 @@ import {
   type MinesweeperPlayRecord,
   type PlayRecord,
 } from "../play/play-record";
-import { applyTimerAction } from "../play/timer";
+import { freshCore, hydratedAt, restoredFrom, timed } from "../play/play-core";
 import type { LifecycleAction, PlayCore } from "../play/types";
 import { entriesOf, gameOfRecord, startedGame } from "./daily-record";
 import { moveMinesweeper, type MinesweeperMove } from "./state";
@@ -21,13 +21,8 @@ export function initMinesweeperDaily(
   daily: DailyMinesweeperResponse,
 ): MinesweeperDailyState {
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     game: startedGame(daily),
-    timer: { accumulatedMs: 0, runningSince: null },
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
   };
 }
 
@@ -48,18 +43,10 @@ function restored(
   now: number,
 ): MinesweeperDailyState {
   if (record?.game !== "minesweeper") {
-    return { ...state, now, hydrated: true };
+    return hydratedAt(state, now);
   }
   const game = gameOfRecord(state.game, record);
-  return {
-    ...state,
-    game,
-    status: statusOf(game),
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
-  };
+  return { ...restoredFrom(state, record, now), game, status: statusOf(game) };
 }
 
 export function minesweeperDailyReducer(
@@ -72,23 +59,13 @@ export function minesweeperDailyReducer(
     case "tick":
     case "pause":
     case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
+      return timed(state, action);
     default: {
       const game = moveMinesweeper(state.game, action);
       if (game === state.game) {
         return state;
       }
-      const status = statusOf(game);
-      return {
-        ...state,
-        game,
-        status,
-        pendingSync: status === "playing" ? state.pendingSync : true,
-      };
+      return { ...state, game, status: statusOf(game) };
     }
   }
 }

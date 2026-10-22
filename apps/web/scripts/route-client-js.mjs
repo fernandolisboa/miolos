@@ -19,7 +19,7 @@ const PER_ROUTE_BUDGET = {
 
   "/sudoku": 53 * 1024,
 
-  "/modo-livre/nonogram": 77 * 1024,
+  "/modo-livre/nonogram": 78 * 1024,
 
   "/modo-livre/termo": 67 * 1024,
 

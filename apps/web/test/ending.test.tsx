@@ -42,7 +42,6 @@ const OPEN: PlayCore = {
   date: DATE,
   timer: { accumulatedMs: 5_000, runningSince: 8_000 },
   status: "playing",
-  pendingSync: false,
   now: 9_000,
   hydrated: true,
 };

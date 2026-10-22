@@ -14,6 +14,7 @@ import {
 import { messages } from "../i18n";
 import { BoardCard } from "../play/board-card";
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { hintAllowed } from "../play/hint-allowance";
 import { hintReadout } from "../play/hint-readout";
 import { usePlayReducer } from "../play/mistakes";
 import { countFilled } from "../play/progress";
@@ -22,7 +23,6 @@ import { mergedGrid, playableGivens } from "../sudoku/engine";
 import { sudokuHintExplanation } from "../sudoku/hint";
 import { Keypad, KeypadSkeleton } from "../sudoku/keypad";
 import {
-  canHint,
   initSudokuPlayState,
   sudokuMistakes,
   sudokuPlayReducer,
@@ -147,7 +147,7 @@ function SudokuFreeBoard({
 
   const { reason, units } = namedHint(state.hint.reason, puzzle.layout);
   const filled = countFilled(playableGivens(state.givens), state.entries);
-  const hintReady = canHint(state, allowance);
+  const hintReady = hintAllowed(state, allowance);
 
   const {
     cleanNotes,
@@ -162,7 +162,7 @@ function SudokuFreeBoard({
   } = useSudokuInput(state, dispatch);
 
   const revealHint = useCallback(() => {
-    if (!canHint(stateRef.current, allowance)) {
+    if (!hintAllowed(stateRef.current, allowance)) {
       return;
     }
     dispatch({ type: "use-hint", solution: puzzle.solution, cleanNotes });

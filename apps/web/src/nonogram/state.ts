@@ -13,6 +13,7 @@ import {
   type BinaryMark,
 } from "../play/binary-grid";
 import { idleHint } from "../play/hint-state";
+import { freshCore } from "../play/play-core";
 import { NO_MISTAKES, type MistakeState } from "../play/mistakes";
 import { NO_HISTORY, undoable, type UndoHistory } from "../play/undo";
 import { cellStateOf, solutionMarks } from "./engine";
@@ -52,7 +53,7 @@ export function initNonogramPlayState(
 ): NonogramPlayState {
   const size = daily.size;
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     size,
     clues: daily.clues,
     solution: solutionMarks(daily.clues),
@@ -61,12 +62,7 @@ export function initNonogramPlayState(
     brush: "fill",
     stroke: null,
     autoCrossed: NO_AUTO_CROSSES,
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };

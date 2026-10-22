@@ -109,7 +109,6 @@ describe("the daily Campo Minado plays the published field from its open start (
     const lost = open(start, mine);
 
     expect(lost.status).toBe("lost");
-    expect(lost.pendingSync).toBe(true);
     expect(lost.game.hit).toBe(mine);
     const record = minesweeperPlayRecordSchema.parse(
       buildMinesweeperRecord(lost, 5_000, true),
@@ -123,7 +122,6 @@ describe("the daily Campo Minado plays the published field from its open start (
     const won = winning();
 
     expect(won.status).toBe("solved");
-    expect(won.pendingSync).toBe(true);
     expect(
       minesweeperPlayRecordSchema.parse(
         buildMinesweeperRecord(won, 5_000, true),

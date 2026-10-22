@@ -499,7 +499,6 @@ describe("the shared record header (T-WEB-S485)", () => {
     date: "2026-07-30",
     timer: { accumulatedMs: 4_000, runningSince: 10_000 },
     status: "playing",
-    pendingSync: false,
     now: 12_500,
     hydrated: true,
   };

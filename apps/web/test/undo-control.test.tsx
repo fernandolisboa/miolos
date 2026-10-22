@@ -46,7 +46,6 @@ function board(overrides: Partial<Editable> = {}): Editable {
     date: DATE,
     timer: { accumulatedMs: 0, runningSince: null },
     status: "playing",
-    pendingSync: false,
     now: 0,
     hydrated: true,
     entries: [null, null],

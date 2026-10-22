@@ -1,3 +1,12 @@
-export function hasHintLeft(used: number, allowance: number | null): boolean {
-  return allowance !== null && used < allowance;
+import type { PlayCore } from "./types";
+
+export function hintAllowed(
+  state: Pick<PlayCore, "status"> & {
+    readonly hint: { readonly used: number };
+  },
+  limit: number | null,
+): boolean {
+  return (
+    limit !== null && state.hint.used < limit && state.status === "playing"
+  );
 }

@@ -2,6 +2,7 @@ import type { DailySudokuResponse } from "@miolos/core";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useFreeHintsPerPuzzle } from "../play/free-hints";
+import { hintAllowed } from "../play/hint-allowance";
 import { mistakeRecord, usePlayReducer } from "../play/mistakes";
 import { recordHeader, type SudokuPlayRecord } from "../play/play-record";
 import { countFilled } from "../play/progress";
@@ -15,7 +16,6 @@ import {
   solvedDigits,
 } from "./engine";
 import {
-  canHint,
   initSudokuPlayState,
   sudokuMistakes,
   sudokuPlayReducer,
@@ -101,7 +101,7 @@ export function useSudokuPlay(
   } = useSudokuInput(state, dispatch);
 
   const revealHint = useCallback(() => {
-    if (solution !== null && canHint(stateRef.current, allowance)) {
+    if (solution !== null && hintAllowed(stateRef.current, allowance)) {
       dispatch({ type: "use-hint", solution, cleanNotes });
     }
   }, [dispatch, solution, allowance, cleanNotes]);
@@ -111,7 +111,7 @@ export function useSudokuPlay(
     solution,
     elapsed,
     filled,
-    hintReady: solution !== null && canHint(state, allowance),
+    hintReady: solution !== null && hintAllowed(state, allowance),
     selectCell,
     moveSelection,
     enterDigit,

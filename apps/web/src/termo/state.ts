@@ -6,8 +6,8 @@ import {
 } from "@miolos/games/termo";
 
 import { messages } from "../i18n";
-import type { PlayRecord, TermoPlayRecord } from "../play/play-record";
-import { applyTimerAction } from "../play/timer";
+import { freshCore, hydratedAt, restoredFrom, timed } from "../play/play-core";
+import type { PlayRecord } from "../play/play-record";
 import { typedLetter } from "../play/typed-letter";
 import type { TermoJudgedRow, TermoPlayAction, TermoPlayState } from "./types";
 
@@ -20,7 +20,7 @@ export const EMPTY_DRAFT: readonly string[] = Array.from(
 
 export function initTermoPlayState(date: string): TermoPlayState {
   return {
-    date,
+    ...freshCore(date),
     guesses: [],
     draft: EMPTY_DRAFT,
     cursor: 0,
@@ -30,11 +30,6 @@ export function initTermoPlayState(date: string): TermoPlayState {
     held: false,
     announcement: "",
     answer: undefined,
-    timer: { accumulatedMs: 0, runningSince: null },
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     gone: false,
   };
 }
@@ -50,11 +45,7 @@ export function termoPlayReducer(
     case "tick":
     case "pause":
     case "resume":
-      return {
-        ...state,
-        timer: applyTimerAction(state.timer, action),
-        now: action.now,
-      };
+      return timed(state, action);
 
     case "type":
     case "erase":
@@ -148,7 +139,6 @@ export function termoPlayReducer(
         status,
         pending: null,
         held: false,
-        pendingSync: status === "playing" ? state.pendingSync : true,
         announcement: copy.rowAria(
           guesses.length,
           MAX_GUESSES,
@@ -264,27 +254,17 @@ function restore(
   record: PlayRecord | undefined,
   now: number,
 ): TermoPlayState {
-  if (!isTermoRecord(record)) {
-    return { ...state, now, hydrated: true };
+  if (record?.game !== "termo") {
+    return hydratedAt(state, now);
   }
   const derived = deriveBoardStatus(record.guesses.map((row) => row.tiles));
   if ((record.outcome ?? "playing") !== derived) {
-    return { ...state, now, hydrated: true };
+    return hydratedAt(state, now);
   }
   return {
-    ...state,
+    ...restoredFrom(state, record, now),
     guesses: record.guesses,
     answer: record.answer,
     status: playStatus(derived),
-    timer: { accumulatedMs: record.elapsedMs, runningSince: null },
-    pendingSync: record.pendingSync,
-    now,
-    hydrated: true,
   };
-}
-
-function isTermoRecord(
-  record: PlayRecord | undefined,
-): record is TermoPlayRecord {
-  return record?.game === "termo";
 }

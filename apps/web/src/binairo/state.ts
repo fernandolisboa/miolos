@@ -27,6 +27,7 @@ import {
   type StrokeEffect,
 } from "../play/brush";
 import { idleHint, unlit } from "../play/hint-state";
+import { freshCore } from "../play/play-core";
 import {
   caretPress,
   NO_MISTAKES,
@@ -85,7 +86,7 @@ export function initPlayState(
   const givens: BinairoGrid = daily.givens;
   const entries = givens.map(() => null);
   return {
-    date: daily.date,
+    ...freshCore(daily.date),
     size: BINAIRO_SIZE,
     solution,
     givens,
@@ -93,13 +94,8 @@ export function initPlayState(
     paint: { kind: "cycle" },
     stroke: null,
     selected: null,
-    timer: { accumulatedMs: 0, runningSince: null },
     hint: idleHint(0),
     violating: violationsOf(givens, entries),
-    status: "playing",
-    pendingSync: false,
-    now: 0,
-    hydrated: false,
     history: NO_HISTORY,
     mistakes: NO_MISTAKES,
   };
