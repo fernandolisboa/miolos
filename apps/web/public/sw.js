@@ -8,6 +8,7 @@ const FALLBACK_BODY =
 
 const CACHE_PREFIX = "miolos-livre-";
 const FREE_PLAY = new URL("/modo-livre", self.location.origin).href;
+const OFFLINE_LANDING = `${FREE_PLAY}?sem-conexao`;
 const COMPLETE = new URL("/sw-cache-complete", self.location.origin).href;
 const ASSET_PREFIX = "/_next/static/";
 
@@ -42,10 +43,11 @@ async function completeCache() {
   return undefined;
 }
 
+// Turbopack names lazily imported chunks as bare "static/…/chunks/…" strings.
 function assetRefs(text, base) {
   const refs = [
-    ...[...text.matchAll(/\/_next\/static\/[\w\-.~%/]+/g)].map((m) => m[0]),
-    ...[...text.matchAll(/(?<![\w/])static\/(?:chunks|media)\/[\w\-.~]+/g)].map(
+    ...[...text.matchAll(/\/_next\/static\/[\w\-.~/]+/g)].map((m) => m[0]),
+    ...[...text.matchAll(/(?<![\w/])static\/[\w\-.~/]+/g)].map(
       (m) => `/_next/${m[0]}`,
     ),
     ...[...text.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)].map(
@@ -62,55 +64,63 @@ function assetRefs(text, base) {
     .map((url) => url.origin + url.pathname);
 }
 
-async function storedPage(cache, url) {
-  const response = await fetch(url);
+async function fetchAndStorePage(cache, page) {
+  const response = await fetch(page);
   if (!storable(response)) {
-    throw new Error(`free-play page not storable: ${url}`);
+    throw new Error(`free-play page not storable: ${page}`);
   }
   const html = await response.clone().text();
-  await cache.put(url, response);
+  await cache.put(page, response);
   return html;
+}
+
+async function crawl(cache) {
+  const indexHtml = await fetchAndStorePage(cache, FREE_PLAY);
+  const pages = new Set(
+    [...indexHtml.matchAll(/href="(\/modo-livre\/[^"/?#]+)"/g)]
+      .map((m) => new URL(m[1], self.location.origin))
+      .filter((url) => isFreePlayPath(url.pathname))
+      .map((url) => url.href),
+  );
+  const pending = assetRefs(indexHtml, FREE_PLAY);
+  for (const page of pages) {
+    pending.push(...assetRefs(await fetchAndStorePage(cache, page), page));
+  }
+  const seen = new Set();
+  while (pending.length > 0) {
+    const url = pending.pop();
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const response = (await caches.match(url)) || (await fetch(url));
+    if (!storable(response)) continue;
+    if (/\.(?:js|css)$/.test(url)) {
+      pending.push(...assetRefs(await response.clone().text(), url));
+    }
+    await cache.put(url, response);
+  }
+  await cache.put(COMPLETE, new Response(""));
+}
+
+async function dropCachesExcept(keep) {
+  for (const name of await caches.keys()) {
+    if (name.startsWith(CACHE_PREFIX) && name !== keep) {
+      await caches.delete(name);
+    }
+  }
 }
 
 async function fill() {
   if (self.navigator.connection && self.navigator.connection.saveData) {
     return;
   }
-  const name = CACHE_PREFIX + String(Date.now());
-  const cache = await caches.open(name);
+  const name = `${CACHE_PREFIX}${Date.now()}`;
   try {
-    const indexHtml = await storedPage(cache, FREE_PLAY);
-    const pages = new Set(
-      [...indexHtml.matchAll(/href="(\/modo-livre\/[^"/?#]+)"/g)].map(
-        (m) => new URL(m[1], self.location.origin).href,
-      ),
-    );
-    const pending = assetRefs(indexHtml, FREE_PLAY);
-    for (const page of pages) {
-      pending.push(...assetRefs(await storedPage(cache, page), page));
-    }
-    const seen = new Set();
-    while (pending.length > 0) {
-      const url = pending.pop();
-      if (seen.has(url)) continue;
-      seen.add(url);
-      const response = (await caches.match(url)) || (await fetch(url));
-      if (!storable(response)) continue;
-      if (/\.(?:js|css)$/.test(url)) {
-        pending.push(...assetRefs(await response.clone().text(), url));
-      }
-      await cache.put(url, response);
-    }
-    await cache.put(COMPLETE, new Response(""));
+    await crawl(await caches.open(name));
   } catch (error) {
     await caches.delete(name);
     throw error;
   }
-  for (const other of await caches.keys()) {
-    if (other.startsWith(CACHE_PREFIX) && other !== name) {
-      await caches.delete(other);
-    }
-  }
+  await dropCachesExcept(name);
 }
 
 let warming;
@@ -122,43 +132,52 @@ function warm() {
   return warming;
 }
 
-async function refreshIfChanged(url, response) {
+async function refresh(url, page) {
   const cache = await completeCache();
-  const stored = cache && (await cache.match(url));
-  if (stored && (await stored.text()) === (await response.text())) {
-    return;
-  }
+  if (cache && !page) return;
+  const stored = cache && (await cache.match(url.origin + url.pathname));
+  if (stored && (await stored.text()) === (await page.text())) return;
   await warm();
 }
 
+async function offlineAnswer(url) {
+  const cache = await completeCache();
+  if (!cache) return undefined;
+  const stored =
+    isFreePlayPath(url.pathname) &&
+    (await cache.match(url.origin + url.pathname));
+  if (stored) return stored;
+  if (await cache.match(FREE_PLAY)) {
+    return Response.redirect(OFFLINE_LANDING, 302);
+  }
+  return undefined;
+}
+
 async function navigate(event, url) {
-  const page = url.origin + url.pathname;
+  let response;
   try {
-    const response =
-      (await event.preloadResponse) || (await fetch(event.request));
-    if (isFreePlayPath(url.pathname) && storable(response)) {
-      event.waitUntil(
-        refreshIfChanged(page, response.clone()).catch(() => undefined),
-      );
-    }
-    return response;
+    response = (await event.preloadResponse) || (await fetch(event.request));
   } catch (error) {
-    const cache = await completeCache();
-    const stored =
-      cache && isFreePlayPath(url.pathname) && (await cache.match(page));
-    if (stored) {
-      return stored;
-    }
-    if (cache && (await cache.match(FREE_PLAY))) {
-      return Response.redirect(FREE_PLAY, 302);
-    }
+    const answer = await offlineAnswer(url);
+    if (answer) return answer;
     throw error;
   }
+  if (response.ok) {
+    const page =
+      isFreePlayPath(url.pathname) && storable(response)
+        ? response.clone()
+        : undefined;
+    event.waitUntil(refresh(url, page).catch(() => undefined));
+  }
+  return response;
 }
 
 async function asset(request) {
   const cache = await completeCache();
-  return (cache && (await cache.match(request))) || fetch(request);
+  return (
+    (cache && (await cache.match(request, { ignoreSearch: true }))) ||
+    fetch(request)
+  );
 }
 
 self.addEventListener("install", (event) => {
@@ -185,8 +204,6 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  // The payload is `pushNudgePayloadSchema`; a missing or malformed one still
-  // notifies, with the pt-BR fallbacks.
   let title = FALLBACK_TITLE;
   let body = FALLBACK_BODY;
   try {

@@ -87,7 +87,7 @@ describe("the web app manifest (T-WEB-S130)", () => {
   });
 });
 
-describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)", () => {
+describe("the install metadata and the service-worker registration tripwire (T-WEB-S131)", () => {
   it("exports the themeColor viewport as a light/dark pair, both tied to --paper-desk — the manifest's static theme_color stays light-only, but the viewport now follows the system", () => {
     const themeColor = viewport.themeColor;
     expect(Array.isArray(themeColor)).toBe(true);

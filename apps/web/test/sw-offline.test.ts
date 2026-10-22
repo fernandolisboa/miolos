@@ -6,7 +6,7 @@ import { createContext, runInContext } from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { registerServiceWorkerScript } from "../src/offline/register-script";
+import { OFFLINE_LANDING_PARAM } from "../src/free-play/offline-note";
 
 const ORIGIN = "https://miolos.test";
 const swSource = readFileSync(
@@ -31,8 +31,10 @@ const keyOf = (input: string | { url: string }) =>
 
 class FakeCache {
   readonly entries = new Map<string, Response>();
-  match(input: string | { url: string }) {
-    return Promise.resolve(this.entries.get(keyOf(input))?.clone());
+  match(input: string | { url: string }, options?: { ignoreSearch?: boolean }) {
+    const key = new URL(keyOf(input));
+    if (options?.ignoreSearch) key.search = "";
+    return Promise.resolve(this.entries.get(key.href)?.clone());
   }
   put(input: string | { url: string }, response: Response) {
     this.entries.set(keyOf(input), response);
@@ -66,6 +68,7 @@ type Site = Record<string, () => Response>;
 
 const INDEX = `<html><head><script src="/_next/static/chunks/a.js"></script></head><body>
 <a href="/">Miolos</a><a href="/termo">Termo do dia</a><a href="/arquivo">Arquivo</a>
+<a href="/modo-livre/..">Up</a><a href="/modo-livre/%2e%2e">Up</a>
 <a href="/modo-livre/termo">Termo</a><a href="/modo-livre/sudoku">Sudoku</a></body></html>`;
 
 function site(overrides: Site = {}): Site {
@@ -79,8 +82,10 @@ function site(overrides: Site = {}): Site {
       served(`<script src="/_next/static/chunks/a.js"></script>`),
     "/_next/static/chunks/a.js": () => served("console.log(1)"),
     "/_next/static/chunks/b.js": () =>
-      served(`load(["static/chunks/lazy.js","static/chunks/lazy.css"])`),
-    "/_next/static/chunks/lazy.js": () => served("lazy()"),
+      served(
+        `load(["static/immutable/chunks/lazy.js","static/chunks/lazy.css"])`,
+      ),
+    "/_next/static/immutable/chunks/lazy.js": () => served("lazy()"),
     "/_next/static/chunks/lazy.css": () => served(".x{}"),
     "/_next/static/chunks/s.css": () =>
       served(
@@ -185,7 +190,7 @@ const STORED_SHAPE =
   /^(?:\/modo-livre(?:\/[^/]+)?|\/_next\/static\/.+|\/sw-cache-complete)$/;
 
 describe("install warms every free-play page and the assets it reaches (T-WEB-S1060)", () => {
-  it("follows the index's free-play links, HTML refs, chunk strings in JS and CSS url(), and nothing else", async () => {
+  it("follows the index's free-play links, HTML refs, chunk strings in JS and CSS url(), and nothing else, not even a /modo-livre/.. link", async () => {
     const sw = worker();
     await sw.dispatch("install").settled();
 
@@ -194,8 +199,8 @@ describe("install warms every free-play page and the assets it reaches (T-WEB-S1
         "/_next/static/chunks/a.js",
         "/_next/static/chunks/b.js",
         "/_next/static/chunks/lazy.css",
-        "/_next/static/chunks/lazy.js",
         "/_next/static/chunks/s.css",
+        "/_next/static/immutable/chunks/lazy.js",
         "/_next/static/media/f.woff2",
         "/modo-livre",
         "/modo-livre/sudoku",
@@ -244,13 +249,15 @@ describe("offline, free play answers from the cache and other pages fall back to
     expect(await response?.text()).toContain("s.css");
   });
 
-  it("redirects a daily, the hub or an unstored free-play path to /modo-livre", async () => {
+  it("redirects a daily, the hub or an unstored free-play path to /modo-livre with the offline flag the note reads", async () => {
     const sw = await installed();
     sw.network.online = false;
     for (const path of ["/termo", "/", "/modo-livre/rainhas"]) {
       const response = await sw.request(path).settled();
       expect(response?.status).toBe(302);
-      expect(response?.headers.get("Location")).toBe(`${ORIGIN}/modo-livre`);
+      expect(response?.headers.get("Location")).toBe(
+        `${ORIGIN}/modo-livre?${OFFLINE_LANDING_PARAM}`,
+      );
     }
   });
 
@@ -321,6 +328,23 @@ describe("a changed free-play page re-warms into a fresh cache (T-WEB-S1063)", (
   });
 });
 
+describe("a navigation anywhere retries a warm while no complete cache exists (T-WEB-S1068)", () => {
+  it("warms on a daily navigation after the install warm failed, and not once a cache is complete", async () => {
+    const sw = worker();
+    sw.network.online = false;
+    await sw.dispatch("install").settled();
+    expect(sw.storedKeys()).toEqual([]);
+
+    sw.network.online = true;
+    await sw.request("/termo").settled();
+    expect(sw.storedKeys()).toContain("/sw-cache-complete");
+
+    sw.network.log.length = 0;
+    await sw.request("/termo").settled();
+    expect(sw.network.log).toEqual(["/termo"]);
+  });
+});
+
 describe("a warm that fails never replaces a complete cache (T-WEB-S1064)", () => {
   it("drops its partial cache on a network error and keeps serving the old one", async () => {
     const sw = await installed();
@@ -365,13 +389,13 @@ describe("a warm that fails never replaces a complete cache (T-WEB-S1064)", () =
 
     const assetSkipped = worker(
       site({
-        "/_next/static/chunks/lazy.js": () =>
+        "/_next/static/immutable/chunks/lazy.js": () =>
           served("lazy()", { headers: { "Cache-Control": "private" } }),
       }),
     );
     await assetSkipped.dispatch("install").settled();
     expect(assetSkipped.storedKeys()).not.toContain(
-      "/_next/static/chunks/lazy.js",
+      "/_next/static/immutable/chunks/lazy.js",
     );
     expect(assetSkipped.storedKeys()).toContain("/sw-cache-complete");
   });
@@ -385,6 +409,10 @@ describe("build assets are cache first and never stored on a miss (T-WEB-S1065)"
       .request("/_next/static/chunks/a.js", { mode: "no-cors" })
       .settled();
     expect(await hit?.text()).toBe("console.log(1)");
+    const deployTagged = await sw
+      .request("/_next/static/chunks/a.js?dpl=abc", { mode: "no-cors" })
+      .settled();
+    expect(await deployTagged?.text()).toBe("console.log(1)");
 
     sw.network.online = true;
     sw.network.routes = site({
@@ -394,39 +422,5 @@ describe("build assets are cache first and never stored on a miss (T-WEB-S1065)"
       .request("/_next/static/chunks/z.js", { mode: "no-cors" })
       .settled();
     expect(sw.storedKeys()).not.toContain("/_next/static/chunks/z.js");
-  });
-});
-
-describe("the layout registers the worker in production only, on load (T-WEB-S1066)", () => {
-  it("guards the inline script on NODE_ENV and registers /sw.js after load", () => {
-    const layout = readFileSync(
-      join(import.meta.dirname, "..", "app", "layout.tsx"),
-      "utf8",
-    );
-    expect(layout).toMatch(
-      /process\.env\.NODE_ENV === "production" &&[\s\S]*registerServiceWorkerScript/,
-    );
-
-    const register = vi.fn(() => Promise.resolve());
-    const onLoad: (() => void)[] = [];
-    const run = (navigator: object) => {
-      runInContext(
-        registerServiceWorkerScript,
-        createContext({
-          navigator,
-          addEventListener: (type: string, listener: () => void) => {
-            if (type === "load") onLoad.push(listener);
-          },
-        }),
-      );
-    };
-
-    run({});
-    expect(onLoad).toEqual([]);
-
-    run({ serviceWorker: { register } });
-    expect(register).not.toHaveBeenCalled();
-    onLoad.forEach((listener) => listener());
-    expect(register).toHaveBeenCalledWith("/sw.js");
   });
 });

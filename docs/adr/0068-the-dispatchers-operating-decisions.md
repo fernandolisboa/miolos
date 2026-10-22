@@ -109,6 +109,9 @@ in the candidate SQL).
    the table honest meanwhile. Recorded as annotation (b) on ADR-0064
    decision 10 and as a comment on #36 — an action filed, not an
    observation.
+   *Annotation (#426, ADR-0151):* the worker now fetches and caches free
+   play, so the "no third capability" premise is gone; the call stands on
+   ADR-0081's reminder switch.
 
 **A deliberate duplication, noted with its reason:** the candidate SQL
 encodes "a day counts iff a won ∧ on-time row exists" as a **prefilter** —
