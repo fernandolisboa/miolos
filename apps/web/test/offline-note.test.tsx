@@ -1,6 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import FreePlayIndexPage from "../app/modo-livre/page";
 import {
   OFFLINE_LANDING_PARAM,
   OfflineNote,
@@ -35,15 +36,21 @@ describe("the free-play index says the daily needs a connection while offline (T
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("shows the note on the worker's offline landing even while the browser reports online", () => {
+  it("shows the note on the worker's offline landing while the browser reports online, until the connection returns", () => {
     window.history.replaceState(
       null,
       "",
       `/modo-livre?${OFFLINE_LANDING_PARAM}`,
     );
-    render(<OfflineNote />);
+    render(<FreePlayIndexPage />);
     expect(screen.getByRole("status")).toHaveTextContent(
       messages.freePlay.offline,
     );
+
+    act(() => {
+      goOffline(false);
+    });
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(window.location.search).toBe("");
   });
 });

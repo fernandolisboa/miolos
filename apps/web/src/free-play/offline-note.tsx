@@ -7,11 +7,22 @@ import styles from "./offline-note.module.css";
 
 export const OFFLINE_LANDING_PARAM = "sem-conexao";
 
+function forgetLanding(): void {
+  const url = new URL(location.href);
+  if (!url.searchParams.has(OFFLINE_LANDING_PARAM)) return;
+  url.searchParams.delete(OFFLINE_LANDING_PARAM);
+  history.replaceState(history.state, "", url);
+}
+
 function subscribe(onChange: () => void): () => void {
-  window.addEventListener("online", onChange);
+  const online = () => {
+    forgetLanding();
+    onChange();
+  };
+  window.addEventListener("online", online);
   window.addEventListener("offline", onChange);
   return () => {
-    window.removeEventListener("online", onChange);
+    window.removeEventListener("online", online);
     window.removeEventListener("offline", onChange);
   };
 }
