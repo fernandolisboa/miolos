@@ -226,6 +226,9 @@ imply a rule the archive breaks.)*
   is caching-free by decision ([ADR-0064](./0064-streak-at-risk-is-a-derived-decision.md)
   decision 5: no fetch handler, ever), so this rejection stands on its own
   terms; only its "not built yet" reason is retired.
+  *Annotation (#426, ADR-0151):* the worker now caches, but only free-play
+  pages and build assets; daily routes are still never stored, so this
+  rejection still stands.
 - **English segments (`/binairo/completed`).** Consistent with the code
   language rule, and ADR-0013 already decided against it for the only
   audience v1 has.
