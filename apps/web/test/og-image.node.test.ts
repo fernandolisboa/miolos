@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { GAMES, type Game } from "@miolos/core";
 import { ImageResponse } from "next/og";
@@ -17,6 +17,7 @@ import {
 } from "../src/i18n";
 import { ogCopy } from "../src/og/copy";
 import { FONTS } from "../src/og/fonts";
+import { closureFilesOf } from "./module-graph";
 
 const FONT_DIR = join(import.meta.dirname, "../assets/fonts");
 
@@ -463,36 +464,6 @@ function code(source: string): string {
     .replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
-function moduleGraph(entry: string): string[] {
-  const seen = new Set<string>();
-  const queue = [entry];
-  while (queue.length > 0) {
-    const current = queue.pop();
-    if (current === undefined || seen.has(current)) {
-      continue;
-    }
-    seen.add(current);
-    for (const match of readFileSync(current, "utf8").matchAll(
-      /(?:from|import)\s*\(?\s*"(\.[^"]*)"/g,
-    )) {
-      const base = join(dirname(current), match[1] ?? "");
-      for (const candidate of [
-        base,
-        `${base}.ts`,
-        `${base}.tsx`,
-        join(base, "index.ts"),
-        join(base, "index.tsx"),
-      ]) {
-        if (existsSync(candidate) && statSync(candidate).isFile()) {
-          queue.push(candidate);
-          break;
-        }
-      }
-    }
-  }
-  return [...seen];
-}
-
 const CARD_SOURCE = join(import.meta.dirname, "..", "src", "og", "card.tsx");
 
 describe("the OG route family, as files (T-WEB-S204)", () => {
@@ -505,7 +476,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
     join(appDir, "arquivo", "[data]", routeSlugs[game], "opengraph-image.tsx");
 
   it("the ROOT site card reaches no database, transitively", () => {
-    const graph = moduleGraph(cardSource);
+    const graph = closureFilesOf(cardSource);
     for (const path of graph) {
       const source = code(readFileSync(path, "utf8"));
       expect.soft(source, path).not.toContain("@miolos/db");
@@ -515,7 +486,7 @@ describe("the OG route family, as files (T-WEB-S204)", () => {
 
     for (const game of GAMES) {
       for (const entry of [dailyCardFile(game), archiveCardFile(game)]) {
-        const reachesTheWall = moduleGraph(entry).filter((path) =>
+        const reachesTheWall = closureFilesOf(entry).filter((path) =>
           code(readFileSync(path, "utf8")).includes("@miolos/db"),
         );
         expect.soft(reachesTheWall, entry).not.toEqual([]);
@@ -841,7 +812,7 @@ describe("the archive cards' trace shape cannot be simplified back (T-WEB-S336)"
 
   it("both card handlers reach the wall and NOTHING from the play surface", () => {
     for (const entry of [DAY_CARD_ROUTE, MONTH_CARD_ROUTE]) {
-      const graph = moduleGraph(entry);
+      const graph = closureFilesOf(entry);
 
       const reachesTheWall = graph.filter((path) =>
         code(readFileSync(path, "utf8")).includes("@miolos/db"),
@@ -866,11 +837,11 @@ describe("the archive cards' trace shape cannot be simplified back (T-WEB-S336)"
   });
 
   it("the archive card BUILDER's own graph reaches no reader at all", () => {
-    for (const path of moduleGraph(CARD_SOURCE)) {
+    for (const path of closureFilesOf(CARD_SOURCE)) {
       const source = code(readFileSync(path, "utf8"));
       expect.soft(source, path).not.toContain("@miolos/db");
       expect.soft(source, path).not.toContain("getDb");
     }
-    expect(moduleGraph(CARD_SOURCE).length).toBeGreaterThanOrEqual(3);
+    expect(closureFilesOf(CARD_SOURCE).length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -6,7 +6,7 @@ import { expect } from "vitest";
 import { withoutComments } from "./ts-source";
 
 const WEB_ROOT = join(import.meta.dirname, "..");
-const REPO_ROOT = join(WEB_ROOT, "..", "..");
+export const REPO_ROOT = join(WEB_ROOT, "..", "..");
 
 function workspaceBase(specifier: string): string | null {
   if (!specifier.startsWith("@miolos/")) {
@@ -93,11 +93,17 @@ export function closureOf(entry: string): ReadonlySet<string> {
   return walk(entry, specifiersOf);
 }
 
+export function closureFilesOf(file: string): readonly string[] {
+  return [...closureOf(relative(REPO_ROOT, file).replaceAll("\\", "/"))].map(
+    (module) => join(REPO_ROOT, module),
+  );
+}
+
 export function valueClosureOf(entry: string): ReadonlySet<string> {
   return walk(entry, valueSpecifiersOf);
 }
 
-function routeEntries(): readonly string[] {
+export function routeEntries(): readonly string[] {
   const found: string[] = [];
   for (const entry of readdirSync(join(WEB_ROOT, "app"), {
     recursive: true,
