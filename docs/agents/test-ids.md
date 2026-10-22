@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S215`    | `S210`         | never used            |
 | `T-DB`   | `S160`    | `S150`         | `T-DB-21`             |
 | `T-API`  | `S380`    | `S363`         | `T-API-16`            |
-| `T-WEB`  | `S1040`   | `S1022`        | `T-WEB-23`            |
+| `T-WEB`  | `S1070`   | `S1068`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#426 (free play offline, ADR-0151) reserved **`T-WEB-S1060…S1069`**. It spent **`S1060…S1065`** and **`S1068`** in `sw-offline.test.ts` (the real `public/sw.js` run in `node:vm`), **`S1066`** in `sw-registration.test.tsx` and **`S1067`** in `offline-note.test.tsx`; `S1069` is **burned**. Re-aimed in place under the `T-WEB-S96` rule, with ADR-0151 as their record: `T-WEB-S261` (from "caching-free" to the worker's five handlers) and `T-WEB-S131` (the registration tripwire now names the push module and the layout script).
 
 #37's telemetry opt-out (ADR-0148) spent **`T-CORE-S210`** (`account-contract.test.ts`: the strict `{sending}` choice), **`T-DB-S150`** (`merge.test.ts`: an opt-out on either side survives a merge, earliest wins), **`T-API-S360…S363`** (`account-telemetry.test.ts`: `S360` the round trip and the kept first instant, `S361` the write preamble and the 401 read; `telemetry-capture.test.ts`: `S362` an opted-out or missing account sends nothing; `telemetry-push.test.ts`: `S363` the push seam end to end) and **`T-WEB-S1020…S1022`** (`ajustes-telemetry.test.tsx`: the client, the card, the policy line). The frontier jumps past **`T-CORE-S211…S214`**, **`T-DB-S151…S159`**, **`T-API-S364…S379`** and **`T-WEB-S1023…S1039`**, reserved for #317 (settings sync); a range #317 leaves unspent is burned. The gaps below #37's ids (`T-CORE-S206…S209`, `T-DB-S146…S149`, `T-API-S342…S359`, `T-WEB-S1008…S1019`) are left to the parallel branches opened the same evening (Termo, Campo Minado free play, offline play); each takes its own from there and the last to merge reconciles this table.
 

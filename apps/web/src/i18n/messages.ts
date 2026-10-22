@@ -536,6 +536,8 @@ export const messages = {
     title: "Modo livre",
     lead: "Puzzles infinitos, gerados aqui no seu aparelho. Nada daqui conta para a sequência nem para as estatísticas.",
     descriptions: freePlayDescriptions,
+    offline:
+      "Sem conexão. O jogo do dia espera a internet voltar; o modo livre funciona assim mesmo.",
 
     back: "← Modo livre",
     backToIndexAria: "Voltar ao Modo livre",
