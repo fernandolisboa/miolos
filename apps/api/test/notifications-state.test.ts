@@ -1,4 +1,4 @@
-import { notificationsStateResponseSchema } from "@miolos/core";
+import { addDays, notificationsStateResponseSchema } from "@miolos/core";
 import { pushSubscriptions, sessions, sql, users } from "@miolos/db";
 import { remoteConfig, todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -20,7 +20,6 @@ import {
   DELETE as subscriptionsDelete,
   POST as subscriptionsPost,
 } from "../app/push/subscriptions/route";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { jsonHeaders, subscriptionsRequest } from "./push-helpers";

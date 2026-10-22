@@ -1,4 +1,4 @@
-import { notificationsStateResponseSchema } from "@miolos/core";
+import { addDays, notificationsStateResponseSchema } from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -17,7 +17,6 @@ import {
 
 import { POST } from "../app/notifications/dismiss/route";
 import { GET as stateGet } from "../app/notifications/state/route";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 import { dismissRequest, jsonHeaders } from "./push-helpers";

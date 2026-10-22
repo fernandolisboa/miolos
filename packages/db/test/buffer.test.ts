@@ -1,3 +1,4 @@
+import { addDays } from "@miolos/core";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -24,15 +25,6 @@ beforeEach(async () => {
 afterAll(async () => {
   await ctx.close();
 });
-
-function addDaysLocal(date: string, days: number): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) {
-    throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
-  }
-  const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
 
 describe("insertDailyPuzzle", () => {
   it("is idempotent on (game, date): second insert returns false, row unchanged", async () => {
@@ -87,7 +79,7 @@ describe("bufferDepth", () => {
     ] as const) {
       await insertDailyPuzzle(ctx.db, {
         game: "binairo",
-        date: addDaysLocal(today, offset),
+        date: addDays(today, offset),
         seed,
         content: binairoContentFixture(),
       });
@@ -96,7 +88,7 @@ describe("bufferDepth", () => {
     await ctx.db
       .update(dailyPuzzles)
       .set({ killedAt: sql`now()` })
-      .where(eq(dailyPuzzles.date, addDaysLocal(today, 1)));
+      .where(eq(dailyPuzzles.date, addDays(today, 1)));
 
     expect(await bufferDepth(ctx.db, "binairo")).toBe(2);
     expect(await bufferDepth(ctx.db, "sudoku")).toBe(0);

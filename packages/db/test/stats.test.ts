@@ -1,4 +1,4 @@
-import { computeStats } from "@miolos/core";
+import { addDays, computeStats } from "@miolos/core";
 import { sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -38,20 +38,11 @@ async function createUser(createdAt?: Date): Promise<string> {
   return user.id;
 }
 
-function addDaysLocal(date: string, days: number): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!match) {
-    throw new RangeError(`expected 'YYYY-MM-DD', got ${JSON.stringify(date)}`);
-  }
-  const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-
 describe("listCompletionsForStats (plan 033 D3, ADR-0049 decision 6)", () => {
   it("T-DB-S34: returns every row unfiltered with all seven facts — SQL-derived onTime, guesses projected, date descending, other users absent", async () => {
     const userId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
-    const yesterday = addDaysLocal(today, -1);
+    const yesterday = addDays(today, -1);
 
     await recordCompletion(ctx.db, {
       userId,
@@ -286,9 +277,9 @@ describe("listPublishedDailiesOnWonDates (ADR-0087)", () => {
     const otherUserId = await createUser();
     const today = await todaySaoPaulo(ctx.db);
     const [lost, late, other, buffered, launch] = [5, 4, 3, 2, 1].map((n) =>
-      addDaysLocal(today, -n),
+      addDays(today, -n),
     );
-    const tomorrow = addDaysLocal(today, 1);
+    const tomorrow = addDays(today, 1);
     if (!lost || !late || !other || !buffered || !launch) {
       throw new Error("date fixture");
     }

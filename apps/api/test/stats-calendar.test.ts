@@ -1,4 +1,8 @@
-import { statsCalendarResponseSchema, statsResponseSchema } from "@miolos/core";
+import {
+  addDays,
+  statsCalendarResponseSchema,
+  statsResponseSchema,
+} from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
 import { todaySaoPaulo } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -19,7 +23,6 @@ import { GET } from "../app/stats/calendar/route";
 import { publishDaily } from "./lineup-helpers";
 
 import { GET as statsGet } from "../app/stats/route";
-import { addDays } from "../src/publishing/dates";
 import { SESSION_COOKIE_NAME } from "../src/session/cookie";
 import { generateSessionToken, hashSessionToken } from "../src/session/token";
 
