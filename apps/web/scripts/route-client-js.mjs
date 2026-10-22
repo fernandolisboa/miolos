@@ -26,6 +26,8 @@ const PER_ROUTE_BUDGET = {
   "/modo-livre/cruzadinha": 667 * 1024,
 
   "/arquivo/[data]/termo": 76 * 1024,
+
+  "/arquivo/[data]/sudoku": 49 * 1024,
 };
 
 const BUDGETED = [

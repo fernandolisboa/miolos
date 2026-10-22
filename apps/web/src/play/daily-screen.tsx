@@ -10,10 +10,9 @@ import {
   preloadConclusionView,
   RemoteConclusionView,
 } from "./conclusion-lazy";
-import type { ConclusionResult } from "./conclusion-view";
 import { EndingStage } from "./ending-stage";
 import { JustEnded, useSawPlay } from "./just-ended";
-import type { PlayCore } from "./types";
+import type { ConclusionResult, PlayCore } from "./types";
 import { isClosedAndFrozen } from "./use-play-lifecycle";
 
 type DailyScreenProps = {

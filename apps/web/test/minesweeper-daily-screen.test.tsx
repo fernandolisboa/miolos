@@ -12,7 +12,7 @@ import { formatElapsed, messages } from "../src/i18n";
 import { minesweeperMessages } from "../src/minesweeper/messages";
 import { MinesweeperConclusion } from "../src/minesweeper/minesweeper-conclusion";
 import { MinesweeperScreen } from "../src/minesweeper/minesweeper-screen";
-import { RemoteConclusionView } from "../src/play/conclusion-view";
+import { RemoteConclusionView } from "../src/play/remote-conclusion-view";
 import type { MinesweeperPlayRecord } from "../src/play/play-record";
 
 const sync = vi.hoisted(() => ({

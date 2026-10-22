@@ -5,7 +5,8 @@ import type { MinesweeperState } from "@miolos/games/minesweeper";
 import { useMemo } from "react";
 
 import { messages } from "../i18n";
-import { ConclusionView, type ConclusionResult } from "../play/conclusion-view";
+import { ConclusionView } from "../play/conclusion-view";
+import type { ConclusionResult } from "../play/types";
 import { useRecordSnapshot } from "../play/use-record-snapshot";
 import { gameOfRecord, startedGame } from "./daily-record";
 import { FinishedMinefield } from "./finished-minefield";

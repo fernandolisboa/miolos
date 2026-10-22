@@ -8,13 +8,13 @@ import type { DayGameState } from "@miolos/core";
 
 import { formatElapsed, messages, routes } from "../i18n";
 import styles from "./conclusion-lazy.module.css";
-import type { ConclusionResult } from "./conclusion-view";
-import type { ConclusionCopy } from "./types";
+import type { ConclusionCopy, ConclusionResult } from "./types";
 
 type ConclusionModule = typeof import("./conclusion-view");
+type RemoteConclusionModule = typeof import("./remote-conclusion-view");
 type ConclusionViewProps = Parameters<ConclusionModule["ConclusionView"]>[0];
 type RemoteConclusionViewProps = Parameters<
-  ConclusionModule["RemoteConclusionView"]
+  RemoteConclusionModule["RemoteConclusionView"]
 >[0];
 
 export function ConclusionLoading({
@@ -179,11 +179,15 @@ const local = resilientConclusion<ConclusionViewProps>(
   localConclusionFallback,
 );
 
-export const ConclusionView = local.Conclusion;
-export const preloadConclusionView = local.preload;
+const remote = resilientConclusion<RemoteConclusionViewProps>(
+  async () => (await import("./remote-conclusion-view")).RemoteConclusionView,
+  remoteConclusionFallback,
+);
 
-export const RemoteConclusionView =
-  resilientConclusion<RemoteConclusionViewProps>(
-    async () => (await import("./conclusion-view")).RemoteConclusionView,
-    remoteConclusionFallback,
-  ).Conclusion;
+export const ConclusionView = local.Conclusion;
+export const RemoteConclusionView = remote.Conclusion;
+
+export function preloadConclusionView(): void {
+  local.preload();
+  remote.preload();
+}

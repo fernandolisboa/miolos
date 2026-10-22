@@ -256,6 +256,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       '  import("@miolos/db");',
 
       '  import("../play/conclusion-lazy");',
+      '  import("../play/conclusion-chrome");',
+      '  import("../play/remote-conclusion-view");',
       '  import("../play/conclusion-stats");',
       '  import("../nonogram/nonogram-conclusion");',
       '  import("../termo/termo-conclusion");',
@@ -285,6 +287,8 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../sudoku/sudoku-screen",
       "../nonogram/nonogram-screen",
       "../play/conclusion-view",
+      "../play/conclusion-chrome",
+      "../play/remote-conclusion-view",
       "../play/conclusion-stats",
 
       "../play/conclusion-lazy",
