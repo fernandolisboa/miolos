@@ -16,7 +16,6 @@ const read = (...path: string[]) =>
 
 const answersCsv = read("termo", "answers.csv");
 const validationTxt = read("termo", "validation.txt");
-const reserveTxt = read("termo", "reserve.txt");
 const lexiconTsv = read("crossword", "lexicon.tsv");
 
 const outputs: readonly (readonly [string, string])[] = [
@@ -30,12 +29,7 @@ const outputs: readonly (readonly [string, string])[] = [
   ],
   [
     join(srcDir, "termo-free", "pool.generated.ts"),
-    renderTermoFreePoolModule(
-      lexiconTsv,
-      validationTxt,
-      answersCsv,
-      reserveTxt,
-    ),
+    renderTermoFreePoolModule(lexiconTsv, validationTxt, answersCsv),
   ],
 ];
 

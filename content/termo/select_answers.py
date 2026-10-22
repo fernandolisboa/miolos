@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Curated answer selection: hand-picked normalized forms, ranked by corpus
-frequency, top 400 kept. Picks were made word-by-word against the answer
+frequency, every pick kept. Picks were made word-by-word against the answer
 constraints (common contemporary pt-BR, lemma-preferred, no proper nouns,
 no loanwords not naturalized, no obscenity, variety of POS and patterns)."""
 
@@ -94,21 +94,15 @@ def main() -> None:
 
     usable = [w for w in picks if w in pool and w in validation]
     usable.sort(key=lambda w: -pool[w][0])
-    answers = usable[:400]
-    print(f"usable: {len(usable)}; kept: {len(answers)}")
-    if len(answers) < 400:
-        print("WARNING: fewer than 400")
-
-    cut = usable[400:]
-    print(f"cut by frequency rank ({len(cut)}):", " ".join(cut[:60]))
+    print(f"kept: {len(usable)}")
 
     with open(f"{BASE}/answers.csv", "w", encoding="utf-8") as f:
         f.write("canonical,normalized\n")
-        for w in answers:
+        for w in usable:
             f.write(f"{pool[w][1]},{w}\n")
 
     # frequency floor of the kept set
-    print("lowest-frequency kept:", [(w, pool[w][0]) for w in answers[-5:]])
+    print("lowest-frequency kept:", [(w, pool[w][0]) for w in usable[-5:]])
 
 
 if __name__ == "__main__":

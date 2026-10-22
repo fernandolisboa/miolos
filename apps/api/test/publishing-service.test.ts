@@ -36,6 +36,7 @@ import {
 
 import {
   drawUniformIndex,
+  isTermoAnswerListLow,
   MAX_BINAIRO_SEED_RETRIES_PER_DATE,
   MAX_CROSSWORD_SEED_RETRIES_PER_DATE,
   MAX_MINESWEEPER_SEED_RETRIES_PER_DATE,
@@ -43,6 +44,7 @@ import {
   MAX_QUEENS_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_DATE,
   MAX_SUDOKU_SEED_RETRIES_PER_RUN,
+  TERMO_ANSWER_COOLDOWN_DAYS,
   TopUpAbortedError,
   topUpBinairoBuffer,
   topUpCrosswordBuffer,
@@ -53,6 +55,12 @@ import {
   topUpTermoBuffer,
   uniformDrawLimit,
 } from "../src/publishing/service";
+import {
+  FULLEST_TERMO_WINDOW,
+  MAX_BUFFER_DEPTH,
+  seedTermoAnswers,
+  spendTermoAnswers,
+} from "./termo-answer-helpers";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -732,6 +740,9 @@ describe("topUpNonogramBuffer", () => {
   });
 });
 
+const ANSWER_LIST_EXHAUSTED =
+  "answer list exhausted: every curated Termo answer was a daily in the last 365 days";
+
 describe("topUpTermoBuffer", () => {
   let poolWarnings: string[] = [];
 
@@ -814,7 +825,7 @@ describe("topUpTermoBuffer", () => {
     }
   });
 
-  it("T-API-S31: a KILLED row's answer is never drawn again", async () => {
+  it("T-API-S31: a KILLED row's answer is not drawn again inside the window", async () => {
     await topUpTermoBuffer(ctx.db, 7);
     const today = await todaySaoPaulo(ctx.db);
     const killedDates = Array.from({ length: 5 }, (_, offset) =>
@@ -850,16 +861,8 @@ describe("topUpTermoBuffer", () => {
   });
 
   it("T-API-S32: exhaustion FAILS CLOSED — uncovered dates carry the exhaustion reason", async () => {
-    const spent = TERMO_ANSWERS.slice(0, 395);
-    await ctx.db.insert(dailyPuzzles).values(
-      spent.map((answer, index) => ({
-        game: "termo" as const,
-        date: addDays("2020-01-01", index),
-        seed: index,
-        content: { canonical: answer.canonical, normalized: answer.normalized },
-        publishedAt: sql`now() - interval '1 year'`,
-      })),
-    );
+    const spent = TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 5);
+    await spendTermoAnswers(ctx.db, spent);
 
     const result = await topUpTermoBuffer(ctx.db, 10);
 
@@ -867,16 +870,16 @@ describe("topUpTermoBuffer", () => {
     expect(result.depth).toBe(5);
     expect(result.failures).toHaveLength(5);
     for (const failure of result.failures) {
-      expect(failure.reason).toBe(
-        "answer list exhausted: every curated Termo answer is already used",
-      );
+      expect(failure.reason).toBe(ANSWER_LIST_EXHAUSTED);
     }
     const today = await todaySaoPaulo(ctx.db);
 
     expect(result.failures.map((failure) => failure.date)).toEqual(
       Array.from({ length: 5 }, (_, offset) => addDays(today, offset + 5)),
     );
-    const fresh = (await termoRows()).filter((row) => row.date >= today);
+    const fresh = (await termoRows()).filter(
+      (row) => row.date >= today && row.date < addDays(today, 10),
+    );
     expect(fresh).toHaveLength(5);
     const spentSet = new Set(spent.map((answer) => answer.normalized));
     for (const answer of answersOf(fresh)) {
@@ -887,27 +890,15 @@ describe("topUpTermoBuffer", () => {
     expect(JSON.parse(poolWarnings[0] ?? "null")).toEqual({
       event: "termo-answer-pool-low",
       remaining: 5,
-      total: 400,
+      total: TERMO_ANSWERS.length,
     });
   });
 
   it("T-API-S44: the low-pool warning fires AT 30 remaining, and is silent at 31", async () => {
-    const spendAnswers = async (count: number): Promise<void> => {
-      await ctx.db.insert(dailyPuzzles).values(
-        TERMO_ANSWERS.slice(0, count).map((answer, index) => ({
-          game: "termo" as const,
-          date: addDays("2020-01-01", index),
-          seed: index,
-          content: {
-            canonical: answer.canonical,
-            normalized: answer.normalized,
-          },
-          publishedAt: sql`now() - interval '1 year'`,
-        })),
-      );
-    };
-
-    await spendAnswers(369);
+    await spendTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 31),
+    );
     await topUpTermoBuffer(ctx.db, 1);
     expect(poolWarnings).toEqual([]);
 
@@ -916,8 +907,87 @@ describe("topUpTermoBuffer", () => {
     expect(JSON.parse(poolWarnings[0] ?? "null")).toEqual({
       event: "termo-answer-pool-low",
       remaining: 30,
-      total: 400,
+      total: TERMO_ANSWERS.length,
     });
+  });
+
+  it("T-API-S342: an answer last drawn 365 days ago is drawn again, and one drawn 364 days ago is not", async () => {
+    const [returning, ...others] = TERMO_ANSWERS;
+    if (returning === undefined) {
+      throw new Error("unreachable: the answer list is empty");
+    }
+    await spendTermoAnswers(ctx.db, others);
+    const today = await todaySaoPaulo(ctx.db);
+    const lastUse = (daysAgo: number) =>
+      seedTermoAnswers(ctx.db, [
+        { date: addDays(today, -daysAgo), answer: returning },
+      ]);
+
+    await lastUse(364);
+    expect(await topUpTermoBuffer(ctx.db, 1)).toEqual({
+      generated: 0,
+      depth: 0,
+      failures: [{ date: today, reason: ANSWER_LIST_EXHAUSTED }],
+    });
+
+    await ctx.db.execute(
+      sql`delete from daily_puzzles where game = 'termo' and date = ${addDays(today, -364)}`,
+    );
+    await lastUse(365);
+    expect(await topUpTermoBuffer(ctx.db, 1)).toEqual({
+      generated: 1,
+      depth: 1,
+      failures: [],
+    });
+    const drawn = (await termoRows()).filter((row) => row.date === today);
+    expect(answersOf(drawn)).toEqual([returning.normalized]);
+  });
+
+  it("T-API-S343: with every window day drawn and every other answer drawn once before it, a clamp-depth run fills every date and repeats nothing inside 365 days", async () => {
+    const depth = MAX_BUFFER_DEPTH;
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.map((answer, index) => ({
+        date: addDays(today, -1 - index),
+        answer,
+      })),
+    );
+
+    const result = await topUpTermoBuffer(ctx.db, depth);
+
+    expect(result).toEqual({ generated: depth, depth, failures: [] });
+    expect(poolWarnings).toEqual([]);
+    const datesByAnswer = new Map<string, string[]>();
+    for (const row of await termoRows()) {
+      const answer = termoDailyContentSchema.parse(row.content).normalized;
+      datesByAnswer.set(answer, [
+        ...(datesByAnswer.get(answer) ?? []),
+        row.date,
+      ]);
+    }
+    for (const [answer, dates] of datesByAnswer) {
+      const sorted = [...dates].sort();
+      for (let index = 1; index < sorted.length; index += 1) {
+        const [before = "", after = ""] = sorted.slice(index - 1, index + 1);
+        expect(
+          addDays(before, TERMO_ANSWER_COOLDOWN_DAYS) <= after,
+          `${answer} on ${before} and ${after}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("T-API-S344: the fullest possible window, a year of dailies plus a clamp-depth buffer, leaves the list not low", () => {
+    expect(
+      isTermoAnswerListLow(TERMO_ANSWERS.length - FULLEST_TERMO_WINDOW),
+    ).toBe(false);
+  });
+
+  it("T-API-S346: a buffered answer stays mixed with at least 100 others (ADR-0114, ADR-0147)", () => {
+    expect(TERMO_ANSWERS.length - FULLEST_TERMO_WINDOW).toBeGreaterThanOrEqual(
+      100,
+    );
   });
 
   it("T-API-S32: an already-covered date is skipped before the pool is consulted", async () => {

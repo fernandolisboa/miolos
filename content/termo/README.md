@@ -20,26 +20,24 @@ exactly as with the grid-game generators.
 `answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`,
 and the **free pool** into `packages/games/src/termo-free/pool.generated.ts`.
 The free pool is what Termo free play draws from: the five-letter words of
-`content/crossword/lexicon.tsv` that are in `validation.txt` and are neither
-an answer nor in `reserve.txt` — 2,187 words
+`content/crossword/lexicon.tsv` that are in `validation.txt` and are not
+an answer — 2,187 words
 ([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
-**Run `generate:termo` after editing `answers.csv`, `reserve.txt`,
-`validation.txt` or the crossword lexicon**, then `pnpm test --force`: a
-staleness test fails when a generated module and its sources disagree.
+**Run `generate:termo` after editing `answers.csv`, `validation.txt` or the
+crossword lexicon**, then `pnpm test --force`: a staleness test fails when a
+generated module and its sources disagree.
 
-`reserve.txt` holds the curated picks of `select_answers.py` that did not make
-`answers.csv`, one normalized word per line, sorted. They stay out of the free
-pool so a client comparing the public lists never narrows the unpublished
-answers below them. **An answer extension moves words from `reserve.txt` into
-`answers.csv`**; when the reserve floor test fails, add new reserve words
-first. A published answer is never deleted: re-curation moves it to
-`reserve.txt`, or regeneration would put it back in the pool.
+An answer drawn for a date is not drawn again for 365 days, and then may
+return ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)).
+**The answer list and the free pool are disjoint:** an answer extension takes
+its words out of the pool. **A published answer is never deleted from
+`answers.csv`**, or regeneration would put it back in the pool.
 
 ## Deliverables
 
 | File | Contents |
 |---|---|
-| `answers.csv` | 400 daily-answer words. Header `canonical,normalized`. Canonical is the correct pt-BR spelling (lowercase, accents/ç kept); normalized matches `^[a-z]{5}$`. |
+| `answers.csv` | 626 daily-answer words, ranked by corpus frequency. Header `canonical,normalized`. Canonical is the correct pt-BR spelling (lowercase, accents/ç kept); normalized matches `^[a-z]{5}$`. |
 | `validation.txt` | 5,408 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
 | `additions.txt` | 98 curated canonical forms the base lexicon is missing ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md), issue #140): real, current pt-BR words attested in the frequency corpus, one per line, sorted by (normalized form, canonical). Merged by `pipeline.py` under the same normalization and blocklist as lexicon entries. Guess dictionary only — never a source of answers. |
 | `canonical-map.csv` | Header `normalized,canonical`. One row per validation word, mapping it to a canonical accented display form. When several accented words share a normalized form (e.g. `sabia`/`sábia`), the most frequent one in the subtitle corpus is the canonical; all colliding spellings remain guessable through the single normalized entry. |
@@ -98,9 +96,11 @@ Raw source downloads are not committed; the URLs above are the record, and
    their canonical spellings, descending (`candidates.tsv`, top 2,500).
 7. **Curation** (`select_answers.py`): a hand-picked pool of 626 normalized forms
    chosen word by word from the ranked candidates against the answer constraints
-   below, then the top 400 of that pool by corpus frequency became `answers.csv`.
-   The frequency floor of the kept set is ≈5,400 subtitle occurrences — every
-   answer is a genuinely everyday word.
+   below, ranked by corpus frequency into `answers.csv`. The first 400 were the
+   original list (frequency floor ≈5,400 subtitle occurrences). The other 226
+   were appended at #200 in the same frequency order, not regenerated, so the
+   first 400 rows did not move; the floor of the whole list is ≈1,750
+   occurrences.
 
 ## Answer constraints applied
 
@@ -113,15 +113,15 @@ Raw source downloads are not committed; the URLs above are the record, and
   scatological. Editorial extra: ethnicity/race words (`judeu`, `negro`) are
   excluded from answers though they are ordinary words and remain valid guesses.
 - Lemmas preferred: singular nouns/adjectives and infinitive verbs. Inflected or
-  function forms admitted only when extremely frequent (13 of the 400: `estou`,
+  function forms admitted only when extremely frequent (13 of the 626: `estou`,
   `vamos`, `tenho`, `quero`, `posso`, `disse`, `mesmo`, `outro`, `algum`,
   `ambos`, `minha`, `nossa`, `sexta`).
 - Unique after normalization (enforced; also verified).
 - Canonical form is the correct dictionary spelling with accents/ç.
-- Variety: a broad mix of infinitive verbs (~70), nouns (the majority),
-  adjectives (~55), plus numerals (`cinco`, `vinte`), weekdays (`sexta`,
-  `terça`), months (`abril`, `junho`, `julho`) and common adverbs; **49** of
-  the 400 canonical forms carry a diacritic (`então`, `manhã`, `saúde`,
+- Variety: a broad mix of infinitive verbs (87), nouns (the majority),
+  adjectives (72), plus numerals (`cinco`, `vinte`, `treze`), weekdays (`sexta`,
+  `terça`), months (`abril`, `junho`, `julho`) and common adverbs; **88** of
+  the 626 canonical forms carry a diacritic (`então`, `manhã`, `saúde`,
   `época`, `túnel`, `dúzia`, …), which the accent-insensitive design exists
   to allow.
 
@@ -136,9 +136,9 @@ curation pass (see `rejected-sample.txt`).
 
 ## Sanity checks (all run, all passing)
 
-- All 400 answer normalized forms match `^[a-z]{5}$`: **yes**
+- All 626 answer normalized forms match `^[a-z]{5}$`: **yes**
 - Duplicate normalized forms in answers: **0**
-- Every answer's normalized form present in `validation.txt`: **yes (400/400)**
+- Every answer's normalized form present in `validation.txt`: **yes (626/626)**
 - Every answer's canonical form normalizes exactly to its normalized form: **yes**
 - `validation.txt`: **5,408 lines**, unique, sorted, all matching `^[a-z]{5}$`
 - `canonical-map.csv`: **5,408 rows**, covers the validation set exactly; every
@@ -173,7 +173,8 @@ curation pass (see `rejected-sample.txt`).
   audited against a comprehensive pt-BR profanity corpus.
 - The lowercase proper-noun-duplicate list is likewise curated, not exhaustive:
   rarer names present in the source lexicon as lowercase entries may remain
-  guessable. Answers are unaffected — all 400 were reviewed individually.
+  guessable. Answers are unaffected — all 626 were picked individually, and
+  the first 400 also passed the self-review above.
 - "Average Brazilian adult recognizes instantly" was applied by model judgment,
-  not by a measurable test; frequency rank (≥ ~5,400 subtitle occurrences) is
+  not by a measurable test; frequency rank (≥ ~1,750 subtitle occurrences) is
   the verifiable proxy.

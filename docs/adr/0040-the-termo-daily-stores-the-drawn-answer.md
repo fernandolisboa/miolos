@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-08-02
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0010](./0010-publication-is-time-driven-published-at-plus-buffer.md), [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0023](./0023-proved-not-sampled-property-testing.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0025](./0025-remote-config-is-a-database-table.md)
 **Amended by:** [ADR-0084](./0084-the-answer-list-alert-rides-the-buffer-depth-poll.md) — decision 7's exhaustion alert
+**Superseded in part by:** [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md) (#200) — decision 4, decision 7's premise that the list ends, the Rejected *"Recycling the oldest answers"* and the partial unique index's *"the sanctioned fix"*, and consequence (g)'s bound: an answer is used for 365 days, then may return.
 
 ## Context
 

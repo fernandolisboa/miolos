@@ -11,7 +11,6 @@ import {
 } from "@miolos/core";
 import { sql } from "@miolos/db";
 import {
-  dailyPuzzles,
   insertDailyPuzzle,
   remoteConfig,
   todaySaoPaulo,
@@ -35,6 +34,7 @@ import {
 } from "vitest";
 
 import { GET } from "../app/buffer-depth/route";
+import { seedTermoAnswers, spendTermoAnswers } from "./termo-answer-helpers";
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
 
@@ -73,7 +73,7 @@ const CONTENT: Record<
   sudoku: (seed) => sudokuContentPlaceholder(seed),
   nonogram: (seed, weekday) => generateNonogram(seed, weekday),
   termo: (_seed, _weekday, offset) =>
-    termoDailyContentSchema.parse(TERMO_ANSWERS[offset % 400]),
+    termoDailyContentSchema.parse(TERMO_ANSWERS[offset % TERMO_ANSWERS.length]),
   crossword: (seed) => generateCrossword(seed),
   queens: (seed, weekday) => generateQueens({ seed, weekday }),
   minesweeper: (seed, weekday) => generateMinesweeperDaily({ seed, weekday }),
@@ -108,18 +108,6 @@ function depthsOf(
   return recordFor(GAMES, (game) => (game === drained ? 0 : depth));
 }
 
-async function spendPastAnswers(from: number, count: number): Promise<void> {
-  await ctx.db.insert(dailyPuzzles).values(
-    TERMO_ANSWERS.slice(from, from + count).map((answer, index) => ({
-      game: "termo" as const,
-      date: addDays("2020-01-01", index),
-      seed: index,
-      content: termoDailyContentSchema.parse(answer),
-      publishedAt: sql`now() - interval '1 year'`,
-    })),
-  );
-}
-
 async function readBody(): Promise<BufferDepthResponse> {
   const response = await GET();
   expect(response.status).toBe(200);
@@ -136,7 +124,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7),
       threshold: 4,
       shallow: false,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -150,7 +138,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "sudoku"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -164,7 +152,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "nonogram"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -178,7 +166,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "termo"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 400,
+      termoAnswersRemaining: TERMO_ANSWERS.length,
       termoAnswersLow: false,
     });
   });
@@ -192,7 +180,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "crossword"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -203,7 +191,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "queens"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -214,7 +202,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(7, "minesweeper"),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
   });
@@ -228,7 +216,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(3),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 397,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 3,
       termoAnswersLow: false,
     });
   });
@@ -242,7 +230,7 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(2),
       threshold: 2,
       shallow: false,
-      termoAnswersRemaining: 398,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 2,
       termoAnswersLow: false,
     });
   });
@@ -254,27 +242,33 @@ describe("GET /buffer-depth", () => {
       depths: depthsOf(0),
       threshold: 4,
       shallow: true,
-      termoAnswersRemaining: 400,
+      termoAnswersRemaining: TERMO_ANSWERS.length,
       termoAnswersLow: false,
     });
   });
 
-  it("T-API-S217: reports the unused answer count, and flags it low AT 30 and not at 31", async () => {
-    await spendPastAnswers(7, 369);
+  it("T-API-S217: reports the eligible answer count, and flags it low AT 30 and not at 31", async () => {
+    await spendTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 31),
+    );
     expect(await readBody()).toMatchObject({
       termoAnswersRemaining: 31,
       termoAnswersLow: false,
     });
 
     await ctx.db.execute(sql`truncate table daily_puzzles`);
-    await spendPastAnswers(7, 370);
+    await spendTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.slice(0, TERMO_ANSWERS.length - 30),
+    );
     expect(await readBody()).toMatchObject({
       termoAnswersRemaining: 30,
       termoAnswersLow: true,
     });
   });
 
-  it("T-API-S218: a killed buffered termo row leaves the buffer but its answer stays spent", async () => {
+  it("T-API-S218: a killed buffered termo row leaves the buffer but its answer stays used inside the window", async () => {
     await seedDays("termo", 7);
     const today = await todaySaoPaulo(ctx.db);
     await ctx.db.execute(
@@ -282,7 +276,7 @@ describe("GET /buffer-depth", () => {
     );
     expect(await readBody()).toMatchObject({
       depths: { termo: 6 },
-      termoAnswersRemaining: 393,
+      termoAnswersRemaining: TERMO_ANSWERS.length - 7,
     });
   });
 
@@ -294,11 +288,28 @@ describe("GET /buffer-depth", () => {
     });
 
     await seedDays("termo", 7);
-    await spendPastAnswers(7, 370);
+    await spendTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.slice(7, TERMO_ANSWERS.length - 23),
+    );
     expect(await readBody()).toMatchObject({
       shallow: false,
       termoAnswersRemaining: 23,
       termoAnswersLow: true,
+    });
+  });
+
+  it("T-API-S345: counts an answer drawn 364 days ago as used and one drawn 365 days ago as eligible", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermoAnswers(
+      ctx.db,
+      TERMO_ANSWERS.slice(0, 2).map((answer, index) => ({
+        date: addDays(today, -364 - index),
+        answer,
+      })),
+    );
+    expect(await readBody()).toMatchObject({
+      termoAnswersRemaining: TERMO_ANSWERS.length - 1,
     });
   });
 });
