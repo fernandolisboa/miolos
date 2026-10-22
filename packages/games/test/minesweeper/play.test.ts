@@ -535,6 +535,7 @@ describe("cycleMinesweeperMark", () => {
 });
 
 describe("any sequence of moves", () => {
+  // ADR-0055: CI gate 3726 ms × 4 → 15_000.
   it("keeps the board consistent after every move", () => {
     fc.assert(
       fc.property(
@@ -552,5 +553,5 @@ describe("any sequence of moves", () => {
       ),
       { numRuns: 200 },
     );
-  });
+  }, 15_000);
 });

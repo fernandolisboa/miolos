@@ -73,6 +73,7 @@ describe("solveMinesweeper", () => {
     expect(state.status).toBe("won");
   });
 
+  // ADR-0055: CI gate 2232 ms × 4 → 10_000.
   it("is sound: every cell it opens is safe and every cell it flags is a mine", () => {
     const fieldArb = fc
       .record({
@@ -107,5 +108,5 @@ describe("solveMinesweeper", () => {
       }),
       { seed: FC_SEED, numRuns: 500 },
     );
-  });
+  }, 10_000);
 });
