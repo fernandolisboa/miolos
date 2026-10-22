@@ -3,6 +3,7 @@
 import { timeBucketIndex, type Game, type StatsResponse } from "@miolos/core";
 
 import { formatElapsed, messages } from "../i18n";
+import { timeBuckets } from "../stats/time-buckets";
 import { useStats } from "../stats/use-stats";
 import { BLANK_VALUE } from "./blank-value";
 import styles from "./conclusion-view.module.css";
@@ -110,7 +111,10 @@ export function ConclusionStatsBody({
 
   const today = lost ? undefined : elapsedMs;
   const todayBucket =
-    today === undefined || !dayMatches ? undefined : timeBucketIndex(today);
+    today === undefined || !dayMatches
+      ? undefined
+      : timeBucketIndex(game, today);
+  const buckets = timeBuckets(game);
   return (
     <div
       className={styles.statsBlock}
@@ -146,10 +150,10 @@ export function ConclusionStatsBody({
       <div className={styles.histogram}>
         {counts.map((count, index) => (
           <div
-            key={messages.stats.histogram.labels[index]}
+            key={buckets[index]?.label}
             role="img"
             aria-label={messages.stats.histogram.aria(
-              messages.stats.histogram.bucketNames[index] ?? "",
+              buckets[index]?.name ?? "",
               count,
             )}
             className={styles.bucket}
@@ -162,7 +166,7 @@ export function ConclusionStatsBody({
               />
             </div>
             <span aria-hidden className={`${styles.bucketLabel} tabular-nums`}>
-              {messages.stats.histogram.labels[index]}
+              {buckets[index]?.label}
             </span>
           </div>
         ))}

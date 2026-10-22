@@ -612,6 +612,7 @@ describe("the free-play import wall (#28, ADR-0046)", () => {
       "../stats/stats-client",
       "../stats/use-stats",
       "../stats/use-stats-calendar",
+      "../stats/time-buckets",
       "../stats",
       "../../app/estatisticas/page",
     ];

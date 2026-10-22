@@ -8,7 +8,9 @@ import {
   dayStateFromRows,
   fullDays,
   perfectDays,
+  TIME_BUCKET_BOUNDS_MS,
   timeBucketIndex,
+  TIMED_GAMES,
   type Game,
   type PublishedDaily,
   type StatsRow,
@@ -527,7 +529,7 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
     expect(stats.binairo.averageMs).toBe(200_000);
     expect(stats.binairo.averageSampleCount).toBe(2);
 
-    expect(stats.binairo.histogram).toEqual([2, 0, 1, 0, 1, 0]);
+    expect(stats.binairo.histogram).toEqual([2, 0, 0, 1, 0, 1]);
 
     const stale = computeStats(
       [row({ game: "sudoku", date: "2026-07-01", elapsedMs: 400_000 })],
@@ -546,9 +548,9 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
       histogram: [0, 0, 0, 0, 0, 0],
     });
 
-    expect(timeBucketIndex(239_999)).toBe(0);
-    expect(timeBucketIndex(240_000)).toBe(1);
-    expect(timeBucketIndex(540_000)).toBe(5);
+    expect(timeBucketIndex("binairo", 239_999)).toBe(2);
+    expect(timeBucketIndex("binairo", 240_000)).toBe(3);
+    expect(timeBucketIndex("binairo", 540_000)).toBe(5);
   });
 
   it("T-CORE-S129: the crossword carries a timed block of its own, and no other game's rows reach it", () => {
@@ -589,9 +591,42 @@ describe("computeStats — times and totals (plan 033 §4.4, ADR-0051 decision 6
       bestMs: 100_000,
       averageMs: 200_000,
       averageSampleCount: 2,
-      histogram: [1, 0, 1, 0, 0, 0],
+      histogram: [0, 1, 0, 0, 1, 0],
     });
     expect(stats.crossword.solved).toBe(1);
+  });
+
+  it("T-CORE-S204: each timed game buckets on its own ascending whole minutes, half-open at both ends", () => {
+    for (const game of TIMED_GAMES) {
+      const bounds = TIME_BUCKET_BOUNDS_MS[game];
+      bounds.forEach((bound, index) => {
+        expect(bound % 60_000, game).toBe(0);
+        expect(bound, game).toBeGreaterThan(bounds[index - 1] ?? 0);
+        expect(timeBucketIndex(game, bound - 1), game).toBe(index);
+        expect(timeBucketIndex(game, bound), game).toBe(index + 1);
+      });
+      expect(timeBucketIndex(game, 0), game).toBe(0);
+      expect(timeBucketIndex(game, Number.MAX_SAFE_INTEGER), game).toBe(5);
+    }
+
+    const minutes = Object.fromEntries(
+      TIMED_GAMES.map((game) => [
+        game,
+        TIME_BUCKET_BOUNDS_MS[game].map((bound) => bound / 60_000),
+      ]),
+    );
+    expect(minutes).toEqual({
+      binairo: [2, 3, 4, 6, 8],
+      sudoku: [4, 6, 8, 12, 16],
+      nonogram: [2, 4, 6, 10, 15],
+      crossword: [4, 6, 8, 12, 16],
+      queens: [1, 2, 3, 4, 6],
+      minesweeper: [2, 3, 4, 6, 8],
+    });
+
+    expect(timeBucketIndex("sudoku", 150_000)).toBe(0);
+    expect(timeBucketIndex("queens", 150_000)).toBe(2);
+    expect(timeBucketIndex("minesweeper", 150_000)).toBe(1);
   });
 
   it("T-CORE-S66: the distribution buckets on-time wins by guesses; the fail row counts every lost row, unqualified", () => {

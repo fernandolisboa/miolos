@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S204`    | `S203`         | never used            |
+| `T-CORE` | `S206`    | `S204`         | never used            |
 | `T-DB`   | `S146`    | `S145`         | `T-DB-21`             |
 | `T-API`  | `S342`    | `S341`         | `T-API-16`            |
-| `T-WEB`  | `S1006`   | `S1005`        | `T-WEB-23`            |
+| `T-WEB`  | `S1008`   | `S1006`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#415 (per-game time buckets, ADR-0146) spent **`T-CORE-S204`** in `packages/core/test/stats.test.ts` (the per-game table in minutes; each timed game's bounds are ascending whole minutes; `timeBucketIndex` is half-open at both ends; 150 000 ms is Sudoku 0, Rainhas 2, Campo Minado 1) and **`T-WEB-S1006`** in `stats-page.test.tsx` and `conclusion-stats.test.tsx` (Campo Minado and Sudoku render their own labels and spoken names on both histograms; Rainhas starts at "menos de 1 minuto"; 2:30 lights `2–3` on Campo Minado and `<4` on Sudoku). Re-aimed in place: `T-CORE-S65`, `S136`, `T-API-S85`, `T-WEB-S154` and `S157` (new bucket values); `T-LINT-S31` names `../stats/time-buckets`. `T-CORE-S205` and `T-WEB-S1007` are **burned**, unspent. Next free is `T-CORE-S206` and `T-WEB-S1008`.
 
 #206 cluster 13 (the `PlayCore` lifecycle in `play/play-core.ts`, `hintAllowed` in `play/hint-allowance.ts`, and `pendingSync` gone from reducer state) spent **`T-WEB-S1004`** in `play-core.test.ts` (`freshCore` is stopped, playing and not hydrated; `hydratedAt` changes only `now` and `hydrated`; `restoredFrom` stops the clock at `elapsedMs`; `timed` pauses, resumes, ticks and stamps `now`; `hintAllowed` refuses a null allowance, a spent one and a closed board). `S1005` is **burned**, unspent, so next free is `S1006`. Re-aimed in place, with no new id: `board-reset.test.ts`'s `hasHintLeft` case now calls `hintAllowed`, and its "keeps the hint spent and the clock" title lost "the sync flag"; `nonogram-state.test.ts`'s `describe("status")` and `crossword-state.test.ts`'s `T-WEB-S426` title no longer name `pendingSync`; `sudoku-state.test.ts`'s concluded-record restore title and `queens-state.test.ts`'s solve case inside `T-WEB-S451` ("…valid, and then freezes the board") likewise. Removed with the dead state they pinned: `termo-state.test.ts`'s "marks the completion pending" case (inside `T-WEB-S82`'s describe), `sudoku-state.test.ts`'s `mark-synced` case, and `nonogram-state.test.ts`'s "carries a concluded record's pendingSync through" case. The record's `pendingSync` stays pinned in `play-record.test.ts`.
 

@@ -31,13 +31,20 @@ export const TIMED_GAMES = [
 ] as const satisfies readonly Game[];
 export type TimedGame = (typeof TIMED_GAMES)[number];
 
-export const TIME_BUCKET_BOUNDS_MS = [
-  240_000, 300_000, 360_000, 420_000, 540_000,
-] as const;
+export const TIME_BUCKET_BOUNDS_MS: Readonly<
+  Record<TimedGame, readonly [number, number, number, number, number]>
+> = {
+  binairo: [120_000, 180_000, 240_000, 360_000, 480_000],
+  sudoku: [240_000, 360_000, 480_000, 720_000, 960_000],
+  nonogram: [120_000, 240_000, 360_000, 600_000, 900_000],
+  crossword: [240_000, 360_000, 480_000, 720_000, 960_000],
+  queens: [60_000, 120_000, 180_000, 240_000, 360_000],
+  minesweeper: [120_000, 180_000, 240_000, 360_000, 480_000],
+};
 
-export function timeBucketIndex(elapsedMs: number): number {
+export function timeBucketIndex(game: TimedGame, elapsedMs: number): number {
   let index = 0;
-  for (const bound of TIME_BUCKET_BOUNDS_MS) {
+  for (const bound of TIME_BUCKET_BOUNDS_MS[game]) {
     if (elapsedMs >= bound) {
       index += 1;
     }
@@ -251,7 +258,7 @@ function timedGameStats(
     0, 0, 0, 0, 0, 0,
   ];
   for (const row of onTimeWins) {
-    const bucket = timeBucketIndex(row.elapsedMs);
+    const bucket = timeBucketIndex(game, row.elapsedMs);
     histogram[bucket] = (histogram[bucket] ?? 0) + 1;
   }
   return { solved, bestMs, averageMs, averageSampleCount, histogram };

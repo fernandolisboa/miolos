@@ -412,16 +412,17 @@ export const messages = {
     },
     emptyValue: "—",
     histogram: {
-      labels: ["<4", "4–5", "5–6", "6–7", "7–9", ">9"],
-
-      bucketNames: [
-        "menos de 4 minutos",
-        "entre 4 e 5 minutos",
-        "entre 5 e 6 minutos",
-        "entre 6 e 7 minutos",
-        "entre 7 e 9 minutos",
-        "mais de 9 minutos",
-      ],
+      label: {
+        under: (minutes: number) => `<${minutes}`,
+        between: (from: number, to: number) => `${from}–${to}`,
+        over: (minutes: number) => `>${minutes}`,
+      },
+      name: {
+        under: (minutes: number) =>
+          minutes === 1 ? "menos de 1 minuto" : `menos de ${minutes} minutos`,
+        between: (from: number, to: number) => `entre ${from} e ${to} minutos`,
+        over: (minutes: number) => `mais de ${minutes} minutos`,
+      },
       aria: (bucketName: string, n: number) =>
         `${n} ${n === 1 ? "jogo" : "jogos"} ${bucketName ? `— ${bucketName}` : ""}`.trim(),
     },

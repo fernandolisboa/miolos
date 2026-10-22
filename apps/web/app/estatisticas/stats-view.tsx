@@ -11,6 +11,7 @@ import { formatElapsed, messages } from "../../src/i18n";
 import { MedalsSection } from "../../src/medals/medals-section";
 import { accentVars } from "../../src/play/accent";
 import { DAY_GAMES } from "../../src/play/day-games";
+import { timeBuckets } from "../../src/stats/time-buckets";
 import { useFullDays } from "../../src/stats/use-full-days";
 import { useStats } from "../../src/stats/use-stats";
 import styles from "./page.module.css";
@@ -151,7 +152,7 @@ function TimedBlock({
           value={block === undefined ? BLANK_VALUE : String(block.solved)}
         />
       </div>
-      <Histogram histogram={block?.histogram} />
+      <Histogram game={game} histogram={block?.histogram} />
     </div>
   );
 }
@@ -172,12 +173,15 @@ function StatRow({
 }
 
 function Histogram({
+  game,
   histogram,
 }: {
+  readonly game: TimedGame;
   readonly histogram: TimedGameStats["histogram"] | undefined;
 }) {
   const counts = histogram ?? TIMED_ZERO.histogram;
   const max = Math.max(...counts, 1);
+  const buckets = timeBuckets(game);
   return (
     <div
       className={styles.histogram}
@@ -185,10 +189,10 @@ function Histogram({
     >
       {counts.map((count, index) => (
         <div
-          key={messages.stats.histogram.labels[index]}
+          key={buckets[index]?.label}
           role="img"
           aria-label={messages.stats.histogram.aria(
-            messages.stats.histogram.bucketNames[index] ?? "",
+            buckets[index]?.name ?? "",
             count,
           )}
           className={styles.bucket}
@@ -200,7 +204,7 @@ function Histogram({
             />
           </div>
           <span aria-hidden className={`${styles.bucketLabel} tabular-nums`}>
-            {messages.stats.histogram.labels[index]}
+            {buckets[index]?.label}
           </span>
         </div>
       ))}
