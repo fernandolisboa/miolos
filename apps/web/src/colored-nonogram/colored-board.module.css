@@ -1,7 +1,8 @@
 /* Layered on nonogram-board.module.css, which loads from another chunk, so
-   their order is not guaranteed: never redeclare a property a Clássico class sets
-   on the same element at the same specificity. A painted cell's fill and a
-   chip's tone come inline from `toneStyle`, which also sets --cell-ink. */
+   their order is not guaranteed: never redeclare a property a Clássico class
+   sets on the same element at the same specificity. A painted cell's fill
+   and a chip's tone come inline from `toneStyle`, which also sets
+   --cell-ink. */
 
 .pageColored.overhang5 {
   --board-overhang: 34px;

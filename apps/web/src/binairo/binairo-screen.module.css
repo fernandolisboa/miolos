@@ -1,12 +1,5 @@
-/* The /binairo BOARD and input row — everything the shared play layout in
-   `../play/screen.module.css` deliberately does not own (ADR-0029). Every
-   rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector either fails the build or
-   leaks globally. */
-
-/* The per-game half of the shared layout, carried on the SAME element as
-   `screen.page`: custom properties only, never a redeclared `.gridCard`.
-   --board-below is the control row's height under the card. */
+/* Custom properties only; the shared layout in play/screen.module.css owns
+   `.gridCard` (see ADR-0029). */
 .pageBinairo {
   --grid-card-rot: 0.4deg;
   --stats-card-rot: -0.5deg;
@@ -15,14 +8,11 @@
   --board-below: calc(var(--space-6) + 52px);
 }
 
-/* ── board ───────────────────────────────────────────────────────────── */
-
 .grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 4px;
-  /* Scoped to the board so a paint drag never fights the page scroll, and
-     the rest of the screen still scrolls normally. */
+  /* Scoped to the board: a paint drag must not fight the page scroll. */
   touch-action: none;
   --spotlight-strength: 12%;
 }
@@ -70,20 +60,12 @@
   font-weight: 500;
 }
 
-/* The pre-hydration placeholder cell. Colour only:
-   every dimension still comes from .cell and .grid above, so the placeholder
-   board is the real board's size on every viewport by construction. Static —
-   DESIGN.md has no shimmer. */
 .cellSkeleton {
   background: var(--paper-tint);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
   cursor: default;
 }
 
-/* --accent-app is scoped to "streak, promo" in DESIGN.md, so using the
-   sealing-wax red as the error colour is a third role: it is the only red in
-   the palette. A doubled hairline and the cell's accessible name keep colour
-   from being the sole carrier. */
 .cellViolating {
   border-color: var(--accent-app);
   color: var(--accent-app);
@@ -91,15 +73,12 @@
   box-shadow: inset 0 0 0 1.5px var(--accent-app);
 }
 
-/* Undrawn — the revealed cell settles in over --duration-fast. */
 .cellHinted {
   background: color-mix(in srgb, var(--accent-binairo) 10%, var(--paper-desk));
   border-color: var(--accent-binairo);
   color: var(--accent-binairo-text);
   font-weight: 600;
 }
-
-/* ── controls ────────────────────────────────────────────────────────── */
 
 .controls {
   box-sizing: border-box;
@@ -121,10 +100,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Non-zero on both axes for the same `cramped-padding` reason as .hint.
-     These are border-box, fixed-size, flex-centred buttons, so padding only
-     shrinks the content box — the frames' 64×52 / 52px geometry below is
-     untouched and the label stays optically centred. */
+  /* Non-zero on both axes for the same `cramped-padding` reason as .hint:
+     padding only shrinks these border-box buttons' content box. */
   padding: var(--space-2) var(--space-3);
   background: var(--paper-card);
   border-radius: var(--radius);
@@ -157,7 +134,6 @@
     color-mix(in srgb, var(--accent-binairo) 22%, transparent);
 }
 
-/* Paint-active inverts (undrawn): the button becomes the ink it paints. */
 .controlDigitActive {
   background: var(--accent-binairo);
   color: var(--paper-desk);
@@ -175,21 +151,16 @@
   }
 }
 
-/* ── pre-hydration placeholders ──────────────────────────────────────── */
-
-/* This module's own copy of the shared sheet's `.placeholder`: the skeleton's
-   control row borrows `.control`, and a class hashed in
-   `../play/screen.module.css` cannot override one hashed here. It has to sit
-   AFTER .control: same specificity, later wins. */
+/* This module's own copy of the shared `.placeholder`: a class hashed in
+   `../play/screen.module.css` cannot override one hashed here, so it must
+   sit after .control (equal specificity, later wins). */
 .placeholder {
   cursor: default;
   pointer-events: none;
 }
 
-/* This module's own reduced-motion block, for the same hashing reason: the
-   shared sheet's block covers `.hint` and cannot reach these classes.
-   DESIGN.md makes a reduced-motion alternative law, so leaving it implicit
-   would silently drop it. */
+/* This module's own reduced-motion block: the shared sheet's covers `.hint`
+   and cannot reach classes hashed here. */
 @media (prefers-reduced-motion: reduce) {
   .cell,
   .control {

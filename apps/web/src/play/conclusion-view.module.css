@@ -1,17 +1,9 @@
-/* Every accent here is `var(--accent)`, set inline on the root from
-   `play/accent.ts` — one sheet, four games.
-
-   Every rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector either fails the build
-   or leaks globally. */
-
 .page {
   box-sizing: border-box;
   min-height: 100dvh;
   padding: var(--space-11) 80px;
 }
 
-/* Per-screen hover accent — anchored on .page, never a bare `a:hover`. */
 .page a:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -20,8 +12,8 @@
   text-underline-offset: 4px;
 }
 
-/* Named areas, never `display: contents` — the top bar's per-viewport
-   members have to survive the reflow. */
+/* Named areas, never `display: contents`: the top bar's per-viewport members
+   must survive the reflow. */
 .pageResult {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -38,8 +30,6 @@
   display: flex;
   flex-direction: column;
 }
-
-/* ── top bar ─────────────────────────────────────────────────────────── */
 
 .topBar {
   grid-area: bar;
@@ -87,8 +77,6 @@
   font-size: 13px;
   color: var(--ink-2);
 }
-
-/* ── result card ─────────────────────────────────────────────────────── */
 
 .resultCard {
   position: relative;
@@ -189,14 +177,8 @@
   composes: stampTime;
 }
 
-/* The loss chrome (ADR-0043 decision 3), declared AFTER `.stamp` so
-   same-specificity-later-wins carries the two overrides.
-
-   IT DECLARES NO `animation`, and the absence is not what stands the settle
-   down — `.stampStill` below is, applied by `OutcomeStamp` from
-   `outcome.state === "lost"` rather than by this class. Motion is a property
-   of the OUTCOME, not of the loss chrome, so the two are separable if a
-   future game ever wants a still stamp on a win. */
+/* Loss chrome (ADR-0043): declared after `.stamp`, so at equal specificity
+   source order lets its overrides win. */
 .stampLost {
   border: 1.5px solid var(--ink-2);
   color: var(--ink-2);
@@ -213,8 +195,7 @@
   margin-top: var(--space-6);
 }
 
-/* Nothing here may use --accent-app #9E3B2F, which is 1.40:1 against
-   terracotta and invisible. */
+/* Nothing here may use --accent-app, which is 1.40:1 against terracotta. */
 .picture {
   width: 132px;
   height: 132px;
@@ -234,8 +215,6 @@
   }
 }
 
-/* ── the day's word (#27, ADR-0043 decision 6) ───────────────────────── */
-
 .pictureCaption {
   display: flex;
   flex-direction: column;
@@ -253,10 +232,8 @@
   color: var(--ink-2);
 }
 
-/* The name. NOT a heading and never `role="heading"` — `.pictureLead` above
-   it is textbook `kicker-above-heading` shape, and the pair is legal only
-   because both that rule and `hero-eyebrow-chip` anchor exclusively on
-   `h1`–`h4` and `[role="heading"]`. */
+/* Not a heading: impeccable's kicker-above-heading is legal here only
+   because it anchors on h1-h4 and [role=heading]. */
 .pictureName {
   margin: 0;
   font-family: var(--font-display);
@@ -276,9 +253,8 @@
   text-align: center;
 }
 
-/* Kept short deliberately: `line-length` needs textLen > 80 AND
-   charsPerLine > 85, and at 34 and 21 characters the two lines never enter
-   the rule at all. */
+/* Copy stays short: impeccable's line-length needs textLen > 80 and
+   charsPerLine > 85. */
 .dayWordResult {
   margin: 0;
   font-size: 15px;
@@ -317,11 +293,8 @@
   text-wrap: pretty;
 }
 
-/* ── the cross-device completed view (#142, ADR-0065) ────────────────────
-   Two quiet lines inside the result card, beside the stamp — never a
-   banner, never a kicker: both are lowercase-set body text, so the
-   `all-caps-body` threshold (>30 chars of direct uppercase text) is
-   structurally out of reach. */
+/* Lowercase body text, never a kicker, keeps impeccable's all-caps-body out
+   of reach. */
 
 .remoteNote {
   margin: var(--space-3) 0 0;
@@ -339,8 +312,6 @@
   color: var(--ink-2);
   text-wrap: pretty;
 }
-
-/* ── side column ─────────────────────────────────────────────────────── */
 
 .side {
   grid-area: side;
@@ -417,13 +388,6 @@
   margin-top: 14px;
 }
 
-/* Non-zero padding on BOTH axes, and the horizontal half is a gate fix rather
-   than a taste one: `.chipDone` paints a background and `.chipMissing` a
-   1.5px dashed border, so at `padding: 12px 0` the chip's two block children
-   sat flush against a VISIBLE boundary and `impeccable detect` fired
-   `cramped-padding` five times per viewport on the concluded card — the one
-   card no URL-mode scan reaches, because a clean browser profile has no
-   concluded record and always renders the empty branch. */
 .chip {
   box-sizing: border-box;
   flex: 1;
@@ -484,12 +448,8 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* ANCHORED ON `.page`, and the extra class is the whole point (finding
-   `chaining-cta-label-vanishes-on-hover`): the solid CTA keeps its paper ink
-   on hover, but a bare `.cta:hover` (0,2,0) loses the cascade to
-   `.page a:hover` (0,2,1) above, and the label would resolve to the SAME
-   `--accent` as `.ctaNext`'s background — an invisible label at 1:1 contrast
-   for as long as the pointer is on it. (0,3,0) wins. */
+/* Anchored on `.page`: a bare `.cta:hover` (0,2,0) loses to `.page a:hover`
+   (0,2,1) and the label would match its own fill. */
 .page .cta:hover {
   color: var(--paper-desk);
   text-decoration: none;
@@ -507,9 +467,7 @@
     color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-/* (0,4,0), so it beats `.page .cta:hover` (0,3,0) above on specificity rather
-   than on source order — the hover must not drop the destination game's ink
-   back to desk on a terracotta fill. */
+/* (0,4,0): beats `.page .cta:hover` on specificity, not source order. */
 .page .cta.ctaNext:hover {
   color: var(--ink-on-accent, var(--paper-desk));
 }
@@ -535,8 +493,6 @@
   text-decoration: none;
   border-bottom-color: var(--accent);
 }
-
-/* ── "ainda não concluído" and the pre-hydration skeleton ────────────── */
 
 .emptyBody {
   flex: 1;
@@ -670,10 +626,8 @@
   }
 }
 
-/* Page padding is 20px, not F6's 18px:
-   impeccable's body-text-viewport-edge fires on a >40-char <p> whose
-   rect.left < 16, and a card at 18px with sub-pixel rounding sits too close
-   to that edge. Hoje ships 20px for the same reason. */
+/* 20px, not 18px: impeccable's body-text-viewport-edge fires on a long <p>
+   closer than 16px to the edge. */
 @media (max-width: 768px) {
   .page {
     padding: var(--space-5) var(--space-5) var(--space-6);
@@ -713,15 +667,10 @@
   }
 
   .stampLabel {
-    /* F6 draws 9px; 11px is the legibility floor the detect gate enforces
-       for functional text (deviation 4), same rule Hoje's kicker follows. */
     font-size: 11px;
     letter-spacing: 0.16em;
   }
 
-  /* `.stampGuesses` needs no block of its own here: it `composes: stampTime`,
-     so the element carries both class names and this rule already governs
-     "4/6" and "X/6" as well as a duration. */
   .stampTime {
     font-size: 28px;
   }
@@ -738,8 +687,6 @@
     font-size: 24px;
   }
 
-  /* Inside the ONE `@media (max-width: 768px)` block this module declares, so
-     `bodyOf`'s first-match lookup cannot be handed the wrong body. */
   .figureRow {
     margin-top: var(--space-4);
   }
@@ -828,15 +775,6 @@
     height: 220px;
   }
 }
-
-/* ── the stat block (#29, plan 033 §6.4) ─────────────────────────────────
-   F5's main-card composition, filled at last: stat rows (F5:33-35),
-   histogram (F5:38-48) and the closing italic line (F5:50) for the timed
-   games; the 7-row guess distribution for Termo. Every bar is a SHAPE in
-   the game's accent and every word is ink (ADR-0041); every numeral that
-   must align is Instrument Sans + tabular-nums (ADR-0036). Placed after
-   the shared blocks and BEFORE nothing it overrides — all class names are
-   this block's own. */
 
 .statsBlock {
   margin-top: var(--space-6);

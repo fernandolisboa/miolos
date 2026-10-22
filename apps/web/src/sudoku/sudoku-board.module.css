@@ -1,12 +1,5 @@
-/* The /sudoku BOARD and KEYPAD — everything the shared play layout in
-   `../play/screen.module.css` deliberately does not own (ADR-0029). Every
-   rule is anchored on a local class: Next compiles CSS Modules in
-   css-loader's `pure` mode, so a bare type selector either fails the build or
-   leaks globally. Every accent is `var(--accent)`, which the screen root sets
-   to `--accent-sudoku`. */
-
-/* Custom properties only, never a redeclared `.gridCard` (ADR-0029).
-   --board-below mirrors the keypad's height under the card. */
+/* Custom properties only; the shared layout in play/screen.module.css owns
+   `.gridCard` (see ADR-0029). */
 .pageSudoku {
   --grid-card-rot: -0.4deg;
   --stats-card-rot: 0.5deg;
@@ -15,15 +8,10 @@
   --board-below: calc(var(--space-6) + 52px + var(--space-2) + 44px);
 }
 
-/* ── board ───────────────────────────────────────────────────────────── */
-
-/* ONE flat 81-item grid with explicit 2px GUTTER TRACKS, never a wrapper per
-   3×3 box: a <div> per box would be a card inside a card. The cells are
-   placed explicitly from `track()` in `engine.ts`; auto-placement would drop
-   nine of them into the gutter tracks.
-
-   `manipulation`, not `none`: Sudoku has no drag, and `none` would
-   needlessly disable pinch-zoom over the board. */
+/* One flat 81-item grid with 2px gutter tracks: cells are placed explicitly
+   from `track()` in `engine.ts`, since auto-placement would drop nine of
+   them into the gutters. `manipulation`, not `none`: Sudoku has no drag, and
+   `none` would disable pinch-zoom. */
 .grid {
   display: grid;
   grid-template-columns:
@@ -37,10 +25,8 @@
   touch-action: manipulation;
 }
 
-/* The four box rules, drawn in the gutter tracks: an undrawn gutter is lighter
-   than the desk-paper cells it separates. Ink at 50% clears WCAG 1.4.11's 3:1
-   where a --line rule would not. No border, radius or box-shadow, so
-   impeccable's `nested-cards` cannot fire on it. */
+/* Ink at 50% clears WCAG 1.4.11's 3:1 where a --line rule would not. No
+   border, radius or box-shadow, so impeccable's `nested-cards` cannot fire. */
 .rule {
   background: color-mix(in srgb, var(--ink) 50%, transparent);
 }
@@ -108,11 +94,8 @@
   pointer-events: none;
 }
 
-/* ── chromatic cell states ───────────────────────────────────────────── */
-
-/* Exactly one per cell, precedence
-   violating > hint-filled > entered > given > empty. The caret below composes
-   with them rather than suppressing them (ADR-0030 (d)). */
+/* Exactly one per cell: violating > hint-filled > entered > given > empty.
+   The caret composes with them (see ADR-0030 (d)). */
 
 .cellGiven {
   background: var(--paper-tint);
@@ -120,16 +103,14 @@
   cursor: default;
 }
 
-/* Weight 450, not 500: ink-blue sits close to --ink, so the given/entered
-   distinction leans on the tint above and on this weight. */
 .cellEntered {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   color: var(--accent);
+  /* 450, not 500: ink-blue sits close to --ink, so weight and tint together
+     tell a given from an entry. */
   font-weight: 450;
 }
 
-/* The free hint's whole visual payload; `use-hint` never moves the selection,
-   so it stays legible with or without the caret. */
 .cellHinted {
   background: color-mix(in srgb, var(--accent) 10%, var(--paper-desk));
   border-color: var(--accent);
@@ -137,12 +118,9 @@
   font-weight: 600;
 }
 
-/* --accent-app is scoped to "streak, promo" in DESIGN.md; using the
-   sealing-wax red as the error colour is a third role, carried over from
-   #18. Three carriers — the doubled hairline, the red, and the composed
-   accessible name — so colour is never the sole one. `aria-invalid` is NOT
-   used: ARIA does not support it on role=button and
-   `jsx-a11y/role-supports-aria-props` reds the lint gate. */
+/* Three carriers (doubled hairline, red, accessible name), so colour is
+   never the only one. `aria-invalid` is not used: ARIA does not support it
+   on role=button and `jsx-a11y/role-supports-aria-props` fails lint. */
 .cellViolating {
   border-color: var(--accent-app);
   color: var(--accent-app);
@@ -150,12 +128,10 @@
   box-shadow: inset 0 0 0 1.5px var(--accent-app);
 }
 
-/* ── the selection's reach ───────────────────────────────────────────── */
-
-/* Violating and hinted cells keep their own look; the fill would erase the
-   hint's accent border. The tint is an overlay image, so a given keeps its
-   paper tint beneath it; in dark, plain --accent text drops under 4.5:1 on
-   it, hence the -text token. These rules must follow .cellGiven/.cellEntered. */
+/* Must follow `.cellGiven`/`.cellEntered`. Violating and hinted cells keep
+   their own look. The tint is an overlay image, so a given keeps its paper
+   tint beneath it; in dark, plain --accent text is under 4.5:1 on it, hence
+   the -text token. */
 .cellUnit {
   background-image: linear-gradient(
     color-mix(in srgb, var(--accent) 7%, transparent),
@@ -181,12 +157,9 @@
   font-weight: 700;
 }
 
-/* ── the caret ───────────────────────────────────────────────────────── */
-
-/* One block for the selection and the focus ring, so they can never disagree
-   (ADR-0030 (c)). Drawn inside the border so it cannot paint over the grid gap
-   or the box rule, and as an outline so a violating cell keeps saying so
-   while it is the caret. */
+/* One block for the selection and the focus ring, so they cannot disagree
+   (see ADR-0030 (c)). Drawn inside the border so it cannot paint over the
+   grid gap or the box rule; an outline, so a violating cell keeps saying so. */
 .cellSelected,
 .cell:focus-visible {
   outline: 2px solid var(--accent);
@@ -194,24 +167,20 @@
 }
 
 /* After the caret block: `.cell:focus-visible` has the same specificity, so
-   order is what keeps the caret visible on the accent fill. */
+   order keeps the caret visible on the accent fill. */
 .cellSameDigit.cellSelected,
 .cellSameDigit:focus-visible {
   outline-color: var(--ink-on-accent);
 }
 
-/* The pre-hydration placeholder cell: colour only, so it is the real board's
-   size by construction. */
 .cellSkeleton {
   background: var(--paper-tint);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
   cursor: default;
 }
 
-/* ── keypad ──────────────────────────────────────────────────────────── */
-
-/* The digit row mirrors the board's tracks, so digit n sits under column n.
-   Never narrower than nine touch targets: below that the mirror yields. */
+/* The digit row mirrors the board's tracks, so digit n sits under column n;
+   below nine touch targets the mirror yields. */
 .keypad {
   display: grid;
   grid-template-columns:
@@ -251,8 +220,6 @@
     box-shadow var(--duration-fast) var(--ease-settle);
 }
 
-/* The column each digit occupies, skipping the gutters: the sequence `track()`
-   computes for the cells, pinned by T-WEB-S34. */
 .keypadDigit:nth-child(1) {
   grid-column: 1;
 }
@@ -299,8 +266,8 @@
   color: var(--ink-on-accent);
 }
 
-/* Nine copies placed: flatter and dimmer than an open key, still above 3:1;
-   the ✓ keeps the state from being colour-only. */
+/* Nine copies placed: dimmer than an open key, still above 3:1; the check
+   mark keeps it from being colour-only. */
 .keypadComplete {
   border-color: var(--line);
   color: color-mix(in srgb, var(--ink-2) 75%, var(--paper-card));
@@ -317,7 +284,6 @@
   color: var(--paper-card);
 }
 
-/* Over nine: the conflict ring's red, with the count as the second carrier. */
 .keypadOver {
   border-color: var(--accent-app);
   color: var(--accent-app);
@@ -401,20 +367,15 @@
   outline-offset: 2px;
 }
 
-/* ── the Nível readout ───────────────────────────────────────────────── */
-
-/* Sudoku's third `.statRow` value; no other game has a difficulty. */
 .levelCard {
   font-size: 14px;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
 
-/* ── pre-hydration placeholders ──────────────────────────────────────── */
-
 /* Must sit after `.keypadDigit` and `.keypadTool`, which the skeleton keypad
-   borrows: same specificity, later wins. A class hashed in the shared sheet
-   cannot override these. */
+   borrows: a class hashed in the shared sheet cannot override them at equal
+   specificity. */
 .placeholder {
   cursor: default;
   pointer-events: none;
@@ -437,7 +398,8 @@
     gap: 3px;
   }
 
-  /* A 3px column gap keeps six keys at 44px or more at the 280px board floor. */
+  /* A 3px column gap keeps six keys at 44px or more at the 280px board
+     floor. */
   .keypad {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     grid-template-rows: repeat(2, 48px);
