@@ -105,6 +105,7 @@ describe("one mount, one read — and no call site can make it refetch (T-WEB-S3
       "app/admin/admin-config-section.tsx",
       "app/ajustes/account-section.tsx",
       "app/ajustes/google-section.tsx",
+      "app/ajustes/telemetry-section.tsx",
       "src/api/free-hints-provider.tsx",
       "src/attach/use-attach-state.ts",
       "src/medals/use-medals.ts",

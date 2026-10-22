@@ -50,9 +50,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     if (inserted) {
-      const userId = context.userId;
+      const { db, userId } = context;
       runAfterResponse(() =>
         captureEvent({
+          db,
           distinctId: userId,
           event: "notification_opt_in",
           properties: {},

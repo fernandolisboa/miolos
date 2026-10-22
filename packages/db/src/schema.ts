@@ -42,6 +42,10 @@ export const users = pgTable(
     onboardingSeenAt: timestamptz("onboarding_seen_at"),
 
     pushPromptDismissedAt: timestamptz("push_prompt_dismissed_at"),
+
+    telemetryOptOutAt: timestamptz("telemetry_opt_out_at"),
+
+    gameSettings: jsonb("game_settings"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
 
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),

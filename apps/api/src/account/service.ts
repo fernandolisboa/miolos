@@ -18,6 +18,34 @@ export async function getAccountState(
   };
 }
 
+export async function telemetryOptedOut(
+  db: Db,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ telemetryOptOutAt: users.telemetryOptOutAt })
+    .from(users)
+    .where(eq(users.id, userId));
+  const row = rows[0];
+  return row === undefined || row.telemetryOptOutAt !== null;
+}
+
+export async function setTelemetrySending(
+  db: Db,
+  userId: string,
+  sending: boolean,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({
+      telemetryOptOutAt: sending
+        ? null
+        : sql`coalesce(${users.telemetryOptOutAt}, now())`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(users.id, userId));
+}
+
 export async function withdrawReminderConsent(
   db: Db,
   userId: string,

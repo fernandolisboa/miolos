@@ -17,15 +17,18 @@ function code(source: string): string {
 
 const sw = code(swSource);
 
-describe("the service worker is caching-free (T-WEB-S261)", () => {
-  it("carries no request-interception or storage token, and exactly the two handlers", () => {
-    expect(sw).not.toContain("fetch");
-    expect(sw).not.toContain("caches");
-
+describe("the service worker registers exactly its five handlers (T-WEB-S261)", () => {
+  it("has install, activate and fetch for free play offline (ADR-0151) beside push and notificationclick", () => {
     const listeners = [...sw.matchAll(/addEventListener\(\s*"([^"]+)"/g)].map(
       (match) => match[1] ?? "",
     );
-    expect(listeners.sort()).toEqual(["notificationclick", "push"]);
+    expect(listeners.sort()).toEqual([
+      "activate",
+      "fetch",
+      "install",
+      "notificationclick",
+      "push",
+    ]);
 
     expect(sw).not.toMatch(/self\.on[a-z]+\s*=/);
 

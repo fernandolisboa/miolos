@@ -4,6 +4,7 @@ import Link from "next/link";
 import { freePlayRoutes, messages } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
 import { PageTopBar } from "../../src/components/page-top-bar";
+import { OfflineNote } from "../../src/free-play/offline-note";
 import styles from "./page.module.css";
 
 export default function FreePlayIndexPage() {
@@ -14,6 +15,7 @@ export default function FreePlayIndexPage() {
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>{messages.freePlay.title}</h1>
         <p className={styles.lead}>{messages.freePlay.lead}</p>
+        <OfflineNote />
       </div>
 
       <section className={styles.games}>

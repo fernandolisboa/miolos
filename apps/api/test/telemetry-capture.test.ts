@@ -1,5 +1,34 @@
 import type { TelemetryEventProperties } from "@miolos/core";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { users } from "@miolos/db";
+import { createTestDb } from "@miolos/db/testing";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+
+const USER_1 = "00000000-0000-4000-8000-000000000001";
+const USER_7 = "00000000-0000-4000-8000-000000000007";
+const USER_42 = "00000000-0000-4000-8000-000000000042";
+
+let ctx: Awaited<ReturnType<typeof createTestDb>>;
+let db: Awaited<ReturnType<typeof createTestDb>>["db"];
+
+beforeAll(async () => {
+  ctx = await createTestDb();
+  db = ctx.db;
+  await db
+    .insert(users)
+    .values([{ id: USER_1 }, { id: USER_7 }, { id: USER_42 }]);
+}, 30_000);
+
+afterAll(async () => {
+  await ctx.close();
+});
 
 async function loadCapture() {
   vi.resetModules();
@@ -21,12 +50,14 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     const { captureEvent } = await loadCapture();
 
     await captureEvent({
-      distinctId: "user-1",
+      db,
+      distinctId: USER_1,
       event: "notification_opt_in",
       properties: {},
     });
     await captureEvent({
-      distinctId: "user-1",
+      db,
+      distinctId: USER_1,
       event: "login_linked",
       properties: { merged: false },
     });
@@ -47,7 +78,8 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
 
     await expect(
       captureEvent({
-        distinctId: "user-1",
+        db,
+        distinctId: USER_1,
         event: "notification_opt_in",
         properties: {},
       }),
@@ -66,7 +98,8 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     );
     const { captureEvent: captureAgain } = await loadCapture();
     const pending = captureAgain({
-      distinctId: "user-1",
+      db,
+      distinctId: USER_1,
       event: "notification_opt_in",
       properties: {},
     });
@@ -86,7 +119,8 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     const { captureEvent, POSTHOG_INGESTION_URL } = await loadCapture();
 
     await captureEvent({
-      distinctId: "user-42",
+      db,
+      distinctId: USER_42,
       event: "puzzle_completed",
       properties: {
         game: "termo",
@@ -112,7 +146,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     expect(JSON.parse(init.body as string)).toEqual({
       api_key: "phc_test_key",
       event: "puzzle_completed",
-      distinct_id: "user-42",
+      distinct_id: USER_42,
       properties: {
         game: "termo",
         date: "2026-08-21",
@@ -134,7 +168,8 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     const { captureEvent } = await loadCapture();
 
     await captureEvent({
-      distinctId: "user-7",
+      db,
+      distinctId: USER_7,
       event: "login_linked",
       properties: {
         merged: true,
@@ -145,7 +180,8 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     expect(fetchMock).not.toHaveBeenCalled();
 
     await captureEvent({
-      distinctId: "user-7",
+      db,
+      distinctId: USER_7,
       event: "login_linked",
       properties: { merged: true },
     });
@@ -157,12 +193,40 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
     expect(JSON.parse(init.body as string)).toEqual({
       api_key: "phc_test_key",
       event: "login_linked",
-      distinct_id: "user-7",
+      distinct_id: USER_7,
       properties: {
         merged: true,
         $process_person_profile: false,
         $geoip_disable: true,
       },
     });
+  });
+  it("T-API-S362: an opted-out account, a missing account and a failed read send nothing; the same event for a sending account goes out (ADR-0148)", async () => {
+    vi.stubEnv("POSTHOG_KEY", "phc_test_key");
+    const fetchMock = vi.fn(() => Promise.resolve(new Response("{}")));
+    vi.stubGlobal("fetch", fetchMock);
+    const { captureEvent } = await loadCapture();
+    const optedOut = "00000000-0000-4000-8000-000000000099";
+    await db
+      .insert(users)
+      .values({ id: optedOut, telemetryOptOutAt: new Date("2026-10-22") });
+    const event = {
+      db,
+      event: "login_linked",
+      properties: { merged: false },
+    } as const;
+
+    await captureEvent({ ...event, distinctId: optedOut });
+    await captureEvent({
+      ...event,
+      distinctId: "00000000-0000-4000-8000-0000000000ff",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await captureEvent({ ...event, distinctId: "not-a-uuid" });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await captureEvent({ ...event, distinctId: USER_1 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

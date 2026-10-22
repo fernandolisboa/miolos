@@ -87,7 +87,7 @@ describe("the web app manifest (T-WEB-S130)", () => {
   });
 });
 
-describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)", () => {
+describe("the install metadata and the service-worker registration tripwire (T-WEB-S131)", () => {
   it("exports the themeColor viewport as a light/dark pair, both tied to --paper-desk — the manifest's static theme_color stays light-only, but the viewport now follows the system", () => {
     const themeColor = viewport.themeColor;
     expect(Array.isArray(themeColor)).toBe(true);
@@ -109,7 +109,7 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     });
   });
 
-  it("registers a service worker in exactly ONE place — the push subscribe module, called from the card's accept and the settings toggle — and never at layout or mount level (the D13 tripwire, re-aimed at #145)", () => {
+  it("names the service worker in exactly two places: the push subscribe module and the layout's inline registration script (ADR-0151)", () => {
     const sources: { path: string; text: string }[] = [];
     for (const dir of ["app", "src"]) {
       for (const entry of readdirSync(join(webRoot, dir), {
@@ -134,6 +134,11 @@ describe("the install metadata and the no-service-worker tripwire (T-WEB-S131)",
     const offenders = sources
       .filter((source) => source.text.includes("serviceWorker"))
       .map((source) => source.path);
-    expect(offenders).toEqual([join(webRoot, "src", "push", "subscribe.ts")]);
+    expect(offenders.sort()).toEqual(
+      [
+        join(webRoot, "src", "offline", "register-script.ts"),
+        join(webRoot, "src", "push", "subscribe.ts"),
+      ].sort(),
+    );
   });
 });

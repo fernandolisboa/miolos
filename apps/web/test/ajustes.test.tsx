@@ -201,6 +201,7 @@ describe("a wide screen lays Ajustes out in paired rows around a full-width Jogo
       "settings-push-heading",
       "settings-games-heading",
       "settings-account-heading",
+      "settings-telemetry-heading",
       "settings-deletion-heading",
     ]);
     const parent = (id: string) =>
@@ -216,6 +217,9 @@ describe("a wide screen lays Ajustes out in paired rows around a full-width Jogo
     );
     expect(parent("settings-account-heading")).not.toBe(
       parent("settings-games-heading"),
+    );
+    expect(parent("settings-telemetry-heading")).toBe(
+      parent("settings-account-heading"),
     );
     document.body.innerHTML = "";
   });
