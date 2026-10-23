@@ -531,7 +531,7 @@ describe("nonogramDailyContentSchema", () => {
 
 describe("termoDailyContentSchema", () => {
   it("T-CORE-S17: every curated answer parses, round-trips unchanged, and agrees with normalizeWord", () => {
-    expect(TERMO_ANSWERS.length).toBe(626);
+    expect(TERMO_ANSWERS.length).toBe(1714);
     for (const answer of TERMO_ANSWERS) {
       const parsed = termoDailyContentSchema.parse(answer);
       expect(parsed).toEqual({

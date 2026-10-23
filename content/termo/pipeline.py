@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Build the Termo guess dictionary and the profanity rows of excluded.txt.
+"""Build the Termo guesses, the common words, the answers and excluded.txt.
 
 Run from anywhere: paths resolve relative to this file. Sources download into
 sources/ (gitignored) from pinned commits and must match their sha256. Inputs:
-ispell.txt (the frozen IME-USP forms), additions.txt. Outputs: validation.txt,
-excluded.txt, candidates.tsv (gitignored), rejected-lexicon-sample.txt.
+ispell.txt (the frozen IME-USP forms), additions.txt, excluded.txt's
+non-profanity rows, answers.csv. Outputs: validation.txt, excluded.txt,
+common.csv, answers.csv (appended to, never rewritten),
+rejected-lexicon-sample.txt.
 """
 import hashlib
 import os
@@ -13,6 +15,7 @@ import re
 import unicodedata
 import urllib.request
 from collections import defaultdict
+from typing import NamedTuple
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,6 +29,8 @@ SOURCES = {
 
 NORM_RE = re.compile(r"^[a-z]{5}$")
 FORBIDDEN_FLAG = "ý"
+FREQUENCY_FLOOR = 100
+CSV_HEADER = "canonical,normalized"
 
 # Surface forms the expander produces and `hunspell -l` rejects against the
 # same pinned files: three FORBIDDENWORD entries and three over-generated forms.
@@ -52,6 +57,11 @@ PROFANITY = {
 }
 
 assert all(len(w) == 5 for w in JUNK | PROPER_NOUN_DUPLICATES)
+
+
+class Common(NamedTuple):
+    canonical: str
+    frequency: int
 
 
 def fetch_sources() -> None:
@@ -146,6 +156,15 @@ def read_lines(name: str) -> list:
         return [line.rstrip("\n") for line in f]
 
 
+def write_lines(name: str, lines: list) -> None:
+    with open(f"{BASE}/{name}", "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def even_parity(norm: str) -> bool:
+    return hashlib.sha256(norm.encode("utf-8")).digest()[0] % 2 == 0
+
+
 def main() -> None:
     fetch_sources()
     rejected = []
@@ -188,19 +207,25 @@ def main() -> None:
         surfaces_of[norm].add(w)
 
     validation = sorted(set(surfaces_of) | set(ispell))
-    with open(f"{BASE}/validation.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(validation) + "\n")
+    write_lines("validation.txt", validation)
     print(f"validation.txt: {len(validation)}")
+
+    with open(f"{BASE}/answers.csv", encoding="utf-8") as f:
+        old = f.read()
+    if not (old.startswith(CSV_HEADER + "\n") and old.endswith("\n")):
+        raise SystemExit("answers.csv: not a header and newline-ended rows, so it cannot be appended to")
+    present = {line.split(",")[1] for line in old.splitlines()[1:]}
 
     profanity = sorted(n for n in surfaces_of if (stems_of[n] | surfaces_of[n]) & PROFANITY)
     matched = set().union(*((stems_of[n] | surfaces_of[n]) & PROFANITY for n in profanity))
     assert matched == PROFANITY, f"PROFANITY: {sorted(PROFANITY - matched)} match no form"
+    if present & set(profanity):
+        raise SystemExit(f"PROFANITY: {sorted(present & set(profanity))} are in answers.csv; retire them instead")
     kept = [r for r in read_lines("excluded.txt") if not r.endswith("\tprofanity")]
     rows = sorted(kept + [f"{n}\tprofanity" for n in profanity])
-    keys = [r.split("\t")[0] for r in rows]
-    assert len(keys) == len(set(keys)), "excluded.txt: a word carries two reasons"
-    with open(f"{BASE}/excluded.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(rows) + "\n")
+    excluded = {r.split("\t")[0] for r in rows}
+    assert len(excluded) == len(rows), "excluded.txt: a word carries two reasons"
+    write_lines("excluded.txt", rows)
     print(f"excluded.txt: {len(rows)} rows ({len(profanity)} profanity)")
 
     freq = {}
@@ -209,15 +234,28 @@ def main() -> None:
             parts = line.split()
             if len(parts) == 2:
                 freq[parts[0]] = int(parts[1])
-    scored = []
+    common = {}
+    in_ispell = set(ispell)
     for norm, forms in surfaces_of.items():
         best = sorted(forms, key=lambda c: (-freq.get(c, 0), c))[0]
-        if freq.get(best, 0) > 0:
-            scored.append((freq[best], norm, best, sorted(forms)))
-    scored.sort(reverse=True)
-    with open(f"{BASE}/candidates.tsv", "w", encoding="utf-8") as f:
-        for s, norm, canon, forms in scored[:2500]:
-            f.write(f"{s}\t{norm}\t{canon}\t{'|'.join(forms)}\n")
+        if freq.get(best, 0) < FREQUENCY_FLOOR:
+            rejected.append((best, "not common: below the frequency floor"))
+        elif norm not in in_ispell:
+            rejected.append((best, "not common: not a frozen IME form"))
+        else:
+            common[norm] = Common(best, freq[best])
+    write_lines("common.csv", [CSV_HEADER] + [f"{common[n].canonical},{n}" for n in sorted(common)])
+    print(f"common.csv: {len(common)}")
+
+    ranked = sorted(common, key=lambda n: (-common[n].frequency, n))
+    appended = [
+        f"{common[n].canonical},{n}\n"
+        for n in ranked
+        if even_parity(n) and n not in present and n not in excluded
+    ]
+    with open(f"{BASE}/answers.csv", "a", encoding="utf-8") as f:
+        f.write("".join(appended))
+    print(f"answers.csv: {len(present)} -> {len(present) + len(appended)} rows")
 
     random.seed(42)
     by_reason = defaultdict(set)

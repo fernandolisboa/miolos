@@ -21,7 +21,7 @@ const PER_ROUTE_BUDGET = {
 
   "/modo-livre/nonogram": 78 * 1024,
 
-  "/modo-livre/termo": 154 * 1024,
+  "/modo-livre/termo": 145 * 1024,
 
   "/modo-livre/cruzadinha": 667 * 1024,
 
@@ -101,7 +101,7 @@ const ROUTE_EXCLUSIVE_MARKERS = [
   },
   {
     route: "/modo-livre/termo",
-    marker: "ábaco\\nabade",
+    marker: "álamo\\nalças",
     reason: "the Termo free pool ships only there (ADR-0114)",
   },
 ];

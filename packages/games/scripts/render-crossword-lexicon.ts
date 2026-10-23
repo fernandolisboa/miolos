@@ -1,6 +1,6 @@
 import { splitLines } from "./split-lines.ts";
 
-export const LEXICON_COLUMNS = ["normalized", "canonical", "clue"] as const;
+const LEXICON_COLUMNS = ["normalized", "canonical", "clue"] as const;
 
 export function parseTsv(
   name: string,

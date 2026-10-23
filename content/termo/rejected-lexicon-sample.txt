@@ -30,36 +30,96 @@ teôn.	not a-z after normalization
 tê-la	not a-z after normalization
 tôo-o	not a-z after normalization
 uga-a	not a-z after normalization
-Abeba	proper-noun (capitalized)
-Amari	proper-noun (capitalized)
-Assur	proper-noun (capitalized)
-BNDES	proper-noun (capitalized)
-Barsa	proper-noun (capitalized)
-Bello	proper-noun (capitalized)
-Bíbl.	proper-noun (capitalized)
-CLXVI	proper-noun (capitalized)
-CMLVI	proper-noun (capitalized)
-Creso	proper-noun (capitalized)
-Dewar	proper-noun (capitalized)
-Eanes	proper-noun (capitalized)
-Hatim	proper-noun (capitalized)
-Hazor	proper-noun (capitalized)
-Helba	proper-noun (capitalized)
-Hiram	proper-noun (capitalized)
-IX-PI	proper-noun (capitalized)
-Ibama	proper-noun (capitalized)
-Jamai	proper-noun (capitalized)
-LINDB	proper-noun (capitalized)
-MLVII	proper-noun (capitalized)
-Nasim	proper-noun (capitalized)
-Paial	proper-noun (capitalized)
-Sarug	proper-noun (capitalized)
-Talia	proper-noun (capitalized)
-Taísa	proper-noun (capitalized)
-XXVII	proper-noun (capitalized)
-XXXIV	proper-noun (capitalized)
-Xingu	proper-noun (capitalized)
-Úrana	proper-noun (capitalized)
+abola	not common: below the frequency floor
+alare	not common: below the frequency floor
+ateve	not common: below the frequency floor
+atuso	not common: below the frequency floor
+aveza	not common: below the frequency floor
+belfo	not common: below the frequency floor
+buala	not common: below the frequency floor
+bulia	not common: below the frequency floor
+couto	not common: below the frequency floor
+eimam	not common: below the frequency floor
+entoa	not common: below the frequency floor
+enxie	not common: below the frequency floor
+gajam	not common: below the frequency floor
+ganês	not common: below the frequency floor
+gavão	not common: below the frequency floor
+gonam	not common: below the frequency floor
+hetes	not common: below the frequency floor
+jatar	not common: below the frequency floor
+loado	not common: below the frequency floor
+nanam	not common: below the frequency floor
+peiam	not common: below the frequency floor
+rupar	not common: below the frequency floor
+sisas	not common: below the frequency floor
+tando	not common: below the frequency floor
+taués	not common: below the frequency floor
+tílio	not common: below the frequency floor
+tútsi	not common: below the frequency floor
+uaupé	not common: below the frequency floor
+volos	not common: below the frequency floor
+zogas	not common: below the frequency floor
+bolor	not common: not a frozen IME form
+calum	not common: not a frozen IME form
+canis	not common: not a frozen IME form
+chaco	not common: not a frozen IME form
+chala	not common: not a frozen IME form
+cline	not common: not a frozen IME form
+flash	not common: not a frozen IME form
+flúor	not common: not a frozen IME form
+fodia	not common: not a frozen IME form
+gouda	not common: not a frozen IME form
+harpo	not common: not a frozen IME form
+jango	not common: not a frozen IME form
+jeová	not common: not a frozen IME form
+laris	not common: not a frozen IME form
+lorca	not common: not a frozen IME form
+líbio	not common: not a frozen IME form
+machê	not common: not a frozen IME form
+manju	not common: not a frozen IME form
+marga	not common: not a frozen IME form
+pajem	not common: not a frozen IME form
+patel	not common: not a frozen IME form
+pelve	not common: not a frozen IME form
+pimba	not common: not a frozen IME form
+pluto	not common: not a frozen IME form
+podre	not common: not a frozen IME form
+ponce	not common: not a frozen IME form
+skate	not common: not a frozen IME form
+suflê	not common: not a frozen IME form
+volts	not common: not a frozen IME form
+óscar	not common: not a frozen IME form
+Aleja	proper-noun (capitalized)
+Anora	proper-noun (capitalized)
+Ardom	proper-noun (capitalized)
+CDLII	proper-noun (capitalized)
+Coppe	proper-noun (capitalized)
+Corsi	proper-noun (capitalized)
+Célio	proper-noun (capitalized)
+DCLII	proper-noun (capitalized)
+Diana	proper-noun (capitalized)
+Dinís	proper-noun (capitalized)
+Gildo	proper-noun (capitalized)
+Girau	proper-noun (capitalized)
+Habur	proper-noun (capitalized)
+Inaya	proper-noun (capitalized)
+Iporá	proper-noun (capitalized)
+Kátia	proper-noun (capitalized)
+MCDVI	proper-noun (capitalized)
+MXXIX	proper-noun (capitalized)
+Manoá	proper-noun (capitalized)
+Oziel	proper-noun (capitalized)
+PMSPA	proper-noun (capitalized)
+PP-SE	proper-noun (capitalized)
+PV-AM	proper-noun (capitalized)
+PV-MA	proper-noun (capitalized)
+Riane	proper-noun (capitalized)
+Tiago	proper-noun (capitalized)
+Turim	proper-noun (capitalized)
+XVIII	proper-noun (capitalized)
+d'Arc	proper-noun (capitalized)
+Êudia	proper-noun (capitalized)
 berna	proper-noun (lowercase duplicate)
 ceara	proper-noun (lowercase duplicate)
 ceará	proper-noun (lowercase duplicate)

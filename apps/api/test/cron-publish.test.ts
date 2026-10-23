@@ -107,6 +107,10 @@ function freeTextOf(result: CronPublishGameResult): string[] {
   return [result.error ?? "", ...result.failures.map((entry) => entry.reason)];
 }
 
+const ANSWER_FORMS: ReadonlySet<string> = new Set(
+  TERMO_ANSWERS.flatMap((answer) => [answer.canonical, answer.normalized]),
+);
+
 const loggedResultSchema = cronPublishGameResultSchema.loose();
 
 async function rowsFor(game: string): Promise<DailyPuzzleRow[]> {
@@ -629,14 +633,10 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       return freeTextOf(loggedResultSchema.parse(parsed));
     });
+    expect(ANSWER_FORMS.has(answer.normalized)).toBe(true);
     for (const text of [...bodyText, ...loggedText]) {
-      expect(text).not.toContain(answer.canonical);
-      expect(text).not.toContain(answer.normalized);
-
-      const collisions = TERMO_ANSWERS.filter(
-        (candidate) =>
-          text.includes(candidate.canonical) ||
-          text.includes(candidate.normalized),
+      const collisions = (text.match(/\p{L}+/gu) ?? []).filter((word) =>
+        ANSWER_FORMS.has(word),
       );
       expect(collisions).toEqual([]);
     }
