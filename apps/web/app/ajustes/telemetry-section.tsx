@@ -8,6 +8,7 @@ import {
   setTelemetrySending,
 } from "../../src/account/telemetry-client";
 import { useMountFetch } from "../../src/api/use-mount-fetch";
+import { Switch } from "../../src/components/switch";
 import switchStyles from "../../src/components/switch.module.css";
 import { messages, routes } from "../../src/i18n";
 import styles from "./page.module.css";
@@ -44,19 +45,16 @@ function TelemetrySwitch() {
     <>
       <div className={switchStyles.switchRow}>
         <span id="settings-telemetry-toggle">{copy.toggle}</span>
-        <button
-          type="button"
-          role="switch"
-          className={switchStyles.switch}
-          aria-labelledby="settings-telemetry-toggle"
-          aria-checked={sending}
+        <Switch
+          labelledBy="settings-telemetry-toggle"
+          checked={sending}
           disabled={busy}
-          onClick={() => {
-            void toggle(!sending);
+          onToggle={(next) => {
+            void toggle(next);
           }}
         >
           {busy ? copy.busy : sending ? copy.on : copy.off}
-        </button>
+        </Switch>
       </div>
       {failed && (
         <p className={styles.note} role="status">

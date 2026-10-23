@@ -57,7 +57,7 @@ export function termoPlayReducer(
       if (!accepting(state) || word === null) {
         return state;
       }
-      if (!isValidGuess(word)) {
+      if (!isValidGuess(word, action.acceptsProfanity)) {
         return noticed(state, copy.notInList);
       }
 

@@ -73,7 +73,7 @@ export function termoVariantReducer(
   if (word === null) {
     return state;
   }
-  if (!isValidGuess(word)) {
+  if (!isValidGuess(word, false)) {
     return noticed(state, copy.notInList);
   }
   return {

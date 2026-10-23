@@ -36,7 +36,7 @@ export type TermoPlayAction =
   | { readonly type: "type"; readonly letter: string }
   | { readonly type: "erase" }
   | { readonly type: "select"; readonly slot: number }
-  | { readonly type: "submit" }
+  | { readonly type: "submit"; readonly acceptsProfanity: boolean }
   | { readonly type: "retry" }
   | { readonly type: "held"; readonly reason: HeldReason }
   | { readonly type: "gone" }

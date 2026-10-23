@@ -1,8 +1,10 @@
 import { normalizeWord } from "@miolos/games";
 import {
   evaluateGuess,
+  isValidGuess,
   MAX_GUESSES,
   TERMO_VALIDATION_WORDS,
+  TERMO_VARIANTS,
 } from "@miolos/games/termo";
 import { drawFreeTermoWords } from "@miolos/games/termo-free";
 import {
@@ -20,6 +22,7 @@ import {
   judgeFreeGuess,
   useFreeTermoBoard,
 } from "../src/free-play/use-free-termo";
+import { useTermoVariant } from "../src/free-play/use-termo-variant";
 import { formatLongDate, messages, routes } from "../src/i18n";
 import { PlaySkeleton, PlayView } from "../src/termo/play-view";
 import { initTermoPlayState } from "../src/termo/state";
@@ -31,6 +34,7 @@ const NEXT_SEED = 20_261_016;
 const WORD = drawFreeTermoWords(SEED, 1)[0] ?? "";
 const NEXT_WORD = drawFreeTermoWords(NEXT_SEED, 1)[0] ?? "";
 const ACCENTED = "ábaco";
+const PROFANITY = "merda";
 const START = initTermoPlayState(FREE_PLAY_DATE);
 
 function misses(answer: string): readonly string[] {
@@ -240,5 +244,45 @@ describe("the Termo play view takes its chrome, not an archive flag (T-WEB-S703)
     expect(
       screen.getByRole("link", { name: messages.play.backAria }),
     ).toHaveAttribute("href", routes.home);
+  });
+});
+
+describe("free play refuses a profanity form on the device, in every variant (T-WEB-S1077)", () => {
+  it("Clássico, Dueto and Quarteto say “não está na lista” and play no row", async () => {
+    expect(isValidGuess(PROFANITY, true)).toBe(true);
+    const { fetchMock } = stubNoIo();
+    const classico = renderHook(() => useFreeTermoBoard(WORD)).result;
+    for (const letter of PROFANITY) {
+      act(() => {
+        classico.current.type(letter);
+      });
+    }
+    await act(async () => {
+      classico.current.submit();
+      await Promise.resolve();
+    });
+    expect(classico.current.state.notice).toBe(
+      messages.games.termo.play.notInList,
+    );
+    expect(classico.current.used).toBe(0);
+
+    for (const variant of ["dueto", "quarteto"] as const) {
+      const { boards, maxGuesses } = TERMO_VARIANTS[variant];
+      const words = drawFreeTermoWords(SEED, boards);
+      const board = renderHook(() => useTermoVariant(words, maxGuesses)).result;
+      for (const letter of PROFANITY) {
+        act(() => {
+          board.current.type(letter);
+        });
+      }
+      act(() => {
+        board.current.submit();
+      });
+      expect(board.current.state.notice, variant).toBe(
+        messages.games.termo.play.notInList,
+      );
+      expect(board.current.state.guesses, variant).toEqual([]);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

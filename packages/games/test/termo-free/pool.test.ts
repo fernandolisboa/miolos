@@ -71,7 +71,7 @@ describe("the Termo free pool", () => {
     expect(new Set(POOL.map(normalizeWord)).size).toBe(POOL_COUNT);
     for (const word of POOL) {
       expect(normalizeWord(word), word).toMatch(/^[a-z]{5}$/);
-      expect(isValidGuess(word), word).toBe(true);
+      expect(isValidGuess(word, false), word).toBe(true);
     }
   });
 

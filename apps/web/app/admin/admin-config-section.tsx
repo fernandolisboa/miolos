@@ -5,6 +5,7 @@ import {
   remoteConfigField,
   remoteConfigKeySchema,
   type AdminStateResponse,
+  type RemoteConfig,
   type RemoteConfigKey,
 } from "@miolos/core";
 import Link from "next/link";
@@ -19,6 +20,7 @@ import {
   type AdminWriteProps,
 } from "../../src/admin/use-admin-write";
 import { useMountFetch } from "../../src/api/use-mount-fetch";
+import { Switch } from "../../src/components/switch";
 import { messages, routes } from "../../src/i18n";
 import settings from "../ajustes/page.module.css";
 import styles from "./admin.module.css";
@@ -26,11 +28,20 @@ import { AdminMembersCard } from "./admin-members-section";
 
 const copy = messages.admin;
 
+type SwitchKey = {
+  [K in RemoteConfigKey]: RemoteConfig[K] extends boolean ? K : never;
+}[RemoteConfigKey];
+type NumberKey = Exclude<RemoteConfigKey, SwitchKey>;
+
+function isSwitchKey(key: RemoteConfigKey): key is SwitchKey {
+  return typeof defaultRemoteConfig[key] === "boolean";
+}
+
 function ConfigRow({
   configKey,
   value,
   ...writeProps
-}: AdminWriteProps & { configKey: RemoteConfigKey; value: number }) {
+}: AdminWriteProps & { configKey: NumberKey; value: number }) {
   const field = remoteConfigField(configKey);
   const min = field.minValue ?? undefined;
   const max = field.maxValue ?? undefined;
@@ -95,6 +106,47 @@ function ConfigRow({
   );
 }
 
+function SwitchConfigRow({
+  configKey,
+  value,
+  ...writeProps
+}: AdminWriteProps & { configKey: SwitchKey; value: boolean }) {
+  const { outcome, write } = useAdminWrite(writeProps);
+  const id = `admin-${configKey}`;
+
+  return (
+    <div className={styles.row}>
+      <span id={`${id}-label`} className={styles.label}>
+        {copy.keys[configKey].label}
+      </span>
+      <p id={`${id}-hint`} className={settings.note}>
+        {copy.keys[configKey].hint}
+      </p>
+      <div className={styles.controls}>
+        <Switch
+          labelledBy={`${id}-label`}
+          describedBy={`${id}-hint`}
+          checked={value}
+          disabled={writeProps.busy}
+          onToggle={(next) => {
+            void write(() => saveRemoteConfigValue(configKey, next));
+          }}
+        >
+          {value ? copy.config.on : copy.config.off}
+        </Switch>
+        <span className={styles.range}>
+          {copy.config.switchDefault(defaultRemoteConfig[configKey])}
+        </span>
+      </div>
+      {outcome && (
+        <p className={settings.note} role="status">
+          {copy.config[outcome]}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function NotAdmin({ email }: { email: string | null }) {
   return (
     <>
@@ -131,14 +183,23 @@ function ConfigBody({
   const { config } = state;
   return (
     <>
-      {remoteConfigKeySchema.options.map((key) => (
-        <ConfigRow
-          key={key}
-          configKey={key}
-          value={config[key]}
-          {...writeProps}
-        />
-      ))}
+      {remoteConfigKeySchema.options.map((key) =>
+        isSwitchKey(key) ? (
+          <SwitchConfigRow
+            key={key}
+            configKey={key}
+            value={config[key]}
+            {...writeProps}
+          />
+        ) : (
+          <ConfigRow
+            key={key}
+            configKey={key}
+            value={config[key]}
+            {...writeProps}
+          />
+        ),
+      )}
     </>
   );
 }

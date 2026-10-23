@@ -221,6 +221,7 @@ check(
     "packages/games/src/nonogram-colors/tones.generated.ts",
     "packages/games/src/termo-answers/answers.generated.ts",
     "packages/games/src/termo-free/pool.generated.ts",
+    "packages/games/src/termo/profanity.generated.ts",
     "packages/games/src/termo/words.generated.ts",
   ]);
 }

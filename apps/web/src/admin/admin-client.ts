@@ -2,6 +2,7 @@ import {
   adminStateResponseSchema,
   type AdminMemberRole,
   type AdminStateResponse,
+  type RemoteConfig,
   type RemoteConfigKey,
 } from "@miolos/core";
 
@@ -15,9 +16,9 @@ export async function fetchAdminState(): Promise<
   return await apiGet("/admin/state", adminStateResponseSchema, ABSENCE);
 }
 
-export async function saveRemoteConfigValue(
-  key: RemoteConfigKey,
-  value: number,
+export async function saveRemoteConfigValue<K extends RemoteConfigKey>(
+  key: K,
+  value: RemoteConfig[K],
 ): Promise<AdminStateResponse | undefined> {
   return await apiPostParsed(
     "/admin/config",

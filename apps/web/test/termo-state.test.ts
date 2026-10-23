@@ -76,9 +76,9 @@ describe("the fixtures the reducer actually accepts", () => {
   it("uses six guesses the local word list really carries", () => {
     expect(new Set(SIX_REAL_GUESSES).size).toBe(MAX_GUESSES);
     for (const guess of [...SIX_REAL_GUESSES, ANSWER]) {
-      expect(isValidGuess(guess), guess).toBe(true);
+      expect(isValidGuess(guess, false), guess).toBe(true);
     }
-    expect(isValidGuess("zzzzz")).toBe(false);
+    expect(isValidGuess("zzzzz", true)).toBe(false);
   });
 });
 
@@ -171,7 +171,10 @@ describe("restore (T-WEB-S81)", () => {
 describe("the ordering contract (T-WEB-S82)", () => {
   it("writes guesses, answer and status in ONE transition", () => {
     const before = typed(ANSWER);
-    const submitted = termoPlayReducer(before, { type: "submit" });
+    const submitted = termoPlayReducer(before, {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     const after = termoPlayReducer(submitted, {
       type: "judged",
       guess: ANSWER,
@@ -195,11 +198,20 @@ describe("the ordering contract (T-WEB-S82)", () => {
       hydrated(),
       typed("caf"),
       typed(ANSWER),
-      termoPlayReducer(typed(ANSWER), { type: "submit" }),
-      termoPlayReducer(termoPlayReducer(typed(ANSWER), { type: "submit" }), {
-        type: "held",
-        reason: "offline",
+      termoPlayReducer(typed(ANSWER), {
+        type: "submit",
+        acceptsProfanity: true,
       }),
+      termoPlayReducer(
+        termoPlayReducer(typed(ANSWER), {
+          type: "submit",
+          acceptsProfanity: true,
+        }),
+        {
+          type: "held",
+          reason: "offline",
+        },
+      ),
       ...closed,
     ];
 
@@ -218,7 +230,10 @@ describe("the ordering contract (T-WEB-S82)", () => {
 
   it("maps the engine's `won` to PlayCore's `solved`, and passes `lost` through", () => {
     const won = termoPlayReducer(
-      termoPlayReducer(typed(ANSWER), { type: "submit" }),
+      termoPlayReducer(typed(ANSWER), {
+        type: "submit",
+        acceptsProfanity: true,
+      }),
       {
         type: "judged",
         guess: ANSWER,
@@ -242,7 +257,7 @@ describe("the ordering contract (T-WEB-S82)", () => {
 
 function closedStates(): readonly TermoPlayState[] {
   const won = termoPlayReducer(
-    termoPlayReducer(typed(ANSWER), { type: "submit" }),
+    termoPlayReducer(typed(ANSWER), { type: "submit", acceptsProfanity: true }),
     {
       type: "judged",
       guess: ANSWER,
@@ -255,7 +270,10 @@ function closedStates(): readonly TermoPlayState[] {
   let lost = hydrated();
   for (let turn = 0; turn < MAX_GUESSES; turn += 1) {
     const guess = SIX_REAL_GUESSES[turn] ?? "";
-    lost = termoPlayReducer(typed(guess, lost), { type: "submit" });
+    lost = termoPlayReducer(typed(guess, lost), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     lost = termoPlayReducer(lost, {
       type: "judged",
       guess,
@@ -277,7 +295,7 @@ const EVERY_ACTION: readonly TermoPlayAction[] = [
   { type: "erase" },
   { type: "select", slot: 0 },
   { type: "select", slot: 3 },
-  { type: "submit" },
+  { type: "submit", acceptsProfanity: true },
   { type: "retry" },
   { type: "held", reason: "offline" },
   { type: "held", reason: "server" },
@@ -333,25 +351,40 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("refuses a short row and a word the local list does not carry", () => {
-    const short = termoPlayReducer(typed("caf"), { type: "submit" });
+    const short = termoPlayReducer(typed("caf"), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     expect(short.pending).toBeNull();
 
-    const junk = termoPlayReducer(typed("zzzzz"), { type: "submit" });
+    const junk = termoPlayReducer(typed("zzzzz"), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     expect(junk.pending).toBeNull();
     expect(junk.draft.join("")).toBe("zzzzz");
     expect(junk.notice).not.toBeNull();
   });
 
   it("bumps the nonce on a SECOND identical rejection", () => {
-    const first = termoPlayReducer(typed("zzzzz"), { type: "submit" });
-    const second = termoPlayReducer(first, { type: "submit" });
+    const first = termoPlayReducer(typed("zzzzz"), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
+    const second = termoPlayReducer(first, {
+      type: "submit",
+      acceptsProfanity: true,
+    });
 
     expect(second.notice).toBe(first.notice);
     expect(second.noticeNonce).toBe(first.noticeNonce + 1);
   });
 
   it("holds the turn on `held` and hands it back on `retry`", () => {
-    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const submitted = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     expect(submitted.pending).toBe(ANSWER);
 
     const held = termoPlayReducer(submitted, {
@@ -369,7 +402,10 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("picks the held line from the REASON, never one string for all four causes (T-WEB-S106)", () => {
-    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const submitted = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
 
     const offline = termoPlayReducer(submitted, {
       type: "held",
@@ -396,7 +432,10 @@ describe("typing, erasing and submitting", () => {
 
     expect(termoPlayReducer(playing, { type: "gone" }).gone).toBe(true);
 
-    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const submitted = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     const gone = termoPlayReducer(submitted, { type: "gone" });
     expect(gone.gone).toBe(true);
 
@@ -406,7 +445,10 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("returns a server-rejected guess to the row it came from", () => {
-    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const submitted = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     const rejected = termoPlayReducer(submitted, {
       type: "rejected",
       reason: "not-in-list",
@@ -420,7 +462,10 @@ describe("typing, erasing and submitting", () => {
   });
 
   it("never writes the notice and the announcer in the same transition", () => {
-    const submitted = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const submitted = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     const seeds: readonly TermoPlayState[] = [
       hydrated(),
       typed("caf"),
@@ -428,7 +473,10 @@ describe("typing, erasing and submitting", () => {
       typed(ANSWER),
       submitted,
       termoPlayReducer(submitted, { type: "held", reason: "offline" }),
-      termoPlayReducer(typed("zzzzz"), { type: "submit" }),
+      termoPlayReducer(typed("zzzzz"), {
+        type: "submit",
+        acceptsProfanity: true,
+      }),
     ];
 
     for (const seed of seeds) {
@@ -450,7 +498,7 @@ describe("typing, erasing and submitting", () => {
       for (const action of [
         { type: "type", letter: "a" },
         { type: "erase" },
-        { type: "submit" },
+        { type: "submit", acceptsProfanity: true },
       ] satisfies TermoPlayAction[]) {
         const next = termoPlayReducer(closed, action);
         expect(next.draft).toBe(closed.draft);
@@ -525,7 +573,10 @@ describe("the cursor: any cell of the current row, gaps allowed (T-WEB-S640)", (
     }
     expect(selected(WORD_LENGTH - 1, state).cursor).toBe(WORD_LENGTH - 1);
 
-    const pending = termoPlayReducer(typed(ANSWER), { type: "submit" });
+    const pending = termoPlayReducer(typed(ANSWER), {
+      type: "submit",
+      acceptsProfanity: true,
+    });
     expect(selected(0, pending)).toBe(pending);
     for (const closed of closedStates()) {
       expect(selected(0, closed)).toBe(closed);
@@ -535,10 +586,13 @@ describe("the cursor: any cell of the current row, gaps allowed (T-WEB-S640)", (
   it("refuses a row with a gap, and starts the next row at its first cell", () => {
     const withGap = gapped("pra", "a");
     expect(withGap.draft.join("")).toBe("praa");
-    expect(termoPlayReducer(withGap, { type: "submit" })).toBe(withGap);
+    expect(
+      termoPlayReducer(withGap, { type: "submit", acceptsProfanity: true }),
+    ).toBe(withGap);
 
     const submitted = termoPlayReducer(selected(1, typed(ANSWER)), {
       type: "submit",
+      acceptsProfanity: true,
     });
     expect(submitted.pending).toBe(ANSWER);
     expect(submitted.draft.join("")).toBe("");
@@ -547,7 +601,10 @@ describe("the cursor: any cell of the current row, gaps allowed (T-WEB-S640)", (
 
   it("puts a rejected guess back with the cursor on its last cell", () => {
     const rejected = termoPlayReducer(
-      termoPlayReducer(typed(ANSWER), { type: "submit" }),
+      termoPlayReducer(typed(ANSWER), {
+        type: "submit",
+        acceptsProfanity: true,
+      }),
       { type: "rejected", reason: "refused" },
     );
     expect(rejected.draft.join("")).toBe(ANSWER);

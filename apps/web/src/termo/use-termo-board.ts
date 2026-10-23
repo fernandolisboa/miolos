@@ -19,6 +19,7 @@ import type {
 export function useTermoBoard(
   date: string,
   judge: TermoJudge,
+  acceptsProfanity: boolean,
 ): { readonly play: TermoPlay; readonly dispatch: Dispatch<TermoPlayAction> } {
   const [state, dispatch] = useReducer(
     termoPlayReducer,
@@ -61,8 +62,8 @@ export function useTermoBoard(
   }, []);
 
   const submit = useCallback(() => {
-    arm({ type: "submit" });
-  }, [arm]);
+    arm({ type: "submit", acceptsProfanity });
+  }, [arm, acceptsProfanity]);
 
   const retry = useCallback(() => {
     arm({ type: "retry" });

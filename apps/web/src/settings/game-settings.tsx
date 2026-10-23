@@ -3,6 +3,7 @@
 import { useId } from "react";
 
 import choiceStyles from "../components/choice.module.css";
+import { Switch } from "../components/switch";
 import switchStyles from "../components/switch.module.css";
 import { messages } from "../i18n";
 import styles from "./game-settings.module.css";
@@ -90,19 +91,14 @@ export function SettingSwitch({
   return (
     <div className={switchStyles.switchRow}>
       <SettingText id={id} text={text} />
-      <button
-        type="button"
-        role="switch"
-        className={switchStyles.switch}
-        aria-labelledby={`${id}-label`}
-        aria-describedby={`${id}-hint`}
-        aria-checked={checked}
-        onClick={() => {
-          onChange(!checked);
-        }}
+      <Switch
+        labelledBy={`${id}-label`}
+        describedBy={`${id}-hint`}
+        checked={checked}
+        onToggle={onChange}
       >
         {checked ? copy.on : copy.off}
-      </button>
+      </Switch>
     </div>
   );
 }

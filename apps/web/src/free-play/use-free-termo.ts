@@ -74,5 +74,5 @@ export function useFreeTermoBoard(canonical: string): TermoPlay {
     (armed, guess) => judgeFreeGuess(armed, guess, canonical),
     [canonical],
   );
-  return useTermoBoard(FREE_PLAY_DATE, judge).play;
+  return useTermoBoard(FREE_PLAY_DATE, judge, false).play;
 }

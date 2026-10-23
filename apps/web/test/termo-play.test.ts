@@ -1,9 +1,10 @@
 import { termoGuessRequestSchema, type DailyTermoResponse } from "@miolos/core";
-import { MAX_GUESSES } from "@miolos/games/termo";
+import { isValidGuess, MAX_GUESSES } from "@miolos/games/termo";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { messages } from "../src/i18n";
 import {
   playRecordKey,
   playRecordSchema,
@@ -299,5 +300,63 @@ describe("an un-judged guess never reaches storage (T-WEB-S85)", () => {
 
     expect(result.current.state.draft.join("")).toBe(GUESSES[1]);
     expect(JSON.stringify(storedRecord())).not.toContain(GUESSES[1]);
+  });
+});
+
+const PROFANITY = "merda";
+
+function postedGuesses(fetchMock: ReturnType<typeof vi.fn>): string[][] {
+  return fetchMock.mock.calls
+    .filter((call) => String(call[0]).endsWith("/termo/guess"))
+    .map(
+      (call) =>
+        termoGuessRequestSchema.parse(
+          JSON.parse(z.object({ body: z.string() }).parse(call[1]).body),
+        ).guesses,
+    );
+}
+
+describe("the daily and archive board post a profanity form, and the server's 200 plays it (T-WEB-S1075)", () => {
+  it("posts the typed form and plays the judged row", async () => {
+    expect(isValidGuess(PROFANITY, false)).toBe(false);
+    const fetchMock = stubJudge(null);
+    const { result } = renderHook(() => useTermoPlay(DAILY));
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    await play(result, PROFANITY);
+
+    expect(postedGuesses(fetchMock)).toEqual([[PROFANITY]]);
+    expect(result.current.state.guesses.map((row) => row.guess)).toEqual([
+      PROFANITY,
+    ]);
+    expect(result.current.state.notice).toBeNull();
+  });
+});
+
+describe("the server's 422 invalid-guess on a profanity form says “não está na lista” (T-WEB-S1076)", () => {
+  it("shows the notice and gives the draft back", async () => {
+    const fetchMock = vi.fn((...args: unknown[]) =>
+      Promise.resolve(
+        String(args[0]).endsWith("/session")
+          ? jsonResponse(200, { userId: crypto.randomUUID(), created: true })
+          : jsonResponse(422, { error: "invalid-guess" }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useTermoPlay(DAILY));
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    await play(result, PROFANITY);
+
+    expect(postedGuesses(fetchMock)).toEqual([[PROFANITY]]);
+    expect(result.current.state.notice).toBe(
+      messages.games.termo.play.notInList,
+    );
+    expect(result.current.state.draft.join("")).toBe(PROFANITY);
+    expect(result.current.state.pending).toBeNull();
+    expect(result.current.state.guesses).toEqual([]);
+    expect(result.current.activeRow).toBe(0);
   });
 });

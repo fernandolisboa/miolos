@@ -1,7 +1,7 @@
 import {
-  defaultRemoteConfig,
   remoteConfigField,
   remoteConfigKeySchema,
+  remoteConfigSchema,
   type RemoteConfig,
   type RemoteConfigKey,
 } from "@miolos/core";
@@ -14,15 +14,14 @@ const warnedInvalidKeys = new Set<RemoteConfigKey>();
 
 export async function getRemoteConfig(db: Db): Promise<RemoteConfig> {
   const rows = await db.select().from(remoteConfig);
-  const config = { ...defaultRemoteConfig };
+  const stored: Partial<Record<RemoteConfigKey, unknown>> = {};
   for (const row of rows) {
     const key = remoteConfigKeySchema.safeParse(row.key);
     if (!key.success) {
       continue;
     }
-    const value = remoteConfigField(key.data).safeParse(row.value);
-    if (value.success) {
-      config[key.data] = value.data;
+    if (remoteConfigField(key.data).safeParse(row.value).success) {
+      stored[key.data] = row.value;
     } else if (!warnedInvalidKeys.has(key.data)) {
       warnedInvalidKeys.add(key.data);
       console.error(
@@ -30,13 +29,13 @@ export async function getRemoteConfig(db: Db): Promise<RemoteConfig> {
       );
     }
   }
-  return config;
+  return remoteConfigSchema.parse(stored);
 }
 
-export async function setRemoteConfigValue(
+export async function setRemoteConfigValue<K extends RemoteConfigKey>(
   db: Db,
-  key: RemoteConfigKey,
-  value: number,
+  key: K,
+  value: RemoteConfig[K],
 ): Promise<void> {
   await db
     .insert(remoteConfig)

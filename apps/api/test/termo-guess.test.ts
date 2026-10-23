@@ -3,6 +3,7 @@ import { eq, sessions, sql, users } from "@miolos/db";
 import {
   dailyPuzzles,
   insertDailyPuzzle,
+  setRemoteConfigValue,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
 import { createTestDb } from "@miolos/db/testing";
@@ -42,7 +43,9 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await ctx.db.execute(sql`truncate table users, daily_puzzles cascade`);
+  await ctx.db.execute(
+    sql`truncate table users, daily_puzzles, remote_config cascade`,
+  );
   getDbCalls.mockClear();
   vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
 });
@@ -69,6 +72,7 @@ const DECOYS: readonly string[] = TERMO_ANSWERS.map((a) => a.normalized)
   .slice(0, 6);
 
 const NOT_A_WORD = "zzzzz";
+const PROFANITY = "merda";
 
 async function createSession(): Promise<{ token: string; userId: string }> {
   const inserted = await ctx.db.insert(users).values({}).returning();
@@ -142,12 +146,13 @@ describe("POST /termo/guess", () => {
   it("T-API-S36: the decoys really are dictionary words and the answer really is one", () => {
     expect(DECOYS).toHaveLength(6);
     for (const word of DECOYS) {
-      expect(isValidGuess(word), `${word} must be a dictionary word`).toBe(
-        true,
-      );
+      expect(
+        isValidGuess(word, false),
+        `${word} must be a dictionary word`,
+      ).toBe(true);
     }
-    expect(isValidGuess(answer.normalized)).toBe(true);
-    expect(isValidGuess(NOT_A_WORD)).toBe(false);
+    expect(isValidGuess(answer.normalized, false)).toBe(true);
+    expect(isValidGuess(NOT_A_WORD, true)).toBe(false);
     expect(answer.canonical).not.toBe(answer.normalized);
   });
 
@@ -481,6 +486,60 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
     const body = termoGuessResponseSchema.parse(await response.json());
     expect(body.status).toBe("playing");
     expect(body.tiles).toHaveLength(1);
+  });
+
+  it("T-API-S385: with the switch off or never stored, a profanity form is a 422 invalid-guess and a dictionary word still a 200", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    for (const stored of [undefined, false]) {
+      if (stored !== undefined) {
+        await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", stored);
+      }
+      const refused = await POST(
+        guessRequest({ token, body: guessBody(today, [PROFANITY]) }),
+      );
+      expect(refused.status, String(stored)).toBe(422);
+      expect(await refused.json()).toEqual({ error: "invalid-guess" });
+
+      const judged = await POST(
+        guessRequest({ token, body: guessBody(today, [DECOYS[0] ?? ""]) }),
+      );
+      expect(judged.status, String(stored)).toBe(200);
+    }
+  });
+
+  it("T-API-S386: with the switch on, a profanity form is judged with tiles", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", true);
+    const { token } = await createSession();
+
+    const response = await POST(
+      guessRequest({ token, body: guessBody(today, [PROFANITY]) }),
+    );
+    expect(response.status).toBe(200);
+    const body = termoGuessResponseSchema.parse(await response.json());
+    expect(body.status).toBe("playing");
+    expect(body.tiles).toHaveLength(1);
+  });
+
+  it("T-API-S387: with the switch off, a profanity form earlier in the list does not refuse a valid newest guess", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      guessRequest({
+        token,
+        body: guessBody(today, [PROFANITY, DECOYS[0] ?? ""]),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(
+      termoGuessResponseSchema.parse(await response.json()).tiles,
+    ).toHaveLength(2);
   });
 
   it("T-API-S42: an EARLIER non-word is judged normally — the gate is the newest guess only", async () => {
