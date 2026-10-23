@@ -26,7 +26,7 @@ export function parseCanonicalCsv(name: string, raw: string): CanonicalRow[] {
   });
 }
 
-export function parseWordLines(name: string, raw: string): string[] {
+function parseWordLines(name: string, raw: string): string[] {
   const lines = splitLines(name, raw);
   for (const [index, line] of lines.entries()) {
     if (line === "") {

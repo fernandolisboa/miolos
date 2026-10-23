@@ -107,8 +107,9 @@ function freeTextOf(result: CronPublishGameResult): string[] {
   return [result.error ?? "", ...result.failures.map((entry) => entry.reason)];
 }
 
-const wholeWord = (word: string): RegExp =>
-  new RegExp(`(?<!\\p{L})${word}(?!\\p{L})`, "u");
+const ANSWER_FORMS: ReadonlySet<string> = new Set(
+  TERMO_ANSWERS.flatMap((answer) => [answer.canonical, answer.normalized]),
+);
 
 const loggedResultSchema = cronPublishGameResultSchema.loose();
 
@@ -624,9 +625,7 @@ describe("GET /cron/publish top-up", () => {
     }
 
     const termoBound: unknown = JSON.parse(boundContent.get("termo") ?? "null");
-    expect(TERMO_ANSWERS).toContainEqual(
-      termoDailyContentSchema.parse(termoBound),
-    );
+    const answer = termoDailyContentSchema.parse(termoBound);
     const bodyText = Object.values(body.games).flatMap(freeTextOf);
 
     const loggedText = logLines.flatMap((line) => {
@@ -635,10 +634,11 @@ describe("GET /cron/publish top-up", () => {
       return freeTextOf(loggedResultSchema.parse(parsed));
     });
     for (const text of [...bodyText, ...loggedText]) {
-      const collisions = TERMO_ANSWERS.filter(
-        (candidate) =>
-          wholeWord(candidate.canonical).test(text) ||
-          wholeWord(candidate.normalized).test(text),
+      expect(text).not.toContain(answer.canonical);
+      expect(text).not.toContain(answer.normalized);
+
+      const collisions = (text.match(/\p{L}+/gu) ?? []).filter((word) =>
+        ANSWER_FORMS.has(word),
       );
       expect(collisions).toEqual([]);
     }

@@ -14,8 +14,8 @@ so the list being public spoils nothing.
 ## The three lists
 
 - **Guesses**: any pt-BR word, 18,250 forms. VERO ∪ `ispell.txt` ∪ `additions.txt`, less the `profanity` rows of `excluded.txt` ([ADR-0152](../../docs/adr/0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md)).
-- **Daily answers**: the rows of `answers.csv` that are not in `excluded.txt`, 1,726 ([ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md)).
-- **Free pool**: the common words that are neither in `answers.csv` nor in `excluded.txt`, 1,088 ([ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md), [ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
+- **Daily answers**: the rows of `answers.csv` that are not in `excluded.txt`, 1,714 ([ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md)).
+- **Free pool**: the common words that are neither in `answers.csv` nor in `excluded.txt`, 1,074 ([ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md), [ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
 
 ## Files
 
@@ -25,8 +25,8 @@ so the list being public spoils nothing.
 | `ispell.txt` | The 5,310 frozen IME-USP forms, normalized, sorted. Input, never rewritten: the IME host resets connections from CI and containers. |
 | `additions.txt` | Curated canonical forms that neither VERO nor `ispell.txt` carries (`deque`, `drone`, `vison`), sorted by (normalized form, canonical) ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)). The pipeline refuses a line that is already a guess. |
 | `common.csv` | The common words, header `canonical,normalized`, alphabetical: the `ispell.txt` forms VERO also knows whose most frequent spelling occurs at least 100 times in the frequency list. 2,990. Written by `pipeline.py`. |
-| `answers.csv` | Header `canonical,normalized`. **Append-only: never edit or delete a row** ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)). Rows 1–626 are the old hand picks; `pipeline.py` appends the rest. 1,726 rows. |
-| `excluded.txt` | The exclusion list: `normalized<TAB>reason`, sorted, unique, 213 rows. Reasons: `profanity` (41), `proper-noun` (34), `foreign` (5), `archaic` (10), `regional` (50), `editorial` (73) and `retired` (0). An excluded word is never an answer and never in the free pool. Only `profanity` rows touch guesses. |
+| `answers.csv` | Header `canonical,normalized`. **Append-only: never edit or delete a row** ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)). Rows 1–626 are the old hand picks; `pipeline.py` appends the rest. 1,714 rows. The appended rows' order is factual frequency ranking; no counts ship. |
+| `excluded.txt` | The exclusion list: `normalized<TAB>reason`, sorted, unique. Reasons: `profanity`, `proper-noun`, `foreign`, `archaic`, `regional`, `editorial` and `retired`. An excluded word is never an answer and never in the free pool. Only `profanity` rows touch guesses. |
 | `rejected-sample.txt` | Hand-assembled audit record of the 2026 hand-picked curation: 107 rejected words and why. Frozen. |
 | `rejected-lexicon-sample.txt` | A seeded sample of what `pipeline.py` drops, up to 30 per reason, rewritten on every run: VERO forms that are not guesses, and guesses that are not common words. |
 | `pipeline.py` | The script. `sources/` is its gitignored download folder. |
@@ -46,14 +46,9 @@ Run `python3 -I pipeline.py` from this folder. It is idempotent: a second run ch
 
 - **Stop a word** from being an answer or a pool word: add a row to `excluded.txt` with its reason, run the pipeline, then `generate:termo`. An exclusion moves no other word. For a word already in `answers.csv`, the reason is `retired`. If that word is already drawn into the buffer, kill that row too, or it still publishes.
 - **Never delete a row of `answers.csv`.** Its word would go back into the free pool.
-- **Profanity**: add the stem to `PROFANITY` in `pipeline.py`. Its rows are refused as guesses while `PROFANITY_IS_A_GUESS` (in `packages/games/scripts/render-termo-words.ts`) is `false`, as Fernando chose.
+- **Profanity**: add the stem to `PROFANITY` in `pipeline.py`. Its rows are refused as guesses while `PROFANITY_IS_A_GUESS` (in `packages/games/scripts/render-termo-words.ts`) is `false`, as Fernando chose. If a new stem matches a word already in `answers.csv`, the pipeline stops: mark that word `retired` and take the stem out of `PROFANITY`, or extend the tool.
 
-The exclusion pass of 2026-10-23 read every common word outside the first 626 rows against these constraints:
-
-- Common contemporary Brazilian Portuguese: no archaisms or `vós` forms (`archaic`), no narrow regionalisms, *tu* forms or pt-PT-only words (`regional`).
-- No proper nouns or brands (`proper-noun`), no unnaturalized loanwords (`foreign`). Naturalized borrowings (`álbum`, `pizza`, `turnê`) are allowed.
-- No obscenities or slurs (`profanity`). `editorial` covers words whose main reading is sexual or scatological, ethnicity words (`judeu`, `negro`), contractions and closed-class words (`disso`, `pelos`, `esses`, `cujos`) and bare prefixes (`super`, `micro`).
-- Inflected forms and plurals are allowed.
+Which words are excluded, and why, follows ADR-0015's answer constraints as [ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md) decision 5 applies them.
 
 ## Generated modules
 

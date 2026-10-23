@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   EXCLUSION_REASONS,
+  excludedWords,
   guessWords,
   parseCanonicalCsv,
   parseExcludedTxt,
@@ -29,16 +30,17 @@ const gamesDir = join(testDir, "..", "..");
 const ADR_0147_ROWS = 626;
 const ADR_0147_PREFIX_SHA256 =
   "29b601ef3ae87417a5edbe63e431d106f8bd5e65741d86208bafaf40d1e98367";
-const ANSWER_ROW_COUNT = 1726;
+const ANSWER_ROW_COUNT = 1714;
+const TERMO_ANSWER_COUNT = 1714;
 const COMMON_COUNT = 2990;
 const VALIDATION_COUNT = 18250;
 const ISPELL_COUNT = 5310;
 const EXCLUDED_COUNTS: Readonly<Record<string, number>> = {
-  archaic: 10,
-  editorial: 73,
-  foreign: 5,
+  archaic: 11,
+  editorial: 90,
+  foreign: 8,
   profanity: 41,
-  "proper-noun": 34,
+  "proper-noun": 39,
   regional: 50,
   retired: 0,
 };
@@ -72,11 +74,9 @@ function findDuplicates(values: readonly string[]): string[] {
   return duplicates;
 }
 
-function readExcluded() {
-  return parseExcludedTxt(
-    readFileSync(join(contentDir, "excluded.txt"), "utf8"),
-  );
-}
+const excludedTxt = () =>
+  readFileSync(join(contentDir, "excluded.txt"), "utf8");
+const readExcluded = () => parseExcludedTxt(excludedTxt());
 
 function shippedGuesses(): string[] {
   const read = (file: string) => readFileSync(join(contentDir, file), "utf8");
@@ -150,12 +150,14 @@ describe("termo word-list harness (ADR-0015)", () => {
     }
   });
 
-  it("excluded.txt is sorted, unique, counted per reason, and names guesses that are in answers.csv only when retired", () => {
+  it("excluded.txt is sorted, unique and counted, and only a retired row is in answers.csv", () => {
     const rows = readExcluded();
     const words = rows.map((row) => row.normalized);
     expect(findDuplicates(words)).toEqual([]);
     expect([...words].sort()).toEqual(words);
-    expect([...EXCLUSION_REASONS].sort()).toEqual(Object.keys(EXCLUDED_COUNTS));
+    expect([...EXCLUSION_REASONS].sort()).toEqual(
+      Object.keys(EXCLUDED_COUNTS).sort(),
+    );
     for (const [reason, count] of Object.entries(EXCLUDED_COUNTS)) {
       expect(
         rows.filter((row) => row.reason === reason),
@@ -228,7 +230,7 @@ describe("termo word-list harness (ADR-0015)", () => {
 
   it("every common word of even parity that is not excluded is in answers.csv", () => {
     const answers = new Set(readAnswersCsv().map((row) => row.normalized));
-    const excluded = new Set(readExcluded().map((row) => row.normalized));
+    const excluded = excludedWords(excludedTxt());
     const missing = readCommonCsv()
       .map((row) => row.normalized)
       .filter(
@@ -249,19 +251,27 @@ describe("termo word-list harness (ADR-0015)", () => {
       join(contentDir, "validation.txt"),
       "utf8",
     );
-    const excludedTxt = readFileSync(join(contentDir, "excluded.txt"), "utf8");
     const onDisk = (...path: string[]) =>
       readFileSync(join(gamesDir, "src", ...path), "utf8");
     expect(onDisk("termo", "words.generated.ts")).toBe(
-      renderTermoValidationModule(validationTxt, excludedTxt),
+      renderTermoValidationModule(validationTxt, excludedTxt()),
     );
     expect(onDisk("termo-answers", "answers.generated.ts")).toBe(
-      renderTermoAnswersModule(answersCsv, excludedTxt),
+      renderTermoAnswersModule(answersCsv, excludedTxt()),
     );
   });
 
+  it("renders the answers without an excluded row, keeping row order", () => {
+    const rendered = renderTermoAnswersModule(
+      "canonical,normalized\nmuito,muito\nentão,entao\nagora,agora\n",
+      "entao\tretired\n",
+    );
+    expect(rendered).toContain('"muito\\nagora"');
+    expect(rendered).not.toContain("então");
+  });
+
   it("TERMO_ANSWERS is answers.csv less excluded.txt, in row order", () => {
-    const excluded = new Set(readExcluded().map((row) => row.normalized));
+    const excluded = excludedWords(excludedTxt());
     expect(TERMO_ANSWERS.map((a) => ({ ...a }))).toEqual(
       readAnswersCsv().filter((row) => !excluded.has(row.normalized)),
     );
@@ -273,7 +283,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     for (const answer of TERMO_ANSWERS) {
       expect(Object.isFrozen(answer)).toBe(true);
     }
-    expect(TERMO_ANSWERS).toHaveLength(ANSWER_ROW_COUNT);
+    expect(TERMO_ANSWERS).toHaveLength(TERMO_ANSWER_COUNT);
     expect(TERMO_VALIDATION_WORDS).toHaveLength(shippedGuesses().length);
     expect(isValidGuess("ábaco")).toBe(true);
     expect(isValidGuess("xqzwv")).toBe(false);

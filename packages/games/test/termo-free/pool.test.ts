@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool";
 import {
+  excludedWords,
   parseCanonicalCsv,
-  parseExcludedTxt,
 } from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
@@ -19,7 +19,7 @@ import { propertyRuns } from "../property-runs";
 const GAMES = join(import.meta.dirname, "..", "..");
 const CONTENT = join(GAMES, "..", "..", "content");
 
-const POOL_COUNT = 1088;
+const POOL_COUNT = 1074;
 const POOL = FREE_POOL_CANONICALS.split("\n");
 const POOL_SET: ReadonlySet<string> = new Set(POOL);
 
@@ -31,11 +31,7 @@ const ANSWER_FORMS: ReadonlySet<string> = new Set(
     (row) => row.normalized,
   ),
 );
-const EXCLUDED_FORMS: ReadonlySet<string> = new Set(
-  parseExcludedTxt(content("termo", "excluded.txt")).map(
-    (row) => row.normalized,
-  ),
-);
+const EXCLUDED_FORMS = excludedWords(content("termo", "excluded.txt"));
 
 const uint32 = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -70,25 +66,13 @@ describe("the Termo free pool", () => {
     expect(POOL).toEqual(expected);
   });
 
-  it("holds 1088 guessable five-letter words, unique in normalized form", () => {
+  it("holds 1074 guessable five-letter words, unique in normalized form", () => {
     expect(POOL).toHaveLength(POOL_COUNT);
     expect(new Set(POOL.map(normalizeWord)).size).toBe(POOL_COUNT);
     for (const word of POOL) {
       expect(normalizeWord(word), word).toMatch(/^[a-z]{5}$/);
       expect(isValidGuess(word), word).toBe(true);
     }
-  });
-
-  it("shares no normalized form with answers.csv, retired rows included", () => {
-    expect(
-      POOL.filter((word) => ANSWER_FORMS.has(normalizeWord(word))),
-    ).toEqual([]);
-  });
-
-  it("shares no normalized form with excluded.txt", () => {
-    expect(
-      POOL.filter((word) => EXCLUDED_FORMS.has(normalizeWord(word))),
-    ).toEqual([]);
   });
 
   it("draws deterministically, for every uint32 seed, a pool word that is never an answer", () => {

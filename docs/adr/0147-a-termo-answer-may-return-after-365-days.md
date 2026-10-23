@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-10-22 (issue #200)
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0024](./0024-buffer-stores-validated-content-reads-strip-inside-the-wall.md), [ADR-0025](./0025-remote-config-is-a-database-table.md)
-**Superseded in part by:** [ADR-0153](./0153-termo-answers-and-the-free-pool-split-the-common-words.md) (#427 PR B) — decision 3: the list is `answers.csv` less `excluded.txt`, 1,726 rows appended by frequency; decision 6 is fulfilled by `excluded.txt`'s `retired` reason; and the Consequences' `select_answers.py`, which is deleted.
+**Superseded in part by:** [ADR-0153](./0153-termo-answers-and-the-free-pool-split-the-common-words.md) (#427 PR B) — decision 3: the list is `answers.csv` less `excluded.txt`, 1,714 rows appended by frequency; decision 6 is fulfilled by `excluded.txt`'s `retired` reason; and the Consequences' `select_answers.py`, which is deleted.
 **Supersedes in part:** [ADR-0040](./0040-the-termo-daily-stores-the-drawn-answer.md) — decision 4 ("used" means every row ever), decision 7's premise that the list ends, the Rejected *"Recycling the oldest answers"*, the Rejected partial unique index's *"the sanctioned fix"*, consequence (f)'s drain mode and consequence (g)'s bound; [ADR-0084](./0084-the-answer-list-alert-rides-the-buffer-depth-poll.md) — decision 1's count, decision 4's "about a year out" and the Consequences' clocks; [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) — the reserve; [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) — the 400 target.
 
 ## Context

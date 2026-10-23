@@ -15,6 +15,7 @@ import re
 import unicodedata
 import urllib.request
 from collections import defaultdict
+from typing import NamedTuple
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -56,6 +57,11 @@ PROFANITY = {
 }
 
 assert all(len(w) == 5 for w in JUNK | PROPER_NOUN_DUPLICATES)
+
+
+class Common(NamedTuple):
+    canonical: str
+    frequency: int
 
 
 def fetch_sources() -> None:
@@ -204,9 +210,17 @@ def main() -> None:
     write_lines("validation.txt", validation)
     print(f"validation.txt: {len(validation)}")
 
+    with open(f"{BASE}/answers.csv", encoding="utf-8") as f:
+        old = f.read()
+    if not (old.startswith(CSV_HEADER + "\n") and old.endswith("\n")):
+        raise SystemExit("answers.csv: not a header and newline-ended rows, so it cannot be appended to")
+    present = {line.split(",")[1] for line in old.splitlines()[1:]}
+
     profanity = sorted(n for n in surfaces_of if (stems_of[n] | surfaces_of[n]) & PROFANITY)
     matched = set().union(*((stems_of[n] | surfaces_of[n]) & PROFANITY for n in profanity))
     assert matched == PROFANITY, f"PROFANITY: {sorted(PROFANITY - matched)} match no form"
+    if present & set(profanity):
+        raise SystemExit(f"PROFANITY: {sorted(present & set(profanity))} are in answers.csv; retire them instead")
     kept = [r for r in read_lines("excluded.txt") if not r.endswith("\tprofanity")]
     rows = sorted(kept + [f"{n}\tprofanity" for n in profanity])
     excluded = {r.split("\t")[0] for r in rows}
@@ -229,21 +243,16 @@ def main() -> None:
         elif norm not in in_ispell:
             rejected.append((best, "not common: not a frozen IME form"))
         else:
-            common[norm] = (best, freq[best])
-    write_lines("common.csv", [CSV_HEADER] + [f"{common[n][0]},{n}" for n in sorted(common)])
+            common[norm] = Common(best, freq[best])
+    write_lines("common.csv", [CSV_HEADER] + [f"{common[n].canonical},{n}" for n in sorted(common)])
     print(f"common.csv: {len(common)}")
 
-    with open(f"{BASE}/answers.csv", encoding="utf-8") as f:
-        old = f.read()
-    present = {line.split(",")[1] for line in old.splitlines()[1:]}
-    ranked = sorted(common, key=lambda n: (-common[n][1], n))
+    ranked = sorted(common, key=lambda n: (-common[n].frequency, n))
     appended = [
-        f"{common[n][0]},{n}\n"
+        f"{common[n].canonical},{n}\n"
         for n in ranked
         if even_parity(n) and n not in present and n not in excluded
     ]
-    if not (old.startswith(CSV_HEADER + "\n") and old.endswith("\n")):
-        raise SystemExit("answers.csv: not a header and newline-ended rows, so it cannot be appended to")
     with open(f"{BASE}/answers.csv", "a", encoding="utf-8") as f:
         f.write("".join(appended))
     print(f"answers.csv: {len(present)} -> {len(present) + len(appended)} rows")
