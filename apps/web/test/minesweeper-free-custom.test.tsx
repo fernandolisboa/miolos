@@ -359,9 +359,10 @@ describe("the screen renders without storage on the server and hydrates over a s
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const recovered: unknown[] = [];
+    let root: ReturnType<typeof hydrateRoot> | undefined;
 
     act(() => {
-      hydrateRoot(
+      root = hydrateRoot(
         container,
         <MinesweeperFreeScreen deps={{ pickSeed: () => SEED }} />,
         { onRecoverableError: (cause) => recovered.push(cause) },
@@ -377,6 +378,9 @@ describe("the screen renders without storage on the server and hydrates over a s
       }),
     ).toBeInTheDocument();
     expect(container.querySelectorAll("[data-cell-index]")).toHaveLength(81);
+    act(() => {
+      root?.unmount();
+    });
     container.remove();
   });
 });
