@@ -523,6 +523,7 @@ describe("Limpar rascunho ao preencher is a setting that starts on (T-WEB-S839)"
       this.setAttribute("open", "");
     };
     const { unmount } = render(<GamesSection />);
+    fireEvent.click(screen.getByRole("tab", { name: "Sudoku" }));
     const group = screen.getByRole("group", { name: "Sudoku" });
     const toggle = within(group).getByRole("switch", {
       name: settingsCopy.flags.cleanNotes.label,

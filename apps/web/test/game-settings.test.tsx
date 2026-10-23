@@ -43,6 +43,10 @@ const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({
 const FREE_DEPS = { pickSeed: () => 42 };
 
 const copy = messages.settings.games;
+
+function openTab(name: string): void {
+  fireEvent.click(screen.getByRole("tab", { name }));
+}
 const FIRST_EMPTY = PUZZLE.givens.indexOf(0);
 
 function patch(next: {
@@ -193,6 +197,15 @@ describe("Destacar linha, coluna e bloco paints the selection's reach only when 
 describe("Ajustes lists every setting, saves it on this device and updates open boards (T-WEB-S593)", () => {
   it("groups the switches: the clock, the end animation and the mistake limit under Em todos os jogos, then each game's own", () => {
     render(<GamesSection />);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      copy.tabs.general,
+      "Sudoku",
+      "Binairo",
+      "Nonogram",
+      "Rainhas",
+      "Cruzadinha",
+      "Campo Minado",
+    ]);
 
     const general = screen.getByRole("group", { name: copy.general });
     expect(
@@ -214,6 +227,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
       }),
     ).toBeInTheDocument();
 
+    openTab("Sudoku");
     const sudoku = screen.getByRole("group", { name: "Sudoku" });
     expect(
       within(sudoku)
@@ -230,6 +244,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(sudoku).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
+    openTab("Rainhas");
     const queens = screen.getByRole("group", { name: "Rainhas" });
     expect(
       within(queens)
@@ -246,6 +261,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         within(queens).getByRole("switch", { name: label }),
       ).toBeInTheDocument();
     }
+    openTab("Cruzadinha");
     const crossword = screen.getByRole("group", { name: "Cruzadinha" });
     expect(within(crossword).getAllByRole("switch")).toHaveLength(2);
     for (const label of [
@@ -257,6 +273,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
       ).toBeInTheDocument();
     }
     for (const name of ["Binairo"]) {
+      openTab(name);
       const group = screen.getByRole("group", { name });
       expect(within(group).getAllByRole("switch")).toHaveLength(1);
       expect(
@@ -265,6 +282,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
         }),
       ).toBeInTheDocument();
     }
+    openTab("Nonogram");
     const nonogram = screen.getByRole("group", { name: "Nonogram" });
     expect(within(nonogram).getAllByRole("switch")).toHaveLength(3);
     for (const label of [
@@ -279,14 +297,23 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
 
   it("describes each switch and can turn every one off and on again", () => {
     render(<GamesSection />);
-    for (const toggle of screen.getAllByRole("switch")) {
-      const before = toggle.getAttribute("aria-checked");
-      expect(toggle).toHaveAccessibleDescription();
-      fireEvent.click(toggle);
-      expect(toggle.getAttribute("aria-checked")).not.toBe(before);
-      fireEvent.click(toggle);
-      expect(toggle.getAttribute("aria-checked")).toBe(before);
+    const seen = new Set<HTMLElement>();
+    for (const tab of screen.getAllByRole("tab")) {
+      fireEvent.click(tab);
+      for (const toggle of screen.getAllByRole("switch")) {
+        if (seen.has(toggle)) {
+          continue;
+        }
+        seen.add(toggle);
+        const before = toggle.getAttribute("aria-checked");
+        expect(toggle).toHaveAccessibleDescription();
+        fireEvent.click(toggle);
+        expect(toggle.getAttribute("aria-checked")).not.toBe(before);
+        fireEvent.click(toggle);
+        expect(toggle.getAttribute("aria-checked")).toBe(before);
+      }
     }
+    expect(seen.size).toBe(1 + 3 + 4 + 1 + 3 + 4 + 2 + 1);
   });
 
   it("persists a switch to this device and updates a mounted board at once", () => {
@@ -305,6 +332,7 @@ describe("Ajustes lists every setting, saves it on this device and updates open 
     fireEvent.keyDown(cell, { key: String(wrongDigit) });
     expect(cell.querySelector(`.${wrongMark.mark}`)).toBeNull();
 
+    openTab("Sudoku");
     const sudoku = screen.getByRole("group", { name: "Sudoku" });
     fireEvent.click(
       within(sudoku).getByRole("switch", { name: copy.flags.showErrors.label }),

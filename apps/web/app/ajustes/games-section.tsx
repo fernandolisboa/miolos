@@ -1,16 +1,7 @@
 import { messages } from "../../src/i18n";
-import { GameSettings } from "../../src/settings/game-settings";
+import { GameTabs } from "./game-tabs";
 import styles from "./page.module.css";
 import { SyncToggle } from "./sync-toggle";
-
-const GAMES = [
-  "sudoku",
-  "binairo",
-  "nonogram",
-  "queens",
-  "crossword",
-  "minesweeper",
-] as const;
 
 export function GamesSection() {
   const copy = messages.settings.games;
@@ -23,7 +14,7 @@ export function GamesSection() {
       <div className={styles.sync}>
         <SyncToggle />
       </div>
-      <GameSettings games={GAMES} clock />
+      <GameTabs />
     </section>
   );
 }

@@ -164,7 +164,7 @@ function setGameSetting(
   });
 }
 
-export function GameSettings({
+export function GeneralSettings({
   games,
   clock,
 }: {
@@ -173,71 +173,86 @@ export function GameSettings({
 }) {
   const settings = useSettings();
   return (
-    <div className={styles.frame}>
-      <div className={styles.groups}>
-        <fieldset className={styles.group}>
-          <legend className={styles.legend}>{copy.general}</legend>
-          {clock ? (
-            <SettingSwitch
-              text={copy.flags.showClock}
-              checked={settings.showClock}
-              onChange={(value) => {
-                writeSettings({ ...readSettings(), showClock: value });
-              }}
-            />
-          ) : null}
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>{copy.general}</legend>
+      {clock ? (
+        <SettingSwitch
+          text={copy.flags.showClock}
+          checked={settings.showClock}
+          onChange={(value) => {
+            writeSettings({ ...readSettings(), showClock: value });
+          }}
+        />
+      ) : null}
+      <SettingSwitch
+        text={copy.flags.endAnimation}
+        checked={settings.endAnimation}
+        onChange={(value) => {
+          writeSettings({ ...readSettings(), endAnimation: value });
+        }}
+      />
+      {games.some((game) => game !== "minesweeper") ? (
+        <SettingSwitch
+          text={copy.flags.mistakeLimit}
+          checked={settings.mistakeLimit}
+          onChange={(value) => {
+            writeSettings({ ...readSettings(), mistakeLimit: value });
+          }}
+        />
+      ) : null}
+    </fieldset>
+  );
+}
+
+export function GameGroup({ game }: { readonly game: SettingsGame }) {
+  const settings = useSettings();
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>{messages.games[game].name}</legend>
+      {(
+        Object.entries(settings.games[game]) as [
+          GameSetting,
+          boolean | ChoiceValue,
+        ][]
+      ).map(([setting, current]) =>
+        typeof current === "boolean" ? (
           <SettingSwitch
-            text={copy.flags.endAnimation}
-            checked={settings.endAnimation}
+            key={setting}
+            text={copy.flags[setting]}
+            checked={current}
             onChange={(value) => {
-              writeSettings({ ...readSettings(), endAnimation: value });
+              setGameSetting(game, setting, value);
             }}
           />
-          {games.some((game) => game !== "minesweeper") ? (
-            <SettingSwitch
-              text={copy.flags.mistakeLimit}
-              checked={settings.mistakeLimit}
-              onChange={(value) => {
-                writeSettings({ ...readSettings(), mistakeLimit: value });
-              }}
-            />
-          ) : null}
-        </fieldset>
-        {games.map((game) => (
-          <fieldset key={game} className={styles.group}>
-            <legend className={styles.legend}>
-              {messages.games[game].name}
-            </legend>
-            {(
-              Object.entries(settings.games[game]) as [
-                GameSetting,
-                boolean | ChoiceValue,
-              ][]
-            ).map(([setting, current]) =>
-              typeof current === "boolean" ? (
-                <SettingSwitch
-                  key={setting}
-                  text={copy.flags[setting]}
-                  checked={current}
-                  onChange={(value) => {
-                    setGameSetting(game, setting, value);
-                  }}
-                />
-              ) : isChoice(setting) ? (
-                <SettingChoice
-                  key={setting}
-                  setting={setting}
-                  choice={CHOICES[setting]}
-                  value={current}
-                  onChange={(value) => {
-                    setGameSetting(game, setting, value);
-                  }}
-                />
-              ) : null,
-            )}
-          </fieldset>
-        ))}
-      </div>
+        ) : isChoice(setting) ? (
+          <SettingChoice
+            key={setting}
+            setting={setting}
+            choice={CHOICES[setting]}
+            value={current}
+            onChange={(value) => {
+              setGameSetting(game, setting, value);
+            }}
+          />
+        ) : null,
+      )}
+    </fieldset>
+  );
+}
+
+export function GameSettings({
+  games,
+  clock,
+}: {
+  readonly games: readonly SettingsGame[];
+  readonly clock: boolean;
+}) {
+  return (
+    <div className={styles.groups}>
+      <GeneralSettings games={games} clock={clock} />
+      {games.map((game) => (
+        <GameGroup key={game} game={game} />
+      ))}
     </div>
   );
 }

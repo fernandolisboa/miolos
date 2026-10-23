@@ -88,6 +88,7 @@ afterEach(() => {
 describe("Marcar ✕ ao completar a linha is a four-way choice in Ajustes (T-WEB-S977)", () => {
   it("offers Sempre, Sempre e mostrar o erro, Só se estiver certa and Desligado under Nonogram, Sempre checked", () => {
     render(<GamesSection />);
+    fireEvent.click(screen.getByRole("tab", { name: "Nonogram" }));
     const nonogram = screen.getByRole("group", { name: "Nonogram" });
     const choice = within(nonogram).getByRole("radiogroup", {
       name: copy.flags.lineCross.label,
@@ -117,6 +118,7 @@ describe("Marcar ✕ ao completar a linha is a four-way choice in Ajustes (T-WEB
         <GamesSection />
       </>,
     );
+    fireEvent.click(screen.getByRole("tab", { name: "Nonogram" }));
     fireEvent.click(screen.getByRole("radio", { name: copy.lineCross.off }));
     expect(
       JSON.parse(localStorage.getItem("miolos-settings") ?? "{}"),

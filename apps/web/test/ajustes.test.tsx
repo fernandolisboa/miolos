@@ -233,14 +233,18 @@ describe("a wide screen lays Ajustes out in paired rows around a full-width Jogo
     expect(decl(bodyOf(css, ".card"), "max-width")).toBeUndefined();
   });
 
-  it("the game settings split into two columns only in a container 50rem wide, so the 480px in-game dialog keeps one", () => {
-    const css = stylesheet("src/settings/game-settings.module.css");
-    expect(decl(bodyOf(css, ".frame"), "container-type")).toBe("inline-size");
-    expect(decl(bodyOf(css, ".groups"), "columns")).toBeUndefined();
-    const wide = bodyOf(css, "@container (min-width: 50rem)");
-    expect(decl(bodyOf(wide, ".groups"), "columns")).toBe("2");
-    expect(decl(bodyOf(wide, ".group + .group"), "break-inside")).toBe("avoid");
-    expect(wide).toMatch(/\.group,\s*\.group \+ \.group\s*\{/);
+  it("the Jogos tabs move to a side list only in a container 48rem wide, and the 480px in-game dialog keeps one column", () => {
+    const tabs = stylesheet("app/ajustes/game-tabs.module.css");
+    expect(decl(bodyOf(tabs, ".tabs"), "container-type")).toBe("inline-size");
+    expect(decl(bodyOf(tabs, ".list"), "flex-wrap")).toBe("wrap");
+    expect(decl(bodyOf(tabs, ".panel"), "display")).toBeUndefined();
+    const wide = bodyOf(tabs, "@container (min-width: 48rem)");
+    expect(decl(bodyOf(wide, ".layout"), "grid-template-columns")).toBe(
+      "13rem minmax(0, 1fr)",
+    );
+    expect(decl(bodyOf(wide, ".list"), "flex-direction")).toBe("column");
+    const groups = stylesheet("src/settings/game-settings.module.css");
+    expect(groups).not.toMatch(/@container|columns:/);
     const dialog = bodyOf(
       stylesheet("src/settings/settings-dialog.module.css"),
       ".dialog",

@@ -833,6 +833,7 @@ export const messages = {
         hint: "Os ajustes dos jogos passam a valer em todos os aparelhos da sua conta com esta opção ligada. Ao ligar, este aparelho usa os ajustes já guardados na conta, se houver.",
       },
       general: "Em todos os jogos",
+      tabs: { label: "Jogo", general: "Geral" },
       on: "Ligado",
       off: "Desligado",
       flags: {

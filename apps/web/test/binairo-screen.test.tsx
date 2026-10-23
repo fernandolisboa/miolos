@@ -1012,6 +1012,7 @@ describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S609)"
 
   it("offers 1 and 0 under Binairo, with 1 checked by default", () => {
     render(<GamesSection />);
+    fireEvent.click(screen.getByRole("tab", { name: "Binairo" }));
     const binairo = screen.getByRole("group", { name: "Binairo" });
     const choice = within(binairo).getByRole("radiogroup", {
       name: copy.flags.firstValue.label,
@@ -1038,6 +1039,7 @@ describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S609)"
       screen.getByText(messages.games.binairo.play.controls.affordance(1)),
     ).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("tab", { name: "Binairo" }));
     fireEvent.click(screen.getByRole("radio", { name: "0" }));
 
     expect(
