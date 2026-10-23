@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 
 import { messages } from "../../src/i18n";
 import { ACCENTS } from "../../src/play/accent";
@@ -26,18 +26,17 @@ const STEPS: Readonly<Record<string, (index: number) => number>> = {
 export function GameTabs() {
   const [active, setActive] = useState<Tab>("general");
   const id = useId();
-  const tabRefs = useRef(new Map<Tab, HTMLButtonElement>());
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const step = STEPS[event.key];
-    if (step === undefined) {
+    if (step === undefined || event.altKey || event.ctrlKey || event.metaKey) {
       return;
     }
     event.preventDefault();
     const index = step(TABS.indexOf(active));
     const next = TABS[(index + TABS.length) % TABS.length] ?? "general";
     setActive(next);
-    tabRefs.current.get(next)?.focus();
+    document.getElementById(`${id}-${next}-tab`)?.focus();
   }
 
   return (
@@ -52,13 +51,6 @@ export function GameTabs() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              ref={(node) => {
-                if (node === null) {
-                  tabRefs.current.delete(tab);
-                } else {
-                  tabRefs.current.set(tab, node);
-                }
-              }}
               type="button"
               role="tab"
               id={`${id}-${tab}-tab`}
@@ -87,9 +79,9 @@ export function GameTabs() {
             className={styles.panel}
           >
             {tab === "general" ? (
-              <GeneralSettings games={GAMES} clock />
+              <GeneralSettings games={GAMES} clock hideLegend />
             ) : (
-              <GameGroup game={tab} />
+              <GameGroup game={tab} hideLegend />
             )}
           </div>
         ))}

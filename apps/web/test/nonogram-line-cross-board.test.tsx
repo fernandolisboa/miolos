@@ -19,6 +19,7 @@ import { NO_MISTAKES } from "../src/play/mistakes";
 import wrongMark from "../src/play/wrong-mark.module.css";
 import type { LineCross } from "../src/settings/settings";
 import { installPointerStubs } from "./pointer";
+import { openTab } from "./open-tab";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -88,7 +89,7 @@ afterEach(() => {
 describe("Marcar ✕ ao completar a linha is a four-way choice in Ajustes (T-WEB-S977)", () => {
   it("offers Sempre, Sempre e mostrar o erro, Só se estiver certa and Desligado under Nonogram, Sempre checked", () => {
     render(<GamesSection />);
-    fireEvent.click(screen.getByRole("tab", { name: "Nonogram" }));
+    openTab("Nonogram");
     const nonogram = screen.getByRole("group", { name: "Nonogram" });
     const choice = within(nonogram).getByRole("radiogroup", {
       name: copy.flags.lineCross.label,
@@ -118,7 +119,7 @@ describe("Marcar ✕ ao completar a linha is a four-way choice in Ajustes (T-WEB
         <GamesSection />
       </>,
     );
-    fireEvent.click(screen.getByRole("tab", { name: "Nonogram" }));
+    openTab("Nonogram");
     fireEvent.click(screen.getByRole("radio", { name: copy.lineCross.off }));
     expect(
       JSON.parse(localStorage.getItem("miolos-settings") ?? "{}"),

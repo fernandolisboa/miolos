@@ -15,6 +15,10 @@
   border-top: 1px solid var(--line);
 }
 
+.legendHidden {
+  composes: hidden from "../components/visually-hidden.module.css";
+}
+
 .legend {
   padding: 0;
   font-size: 11px;

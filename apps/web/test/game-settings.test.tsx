@@ -20,6 +20,7 @@ import { PlaySkeleton } from "../src/sudoku/play-view";
 import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { flushGeneration } from "./free-generation";
+import { openTab } from "./open-tab";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -43,10 +44,6 @@ const DAILY: DailySudokuResponse = dailySudokuResponseSchema.parse({
 const FREE_DEPS = { pickSeed: () => 42 };
 
 const copy = messages.settings.games;
-
-function openTab(name: string): void {
-  fireEvent.click(screen.getByRole("tab", { name }));
-}
 const FIRST_EMPTY = PUZZLE.givens.indexOf(0);
 
 function patch(next: {

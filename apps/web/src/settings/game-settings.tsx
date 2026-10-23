@@ -164,17 +164,23 @@ function setGameSetting(
   });
 }
 
+function legendClass(hidden: boolean): string | undefined {
+  return hidden ? styles.legendHidden : styles.legend;
+}
+
 export function GeneralSettings({
   games,
   clock,
+  hideLegend = false,
 }: {
   readonly games: readonly SettingsGame[];
   readonly clock: boolean;
+  readonly hideLegend?: boolean;
 }) {
   const settings = useSettings();
   return (
     <fieldset className={styles.group}>
-      <legend className={styles.legend}>{copy.general}</legend>
+      <legend className={legendClass(hideLegend)}>{copy.general}</legend>
       {clock ? (
         <SettingSwitch
           text={copy.flags.showClock}
@@ -204,11 +210,19 @@ export function GeneralSettings({
   );
 }
 
-export function GameGroup({ game }: { readonly game: SettingsGame }) {
+export function GameGroup({
+  game,
+  hideLegend = false,
+}: {
+  readonly game: SettingsGame;
+  readonly hideLegend?: boolean;
+}) {
   const settings = useSettings();
   return (
     <fieldset className={styles.group}>
-      <legend className={styles.legend}>{messages.games[game].name}</legend>
+      <legend className={legendClass(hideLegend)}>
+        {messages.games[game].name}
+      </legend>
       {(
         Object.entries(settings.games[game]) as [
           GameSetting,

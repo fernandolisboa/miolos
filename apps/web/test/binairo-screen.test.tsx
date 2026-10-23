@@ -29,6 +29,7 @@ import {
 import { freeHintSteps, spendFreeHints } from "./free-hints";
 import { installPointerStubs, stubElementFromPoint } from "./pointer";
 import { SPOKEN } from "./hint-reason";
+import { openTab } from "./open-tab";
 
 const sync = vi.hoisted(() => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -1012,7 +1013,7 @@ describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S609)"
 
   it("offers 1 and 0 under Binairo, with 1 checked by default", () => {
     render(<GamesSection />);
-    fireEvent.click(screen.getByRole("tab", { name: "Binairo" }));
+    openTab("Binairo");
     const binairo = screen.getByRole("group", { name: "Binairo" });
     const choice = within(binairo).getByRole("radiogroup", {
       name: copy.flags.firstValue.label,
@@ -1039,7 +1040,7 @@ describe("Primeiro valor in Ajustes turns the board's order around (T-WEB-S609)"
       screen.getByText(messages.games.binairo.play.controls.affordance(1)),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Binairo" }));
+    openTab("Binairo");
     fireEvent.click(screen.getByRole("radio", { name: "0" }));
 
     expect(
