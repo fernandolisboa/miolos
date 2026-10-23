@@ -21,7 +21,7 @@ Fernando (2026-10-23): "nao, palavrao pode filtrar como \"nao esta na lista\" si
 
 - Turning the switch on or off takes effect on the next guess, with no deploy. Only the newest guess is judged, so a change never closes a board in play.
 - On the daily and the archive a profanity form costs one round trip before "não está na lista"; every other word is still refused on the device.
-- Free play has no server and its wall forbids a fetch (ADR-0078), so it cannot read the switch. Refusing there is Fernando's "a princípio, filtra", and free play records and shows nothing to anyone.
+- Free play has no server and its wall forbids a fetch (ADR-0078), so it cannot read the switch. Refusing there is Fernando's "a principio, filtra", and free play records and shows nothing to anyone.
 - The 246-byte list reaches the three Termo routes only. The forms are already public in `excluded.txt` and VERO, and none is an answer or a pool word, so ADR-0004 is untouched. The list sits in the dictionary's chunk, which the three routes share, so free play carries it unused. Measured: `/termo` 154.5 of 159 KB, `/arquivo/[data]/termo` 149.5 of 154, `/modo-livre/termo` 140.9 of 145.
 
 ## Rejected
