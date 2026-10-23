@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Switch } from "../src/components/switch";
 import switchStyles from "../src/components/switch.module.css";
+import { bodyOf, decl, stylesheet } from "./css-source";
 
 function renderSwitch(props: { checked: boolean; disabled?: boolean }) {
   const onToggle = vi.fn();
@@ -51,5 +52,17 @@ describe("the shared Switch (T-WEB-S1080)", () => {
     expect(button).toBeDisabled();
     fireEvent.click(button);
     expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("lends its look to /admin's Salvar from the module that defines it", () => {
+    expect(
+      decl(
+        bodyOf(stylesheet("app/admin/admin.module.css"), ".save"),
+        "composes",
+      ),
+    ).toBe('switch from "../../src/components/switch.module.css"');
+    expect(
+      bodyOf(stylesheet("src/components/switch.module.css"), ".switch"),
+    ).toContain("min-height");
   });
 });

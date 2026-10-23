@@ -57,7 +57,7 @@
 }
 
 .save {
-  composes: switch from "../ajustes/page.module.css";
+  composes: switch from "../../src/components/switch.module.css";
   min-width: 0;
   margin-left: auto;
 }
