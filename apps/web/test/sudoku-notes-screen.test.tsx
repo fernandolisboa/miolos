@@ -23,6 +23,7 @@ import styles from "../src/sudoku/sudoku-board.module.css";
 import { SudokuScreen } from "../src/sudoku/sudoku-screen";
 import { useSudokuPlay } from "../src/sudoku/use-sudoku-play";
 import { flushGeneration } from "./free-generation";
+import { openTab } from "./open-tab";
 
 vi.mock("../src/play/sync", () => ({
   startCompletionSync: vi.fn(() => () => undefined),
@@ -523,6 +524,7 @@ describe("Limpar rascunho ao preencher is a setting that starts on (T-WEB-S839)"
       this.setAttribute("open", "");
     };
     const { unmount } = render(<GamesSection />);
+    openTab("Sudoku");
     const group = screen.getByRole("group", { name: "Sudoku" });
     const toggle = within(group).getByRole("switch", {
       name: settingsCopy.flags.cleanNotes.label,

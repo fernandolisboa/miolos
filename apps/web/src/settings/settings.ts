@@ -74,6 +74,10 @@ const schema = base.catch(base.parse({}));
 export type Settings = z.infer<typeof schema>;
 export type SettingsGame = keyof Settings["games"];
 
+export function settingsGames(): readonly SettingsGame[] {
+  return games.keyof().options;
+}
+
 const DEFAULTS: Settings = schema.parse(undefined);
 
 export function settingsFrom(value: unknown): Settings {
