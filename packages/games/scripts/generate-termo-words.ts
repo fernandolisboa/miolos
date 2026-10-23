@@ -16,12 +16,13 @@ const read = (...path: string[]) =>
 
 const answersCsv = read("termo", "answers.csv");
 const validationTxt = read("termo", "validation.txt");
+const excludedTxt = read("termo", "excluded.txt");
 const lexiconTsv = read("crossword", "lexicon.tsv");
 
 const outputs: readonly (readonly [string, string])[] = [
   [
     join(srcDir, "termo", "words.generated.ts"),
-    renderTermoValidationModule(validationTxt),
+    renderTermoValidationModule(validationTxt, excludedTxt),
   ],
   [
     join(srcDir, "termo-answers", "answers.generated.ts"),
@@ -29,7 +30,12 @@ const outputs: readonly (readonly [string, string])[] = [
   ],
   [
     join(srcDir, "termo-free", "pool.generated.ts"),
-    renderTermoFreePoolModule(lexiconTsv, validationTxt, answersCsv),
+    renderTermoFreePoolModule(
+      lexiconTsv,
+      validationTxt,
+      answersCsv,
+      excludedTxt,
+    ),
   ],
 ];
 

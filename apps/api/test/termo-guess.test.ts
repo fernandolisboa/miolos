@@ -469,6 +469,20 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
     expect(await completionRows()).toHaveLength(0);
   });
 
+  it("T-API-S380: a real word the IME list missed is judged, not refused", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    const { token } = await createSession();
+
+    const response = await POST(
+      guessRequest({ token, body: guessBody(today, ["bolor"]) }),
+    );
+    expect(response.status).toBe(200);
+    const body = termoGuessResponseSchema.parse(await response.json());
+    expect(body.status).toBe("playing");
+    expect(body.tiles).toHaveLength(1);
+  });
+
   it("T-API-S42: an EARLIER non-word is judged normally — the gate is the newest guess only", async () => {
     const today = await todaySaoPaulo(ctx.db);
     await seedTermo(today);

@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S215`    | `S210`         | never used            |
+| `T-CORE` | `S217`    | `S210`         | never used            |
 | `T-DB`   | `S160`    | `S150`         | `T-DB-21`             |
-| `T-API`  | `S380`    | `S363`         | `T-API-16`            |
-| `T-WEB`  | `S1070`   | `S1068`        | `T-WEB-23`            |
+| `T-API`  | `S385`    | `S380`         | `T-API-16`            |
+| `T-WEB`  | `S1075`   | `S1070`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#427 (Termo guesses from VERO, ADR-0152) reserved **`T-API-S380…S384`**, **`T-CORE-S215`/`S216`** and **`T-WEB-S1070…S1074`** on the issue for both of its PRs. PR A spent **`T-API-S380`** in `termo-guess.test.ts` (the judge answers 200 for `bolor`, a word main refused with 422) and **`T-WEB-S1070`** in `termos.test.tsx` (`/termos` names VERO and the Mozilla Public License 2.0 and links the public repository). The rest stays reserved for PR B, and whatever PR B leaves unspent is burned then.
 
 #200 (a Termo answer may return after 365 days, ADR-0147) spent **`T-DB-S146`** in `published.test.ts` (`listUsedTermoAnswers` counts a row dated on `fromDate` and not one the day before) and **`T-API-S342…S346`**: in `publishing-service.test.ts`, `S342` (an answer last drawn 365 days ago is drawn again; 364 days ago, the run fails with the exhaustion reason), `S343` (with every window day drawn and every other answer drawn before it, a clamp-depth run writes 30 rows and repeats nothing inside 365 days), `S344` (the list minus the fullest window, 364 + the `bufferDepth` maximum, is not low) and `S346` (the list minus the fullest window of 394 rows is at least 100, ADR-0114's mixing floor kept by ADR-0147); in `buffer-depth.test.ts`, `S345` (the remaining count follows the window). Re-aimed in place: the four `T-DB-S10` cases (dates relative to today, title); `T-API-S5`, `S22`, `S34b`, `S224`, `S240`, `S341`, `S217`, `S219`, `S32` and `S44` (counts derived from `TERMO_ANSWERS.length`, answers spent with `spendAnswers`); `S31` and `S218` (retitled); `T-CORE-S17`, `S19` and `T-WEB-S190`'s sweep (retitled, 626). `T-DB-S147` is **burned**, unspent. Nothing in those ranges is left unspent beyond the burned `T-DB-S147`.
 

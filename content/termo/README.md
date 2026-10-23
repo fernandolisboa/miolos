@@ -1,180 +1,68 @@
-# Termo draft word list
+# Termo word lists
 
-Draft answer/validation word lists for the Miolos Termo game (Brazilian Portuguese,
-5 letters, accent-insensitive matching: guesses are compared after NFD diacritic
-stripping and ç→c; tiles reveal the canonical accented spelling). Produced under
-[ADR-0015](../../docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)
-(AI-curated, mechanical constraints); the M2 Termo ticket ships the validation
-harness that proves the invariants below as property-style tests before this list
-feeds the publishing cron.
+The word lists of the Miolos Termo game (Brazilian Portuguese, five letters).
+Matching is accent-insensitive: a guess is compared after lowercasing, Unicode
+NFD and stripping combining marks (so `ç` becomes `c`), and tiles reveal the
+canonical accented spelling
+([ADR-0015](../../docs/adr/0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)).
 
-**The file order is not the daily order.** The list being public spoils nothing:
-which word is any given day's answer is a server-side seeded choice
+**The file order is not the daily order.** Which word is a day's answer is a
+server-side seeded choice
 ([ADR-0010](../../docs/adr/0010-publication-is-time-driven-published-at-plus-buffer.md)),
-exactly as with the grid-game generators.
+so the list being public spoils nothing.
 
-## Generated modules and the free pool
-
-`pnpm --filter @miolos/games generate:termo` renders three modules:
-`validation.txt` into `packages/games/src/termo/words.generated.ts`,
-`answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`,
-and the **free pool** into `packages/games/src/termo-free/pool.generated.ts`.
-The free pool is what Termo free play draws from: the five-letter words of
-`content/crossword/lexicon.tsv` that are in `validation.txt` and are not
-an answer — 2,187 words
-([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
-**Run `generate:termo` after editing `answers.csv`, `validation.txt` or the
-crossword lexicon**, then `pnpm test --force`: a staleness test fails when a
-generated module and its sources disagree.
-
-An answer drawn for a date is not drawn again for 365 days, and then may
-return ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)).
-**The answer list and the free pool are disjoint:** an answer extension takes
-its words out of the pool. **A published answer is never deleted from
-`answers.csv`**, or regeneration would put it back in the pool.
-
-## Deliverables
+## Files
 
 | File | Contents |
 |---|---|
-| `answers.csv` | 626 daily-answer words, ranked by corpus frequency. Header `canonical,normalized`. Canonical is the correct pt-BR spelling (lowercase, accents/ç kept); normalized matches `^[a-z]{5}$`. |
-| `validation.txt` | 5,408 accepted-guess words, one normalized 5-letter word per line, sorted, unique. Superset of every `answers.csv` normalized form. |
-| `additions.txt` | 98 curated canonical forms the base lexicon is missing ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md), issue #140): real, current pt-BR words attested in the frequency corpus, one per line, sorted by (normalized form, canonical). Merged by `pipeline.py` under the same normalization and blocklist as lexicon entries. Guess dictionary only — never a source of answers. |
-| `canonical-map.csv` | Header `normalized,canonical`. One row per validation word, mapping it to a canonical accented display form. When several accented words share a normalized form (e.g. `sabia`/`sábia`), the most frequent one in the subtitle corpus is the canonical; all colliding spellings remain guessable through the single normalized entry. |
-| `rejected-sample.txt` | 107 examples of rejected words with the constraint that rejected each (tab-separated). **Hand-assembled audit record from the curation pass** — the answer-stage rejections come from model judgment, which no script reproduces. |
-| `rejected-lexicon-sample.txt` | The mechanical, reproducible counterpart: a seeded random sample of lexicon-stage rejections, written by `pipeline.py` on every run. |
-| `pipeline.py`, `select_answers.py` | The scripts that produce the three data files above (deterministic; run from anywhere, sources auto-download; `candidates.tsv` and `sources/` are gitignored intermediates). |
+| `validation.txt` | The guess dictionary: 18,250 normalized words, one per line, sorted, unique, all `^[a-z]{5}$`. VERO ∪ `ispell.txt` ∪ `additions.txt` ([ADR-0152](../../docs/adr/0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md)). Written by `pipeline.py`. |
+| `ispell.txt` | The 5,310 frozen IME-USP forms, normalized, sorted. Input, never rewritten: the IME host resets connections from CI and containers. |
+| `additions.txt` | Curated canonical forms that neither VERO nor `ispell.txt` carries (`deque`, `drone`, `vison`), sorted by (normalized form, canonical) ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)). The pipeline refuses a line that is already a guess. |
+| `excluded.txt` | The exclusion list: `normalized<TAB>reason`, sorted, unique. Today only `profanity` rows (37), written by `pipeline.py` from its `PROFANITY` stems and spellings, every inflection included. An excluded word is never an answer and never in the free pool. |
+| `answers.csv` | The 626 daily answers, header `canonical,normalized`. Hand-picked under ADR-0015's constraints and ranked by corpus frequency. **Never delete a row** ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)). |
+| `rejected-sample.txt` | Hand-assembled audit record of the answer curation: 107 rejected words and why. |
+| `rejected-lexicon-sample.txt` | A seeded sample of what `pipeline.py` rejects from VERO, per reason, rewritten on every run. |
+| `pipeline.py`, `select_answers.py` | The scripts. `sources/` and `candidates.tsv` are gitignored intermediates. |
 
-## Sources and licenses
+## Generated modules
 
-1. **Base lexicon** — IME-USP "Lista de palavras do português brasileiro",
-   derived from Ricardo Ueda Karpischek's br.ispell dictionary, pre-expanded
-   (inflections, plurals and conjugations included as plain entries).
-   - URL: `https://www.ime.usp.br/~pf/dicios/br-utf8.txt` (261,788 entries)
-   - License: **Creative Commons Attribution (CC BY)**, as stated on
-     `https://www.ime.usp.br/~pf/dicios/` ("O uso do material está sujeito à
-     licença Creative Commons Attribution (CC BY)").
-   - Chosen over the LibreOffice pt-BR hunspell dictionary because no
-     hunspell/`unmunch` tooling was available for affix expansion; this list is
-     already expanded.
-2. **Frequency ranking** — hermitdave/FrequencyWords, pt_BR full list (built
-   from the OpenSubtitles 2018 corpus).
-   - URL: `https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pt_br/pt_br_full.txt` (848,043 entries)
-   - License: **MIT for code, CC-BY-SA-4.0 for content** (per the repo README).
-     Used here only to rank/select; the frequency numbers themselves are not
-     shipped.
+`pnpm --filter @miolos/games generate:termo` renders:
 
-Raw source downloads are not committed; the URLs above are the record, and
-`pipeline.py` re-fetches them to regenerate everything deterministically.
+- the guesses into `packages/games/src/termo/words.generated.ts`: `validation.txt`, minus the `profanity` rows of `excluded.txt` only if `PROFANITY_IS_A_GUESS` (in `packages/games/scripts/render-termo-words.ts`) is `false`. It is `true`: a typed profane word is accepted, pending Fernando's answer;
+- `answers.csv` into `packages/games/src/termo-answers/answers.generated.ts`;
+- the **free pool** into `packages/games/src/termo-free/pool.generated.ts`: the five-letter words of `content/crossword/lexicon.tsv` that are guesses, are not answers and are not excluded. 2,259 words ([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)).
+
+**Run `generate:termo` after editing anything here or the crossword lexicon**, then `pnpm test --force`: a staleness test fails when a generated module and its sources disagree.
+
+## Sources and licences
+
+1. **VERO**, the LibreOffice pt-BR hunspell dictionary (Raimundo Moura and the VERO team), dual-licensed LGPLv3 / MPL. Miolos takes it under the **Mozilla Public License 2.0**: `validation.txt`, `excluded.txt`, `words.generated.ts` and `pool.generated.ts` are MPL-2.0 files (<https://mozilla.org/MPL/2.0/>). `/termos` names VERO, the licence and this repository.
+   - `https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/pt_BR/pt_BR.dic`, sha256 `a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183`
+   - `.../pt_BR/pt_BR.aff`, sha256 `21d8ad2a769a60e17e2b5ea4ef11d4d593a58b9e2a82d642ef82d6a4c5523865`
+2. **IME-USP** "Lista de palavras do português brasileiro" (`https://www.ime.usp.br/~pf/dicios/br-utf8.txt`), derived from Ricardo Ueda Karpischek's br.ispell, **CC BY**. Its five-letter forms, filtered as before #427, are frozen in `ispell.txt`.
+3. **hermitdave/FrequencyWords** pt_BR (OpenSubtitles 2018), **CC-BY-SA-4.0** content. Used only to rank; no counts ship.
+   - `https://raw.githubusercontent.com/hermitdave/FrequencyWords/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/pt_br/pt_br_full.txt`, sha256 `533b3abaab3b1ea9cec7a150fc8aaf8d428c6f241979cc2224b7ee82f8a369b2`
+
+`pipeline.py` downloads each pinned file into `sources/` and stops if a hash differs. Nothing downloaded is committed.
 
 ## Pipeline
 
-1. **Normalize** every lexicon entry: lowercase → Unicode NFD → strip combining
-   marks (this also turns ç into c). Keep entries whose normalized form matches
-   `^[a-z]{5}$`.
-2. **Lexicon-stage exclusions**: capitalized lemmas (proper nouns), entries with
-   hyphens/spaces/apostrophes/periods, roman numerals, a blocklist of slurs,
-   heavy obscenities and scatological verbs (normalized forms; mild vulgarity
-   stays guessable), a curated list of **lowercase proper-noun duplicates** the
-   capitalization filter cannot see (`maria`, `paris`, `japao`… — words with a
-   legitimate common-noun or verb reading like `silva`, `bento`, `marta`,
-   `edite`, `tomas`, `rosa` are deliberately kept), and two corrupted source
-   tokens (`ceemo`, `geemo` — truncated `-eemos` subjunctives).
-3. **Curated additions** (`additions.txt`): canonical forms for real pt-BR
-   words the base lexicon is missing, merged under the same normalization —
-   and the blocklist, proper-noun and corruption filters bind on them too,
-   as **hard assertions** rather than the lexicon path's silent skips: a
-   hand-reviewed line that hits one aborts the run instead of disappearing.
-   A line already present in the base lexicon fails the run — the file can
-   never silently duplicate the source — and a line whose *normalized form*
-   the base lexicon already carries fails too, so an addition can never
-   flip an existing `canonical-map.csv` row.
-4. **`validation.txt`** = all surviving normalized forms, sorted and deduplicated.
-5. **`canonical-map.csv`** = for each normalized form, the colliding canonical
-   spelling with the highest OpenSubtitles frequency (alphabetical tiebreak).
-6. **Answer candidates** = normalized forms scored by the max frequency of any of
-   their canonical spellings, descending (`candidates.tsv`, top 2,500).
-7. **Curation** (`select_answers.py`): a hand-picked pool of 626 normalized forms
-   chosen word by word from the ranked candidates against the answer constraints
-   below, ranked by corpus frequency into `answers.csv`. The first 400 were the
-   original list (frequency floor ≈5,400 subtitle occurrences). The other 226
-   were appended at #200 in the same frequency order, not regenerated, so the
-   first 400 rows did not move; the floor of the whole list is ≈1,750
-   occurrences.
+1. **Expand VERO.** Every `.dic` stem, its PFX and SFX forms and their cross product (both rules flagged `Y`). This `.aff` has no continuation classes, so one pass of each is complete. Entries with the FORBIDDENWORD flag and multi-word entries are skipped.
+2. **Keep five-letter words.** Drop forms with a capital (proper nouns), forms that are not `a`–`z` after normalization, the six forms `hunspell -l` rejects (`HUNSPELL_REJECTED`), the junk `https` and `vldis`, and `PROPER_NOUN_DUPLICATES` (`jesus`, `paris`, `maria`…). VERO's other lowercase names and English words stay: a guess shows nothing to anyone else (ADR-0152).
+3. **Union** with `ispell.txt` and `additions.txt` into `validation.txt`.
+4. **Profanity rows.** Every kept form whose VERO stem or spelling is in `PROFANITY` becomes an `excluded.txt` row; rows with other reasons are kept as they are.
+5. **Candidates.** VERO and additions forms scored by their most frequent spelling, top 2,500, into `candidates.tsv` for `select_answers.py`. Since VERO knows `metrô`, the script no longer reproduces `answers.csv` byte for byte; `answers.csv` is the record.
 
-## Answer constraints applied
+## Answer constraints
 
-- Common contemporary Brazilian Portuguese only — no archaisms, regionalisms or
-  technical jargon.
-- No proper nouns (including lowercase corpus artifacts like `paris`, `jesus`),
-  no unnaturalized loanwords, no abbreviations. Naturalized accented borrowings
-  (`álbum`, `turnê`, `tênis`, `álibi`, `hotel`) are allowed.
-- No obscenities, slurs, or words whose primary reading is sexual or
-  scatological. Editorial extra: ethnicity/race words (`judeu`, `negro`) are
-  excluded from answers though they are ordinary words and remain valid guesses.
-- Lemmas preferred: singular nouns/adjectives and infinitive verbs. Inflected or
-  function forms admitted only when extremely frequent (13 of the 626: `estou`,
-  `vamos`, `tenho`, `quero`, `posso`, `disse`, `mesmo`, `outro`, `algum`,
-  `ambos`, `minha`, `nossa`, `sexta`).
-- Unique after normalization (enforced; also verified).
-- Canonical form is the correct dictionary spelling with accents/ç.
-- Variety: a broad mix of infinitive verbs (87), nouns (the majority),
-  adjectives (72), plus numerals (`cinco`, `vinte`, `treze`), weekdays (`sexta`,
-  `terça`), months (`abril`, `junho`, `julho`) and common adverbs; **88** of
-  the 626 canonical forms carry a diacritic (`então`, `manhã`, `saúde`,
-  `época`, `túnel`, `dúzia`, …), which the accent-insensitive design exists
-  to allow.
+The 626 answers were picked word by word against these:
 
-## Self-review pass
+- Common contemporary Brazilian Portuguese: no archaisms, regionalisms or jargon.
+- No proper nouns, unnaturalized loanwords or abbreviations. Naturalized accented borrowings (`álbum`, `turnê`, `hotel`) are allowed.
+- No obscenities, slurs or words whose main reading is sexual or scatological. Editorially, `judeu` and `negro` are not answers, though they are guesses.
+- Lemmas preferred; 13 very frequent inflected or function forms admitted (`estou`, `vamos`, `minha`…).
+- Unique after normalization; the canonical form is the dictionary spelling with accents.
 
-A full word-by-word review of the initially selected 400 removed **2 words**:
-`judeu` and `negro` (race/ethnicity words — inoffensive in pt-BR but unsuitable
-as daily answers by editorial judgment). They were replaced by the next-ranked
-curated candidates (`nuvem`, `praga`). Words like `vadia`, `bunda`, `bicha`,
-`veado`, `pinto`, `tesão`, `gozar` had already been rejected during the initial
-curation pass (see `rejected-sample.txt`).
+## Checks
 
-## Sanity checks (all run, all passing)
-
-- All 626 answer normalized forms match `^[a-z]{5}$`: **yes**
-- Duplicate normalized forms in answers: **0**
-- Every answer's normalized form present in `validation.txt`: **yes (626/626)**
-- Every answer's canonical form normalizes exactly to its normalized form: **yes**
-- `validation.txt`: **5,408 lines**, unique, sorted, all matching `^[a-z]{5}$`
-- `canonical-map.csv`: **5,408 rows**, covers the validation set exactly; every
-  canonical normalizes back to its key
-- Every `additions.txt` entry survives the pipeline into `validation.txt`
-  and is accepted by the shipped `isValidGuess` (pinned in
-  `packages/games/test/termo/word-list.test.ts`)
-- Normalized forms with more than one canonical spelling (sabia/sábia-style
-  collisions): **520** (largest groups are 4-way ties: `calca`, `forca`,
-  `troca`)
-
-## Known limitations
-
-- The IME-USP list is explicitly "possibly incomplete"; e.g. `sabiá` (the bird)
-  is absent, so the `sabia` collision set is `sabia`/`sábia` only. Harmless for
-  gameplay (the normalized form is guessable either way) but canonical-map
-  coverage of rare accent variants is only as good as the source lexicon.
-  Membership gaps reported by players (issue #140: `áudio`, and a corpus
-  sweep found `podre`, `letal`, `doces`, `tchau`, `dócil`… — 98 in all) are
-  closed through `additions.txt` ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md));
-  the additions pass reviewed every missing normalized form with an
-  aggregated corpus frequency ≥ 200, so remaining gaps are rarer than that
-  or absent from the subtitle corpus.
-- 5,408 validation words is at the low end of the 5k–15k target; term.ooo
-  accepts more because it expands the full hunspell affix table. Swapping in a
-  fully unmunched hunspell expansion later would only add rows, never break
-  existing ones — ADR-0062 records why that expansion was not shippable
-  offline when #140 was fixed, and leaves the door open.
-- The obscenity/slur blocklist is hand-made (24 normalized forms, including the
-  slur-strength `bicha` and `vadia`, of which 16 actually occur in the source
-  lexicon and are excluded from validation); it was not
-  audited against a comprehensive pt-BR profanity corpus.
-- The lowercase proper-noun-duplicate list is likewise curated, not exhaustive:
-  rarer names present in the source lexicon as lowercase entries may remain
-  guessable. Answers are unaffected — all 626 were picked individually, and
-  the first 400 also passed the self-review above.
-- "Average Brazilian adult recognizes instantly" was applied by model judgment,
-  not by a measurable test; frequency rank (≥ ~1,750 subtitle occurrences) is
-  the verifiable proxy.
+`packages/games/test/termo/word-list.test.ts` and `test/termo-free/pool.test.ts` pin, on every CI run: the shape, order and counts of every file above; every `ispell.txt` and `additions.txt` word is a guess; `bolor`, `chope`, `sarau`, `vocal` and `sagui` are guesses and `xqzwv` and `https` are not; no answer is excluded; the pool shares nothing with answers or `excluded.txt`; and the generated modules match their sources.

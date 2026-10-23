@@ -27,3 +27,15 @@ describe("the terms-of-use page (T-WEB-S293)", () => {
     expect(markup).toContain(messages.terms.account.privacyLinkLabel);
   });
 });
+
+describe("the Termo dictionary credit on /termos (T-WEB-S1070)", () => {
+  it("names VERO, the Mozilla Public License 2.0 and links the public repository that holds the list", () => {
+    const markup = renderToStaticMarkup(<TermsPage />);
+
+    expect(markup).toContain("VERO");
+    expect(markup).toContain("Mozilla Public License 2.0");
+    expect(markup).toContain(
+      'href="https://github.com/fernandolisboa/miolos/tree/main/content/termo"',
+    );
+  });
+});
