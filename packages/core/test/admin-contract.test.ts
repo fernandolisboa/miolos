@@ -15,7 +15,15 @@ const CONFIG = {
   attachStreakThreshold: 5,
   pushOptInStreakThreshold: 3,
   freeHintsPerPuzzle: 3,
+  termoAcceptsProfanity: false,
 };
+
+const NUMBER_KEYS = [
+  "bufferDepth",
+  "attachStreakThreshold",
+  "pushOptInStreakThreshold",
+  "freeHintsPerPuzzle",
+] as const;
 
 function rejects(
   schema: { safeParse: (value: unknown) => { success: boolean } },
@@ -27,13 +35,13 @@ function rejects(
 }
 
 describe("the admin config write (ADR-0097)", () => {
-  it("T-CORE-S170: one known key and an integer inside that key's bounds, nothing else", () => {
+  it("T-CORE-S170: one known key and a value that key's field takes, nothing else", () => {
     expect(
       adminConfigWriteSchema.safeParse({ key: "bufferDepth", value: 31 })
         .success,
     ).toBe(false);
 
-    for (const key of remoteConfigKeySchema.options) {
+    for (const key of NUMBER_KEYS) {
       const field = remoteConfigField(key);
       const min = field.minValue ?? Number.NaN;
       const max = field.maxValue ?? Number.NaN;
@@ -48,10 +56,23 @@ describe("the admin config write (ADR-0097)", () => {
         { key, value: max + 1 },
         { key, value: 7.5 },
         { key, value: "7" },
+        { key, value: true },
         { key },
         { key, value: min, extra: true },
       ]);
     }
+    for (const value of [true, false]) {
+      expect(
+        adminConfigWriteSchema.parse({ key: "termoAcceptsProfanity", value }),
+      ).toEqual({ key: "termoAcceptsProfanity", value });
+    }
+    rejects(adminConfigWriteSchema, [
+      { key: "termoAcceptsProfanity", value: 0 },
+      { key: "termoAcceptsProfanity", value: 1 },
+      { key: "termoAcceptsProfanity", value: "true" },
+      { key: "termoAcceptsProfanity" },
+      { key: "termoAcceptsProfanity", value: true, extra: true },
+    ]);
     rejects(adminConfigWriteSchema, [
       { key: "someFutureTunable", value: 3 },
       { value: 3 },
@@ -61,13 +82,11 @@ describe("the admin config write (ADR-0097)", () => {
 
   it("T-CORE-S171: the keys and their bounds are the remote-config schema's", () => {
     expect(remoteConfigKeySchema.options).toEqual([
-      "bufferDepth",
-      "attachStreakThreshold",
-      "pushOptInStreakThreshold",
-      "freeHintsPerPuzzle",
+      ...NUMBER_KEYS,
+      "termoAcceptsProfanity",
     ]);
     expect(
-      remoteConfigKeySchema.options.map((key) => {
+      NUMBER_KEYS.map((key) => {
         const field = remoteConfigField(key);
         return [key, field.minValue, field.maxValue];
       }),

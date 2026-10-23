@@ -46,7 +46,7 @@ Run `python3 -I pipeline.py` from this folder. It is idempotent: a second run ch
 
 - **Stop a word** from being an answer or a pool word: add a row to `excluded.txt` with its reason, run the pipeline, then `generate:termo`. An exclusion moves no other word. For a word already in `answers.csv`, the reason is `retired`. If that word is already drawn into the buffer, kill that row too, or it still publishes.
 - **Never delete a row of `answers.csv`.** Its word would go back into the free pool.
-- **Profanity**: add the stem to `PROFANITY` in `pipeline.py`. Its rows are refused as guesses while `PROFANITY_IS_A_GUESS` (in `packages/games/scripts/render-termo-words.ts`) is `false`, as Fernando chose. If a new stem matches a word already in `answers.csv`, the pipeline stops: mark that word `retired` and take the stem out of `PROFANITY`, or extend the tool.
+- **Profanity**: add the stem to `PROFANITY` in `pipeline.py`. Its rows are refused as guesses unless the `/admin` switch `termoAcceptsProfanity` is on (ADR-0154); `generate:termo` writes them to `profanity.generated.ts`. If a new stem matches a word already in `answers.csv`, the pipeline stops: mark that word `retired` and take the stem out of `PROFANITY`, or extend the tool.
 
 Which words are excluded, and why, follows ADR-0015's answer constraints as [ADR-0153](../../docs/adr/0153-termo-answers-and-the-free-pool-split-the-common-words.md) decision 5 applies them.
 

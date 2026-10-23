@@ -10,6 +10,7 @@ import {
   unsubscribeAndForget,
 } from "../../src/push/subscribe";
 import { usePushState } from "../../src/push/use-push-state";
+import { Switch } from "../../src/components/switch";
 import switchStyles from "../../src/components/switch.module.css";
 import styles from "./page.module.css";
 
@@ -127,17 +128,14 @@ export function ReminderSection() {
       ) : (
         <div className={switchStyles.switchRow}>
           <span id="settings-push-toggle">{copy.toggle}</span>
-          <button
-            type="button"
-            role="switch"
-            className={switchStyles.switch}
-            aria-labelledby="settings-push-toggle"
-            aria-checked={view === "on"}
+          <Switch
+            labelledBy="settings-push-toggle"
+            checked={view === "on"}
             disabled={!switchable || busy}
-            onClick={toggle}
+            onToggle={toggle}
           >
             {busy || (view !== "on" && view !== "off") ? copy.busy : copy[view]}
-          </button>
+          </Switch>
         </div>
       )}
 

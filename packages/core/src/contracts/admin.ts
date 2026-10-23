@@ -36,7 +36,10 @@ export const adminStateResponseSchema = z.discriminatedUnion("role", [
 export type AdminStateResponse = z.infer<typeof adminStateResponseSchema>;
 
 export const adminConfigWriteSchema = z
-  .strictObject({ key: remoteConfigKeySchema, value: z.number() })
+  .strictObject({
+    key: remoteConfigKeySchema,
+    value: z.union([z.number(), z.boolean()]),
+  })
   .refine(({ key, value }) => remoteConfigField(key).safeParse(value).success);
 export type AdminConfigWriteRequest = z.infer<typeof adminConfigWriteSchema>;
 

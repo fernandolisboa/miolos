@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { renderTermoFreePoolModule } from "./render-termo-free-pool.ts";
 import {
   renderTermoAnswersModule,
+  renderTermoProfanityModule,
   renderTermoValidationModule,
 } from "./render-termo-words.ts";
 
@@ -23,6 +24,10 @@ const outputs: readonly (readonly [string, string])[] = [
   [
     join(srcDir, "termo", "words.generated.ts"),
     renderTermoValidationModule(validationTxt, excludedTxt),
+  ],
+  [
+    join(srcDir, "termo", "profanity.generated.ts"),
+    renderTermoProfanityModule(validationTxt, excludedTxt),
   ],
   [
     join(srcDir, "termo-answers", "answers.generated.ts"),

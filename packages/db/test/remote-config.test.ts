@@ -37,6 +37,7 @@ describe("getRemoteConfig", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -47,6 +48,7 @@ describe("getRemoteConfig", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -59,6 +61,7 @@ describe("getRemoteConfig", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -71,6 +74,7 @@ describe("getRemoteConfig", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -83,6 +87,7 @@ describe("getRemoteConfig", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -101,6 +106,7 @@ describe("getRemoteConfig", () => {
         attachStreakThreshold: 5,
         pushOptInStreakThreshold: 9,
         freeHintsPerPuzzle: 3,
+        termoAcceptsProfanity: false,
       });
     }
     const logged = error.mock.calls.filter((call) =>
@@ -131,6 +137,39 @@ describe("setRemoteConfigValue", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
+  });
+});
+
+describe("termoAcceptsProfanity in remote_config (ADR-0154)", () => {
+  it("T-DB-S160: a stored boolean round-trips, and a stored 1 falls back to false and is logged once", async () => {
+    await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", true);
+    expect((await getRemoteConfig(ctx.db)).termoAcceptsProfanity).toBe(true);
+    const rows = await ctx.db.select().from(remoteConfig);
+    expect(rows.map((row) => row.value)).toEqual([true]);
+
+    await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", false);
+    expect((await getRemoteConfig(ctx.db)).termoAcceptsProfanity).toBe(false);
+
+    const error = vi.mocked(console.error);
+    error.mockClear();
+    await ctx.db
+      .update(remoteConfig)
+      .set({ value: 1 })
+      .where(sql`key = 'termoAcceptsProfanity'`);
+    for (let read = 0; read < 2; read++) {
+      expect(await getRemoteConfig(ctx.db)).toEqual({
+        bufferDepth: 7,
+        attachStreakThreshold: 5,
+        pushOptInStreakThreshold: 3,
+        freeHintsPerPuzzle: 3,
+        termoAcceptsProfanity: false,
+      });
+    }
+    const logged = error.mock.calls.filter((call) =>
+      String(call[0]).includes("termoAcceptsProfanity"),
+    );
+    expect(logged).toHaveLength(1);
   });
 });

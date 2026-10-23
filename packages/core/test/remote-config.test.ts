@@ -16,12 +16,14 @@ describe("remoteConfigSchema", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
     expect(defaultRemoteConfig).toEqual({
       bufferDepth: 7,
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -31,6 +33,7 @@ describe("remoteConfigSchema", () => {
       attachStreakThreshold: 5,
       pushOptInStreakThreshold: 3,
       freeHintsPerPuzzle: 3,
+      termoAcceptsProfanity: false,
     });
   });
 
@@ -77,5 +80,23 @@ describe("remoteConfigSchema.freeHintsPerPuzzle (ADR-0098)", () => {
       HINTS_PER_PUZZLE_CEILING,
     );
     expect(hintsUsedSchema.maxValue).toBe(HINTS_PER_PUZZLE_CEILING);
+  });
+});
+
+describe("remoteConfigSchema.termoAcceptsProfanity (ADR-0154)", () => {
+  it("T-CORE-S217: defaults to false, takes either boolean, nothing else", () => {
+    expect(remoteConfigSchema.parse({}).termoAcceptsProfanity).toBe(false);
+    for (const value of [true, false]) {
+      expect(
+        remoteConfigSchema.parse({ termoAcceptsProfanity: value })
+          .termoAcceptsProfanity,
+      ).toBe(value);
+    }
+    for (const bad of [0, 1, "true", null]) {
+      expect(
+        remoteConfigSchema.safeParse({ termoAcceptsProfanity: bad }).success,
+        JSON.stringify(bad),
+      ).toBe(false);
+    }
   });
 });

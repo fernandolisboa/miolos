@@ -3,11 +3,13 @@ import {
   termoGuessRequestSchema,
   termoGuessResponseSchema,
 } from "@miolos/core";
+import type { Db } from "@miolos/db";
 import {
   getPublishedDailyWithSolution,
+  getRemoteConfig,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
-import { isValidGuess } from "@miolos/games/termo";
+import { isProfanityForm, isValidGuess } from "@miolos/games/termo";
 import type { NextRequest } from "next/server";
 
 import { corsHeaders, preflightResponse } from "../../../src/cors";
@@ -20,6 +22,13 @@ export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return preflightResponse();
+}
+
+async function acceptsGuess(db: Db, word: string): Promise<boolean> {
+  return (
+    isValidGuess(word) ||
+    (isProfanityForm(word) && (await getRemoteConfig(db)).termoAcceptsProfanity)
+  );
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -41,7 +50,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const content = termoDailyContentSchema.parse(row.content);
 
   const newest = body.guesses[body.guesses.length - 1];
-  if (newest !== undefined && !isValidGuess(newest)) {
+  if (newest !== undefined && !(await acceptsGuess(db, newest))) {
     return errorResponse(422, "invalid-guess");
   }
 

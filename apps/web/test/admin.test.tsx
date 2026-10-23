@@ -23,6 +23,7 @@ const CONFIG = {
   attachStreakThreshold: 5,
   pushOptInStreakThreshold: 3,
   freeHintsPerPuzzle: 3,
+  termoAcceptsProfanity: false,
 };
 const admin = (config: typeof CONFIG = CONFIG) => ({
   role: "admin",
@@ -199,12 +200,13 @@ describe("a non-member sees the refusal and their attached email, or the way to 
   });
 });
 
-describe("an admin sees one row per key, bounded by the schema (T-WEB-S533)", () => {
+describe("an admin sees one row per key: a number bounded by the schema, a boolean as a switch (T-WEB-S533)", () => {
   it("each input carries its value, min, max and step, and the row names its range and default", async () => {
     serve(admin({ ...CONFIG, bufferDepth: 12 }));
     render(<AdminConfigSection />);
 
     expect(await screen.findAllByRole("spinbutton")).toHaveLength(4);
+    expect(screen.getAllByRole("switch")).toHaveLength(1);
     for (const [key, value, min, max, fallback] of [
       ["bufferDepth", "12", "1", "30", 7],
       ["attachStreakThreshold", "5", "1", "365", 5],
@@ -249,6 +251,68 @@ describe("saving a row posts that key and redraws every row from the answer (T-W
     expect((await input("bufferDepth")).value).toBe("10");
     expect((await input("attachStreakThreshold")).value).toBe("5");
     expect(saveButton("bufferDepth")).toBeDisabled();
+  });
+});
+
+describe("a boolean key is a switch row that saves on tap (T-WEB-S1082)", () => {
+  const KEY = "termoAcceptsProfanity";
+
+  function toggle(): Promise<HTMLElement> {
+    return screen.findByRole("switch", { name: copy.keys[KEY].label });
+  }
+
+  it("shows its label, hint and default, posts {key, value: true} on a tap, holds every row in flight and redraws from the answer", async () => {
+    const save = pending();
+    const fetchMock = serve(admin(), save.write);
+    render(<AdminConfigSection />);
+    const button = await toggle();
+
+    expect(button).toHaveAttribute("aria-checked", "false");
+    expect(button).toHaveTextContent(copy.config.off);
+    expect(button).toHaveAccessibleDescription(copy.keys[KEY].hint);
+    expect(
+      screen.getByText(copy.config.switchDefault(false)),
+    ).toBeInTheDocument();
+
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+    expect(await input("bufferDepth")).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_URL}/admin/config`,
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ key: KEY, value: true }),
+      }),
+    );
+
+    save.finish(jsonResponse(200, admin({ ...CONFIG, [KEY]: true })));
+    expect(await screen.findByText(copy.config.saved)).toBeInTheDocument();
+    expect(button).toHaveAttribute("aria-checked", "true");
+    expect(button).toHaveTextContent(copy.config.on);
+    expect(button).toBeEnabled();
+  });
+
+  it("a 403, a malformed answer or a network error say so, and the switch shows the server's state again", async () => {
+    for (const write of [
+      () => Promise.resolve(jsonResponse(403, { error: "not-admin" })),
+      () => Promise.resolve(jsonResponse(200, { config: CONFIG })),
+      () => Promise.reject(new TypeError("offline")),
+    ]) {
+      serve(admin({ ...CONFIG, [KEY]: true }), write);
+      const view = render(<AdminConfigSection />);
+      const button = await toggle();
+
+      fireEvent.click(button);
+
+      expect(await screen.findByText(copy.config.failed)).toBeInTheDocument();
+      expect(button).toHaveAttribute("aria-checked", "true");
+      expect(button).toHaveTextContent(copy.config.on);
+      expect(button).toBeEnabled();
+      view.unmount();
+    }
   });
 });
 

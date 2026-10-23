@@ -8,7 +8,7 @@ import {
   type Dispatch,
 } from "react";
 
-import { initTermoPlayState, termoPlayReducer } from "./state";
+import { initTermoPlayState, type TermoPlayReducer } from "./state";
 import type {
   TermoJudge,
   TermoPlay,
@@ -19,12 +19,9 @@ import type {
 export function useTermoBoard(
   date: string,
   judge: TermoJudge,
+  reduce: TermoPlayReducer,
 ): { readonly play: TermoPlay; readonly dispatch: Dispatch<TermoPlayAction> } {
-  const [state, dispatch] = useReducer(
-    termoPlayReducer,
-    date,
-    initTermoPlayState,
-  );
+  const [state, dispatch] = useReducer(reduce, date, initTermoPlayState);
 
   const stateRef = useRef<TermoPlayState>(state);
   useEffect(() => {
@@ -34,7 +31,7 @@ export function useTermoBoard(
   const arm = useCallback(
     (action: Extract<TermoPlayAction, { type: "submit" | "retry" }>) => {
       const current = stateRef.current;
-      const next = termoPlayReducer(current, action);
+      const next = reduce(current, action);
       if (next === current) {
         return;
       }
@@ -45,7 +42,7 @@ export function useTermoBoard(
         void Promise.resolve(judge(next, next.pending)).then(dispatch);
       }
     },
-    [judge],
+    [judge, reduce],
   );
 
   const type = useCallback((letter: string) => {

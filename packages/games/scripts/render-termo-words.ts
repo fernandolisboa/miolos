@@ -36,9 +36,6 @@ function parseWordLines(name: string, raw: string): string[] {
   return lines;
 }
 
-// see ADR-0152 decision 4
-export const PROFANITY_IS_A_GUESS = false;
-
 export const EXCLUSION_REASONS: ReadonlySet<string> = new Set([
   "archaic",
   "editorial",
@@ -76,18 +73,27 @@ export function excludedWords(excludedTxt: string): ReadonlySet<string> {
   return new Set(parseExcludedTxt(excludedTxt).map((row) => row.normalized));
 }
 
+function partitionProfanity(
+  validationTxt: string,
+  excludedTxt: string,
+): { readonly guesses: string[]; readonly profanity: string[] } {
+  const profane = new Set(
+    parseExcludedTxt(excludedTxt)
+      .filter((row) => row.reason === "profanity")
+      .map((row) => row.normalized),
+  );
+  const words = parseWordLines("validation.txt", validationTxt);
+  return {
+    guesses: words.filter((word) => !profane.has(word)),
+    profanity: words.filter((word) => profane.has(word)),
+  };
+}
+
 export function guessWords(
   validationTxt: string,
   excludedTxt: string,
 ): string[] {
-  const refused = new Set(
-    parseExcludedTxt(excludedTxt)
-      .filter((row) => !PROFANITY_IS_A_GUESS && row.reason === "profanity")
-      .map((row) => row.normalized),
-  );
-  return parseWordLines("validation.txt", validationTxt).filter(
-    (word) => !refused.has(word),
-  );
+  return partitionProfanity(validationTxt, excludedTxt).guesses;
 }
 
 export function renderWordsModule(
@@ -136,6 +142,19 @@ export function renderTermoValidationModule(
     "VALIDATION_WORDS",
     "normalized validation words, validation.txt order",
     guessWords(validationTxt, excludedTxt),
+    VERO_NOTICE,
+  );
+}
+
+export function renderTermoProfanityModule(
+  validationTxt: string,
+  excludedTxt: string,
+): string {
+  return renderWordsModule(
+    "content/termo/validation.txt and excluded.txt",
+    "PROFANITY_GUESSES",
+    "normalized profanity forms, validation.txt order",
+    partitionProfanity(validationTxt, excludedTxt).profanity,
     VERO_NOTICE,
   );
 }

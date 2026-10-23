@@ -1008,6 +1008,9 @@ export const messages = {
       ) => `De ${min} a ${max} · padrão ${fallback}`,
       save: "Salvar",
       saveAria: (label: string) => `Salvar: ${label}`,
+      on: "Ligado",
+      off: "Desligado",
+      switchDefault: (on: boolean) => `Padrão: ${on ? "ligado" : "desligado"}`,
       saved: "Salvo.",
       failed: "Não deu certo agora. Tente de novo.",
     },
@@ -1027,6 +1030,10 @@ export const messages = {
       freeHintsPerPuzzle: {
         label: "Dicas por puzzle",
         hint: `Quantas dicas grátis cada puzzle do dia e do arquivo oferece. No modo livre são sempre ${FREE_HINTS_PER_PUZZLE}; o Termo não tem dicas.`,
+      },
+      termoAcceptsProfanity: {
+        label: "Palavrões no Termo",
+        hint: "Vale para o Termo do dia e do arquivo. O modo livre sempre recusa.",
       },
     } satisfies Record<RemoteConfigKey, { label: string; hint: string }>,
     members: {

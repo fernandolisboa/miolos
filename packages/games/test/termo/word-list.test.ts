@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,12 +12,14 @@ import {
   guessWords,
   parseCanonicalCsv,
   parseExcludedTxt,
-  PROFANITY_IS_A_GUESS,
   renderTermoAnswersModule,
+  renderTermoProfanityModule,
   renderTermoValidationModule,
 } from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
+import { PROFANITY_GUESSES } from "../../src/termo/profanity.generated";
 import {
+  isProfanityForm,
   isValidGuess,
   TERMO_VALIDATION_WORDS,
 } from "../../src/termo/word-list";
@@ -77,6 +80,10 @@ function findDuplicates(values: readonly string[]): string[] {
 const excludedTxt = () =>
   readFileSync(join(contentDir, "excluded.txt"), "utf8");
 const readExcluded = () => parseExcludedTxt(excludedTxt());
+const readProfanity = () =>
+  readExcluded()
+    .filter((row) => row.reason === "profanity")
+    .map((row) => row.normalized);
 
 function shippedGuesses(): string[] {
   const read = (file: string) => readFileSync(join(contentDir, file), "utf8");
@@ -128,16 +135,11 @@ describe("termo word-list harness (ADR-0015)", () => {
     expect(findDuplicates(ispell)).toEqual([]);
     expect([...ispell].sort()).toEqual(ispell);
     const validation = new Set(readLines("validation.txt"));
-    const profanity = new Set(
-      readExcluded()
-        .filter((row) => row.reason === "profanity")
-        .map((row) => row.normalized),
-    );
+    const profanity = new Set(readProfanity());
     for (const word of ispell) {
       expect(validation.has(word), word).toBe(true);
-      expect(isValidGuess(word), word).toBe(
-        PROFANITY_IS_A_GUESS || !profanity.has(word),
-      );
+      expect(isValidGuess(word), word).toBe(!profanity.has(word));
+      expect(isValidGuess(word) || isProfanityForm(word), word).toBe(true);
     }
   });
 
@@ -147,6 +149,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     }
     for (const word of ["xqzwv", "https", "vldis", "zzzzz"]) {
       expect(isValidGuess(word), word).toBe(false);
+      expect(isProfanityForm(word), word).toBe(false);
     }
   });
 
@@ -185,10 +188,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     for (const word of shippedGuesses()) {
       refused.delete(word);
     }
-    const profanity = readExcluded()
-      .filter((row) => row.reason === "profanity")
-      .map((row) => row.normalized);
-    expect([...refused]).toEqual(PROFANITY_IS_A_GUESS ? [] : profanity);
+    expect([...refused]).toEqual(readProfanity());
   });
 
   it("common.csv is the alphabetical IME-and-VERO common words, each a frozen IME form and a guess", () => {
@@ -239,13 +239,49 @@ describe("termo word-list harness (ADR-0015)", () => {
     expect(missing).toEqual([]);
   });
 
-  it("a profanity row is a guess exactly when PROFANITY_IS_A_GUESS says so", () => {
-    for (const word of ["merda", "foder", "mijou"]) {
-      expect(isValidGuess(word), word).toBe(PROFANITY_IS_A_GUESS);
+  it("PROFANITY_GUESSES is the profanity rows that are validation words, in validation order, and the dictionary holds none", () => {
+    const profanity = new Set(readProfanity());
+    const forms = PROFANITY_GUESSES.split("\n");
+    expect(forms).toEqual(
+      readLines("validation.txt").filter((word) => profanity.has(word)),
+    );
+    expect(forms).toHaveLength(EXCLUDED_COUNTS.profanity ?? 0);
+    const dictionary = new Set(TERMO_VALIDATION_WORDS);
+    expect(forms.filter((word) => dictionary.has(word))).toEqual([]);
+  });
+
+  it("a profanity form is no dictionary word, and isProfanityForm knows it in any case or accent", () => {
+    for (const word of PROFANITY_GUESSES.split("\n")) {
+      expect(isValidGuess(word), word).toBe(false);
+      expect(isProfanityForm(word), word).toBe(true);
+      expect(isProfanityForm(word.toUpperCase()), word).toBe(true);
+    }
+    expect(isValidGuess("tesão")).toBe(false);
+    expect(isProfanityForm("tesão")).toBe(true);
+  });
+
+  it("no dictionary word is a profanity form", () => {
+    for (const word of TERMO_VALIDATION_WORDS) {
+      expect(isValidGuess(word), word).toBe(true);
+      expect(isProfanityForm(word), word).toBe(false);
     }
   });
 
-  it("words.generated.ts and answers.generated.ts are byte-identical to the renderer output from content/termo", () => {
+  it("a five-letter string in neither list is neither a guess nor a profanity form", () => {
+    const known = new Set([
+      ...TERMO_VALIDATION_WORDS,
+      ...PROFANITY_GUESSES.split("\n"),
+    ]);
+    fc.assert(
+      fc.property(fc.stringMatching(/^[a-z]{5}$/), (word) => {
+        fc.pre(!known.has(word));
+        return !isValidGuess(word) && !isProfanityForm(word);
+      }),
+      { seed: 435, numRuns: 2000 },
+    );
+  });
+
+  it("words.generated.ts, answers.generated.ts and profanity.generated.ts are byte-identical to the renderer output from content/termo", () => {
     const answersCsv = readFileSync(join(contentDir, "answers.csv"), "utf8");
     const validationTxt = readFileSync(
       join(contentDir, "validation.txt"),
@@ -258,6 +294,9 @@ describe("termo word-list harness (ADR-0015)", () => {
     );
     expect(onDisk("termo-answers", "answers.generated.ts")).toBe(
       renderTermoAnswersModule(answersCsv, excludedTxt()),
+    );
+    expect(onDisk("termo", "profanity.generated.ts")).toBe(
+      renderTermoProfanityModule(validationTxt, excludedTxt()),
     );
   });
 

@@ -33,6 +33,7 @@ const DEFAULTS = {
   attachStreakThreshold: 5,
   pushOptInStreakThreshold: 3,
   freeHintsPerPuzzle: 3,
+  termoAcceptsProfanity: false,
 };
 
 let ctx: Awaited<ReturnType<typeof createTestDb>>;
@@ -336,6 +337,42 @@ describe("POST /admin/config", () => {
       ...DEFAULTS,
       bufferDepth: 9,
       attachStreakThreshold: 8,
+    });
+  });
+
+  it("T-API-S389: an admin switches termoAcceptsProfanity with a boolean, and a number for it or a boolean for a number key is a 400 that writes nothing", async () => {
+    const admin = await createMember("admin");
+    for (const body of [
+      { key: "termoAcceptsProfanity", value: 1 },
+      { key: "termoAcceptsProfanity", value: 0 },
+      { key: "termoAcceptsProfanity", value: "true" },
+      { key: "bufferDepth", value: true },
+    ]) {
+      const response = await writeConfig(
+        jsonHeaders(admin.token),
+        JSON.stringify(body),
+      );
+      expect(response.status, JSON.stringify(body)).toBe(400);
+    }
+    expect(await storedRows()).toEqual([]);
+
+    const on = await writeConfig(
+      jsonHeaders(admin.token),
+      JSON.stringify({ key: "termoAcceptsProfanity", value: true }),
+    );
+    expect(on.status).toBe(200);
+    expect(adminStateResponseSchema.parse(await on.json())).toEqual({
+      role: "admin",
+      email: admin.email,
+      config: { ...DEFAULTS, termoAcceptsProfanity: true },
+    });
+    expect(await storedRows()).toEqual([
+      { key: "termoAcceptsProfanity", value: true },
+    ]);
+    expect((await readState(admin.token)).role).toBe("admin");
+    expect(await getRemoteConfig(ctx.db)).toEqual({
+      ...DEFAULTS,
+      termoAcceptsProfanity: true,
     });
   });
 
