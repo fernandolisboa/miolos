@@ -29,11 +29,13 @@ describe("the terms-of-use page (T-WEB-S293)", () => {
 });
 
 describe("the Termo dictionary credit on /termos (T-WEB-S1070)", () => {
-  it("names VERO, the Mozilla Public License 2.0 and links the public repository that holds the list", () => {
+  it("names VERO and the MPL 2.0, IME-USP and CC BY, and links the public repository that holds the list", () => {
     const markup = renderToStaticMarkup(<TermsPage />);
 
     expect(markup).toContain("VERO");
     expect(markup).toContain("Mozilla Public License 2.0");
+    expect(markup).toContain("IME-USP");
+    expect(markup).toContain("CC BY");
     expect(markup).toContain(
       'href="https://github.com/fernandolisboa/miolos/tree/main/content/termo"',
     );

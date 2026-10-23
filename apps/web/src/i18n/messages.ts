@@ -777,7 +777,7 @@ export const messages = {
       heading: "O conteúdo é nosso",
       body: "Os puzzles, o design, o nome e a marca do Miolos nos pertencem. Compartilhar os seus resultados é sempre bem-vindo; copiar ou republicar o conteúdo do site como se fosse seu, ou usá-lo comercialmente sem a nossa autorização, não é.",
       dictionaryLead:
-        "A exceção são as palavras aceitas no Termo: vêm do VERO, o dicionário pt-BR do LibreOffice, sob a Mozilla Public License 2.0, e a lista está no",
+        "A exceção são as palavras aceitas no Termo: vêm do VERO, o dicionário pt-BR do LibreOffice, sob a Mozilla Public License 2.0, e da lista de palavras do IME-USP, de Ricardo Ueda Karpischek, sob CC BY. A lista completa está no",
       dictionaryLinkLabel: "repositório público do Miolos",
       dictionaryHref:
         "https://github.com/fernandolisboa/miolos/tree/main/content/termo",

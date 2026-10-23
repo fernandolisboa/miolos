@@ -213,6 +213,7 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
     await flushGeneration();
   }
 
+  // ADR-0055: CI gate 1494 ms × 4 → 10_000; contended local 5124 ms timed out at 5_000.
   it("draws a 7x7 board, names the size, solves to its mode line and goes again at 7 — zero fetch, zero writes", async () => {
     const fetchMock = vi.fn(() => {
       throw new Error("free play must not fetch");
@@ -244,7 +245,7 @@ describe("a 7x7 free crossword goes through the real engine and stays 7x7 (T-WEB
     expect(boardOf(7).querySelectorAll("[data-cell-index]")).toHaveLength(49);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(setItem).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 
   it("keeps the 7x7 floor on the page and the seven tracks on the grid, while generating and once ready", async () => {
     const { container } = render(

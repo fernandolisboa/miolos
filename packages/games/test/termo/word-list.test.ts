@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   guessWords,
+  parseExcludedTxt,
   PROFANITY_IS_A_GUESS,
   renderTermoAnswersModule,
   renderTermoValidationModule,
@@ -25,7 +26,7 @@ const gamesDir = join(testDir, "..", "..");
 const ANSWER_COUNT = 626;
 const VALIDATION_COUNT = 18250;
 const ISPELL_COUNT = 5310;
-const PROFANITY_COUNT = 37;
+const PROFANITY_COUNT = 41;
 const NORMALIZED_SHAPE = /^[a-z]{5}$/;
 
 function readLines(file: string): string[] {
@@ -62,12 +63,10 @@ function findDuplicates(values: readonly string[]): string[] {
   return duplicates;
 }
 
-function readExcluded(): { normalized: string; reason: string }[] {
-  return readLines("excluded.txt").map((row) => {
-    const columns = row.split("\t");
-    expect(columns, row).toHaveLength(2);
-    return { normalized: columns[0] ?? "", reason: columns[1] ?? "" };
-  });
+function readExcluded() {
+  return parseExcludedTxt(
+    readFileSync(join(contentDir, "excluded.txt"), "utf8"),
+  );
 }
 
 function shippedGuesses(): string[] {

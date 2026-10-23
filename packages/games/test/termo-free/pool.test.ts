@@ -5,6 +5,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool";
+import { parseExcludedTxt } from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
 import { TERMO_ANSWERS } from "../../src/termo-answers";
@@ -63,9 +64,9 @@ describe("the Termo free pool", () => {
 
   it("shares no normalized form with excluded.txt", () => {
     const excluded = new Set(
-      content("termo", "excluded.txt")
-        .split("\n")
-        .map((row) => row.split("\t")[0]),
+      parseExcludedTxt(content("termo", "excluded.txt")).map(
+        (row) => row.normalized,
+      ),
     );
     expect(POOL.filter((word) => excluded.has(normalizeWord(word)))).toEqual(
       [],

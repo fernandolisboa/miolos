@@ -18,7 +18,7 @@ so the list being public spoils nothing.
 | `validation.txt` | The guess dictionary: 18,250 normalized words, one per line, sorted, unique, all `^[a-z]{5}$`. VERO ∪ `ispell.txt` ∪ `additions.txt` ([ADR-0152](../../docs/adr/0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md)). Written by `pipeline.py`. |
 | `ispell.txt` | The 5,310 frozen IME-USP forms, normalized, sorted. Input, never rewritten: the IME host resets connections from CI and containers. |
 | `additions.txt` | Curated canonical forms that neither VERO nor `ispell.txt` carries (`deque`, `drone`, `vison`), sorted by (normalized form, canonical) ([ADR-0062](../../docs/adr/0062-termo-guess-dictionary-gaps-close-with-curated-additions.md)). The pipeline refuses a line that is already a guess. |
-| `excluded.txt` | The exclusion list: `normalized<TAB>reason`, sorted, unique. Today only `profanity` rows (37), written by `pipeline.py` from its `PROFANITY` stems and spellings, every inflection included. An excluded word is never an answer and never in the free pool. |
+| `excluded.txt` | The exclusion list: `normalized<TAB>reason`, sorted, unique. Today only `profanity` rows (41), written by `pipeline.py` from its `PROFANITY` stems and spellings, every inflection included. An excluded word is never an answer and never in the free pool. |
 | `answers.csv` | The 626 daily answers, header `canonical,normalized`. Hand-picked under ADR-0015's constraints and ranked by corpus frequency. **Never delete a row** ([ADR-0147](../../docs/adr/0147-a-termo-answer-may-return-after-365-days.md)). |
 | `rejected-sample.txt` | Hand-assembled audit record of the answer curation: 107 rejected words and why. |
 | `rejected-lexicon-sample.txt` | A seeded sample of what `pipeline.py` rejects from VERO, per reason, rewritten on every run. |
@@ -47,7 +47,7 @@ so the list being public spoils nothing.
 
 ## Pipeline
 
-1. **Expand VERO.** Every `.dic` stem, its PFX and SFX forms and their cross product (both rules flagged `Y`). This `.aff` has no continuation classes, so one pass of each is complete. Entries with the FORBIDDENWORD flag and multi-word entries are skipped.
+1. **Expand VERO.** Every `.dic` stem, its PFX and SFX forms and their cross product (both rules flagged `Y`). This `.aff`'s only continuation classes, on flag `5`'s state names, yield capitalized forms that are dropped anyway, so one pass of each is complete. Entries with the FORBIDDENWORD flag and multi-word entries are skipped.
 2. **Keep five-letter words.** Drop forms with a capital (proper nouns), forms that are not `a`–`z` after normalization, the six forms `hunspell -l` rejects (`HUNSPELL_REJECTED`), the junk `https` and `vldis`, and `PROPER_NOUN_DUPLICATES` (`jesus`, `paris`, `maria`…). VERO's other lowercase names and English words stay: a guess shows nothing to anyone else (ADR-0152).
 3. **Union** with `ispell.txt` and `additions.txt` into `validation.txt`.
 4. **Profanity rows.** Every kept form whose VERO stem or spelling is in `PROFANITY` becomes an `excluded.txt` row; rows with other reasons are kept as they are.
@@ -65,4 +65,4 @@ The 626 answers were picked word by word against these:
 
 ## Checks
 
-`packages/games/test/termo/word-list.test.ts` and `test/termo-free/pool.test.ts` pin, on every CI run: the shape, order and counts of every file above; every `ispell.txt` and `additions.txt` word is a guess; `bolor`, `chope`, `sarau`, `vocal` and `sagui` are guesses and `xqzwv` and `https` are not; no answer is excluded; the pool shares nothing with answers or `excluded.txt`; and the generated modules match their sources.
+`packages/games/test/termo/word-list.test.ts` and `test/termo-free/pool.test.ts` pin these files and the generated modules on every CI run.

@@ -46,8 +46,9 @@ PROPER_NOUN_DUPLICATES = {
 # A five-letter form is an excluded.txt `profanity` row when one of its VERO
 # stems or spellings is listed here, so a listed stem brings every inflection.
 PROFANITY = {
-    "bicha", "bosta", "bostar", "cagar", "cagão", "foder", "merda", "mijar",
-    "peidar", "peido", "porra", "puto", "vadia", "viado",
+    "bicha", "bosta", "bostar", "cagar", "cagão", "corno", "foder", "merda",
+    "mijar", "mijão", "mijos", "peidar", "peido", "porra", "puto", "tesão",
+    "vadia", "viado",
 }
 
 assert all(len(w) == 5 for w in JUNK | PROPER_NOUN_DUPLICATES)
@@ -62,7 +63,8 @@ def fetch_sources() -> None:
             urllib.request.urlretrieve(url, path)
         with open(path, "rb") as f:
             digest = hashlib.sha256(f.read()).hexdigest()
-        assert digest == sha256, f"{name}: sha256 {digest}, expected {sha256}"
+        if digest != sha256:
+            raise SystemExit(f"{name}: sha256 {digest}, expected {sha256}")
 
 
 def normalize(word: str) -> str:
@@ -106,8 +108,9 @@ def apply_affix(kind: str, word: str, rule_list: list) -> list:
 def expand_vero(dic_path: str, aff_path: str):
     """Yield (surface form, stem) for every stem and affixed form.
 
-    pt_BR.aff uses no continuation classes, so one SFX pass, one PFX pass and
-    their cross product (both rules flagged Y) are the whole expansion.
+    pt_BR.aff's only continuation classes (flag 5's state names) yield
+    capitalized forms that are dropped anyway, so one SFX pass, one PFX pass
+    and their cross product (both rules flagged Y) are the whole expansion.
     """
     rules = read_affixes(aff_path)
     with open(dic_path, encoding="utf-8-sig") as f:

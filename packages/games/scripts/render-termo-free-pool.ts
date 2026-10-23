@@ -1,8 +1,8 @@
 import { LEXICON_COLUMNS, parseTsv } from "./render-crossword-lexicon.ts";
 import {
-  guessWords,
   parseAnswersCsv,
   parseExcludedTxt,
+  parseWordLines,
   renderWordsModule,
   VERO_NOTICE,
 } from "./render-termo-words.ts";
@@ -13,7 +13,7 @@ export function renderTermoFreePoolModule(
   answersCsv: string,
   excludedTxt: string,
 ): string {
-  const guessable = new Set(guessWords(validationTxt, excludedTxt));
+  const guessable = new Set(parseWordLines("validation.txt", validationTxt));
   const answers = new Set(
     parseAnswersCsv(answersCsv).map((row) => row.normalized),
   );

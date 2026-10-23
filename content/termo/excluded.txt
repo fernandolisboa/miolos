@@ -9,6 +9,7 @@ cagar	profanity
 cagas	profanity
 cagou	profanity
 cague	profanity
+corno	profanity
 fodam	profanity
 fodas	profanity
 fodei	profanity
@@ -20,11 +21,13 @@ fodia	profanity
 merda	profanity
 mijai	profanity
 mijam	profanity
+mijao	profanity
 mijar	profanity
 mijas	profanity
 mijei	profanity
 mijem	profanity
 mijes	profanity
+mijos	profanity
 mijou	profanity
 peida	profanity
 peide	profanity
@@ -32,6 +35,7 @@ peido	profanity
 porra	profanity
 putas	profanity
 putos	profanity
+tesao	profanity
 vadia	profanity
 viada	profanity
 viado	profanity

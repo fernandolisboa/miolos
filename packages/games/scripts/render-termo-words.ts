@@ -37,7 +37,7 @@ export function parseWordLines(name: string, raw: string): string[] {
 }
 
 // see ADR-0152 decision 4
-export const PROFANITY_IS_A_GUESS = true;
+export const PROFANITY_IS_A_GUESS = false;
 
 const EXCLUSION_REASONS: ReadonlySet<string> = new Set(["profanity"]);
 
