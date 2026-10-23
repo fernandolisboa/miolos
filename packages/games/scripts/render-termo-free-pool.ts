@@ -1,38 +1,28 @@
-import { LEXICON_COLUMNS, parseTsv } from "./render-crossword-lexicon.ts";
 import {
-  parseAnswersCsv,
-  parseExcludedTxt,
-  parseWordLines,
+  excludedWords,
+  parseCanonicalCsv,
   renderWordsModule,
   VERO_NOTICE,
 } from "./render-termo-words.ts";
 
 export function renderTermoFreePoolModule(
-  lexiconTsv: string,
-  validationTxt: string,
+  commonCsv: string,
   answersCsv: string,
   excludedTxt: string,
 ): string {
-  const guessable = new Set(parseWordLines("validation.txt", validationTxt));
   const answers = new Set(
-    parseAnswersCsv(answersCsv).map((row) => row.normalized),
+    parseCanonicalCsv("answers.csv", answersCsv).map((row) => row.normalized),
   );
-  const excluded = new Set(
-    parseExcludedTxt(excludedTxt).map((row) => row.normalized),
-  );
-  const pool = parseTsv("lexicon.tsv", lexiconTsv, LEXICON_COLUMNS)
+  const excluded = excludedWords(excludedTxt);
+  const pool = parseCanonicalCsv("common.csv", commonCsv)
     .filter(
-      ([normalized = ""]) =>
-        normalized.length === 5 &&
-        guessable.has(normalized) &&
-        !answers.has(normalized) &&
-        !excluded.has(normalized),
+      (row) => !answers.has(row.normalized) && !excluded.has(row.normalized),
     )
-    .map(([, canonical = ""]) => canonical);
+    .map((row) => row.canonical);
   return renderWordsModule(
-    "content/crossword/lexicon.tsv, content/termo/validation.txt, answers.csv and excluded.txt",
+    "content/termo/common.csv, answers.csv and excluded.txt",
     "FREE_POOL_CANONICALS",
-    "canonical five-letter lexicon words that are guesses, never answers and never excluded, lexicon.tsv order",
+    "canonical common words that are never in answers.csv and never excluded, common.csv order",
     pool,
     VERO_NOTICE,
   );

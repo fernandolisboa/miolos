@@ -1,25 +1,25 @@
 import { splitLines } from "./split-lines.ts";
 
-const ANSWERS_HEADER = "canonical,normalized";
+const CANONICAL_CSV_HEADER = "canonical,normalized";
 
-export interface AnswerRow {
+export interface CanonicalRow {
   readonly canonical: string;
   readonly normalized: string;
 }
 
-export function parseAnswersCsv(answersCsv: string): AnswerRow[] {
-  const lines = splitLines("answers.csv", answersCsv);
+export function parseCanonicalCsv(name: string, raw: string): CanonicalRow[] {
+  const lines = splitLines(name, raw);
   const header = lines[0];
-  if (header !== ANSWERS_HEADER) {
+  if (header !== CANONICAL_CSV_HEADER) {
     throw new Error(
-      `answers.csv: expected header ${JSON.stringify(ANSWERS_HEADER)}, got ${JSON.stringify(header ?? "")}`,
+      `${name}: expected header ${JSON.stringify(CANONICAL_CSV_HEADER)}, got ${JSON.stringify(header ?? "")}`,
     );
   }
   return lines.slice(1).map((line, index) => {
     const [canonical = "", normalized = "", ...rest] = line.split(",");
     if (rest.length !== 0 || canonical === "" || normalized === "") {
       throw new Error(
-        `answers.csv: row ${String(index + 2)} is not a 2-column row: ${JSON.stringify(line)}`,
+        `${name}: row ${String(index + 2)} is not a 2-column row: ${JSON.stringify(line)}`,
       );
     }
     return { canonical, normalized };
@@ -39,7 +39,15 @@ export function parseWordLines(name: string, raw: string): string[] {
 // see ADR-0152 decision 4
 export const PROFANITY_IS_A_GUESS = false;
 
-const EXCLUSION_REASONS: ReadonlySet<string> = new Set(["profanity"]);
+export const EXCLUSION_REASONS: ReadonlySet<string> = new Set([
+  "archaic",
+  "editorial",
+  "foreign",
+  "profanity",
+  "proper-noun",
+  "regional",
+  "retired",
+]);
 
 export const VERO_NOTICE: readonly string[] = [
   "// Derived from VERO, the LibreOffice pt_BR dictionary (https://github.com/LibreOffice/dictionaries).",
@@ -62,6 +70,10 @@ export function parseExcludedTxt(excludedTxt: string): ExcludedRow[] {
     }
     return { normalized, reason };
   });
+}
+
+export function excludedWords(excludedTxt: string): ReadonlySet<string> {
+  return new Set(parseExcludedTxt(excludedTxt).map((row) => row.normalized));
 }
 
 export function guessWords(
@@ -99,12 +111,19 @@ export function renderWordsModule(
   ].join("\n");
 }
 
-export function renderTermoAnswersModule(answersCsv: string): string {
+export function renderTermoAnswersModule(
+  answersCsv: string,
+  excludedTxt: string,
+): string {
+  const excluded = excludedWords(excludedTxt);
   return renderWordsModule(
-    "content/termo/answers.csv",
+    "content/termo/answers.csv and excluded.txt",
     "ANSWER_CANONICALS",
-    "canonical answer spellings, answers.csv row order",
-    parseAnswersCsv(answersCsv).map((row) => row.canonical),
+    "canonical answer spellings, answers.csv row order less excluded.txt",
+    parseCanonicalCsv("answers.csv", answersCsv)
+      .filter((row) => !excluded.has(row.normalized))
+      .map((row) => row.canonical),
+    VERO_NOTICE,
   );
 }
 

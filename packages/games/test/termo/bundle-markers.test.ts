@@ -21,7 +21,7 @@ const CONTROL_PAIR = ["zurre", "zurro"] as const;
 
 const EXPECTED_MARKERS: readonly string[] = ["zurro", "abaco"];
 
-const FREE_POOL_MARKER = ["ábaco", "abade"] as const;
+const FREE_POOL_MARKER = ["álamo", "alças"] as const;
 
 const SRC = join(import.meta.dirname, "..", "..", "src");
 const WORDS = readFileSync(join(SRC, "termo", "words.generated.ts"), "utf8");

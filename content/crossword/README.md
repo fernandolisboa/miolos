@@ -10,7 +10,7 @@ The answer words and clues the Cruzadinha generator fills its 5×5 and 7×7 temp
 | `rejected.tsv` | Header `normalized	canonical	reason`, sorted. Candidates the curation pass turned down, each with one reason from a closed set: `proper-noun`, `foreign`, `obscene`, `abbreviation`, `obscure`, `archaic`, `regional`, `not-a-word`, `interjection`, `inflection`, `offensive`, `brand`, `unclueable`. |
 | `candidates.py` | The deterministic candidate stage. Writes the gitignored `candidates.tsv` from the gitignored `sources/`. |
 
-`lexicon.tsv` is rendered into `packages/games/src/crossword/lexicon.generated.ts` by `pnpm --filter @miolos/games generate:crossword`. Its five-letter words also feed the Termo free pool, so **run `pnpm --filter @miolos/games generate:termo` too** ([ADR-0114](../../docs/adr/0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md)). `packages/games/test/crossword/lexicon.test.ts` and `packages/games/test/termo-free/pool.test.ts` fail when a generated module and the lexicon disagree. Turbo does not track `content/` as a test input, so run `pnpm test --force` after editing the lexicon.
+`lexicon.tsv` is rendered into `packages/games/src/crossword/lexicon.generated.ts` by `pnpm --filter @miolos/games generate:crossword`. `packages/games/test/crossword/lexicon.test.ts` fails when the generated module and the lexicon disagree. Turbo does not track `content/` as a test input, so run `pnpm test --force` after editing the lexicon.
 
 ## Sources and licences
 

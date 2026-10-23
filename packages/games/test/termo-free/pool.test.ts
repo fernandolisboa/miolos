@@ -5,10 +5,12 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool";
-import { parseExcludedTxt } from "../../scripts/render-termo-words";
+import {
+  parseCanonicalCsv,
+  parseExcludedTxt,
+} from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
-import { TERMO_ANSWERS } from "../../src/termo-answers";
 import { createSeededRandom } from "../../src/random";
 import { drawFreeTermoWords } from "../../src/termo-free";
 import { FREE_POOL_CANONICALS } from "../../src/termo-free/pool.generated";
@@ -17,15 +19,23 @@ import { propertyRuns } from "../property-runs";
 const GAMES = join(import.meta.dirname, "..", "..");
 const CONTENT = join(GAMES, "..", "..", "content");
 
-const POOL_COUNT = 2259;
+const POOL_COUNT = 1088;
 const POOL = FREE_POOL_CANONICALS.split("\n");
 const POOL_SET: ReadonlySet<string> = new Set(POOL);
-const ANSWER_FORMS: ReadonlySet<string> = new Set(
-  TERMO_ANSWERS.map((answer) => answer.normalized),
-);
 
 const content = (...path: string[]) =>
   readFileSync(join(CONTENT, ...path), "utf8");
+
+const ANSWER_FORMS: ReadonlySet<string> = new Set(
+  parseCanonicalCsv("answers.csv", content("termo", "answers.csv")).map(
+    (row) => row.normalized,
+  ),
+);
+const EXCLUDED_FORMS: ReadonlySet<string> = new Set(
+  parseExcludedTxt(content("termo", "excluded.txt")).map(
+    (row) => row.normalized,
+  ),
+);
 
 const uint32 = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -36,18 +46,31 @@ describe("the Termo free pool", () => {
         join(GAMES, "src", "termo-free", "pool.generated.ts"),
         "utf8",
       ),
-      "stale: run `pnpm --filter @miolos/games generate:termo` after editing content/crossword/lexicon.tsv (with generate:crossword) or anything under content/termo",
+      "stale: run `pnpm --filter @miolos/games generate:termo` after editing anything under content/termo",
     ).toBe(
       renderTermoFreePoolModule(
-        content("crossword", "lexicon.tsv"),
-        content("termo", "validation.txt"),
+        content("termo", "common.csv"),
         content("termo", "answers.csv"),
         content("termo", "excluded.txt"),
       ),
     );
   });
 
-  it("holds 2259 guessable five-letter words, unique in normalized form", () => {
+  it("is the common words that are not in answers.csv and not excluded, in common.csv order", () => {
+    const expected = parseCanonicalCsv(
+      "common.csv",
+      content("termo", "common.csv"),
+    )
+      .filter(
+        (row) =>
+          !ANSWER_FORMS.has(row.normalized) &&
+          !EXCLUDED_FORMS.has(row.normalized),
+      )
+      .map((row) => row.canonical);
+    expect(POOL).toEqual(expected);
+  });
+
+  it("holds 1088 guessable five-letter words, unique in normalized form", () => {
     expect(POOL).toHaveLength(POOL_COUNT);
     expect(new Set(POOL.map(normalizeWord)).size).toBe(POOL_COUNT);
     for (const word of POOL) {
@@ -56,21 +79,16 @@ describe("the Termo free pool", () => {
     }
   });
 
-  it("shares no normalized form with the answer list", () => {
+  it("shares no normalized form with answers.csv, retired rows included", () => {
     expect(
       POOL.filter((word) => ANSWER_FORMS.has(normalizeWord(word))),
     ).toEqual([]);
   });
 
   it("shares no normalized form with excluded.txt", () => {
-    const excluded = new Set(
-      parseExcludedTxt(content("termo", "excluded.txt")).map(
-        (row) => row.normalized,
-      ),
-    );
-    expect(POOL.filter((word) => excluded.has(normalizeWord(word)))).toEqual(
-      [],
-    );
+    expect(
+      POOL.filter((word) => EXCLUDED_FORMS.has(normalizeWord(word))),
+    ).toEqual([]);
   });
 
   it("draws deterministically, for every uint32 seed, a pool word that is never an answer", () => {

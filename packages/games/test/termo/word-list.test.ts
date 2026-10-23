@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,7 +6,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  EXCLUSION_REASONS,
   guessWords,
+  parseCanonicalCsv,
   parseExcludedTxt,
   PROFANITY_IS_A_GUESS,
   renderTermoAnswersModule,
@@ -23,10 +26,22 @@ const repoRoot = join(testDir, "..", "..", "..", "..");
 const contentDir = join(repoRoot, "content", "termo");
 const gamesDir = join(testDir, "..", "..");
 
-const ANSWER_COUNT = 626;
+const ADR_0147_ROWS = 626;
+const ADR_0147_PREFIX_SHA256 =
+  "29b601ef3ae87417a5edbe63e431d106f8bd5e65741d86208bafaf40d1e98367";
+const ANSWER_ROW_COUNT = 1726;
+const COMMON_COUNT = 2990;
 const VALIDATION_COUNT = 18250;
 const ISPELL_COUNT = 5310;
-const PROFANITY_COUNT = 41;
+const EXCLUDED_COUNTS: Readonly<Record<string, number>> = {
+  archaic: 10,
+  editorial: 73,
+  foreign: 5,
+  profanity: 41,
+  "proper-noun": 34,
+  regional: 50,
+  retired: 0,
+};
 const NORMALIZED_SHAPE = /^[a-z]{5}$/;
 
 function readLines(file: string): string[] {
@@ -35,20 +50,14 @@ function readLines(file: string): string[] {
   return trimmed.split("\n");
 }
 
-interface AnswerRow {
-  readonly canonical: string;
-  readonly normalized: string;
-}
+const readCanonicalCsv = (file: string) =>
+  parseCanonicalCsv(file, readFileSync(join(contentDir, file), "utf8"));
 
-function readAnswersCsv(): AnswerRow[] {
-  const [header, ...rows] = readLines("answers.csv");
-  expect(header).toBe("canonical,normalized");
-  return rows.map((row) => {
-    const columns = row.split(",");
-    expect(columns).toHaveLength(2);
-    return { canonical: columns[0] ?? "", normalized: columns[1] ?? "" };
-  });
-}
+const readAnswersCsv = () => readCanonicalCsv("answers.csv");
+const readCommonCsv = () => readCanonicalCsv("common.csv");
+
+const evenParity = (normalized: string): boolean =>
+  (createHash("sha256").update(normalized, "utf8").digest()[0] ?? 1) % 2 === 0;
 
 function findDuplicates(values: readonly string[]): string[] {
   const seen = new Set<string>();
@@ -86,7 +95,7 @@ describe("termo word-list harness (ADR-0015)", () => {
 
   it("no two answers share a normalized form", () => {
     const normalized = readAnswersCsv().map((row) => row.normalized);
-    expect(normalized).toHaveLength(ANSWER_COUNT);
+    expect(normalized).toHaveLength(ANSWER_ROW_COUNT);
     expect(findDuplicates(normalized)).toEqual([]);
   });
 
@@ -141,22 +150,91 @@ describe("termo word-list harness (ADR-0015)", () => {
     }
   });
 
-  it("excluded.txt is sorted, unique, profanity-only, and names dictionary words that are never answers", () => {
+  it("excluded.txt is sorted, unique, counted per reason, and names guesses that are in answers.csv only when retired", () => {
     const rows = readExcluded();
     const words = rows.map((row) => row.normalized);
     expect(findDuplicates(words)).toEqual([]);
     expect([...words].sort()).toEqual(words);
-    expect(rows.filter((row) => row.reason === "profanity")).toHaveLength(
-      PROFANITY_COUNT,
-    );
-    expect(rows.filter((row) => row.reason !== "profanity")).toEqual([]);
+    expect([...EXCLUSION_REASONS].sort()).toEqual(Object.keys(EXCLUDED_COUNTS));
+    for (const [reason, count] of Object.entries(EXCLUDED_COUNTS)) {
+      expect(
+        rows.filter((row) => row.reason === reason),
+        reason,
+      ).toHaveLength(count);
+    }
     const validation = new Set(readLines("validation.txt"));
     const answers = new Set(readAnswersCsv().map((row) => row.normalized));
-    for (const word of words) {
-      expect(word).toMatch(NORMALIZED_SHAPE);
-      expect(validation.has(word), word).toBe(true);
-      expect(answers.has(word), word).toBe(false);
+    for (const { normalized, reason } of rows) {
+      expect(normalized).toMatch(NORMALIZED_SHAPE);
+      expect(validation.has(normalized), normalized).toBe(true);
+      expect(answers.has(normalized), normalized).toBe(reason === "retired");
     }
+  });
+
+  it("refuses an excluded.txt row whose reason is not one of the seven", () => {
+    expect(() => parseExcludedTxt("abade\tobscure\n")).toThrow(/line 1/);
+    expect(parseExcludedTxt("abade\tretired\n")).toEqual([
+      { normalized: "abade", reason: "retired" },
+    ]);
+  });
+
+  it("only profanity rows ever leave the guesses", () => {
+    const refused = new Set(readLines("validation.txt"));
+    for (const word of shippedGuesses()) {
+      refused.delete(word);
+    }
+    const profanity = readExcluded()
+      .filter((row) => row.reason === "profanity")
+      .map((row) => row.normalized);
+    expect([...refused]).toEqual(PROFANITY_IS_A_GUESS ? [] : profanity);
+  });
+
+  it("common.csv is the alphabetical IME-and-VERO common words, each a frozen IME form and a guess", () => {
+    const rows = readCommonCsv();
+    const normalized = rows.map((row) => row.normalized);
+    expect(rows).toHaveLength(COMMON_COUNT);
+    expect(findDuplicates(normalized)).toEqual([]);
+    expect([...normalized].sort()).toEqual(normalized);
+    const ispell = new Set(readLines("ispell.txt"));
+    const validation = new Set(readLines("validation.txt"));
+    for (const row of rows) {
+      expect(row.normalized).toMatch(NORMALIZED_SHAPE);
+      expect(normalizeWord(row.canonical)).toBe(row.normalized);
+      expect(ispell.has(row.normalized), row.normalized).toBe(true);
+      expect(validation.has(row.normalized), row.normalized).toBe(true);
+    }
+  });
+
+  it("the first 626 rows of answers.csv are ADR-0147's, byte for byte", () => {
+    const prefix = readLines("answers.csv").slice(0, ADR_0147_ROWS + 1);
+    expect(
+      createHash("sha256")
+        .update(`${prefix.join("\n")}\n`, "utf8")
+        .digest("hex"),
+    ).toBe(ADR_0147_PREFIX_SHA256);
+  });
+
+  it("every row past the prefix is a common.csv row of even SHA-256 parity", () => {
+    const common = new Map(
+      readCommonCsv().map((row) => [row.normalized, row.canonical]),
+    );
+    const appended = readAnswersCsv().slice(ADR_0147_ROWS);
+    expect(appended.length).toBeGreaterThan(0);
+    for (const { canonical, normalized } of appended) {
+      expect(common.get(normalized), normalized).toBe(canonical);
+      expect(evenParity(normalized), normalized).toBe(true);
+    }
+  });
+
+  it("every common word of even parity that is not excluded is in answers.csv", () => {
+    const answers = new Set(readAnswersCsv().map((row) => row.normalized));
+    const excluded = new Set(readExcluded().map((row) => row.normalized));
+    const missing = readCommonCsv()
+      .map((row) => row.normalized)
+      .filter(
+        (word) => evenParity(word) && !excluded.has(word) && !answers.has(word),
+      );
+    expect(missing).toEqual([]);
   });
 
   it("a profanity row is a guess exactly when PROFANITY_IS_A_GUESS says so", () => {
@@ -178,14 +256,15 @@ describe("termo word-list harness (ADR-0015)", () => {
       renderTermoValidationModule(validationTxt, excludedTxt),
     );
     expect(onDisk("termo-answers", "answers.generated.ts")).toBe(
-      renderTermoAnswersModule(answersCsv),
+      renderTermoAnswersModule(answersCsv, excludedTxt),
     );
   });
 
-  it("TERMO_ANSWERS preserves answers.csv row order", () => {
-    const rows = readAnswersCsv();
-    expect(TERMO_ANSWERS).toHaveLength(rows.length);
-    expect(TERMO_ANSWERS.map((a) => ({ ...a }))).toEqual(rows);
+  it("TERMO_ANSWERS is answers.csv less excluded.txt, in row order", () => {
+    const excluded = new Set(readExcluded().map((row) => row.normalized));
+    expect(TERMO_ANSWERS.map((a) => ({ ...a }))).toEqual(
+      readAnswersCsv().filter((row) => !excluded.has(row.normalized)),
+    );
   });
 
   it("exports are frozen and sized", () => {
@@ -194,7 +273,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     for (const answer of TERMO_ANSWERS) {
       expect(Object.isFrozen(answer)).toBe(true);
     }
-    expect(TERMO_ANSWERS).toHaveLength(ANSWER_COUNT);
+    expect(TERMO_ANSWERS).toHaveLength(ANSWER_ROW_COUNT);
     expect(TERMO_VALIDATION_WORDS).toHaveLength(shippedGuesses().length);
     expect(isValidGuess("ábaco")).toBe(true);
     expect(isValidGuess("xqzwv")).toBe(false);
