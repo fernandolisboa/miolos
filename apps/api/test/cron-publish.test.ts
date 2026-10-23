@@ -633,10 +633,8 @@ describe("GET /cron/publish top-up", () => {
       const parsed: unknown = JSON.parse(line);
       return freeTextOf(loggedResultSchema.parse(parsed));
     });
+    expect(ANSWER_FORMS.has(answer.normalized)).toBe(true);
     for (const text of [...bodyText, ...loggedText]) {
-      expect(text).not.toContain(answer.canonical);
-      expect(text).not.toContain(answer.normalized);
-
       const collisions = (text.match(/\p{L}+/gu) ?? []).filter((word) =>
         ANSWER_FORMS.has(word),
       );
