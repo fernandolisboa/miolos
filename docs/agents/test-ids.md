@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S217`    | `S213`         | never used            |
-| `T-DB`   | `S160`    | `S152`         | `T-DB-21`             |
-| `T-API`  | `S385`    | `S380`         | `T-API-16`            |
-| `T-WEB`  | `S1075`   | `S1070`        | `T-WEB-23`            |
+| `T-CORE` | `S220`    | `S217`         | never used            |
+| `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
+| `T-API`  | `S390`    | `S389`         | `T-API-16`            |
+| `T-WEB`  | `S1084`   | `S1082`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#435 (profanity as a Termo guess is an `/admin` switch, ADR-0154) reserved **`T-CORE-S217…S219`**, **`T-DB-S160`**, **`T-API-S385…S389`** and **`T-WEB-S1075…S1083`**. It spent **`T-CORE-S217`** (`remote-config.test.ts`: `termoAcceptsProfanity` defaults to false, takes either boolean, rejects `0`, `1`, `"true"` and `null`), **`T-DB-S160`** (`remote-config.test.ts`: a stored boolean round-trips; a stored `1` reads false and logs once), **`T-API-S385…S387`** (`termo-guess.test.ts`: off or absent, a profanity form is a 422 and a dictionary word a 200; on, a 200 with tiles; off, an earlier profanity guess does not refuse a valid newest one) and **`T-API-S389`** (`admin.test.ts`: an admin saves `true` and the state answers it; a number for this key or a boolean for a number key is a 400 that writes nothing), and **`T-WEB-S1075`**/**`S1076`** (`termo-play.test.ts`: the daily board posts a profanity form and plays the 200; a 422 shows "não está na lista" and gives the draft back), **`S1077`** (`free-play-termo.test.tsx`: Clássico, Dueto and Quarteto refuse it on the device), **`S1080`** (`switch.test.tsx`: the shared `Switch`, and `/admin`'s Salvar composing its look from `switch.module.css`) and **`S1082`** (`admin.test.tsx`: the switch row). Re-aimed in place: **`T-CORE-S170`** (retitled; a boolean for a number key and a number for the boolean key are refused) and **`S171`** (the key list ends with the boolean), **`T-WEB-S533`** (retitled; one switch beside the four bounded inputs); `T-API-S36`, `S39`, `T-WEB-S87` and the `termo-state.test.ts` cases only gained the new `isValidGuess` or `submit` argument. **`T-CORE-S218`/`S219`**, **`T-API-S388`** and **`T-WEB-S1078`/`S1079`/`S1081`/`S1083`** are burned unspent.
 
 #427 (Termo guesses from VERO, ADR-0152) reserved **`T-API-S380…S384`**, **`T-CORE-S215`/`S216`** and **`T-WEB-S1070…S1074`** on the issue for both of its PRs. PR A spent **`T-API-S380`** in `termo-guess.test.ts` (the judge answers 200 for `bolor`, a word main refused with 422) and **`T-WEB-S1070`** in `termos.test.tsx` (`/termos` names VERO and the Mozilla Public License 2.0 and links the public repository). PR B (answers from the common words, ADR-0153) spent **none**: its invariants live in `packages/games` tests, which carry no ids, and the count changes re-aimed **`T-CORE-S17`** and **`T-WEB-S190`** in place (626 → 1,714; `T-CORE-S19` needed no change), and **`T-API-S41`** now sweeps the error text for answers as whole words, since `conte` is an answer and `content` a column name. **`T-API-S381…S384`**, **`T-CORE-S215`/`S216`** and **`T-WEB-S1071…S1074`** are burned unspent.
 
