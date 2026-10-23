@@ -11,7 +11,7 @@ const CHUNKS = join(NEXT_DIR, "static", "chunks");
 const MAX_DELTA_BYTES = 48 * 1024;
 
 const PER_ROUTE_BUDGET = {
-  "/termo": 76 * 1024,
+  "/termo": 159 * 1024,
 
   "/binairo": 49 * 1024,
 
@@ -21,11 +21,11 @@ const PER_ROUTE_BUDGET = {
 
   "/modo-livre/nonogram": 78 * 1024,
 
-  "/modo-livre/termo": 67 * 1024,
+  "/modo-livre/termo": 154 * 1024,
 
   "/modo-livre/cruzadinha": 667 * 1024,
 
-  "/arquivo/[data]/termo": 76 * 1024,
+  "/arquivo/[data]/termo": 154 * 1024,
 
   "/arquivo/[data]/sudoku": 49 * 1024,
 };

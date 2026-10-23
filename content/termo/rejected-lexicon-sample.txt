@@ -1,74 +1,93 @@
-bicha	blocklist (slur/heavy obscenity)
-bosta	blocklist (slur/heavy obscenity)
-cagam	blocklist (slur/heavy obscenity)
-cagar	blocklist (slur/heavy obscenity)
-cagou	blocklist (slur/heavy obscenity)
-cague	blocklist (slur/heavy obscenity)
-merda	blocklist (slur/heavy obscenity)
-mijam	blocklist (slur/heavy obscenity)
-mijar	blocklist (slur/heavy obscenity)
-mijei	blocklist (slur/heavy obscenity)
-mijou	blocklist (slur/heavy obscenity)
-porra	blocklist (slur/heavy obscenity)
-putas	blocklist (slur/heavy obscenity)
-putos	blocklist (slur/heavy obscenity)
-vadia	blocklist (slur/heavy obscenity)
-vadiá	blocklist (slur/heavy obscenity)
-micro-onda	hyphen/space/apostrophe/period
-micro-ondas	hyphen/space/apostrophe/period
-Absalão	proper-noun (capitalized lemma)
-Alencar	proper-noun (capitalized lemma)
-Aquiles	proper-noun (capitalized lemma)
-Araguaia	proper-noun (capitalized lemma)
-Argentina	proper-noun (capitalized lemma)
-Averróis	proper-noun (capitalized lemma)
-Belisário	proper-noun (capitalized lemma)
-Benedito	proper-noun (capitalized lemma)
-Carolina	proper-noun (capitalized lemma)
-Caxias	proper-noun (capitalized lemma)
-Dardanelos	proper-noun (capitalized lemma)
-Demóstenes	proper-noun (capitalized lemma)
-Emirados	proper-noun (capitalized lemma)
-Emília	proper-noun (capitalized lemma)
-Engels	proper-noun (capitalized lemma)
-Esaú	proper-noun (capitalized lemma)
-Eugênia	proper-noun (capitalized lemma)
-Gauss	proper-noun (capitalized lemma)
-Geórgia	proper-noun (capitalized lemma)
-HIV	proper-noun (capitalized lemma)
-Inglaterra	proper-noun (capitalized lemma)
-Marrocos	proper-noun (capitalized lemma)
-Medeiros	proper-noun (capitalized lemma)
-Palumbo	proper-noun (capitalized lemma)
-Pentecostes	proper-noun (capitalized lemma)
-Rubens	proper-noun (capitalized lemma)
-Teodoro	proper-noun (capitalized lemma)
-Tâmisa	proper-noun (capitalized lemma)
-UFRJ	proper-noun (capitalized lemma)
-Vaticano	proper-noun (capitalized lemma)
-andré	proper-noun (lowercase duplicate)
-artur	proper-noun (lowercase duplicate)
+https	junk (not a word)
+vldis	junk (not a word)
+aio-o	not a-z after normalization
+ajo-a	not a-z after normalization
+ama-a	not a-z after normalization
+bomb.	not a-z after normalization
+bret.	not a-z after normalization
+burl.	not a-z after normalization
+cio-o	not a-z after normalization
+di-lo	not a-z after normalization
+du-la	not a-z after normalization
+dá-la	not a-z after normalization
+dá-se	not a-z after normalization
+dôo-o	not a-z after normalization
+ei-la	not a-z after normalization
+evo-a	not a-z after normalization
+larg.	not a-z after normalization
+leu-a	not a-z after normalization
+lê-lo	not a-z after normalization
+ocid.	not a-z after normalization
+parn.	not a-z after normalization
+pia-o	not a-z after normalization
+prot.	not a-z after normalization
+prov.	not a-z after normalization
+pulv.	not a-z after normalization
+sect.	not a-z after normalization
+soo-o	not a-z after normalization
+sôo-a	not a-z after normalization
+teôn.	not a-z after normalization
+tê-la	not a-z after normalization
+tôo-o	not a-z after normalization
+uga-a	not a-z after normalization
+Abeba	proper-noun (capitalized)
+Amari	proper-noun (capitalized)
+Assur	proper-noun (capitalized)
+BNDES	proper-noun (capitalized)
+Barsa	proper-noun (capitalized)
+Bello	proper-noun (capitalized)
+Bíbl.	proper-noun (capitalized)
+CLXVI	proper-noun (capitalized)
+CMLVI	proper-noun (capitalized)
+Creso	proper-noun (capitalized)
+Dewar	proper-noun (capitalized)
+Eanes	proper-noun (capitalized)
+Hatim	proper-noun (capitalized)
+Hazor	proper-noun (capitalized)
+Helba	proper-noun (capitalized)
+Hiram	proper-noun (capitalized)
+IX-PI	proper-noun (capitalized)
+Ibama	proper-noun (capitalized)
+Jamai	proper-noun (capitalized)
+LINDB	proper-noun (capitalized)
+MLVII	proper-noun (capitalized)
+Nasim	proper-noun (capitalized)
+Paial	proper-noun (capitalized)
+Sarug	proper-noun (capitalized)
+Talia	proper-noun (capitalized)
+Taísa	proper-noun (capitalized)
+XXVII	proper-noun (capitalized)
+XXXIV	proper-noun (capitalized)
+Xingu	proper-noun (capitalized)
+Úrana	proper-noun (capitalized)
 berna	proper-noun (lowercase duplicate)
 ceara	proper-noun (lowercase duplicate)
 ceará	proper-noun (lowercase duplicate)
 chica	proper-noun (lowercase duplicate)
 chico	proper-noun (lowercase duplicate)
+chiça	proper-noun (lowercase duplicate)
+chiço	proper-noun (lowercase duplicate)
+chiçá	proper-noun (lowercase duplicate)
 césar	proper-noun (lowercase duplicate)
-egito	proper-noun (lowercase duplicate)
+goias	proper-noun (lowercase duplicate)
 goiás	proper-noun (lowercase duplicate)
 japão	proper-noun (lowercase duplicate)
 jesus	proper-noun (lowercase duplicate)
 joana	proper-noun (lowercase duplicate)
 jorge	proper-noun (lowercase duplicate)
 maria	proper-noun (lowercase duplicate)
-mário	proper-noun (lowercase duplicate)
+mariô	proper-noun (lowercase duplicate)
 paris	proper-noun (lowercase duplicate)
 paulo	proper-noun (lowercase duplicate)
+paúlo	proper-noun (lowercase duplicate)
 pedro	proper-noun (lowercase duplicate)
 piauí	proper-noun (lowercase duplicate)
-saara	proper-noun (lowercase duplicate)
+páris	proper-noun (lowercase duplicate)
 souza	proper-noun (lowercase duplicate)
 síria	proper-noun (lowercase duplicate)
-viena	proper-noun (lowercase duplicate)
-ceemo	source corruption (truncated form)
-geemo	source corruption (truncated form)
+aguem	rejected by hunspell
+agues	rejected by hunspell
+menas	rejected by hunspell
+éguam	rejected by hunspell
+íguam	rejected by hunspell
+íguas	rejected by hunspell

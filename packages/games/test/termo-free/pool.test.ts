@@ -5,6 +5,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { renderTermoFreePoolModule } from "../../scripts/render-termo-free-pool";
+import { parseExcludedTxt } from "../../scripts/render-termo-words";
 import { normalizeWord } from "../../src/normalize";
 import { isValidGuess } from "../../src/termo/word-list";
 import { TERMO_ANSWERS } from "../../src/termo-answers";
@@ -16,7 +17,7 @@ import { propertyRuns } from "../property-runs";
 const GAMES = join(import.meta.dirname, "..", "..");
 const CONTENT = join(GAMES, "..", "..", "content");
 
-const POOL_COUNT = 2187;
+const POOL_COUNT = 2259;
 const POOL = FREE_POOL_CANONICALS.split("\n");
 const POOL_SET: ReadonlySet<string> = new Set(POOL);
 const ANSWER_FORMS: ReadonlySet<string> = new Set(
@@ -35,17 +36,18 @@ describe("the Termo free pool", () => {
         join(GAMES, "src", "termo-free", "pool.generated.ts"),
         "utf8",
       ),
-      "stale: run `pnpm --filter @miolos/games generate:termo` after editing content/crossword/lexicon.tsv (with generate:crossword) or content/termo/answers.csv",
+      "stale: run `pnpm --filter @miolos/games generate:termo` after editing content/crossword/lexicon.tsv (with generate:crossword) or anything under content/termo",
     ).toBe(
       renderTermoFreePoolModule(
         content("crossword", "lexicon.tsv"),
         content("termo", "validation.txt"),
         content("termo", "answers.csv"),
+        content("termo", "excluded.txt"),
       ),
     );
   });
 
-  it("holds 2187 guessable five-letter words, unique in normalized form", () => {
+  it("holds 2259 guessable five-letter words, unique in normalized form", () => {
     expect(POOL).toHaveLength(POOL_COUNT);
     expect(new Set(POOL.map(normalizeWord)).size).toBe(POOL_COUNT);
     for (const word of POOL) {
@@ -58,6 +60,17 @@ describe("the Termo free pool", () => {
     expect(
       POOL.filter((word) => ANSWER_FORMS.has(normalizeWord(word))),
     ).toEqual([]);
+  });
+
+  it("shares no normalized form with excluded.txt", () => {
+    const excluded = new Set(
+      parseExcludedTxt(content("termo", "excluded.txt")).map(
+        (row) => row.normalized,
+      ),
+    );
+    expect(POOL.filter((word) => excluded.has(normalizeWord(word)))).toEqual(
+      [],
+    );
   });
 
   it("draws deterministically, for every uint32 seed, a pool word that is never an answer", () => {

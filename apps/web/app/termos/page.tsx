@@ -41,6 +41,16 @@ export default function TermsPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>{messages.terms.content.heading}</h2>
         <p className={styles.body}>{messages.terms.content.body}</p>
+        <p className={styles.body}>
+          {messages.terms.content.dictionaryLead}{" "}
+          <a
+            className={styles.contact}
+            href={messages.terms.content.dictionaryHref}
+          >
+            {messages.terms.content.dictionaryLinkLabel}
+          </a>
+          .
+        </p>
       </section>
 
       <section className={styles.section}>

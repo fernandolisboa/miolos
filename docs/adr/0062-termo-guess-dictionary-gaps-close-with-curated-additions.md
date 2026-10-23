@@ -2,6 +2,8 @@
 
 **Status:** Accepted — 2026-08-20 (issue #140, shipped in #152)
 **Depends on:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md)
+**Amended by:** [ADR-0152](./0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md) (#427) — decision 2: the blocklist no longer binds on guesses; profanity is an exclusion-list reason that applies to answers and the free pool, and to guesses while `PROFANITY_IS_A_GUESS` is false, which ships until Fernando answers (pending). The proper-noun list stays binding.
+**Superseded in part by:** [ADR-0152](./0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md) (#427) — the Rejected "full hunspell expansion": VERO is expanded by `pipeline.py` and is the base of the guess dictionary; and decision 1's `canonical-map.csv`, which is deleted.
 
 ## Context
 

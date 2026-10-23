@@ -37,11 +37,13 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 
 | Area     | Next free | Highest in use | Bare series closed at |
 | -------- | --------- | -------------- | --------------------- |
-| `T-CORE` | `S215`    | `S213`         | never used            |
+| `T-CORE` | `S217`    | `S213`         | never used            |
 | `T-DB`   | `S160`    | `S152`         | `T-DB-21`             |
-| `T-API`  | `S380`    | `S365`         | `T-API-16`            |
-| `T-WEB`  | `S1070`   | `S1068`        | `T-WEB-23`            |
+| `T-API`  | `S385`    | `S380`         | `T-API-16`            |
+| `T-WEB`  | `S1075`   | `S1070`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#427 (Termo guesses from VERO, ADR-0152) reserved **`T-API-S380…S384`**, **`T-CORE-S215`/`S216`** and **`T-WEB-S1070…S1074`** on the issue for both of its PRs. PR A spent **`T-API-S380`** in `termo-guess.test.ts` (the judge answers 200 for `bolor`, a word main refused with 422) and **`T-WEB-S1070`** in `termos.test.tsx` (`/termos` names VERO and the Mozilla Public License 2.0 and links the public repository). The rest stays reserved for PR B, and whatever PR B leaves unspent is burned then.
 
 #425 (Campo Minado best times and *Personalizado*, ADR-0150) reserved **`T-WEB-S1040…S1059`** and spent **`S1040…S1052`**; it re-aimed `T-WEB-S374`, `S886`, `S887`, `S889` and `T-LINT-S73` in place. `S1053…S1059` are **burned**.
 
