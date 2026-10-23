@@ -187,6 +187,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       },
     );
 
+    // ADR-0055: CI gate 2552 ms (40 runs) × 4 → 15_000.
     it.each(calls)(
       "no field of the row reaches the card except its date",
       async (_family, call, reader, callDated) => {
@@ -215,6 +216,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
         );
         expect(dated.equals(first)).toBe(false);
       },
+      15_000,
     );
   });
 
@@ -266,6 +268,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       );
     });
 
+    // ADR-0055: CI gate 2541 ms (40 runs) × 4 → 15_000.
     it("the card's date comes from the DB CLOCK's own row, never from new Date()", async () => {
       spies.getTodayDaily.mockResolvedValue(row(game));
       const fromRow = Buffer.from(
@@ -283,7 +286,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
 
       expect(fromRow.equals(fromUrl)).toBe(true);
       expect(formatLongDate(PUBLISHED_DATE)).toBe("22 de fevereiro de 2026");
-    });
+    }, 15_000);
   });
 });
 

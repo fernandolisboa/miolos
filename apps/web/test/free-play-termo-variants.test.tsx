@@ -169,6 +169,7 @@ describe("the variant reducer judges every open board with one draft (T-WEB-S890
 });
 
 describe("the Variante menu deals Dueto and Quarteto boards (T-WEB-S891)", () => {
+  // ADR-0055: CI gate 2543 ms (40 runs) × 4 → 15_000.
   it("starts on Clássico and deals two boards of seven, then four of nine, with distinct words", async () => {
     await renderScreen();
 
@@ -199,7 +200,7 @@ describe("the Variante menu deals Dueto and Quarteto boards (T-WEB-S891)", () =>
     }
     expect(screen.getByText(play.progressShort(0, 9))).toBeInTheDocument();
     expect(new Set(WORDS.map(normalizeWord)).size).toBe(4);
-  });
+  }, 15_000);
 
   it("closes the menu when a variant is picked", async () => {
     await renderScreen();
@@ -324,6 +325,7 @@ describe("Dueto ends on the free-play card with every word (T-WEB-S894)", () => 
     expect(setItem).not.toHaveBeenCalled();
   });
 
+  // ADR-0055: CI gate 2322 ms (40 runs) × 4 → 10_000.
   it("loses after seven misses to a card that shows the words", async () => {
     const { container } = await renderScreen();
     await choose(copy.dueto);
@@ -338,7 +340,7 @@ describe("Dueto ends on the free-play card with every word (T-WEB-S894)", () => 
     );
     expect(screen.getByText(messages.freePlay.solved.lostStamp)).toBeVisible();
     expect(screen.getByText(WORDS[1] ?? "")).toBeInTheDocument();
-  });
+  }, 10_000);
 });
 
 describe("the variant chunk never reaches the free pool (T-WEB-S895)", () => {

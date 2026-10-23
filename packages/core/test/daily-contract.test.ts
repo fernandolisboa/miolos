@@ -623,6 +623,7 @@ describe("stripDailyContent (termo)", () => {
     expect(dailyPuzzleResponseSchema.parse(stripped)).toEqual(stripped);
   });
 
+  // ADR-0055: CI gate 2158 ms (40 runs) × 4 → 10_000.
   it("T-CORE-S19: carries no forbidden daily key at any depth, over every curated answer", () => {
     for (const answer of TERMO_ANSWERS) {
       const stripped = stripDailyContent("termo", "2026-08-03", answer);
@@ -633,7 +634,7 @@ describe("stripDailyContent (termo)", () => {
         expect(keys.has(forbidden)).toBe(false);
       }
     }
-  });
+  }, 10_000);
 
   it("T-CORE-S19: a projection carrying canonical or normalized fails the response schema", () => {
     for (const smuggled of [
@@ -949,6 +950,7 @@ describe("projectCrossword", () => {
     }
   });
 
+  // ADR-0055: CI gate 2133 ms (40 runs) × 4 → 10_000.
   it("T-CORE-S187: projects exactly what the daily strip does at 5 and 7, and 5 and 7 are the sizes", () => {
     for (const seed of CROSSWORD_SEEDS) {
       for (const size of CROSSWORD_SIZES) {
@@ -960,7 +962,7 @@ describe("projectCrossword", () => {
     }
     expect(CROSSWORD_SIZES).toEqual([5, 7]);
     expectTypeOf<CrosswordSize>().toEqualTypeOf<GamesCrosswordSize>();
-  });
+  }, 10_000);
 
   it("T-CORE-S188: every daily shape and the strip accept the engine's 7x7 and 5x5 output", () => {
     for (const puzzle of [SEVEN, crosswordDaily()]) {

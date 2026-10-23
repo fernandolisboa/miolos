@@ -441,6 +441,7 @@ describe("the poll's off states: hidden, zero listeners, cleanup (T-WEB-S260)", 
 });
 
 describe("referential stability under N consumers (T-WEB-S242)", () => {
+  // ADR-0055: CI gate 2105 ms (40 runs) × 4 → 10_000.
   it("hands back the same object at N = 4, 16 and 32, plain and in StrictMode, with no render loop", async () => {
     for (const wrapper of [undefined, strict]) {
       for (const consumers of [4, 16, 32]) {
@@ -476,7 +477,7 @@ describe("referential stability under N consumers (T-WEB-S242)", () => {
         rendered.unmount();
       }
     }
-  });
+  }, 10_000);
 });
 
 describe("the day-truth seam is one function body wide (T-WEB-S244)", () => {

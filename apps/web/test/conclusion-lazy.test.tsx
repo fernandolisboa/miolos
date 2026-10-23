@@ -376,9 +376,11 @@ describe("the daily screen's preload also warms the remote conclusion, which no 
     vi.doMock("../src/play/conclusion-view", () => ({
       ConclusionView: () => null,
     }));
-    vi.doMock("../src/play/remote-conclusion-view", async () => {
+    vi.doMock("../src/play/remote-conclusion-view", () => {
       remote.loads += 1;
-      return await vi.importActual("../src/play/remote-conclusion-view");
+      const actual = vi.importActual("../src/play/remote-conclusion-view");
+      chunk.settling.push(actual);
+      return actual;
     });
     const { preloadConclusionView } = await loadLazyModule();
 

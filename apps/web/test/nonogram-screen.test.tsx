@@ -295,6 +295,7 @@ describe("the composite widget (T-WEB-S42)", () => {
     expect(caretIndex(container)).toBe(side * side - 1);
   }, 15_000);
 
+  // ADR-0055: CI gate 2372 ms (40 runs) × 4 → 10_000.
   it("reaches the row's and the column's ends with Home/End and PageUp/PageDown", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
     const board = boardOf(BIG);
@@ -311,7 +312,7 @@ describe("the composite widget (T-WEB-S42)", () => {
     expect(caretIndex(container)).toBe(4);
     fireEvent.keyDown(board, { key: "PageDown" });
     expect(caretIndex(container)).toBe((side - 1) * side + 4);
-  });
+  }, 10_000);
 
   it("writes with 1 and 2 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
