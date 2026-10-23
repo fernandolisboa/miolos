@@ -96,6 +96,7 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
           }),
       ),
     );
+    const deadline = vi.spyOn(AbortSignal, "timeout");
     const { captureEvent: captureAgain } = await loadCapture();
     const pending = captureAgain({
       db,
@@ -104,8 +105,13 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       properties: {},
     });
 
-    const init = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]?.[1] as RequestInit | undefined;
+    const hanging = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    await vi.waitFor(() => {
+      expect(hanging).toHaveBeenCalled();
+    });
+    const init = hanging.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(deadline).toHaveBeenCalledWith(3_000);
+    expect(init?.signal).toBe(deadline.mock.results[0]?.value);
     (init?.signal as AbortSignal | undefined)?.dispatchEvent(
       new Event("abort"),
     );

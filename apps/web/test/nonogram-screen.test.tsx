@@ -226,6 +226,7 @@ function withoutLineCross(): void {
 }
 
 describe("the composite widget (T-WEB-S42)", () => {
+  // ADR-0055: CI gate 4142 ms (40 runs) × 4 → 20_000.
   it("is one tab stop, not size² of them, and not a role=grid", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
 
@@ -243,7 +244,7 @@ describe("the composite widget (T-WEB-S42)", () => {
     ).toHaveLength(BIG.size ** 2 - 1);
 
     expect(board.querySelectorAll("[aria-disabled]")).toHaveLength(0);
-  });
+  }, 20_000);
 
   it("selects the cell a Tab lands on, so the writing keys are not a silent no-op", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
@@ -270,6 +271,7 @@ describe("the composite widget (T-WEB-S42)", () => {
     expect(caretIndex(container)).toBe(3);
   });
 
+  // ADR-0055: CI gate 2610 ms (40 runs) × 4 → 15_000.
   it("moves the caret with the arrows and clamps at all four edges", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
     const board = boardOf(BIG);
@@ -291,8 +293,9 @@ describe("the composite widget (T-WEB-S42)", () => {
     fireEvent.keyDown(board, { key: "ArrowDown" });
     fireEvent.keyDown(board, { key: "ArrowRight" });
     expect(caretIndex(container)).toBe(side * side - 1);
-  });
+  }, 15_000);
 
+  // ADR-0055: CI gate 2372 ms (40 runs) × 4 → 10_000.
   it("reaches the row's and the column's ends with Home/End and PageUp/PageDown", () => {
     const { container } = render(<NonogramScreen daily={BIG} />);
     const board = boardOf(BIG);
@@ -309,7 +312,7 @@ describe("the composite widget (T-WEB-S42)", () => {
     expect(caretIndex(container)).toBe(4);
     fireEvent.keyDown(board, { key: "PageDown" });
     expect(caretIndex(container)).toBe((side - 1) * side + 4);
-  });
+  }, 10_000);
 
   it("writes with 1 and 2 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<NonogramScreen daily={SMALL} />);
@@ -1539,6 +1542,7 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(pixels(decl(caret, "outline-offset"))).toBeLessThan(0);
   });
 
+  // ADR-0055: CI gate 4163 ms (40 runs) × 4 → 20_000.
   it("C1 — draws the frame and the every-five rule as classes, not comments", () => {
     for (const fixture of [SMALL, BIG]) {
       const { container, unmount } = render(<NonogramScreen daily={fixture} />);
@@ -1560,7 +1564,7 @@ describe("the board geometry (T-WEB-S48)", () => {
       }
       unmount();
     }
-  });
+  }, 20_000);
 });
 
 describe("the picture reveal's CSS (T-WEB-S52)", () => {

@@ -233,6 +233,7 @@ describe("notes sit in fixed slots and are named for a screen reader (T-WEB-S837
 });
 
 describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
+  // ADR-0055: CI gate 2080 ms (40 runs) × 4 → 10_000.
   it("toggles with the pencil key, which reports it with aria-pressed", () => {
     render(<SudokuScreen daily={DAILY} />);
     expect(pencil()).toHaveAttribute("aria-pressed", "false");
@@ -241,7 +242,7 @@ describe("Rascunho on the keypad and the keyboard (T-WEB-S838)", () => {
     expect(pencil()).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(pencil());
     expect(pencil()).toHaveAttribute("aria-pressed", "false");
-  });
+  }, 10_000);
 
   it("toggles with N and n, and leaves Ctrl+N to the browser", () => {
     render(<SudokuScreen daily={DAILY} />);

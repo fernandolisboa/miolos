@@ -480,6 +480,7 @@ describe("topUpBinairoBuffer", () => {
 });
 
 describe("topUpSudokuBuffer", () => {
+  // ADR-0055: every test here shares one driver, the Sudoku generator; CI gate max 24 744 ms over 40 runs (the full week) × 4 → 100_000.
   it("covers a full week with content the strict contract and the weekday criteria both accept", async () => {
     const result = await topUpSudokuBuffer(ctx.db, 7);
 
@@ -498,7 +499,7 @@ describe("topUpSudokuBuffer", () => {
       );
       expect(verdict.approved).toBe(true);
     }
-  }, 30_000);
+  }, 100_000);
 
   it("T-API-S7: a date whose generation always fails lands in failures and the run continues", async () => {
     const today = await todaySaoPaulo(ctx.db);
@@ -519,7 +520,7 @@ describe("topUpSudokuBuffer", () => {
     expect(dates).toHaveLength(6);
 
     expect(generation.calls).toBe(6 + MAX_SUDOKU_SEED_RETRIES_PER_DATE);
-  }, 30_000);
+  }, 100_000);
 
   it("T-API-S16: the RUN-scoped budget bounds total attempts, not depth x per-date", async () => {
     for (const weekday of [1, 2, 3, 4, 5, 6, 7]) {
@@ -544,7 +545,7 @@ describe("topUpSudokuBuffer", () => {
     for (const failure of result.failures.slice(datesThatReallyTried)) {
       expect(failure.reason).toBe("run seed-retry budget exhausted");
     }
-  }, 30_000);
+  }, 100_000);
 
   it("an already-covered date is never charged against the run budget", async () => {
     await topUpSudokuBuffer(ctx.db, 7);
@@ -559,7 +560,7 @@ describe("topUpSudokuBuffer", () => {
 
     expect(result).toEqual({ generated: 1, depth: 7, failures: [] });
     expect(generation.calls).toBe(1);
-  }, 30_000);
+  }, 100_000);
 
   it("T-API-S186: a validator that always rejects retries the full per-date budget", async () => {
     generation.rejectValidator = true;
@@ -577,7 +578,7 @@ describe("topUpSudokuBuffer", () => {
       expect(failure.reason).toBe("run seed-retry budget exhausted");
     }
     expect(generation.calls).toBe(MAX_SUDOKU_SEED_RETRIES_PER_RUN);
-  }, 30_000);
+  }, 100_000);
 
   it("T-API-S187: a schema rejection burns the run budget, one attempt per date", async () => {
     generation.injectStrayKey = true;
@@ -603,7 +604,7 @@ describe("topUpSudokuBuffer", () => {
     expect(result.failures.map((failure) => failure.date)).toEqual(
       Array.from({ length: 7 }, (_, offset) => addDays(today, offset)),
     );
-  }, 30_000);
+  }, 100_000);
 });
 
 describe("topUpNonogramBuffer", () => {

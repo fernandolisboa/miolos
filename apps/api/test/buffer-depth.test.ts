@@ -115,6 +115,7 @@ async function readBody(): Promise<BufferDepthResponse> {
 }
 
 describe("GET /buffer-depth", () => {
+  // ADR-0055: CI gate 2232 ms (40 runs) × 4 → 10_000.
   it("T-API-S5: reports per-game depth, the effective threshold and shallow=false at 7", async () => {
     await seedAllBut(7);
     const response = await GET();
@@ -127,7 +128,7 @@ describe("GET /buffer-depth", () => {
       termoAnswersRemaining: TERMO_ANSWERS.length - 7,
       termoAnswersLow: false,
     });
-  });
+  }, 10_000);
 
   it("T-API-S5: a drained SUDOKU buffer reports shallow=true even with binairo healthy", async () => {
     await seedAllBut(7, "sudoku");

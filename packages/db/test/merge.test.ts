@@ -890,6 +890,7 @@ describe("mergeAccounts — the once-per-account timestamps (#35, ADR-0061; #134
     return row;
   }
 
+  // ADR-0055: CI gate 2314 ms (40 runs) × 4 → 10_000.
   it("T-DB-S63: either side suffices in both argument orders, both-stamped keeps the EARLIEST, and attach_prompt_dismissed_at rides the same statement — including the mixed case where only one column's arm fires", async () => {
     for (const reversed of [false, true]) {
       const winner = await createUser(OLDER);
@@ -972,7 +973,7 @@ describe("mergeAccounts — the once-per-account timestamps (#35, ADR-0061; #134
         attachPromptDismissedAt: EARLIER,
       });
     }
-  });
+  }, 10_000);
 
   it("T-DB-S64: a re-run matches zero rows — the winner's updated_at is not re-bumped — and the loser's own values are untouched by the tombstone SET", async () => {
     const winner = await createUser(OLDER);

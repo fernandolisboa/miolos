@@ -88,10 +88,12 @@ describe("every authenticated GET goes through one envelope (T-API-S183)", () =>
     },
   );
 
+  // ADR-0055: CI gate 2545 ms (40 runs) × 4 → 15_000.
   it.each(Object.entries(AUTHENTICATED_GETS))(
     "%s exports GET and the dynamic marker, and nothing else",
     async (_name, load) => {
       expect(Object.keys(await load()).sort()).toEqual(["GET", "dynamic"]);
     },
+    15_000,
   );
 });

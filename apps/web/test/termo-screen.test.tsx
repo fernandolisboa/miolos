@@ -218,6 +218,7 @@ afterEach(() => {
 });
 
 describe("judged and future rows are output; only the active row takes input (T-WEB-S86, re-aimed by #327 / ADR-0106)", () => {
+  // ADR-0055: CI gate 2429 ms (40 runs) × 4 → 10_000.
   it("is a labelled group of six labelled row groups, every tile outside the active row hidden", () => {
     const { play } = playFixture({
       guesses: [{ guess: VALID, tiles: TILES }],
@@ -237,7 +238,7 @@ describe("judged and future rows are output; only the active row takes input (T-
       name: copy.rowActiveAria(2, MAX_GUESSES),
     });
     expect(within(active).getAllByRole("button")).toHaveLength(WORD_LENGTH);
-  });
+  }, 10_000);
 
   it("puts one tab stop on the board, on the active row's cursor cell", () => {
     const { play } = playFixture({ cursor: 3 });
@@ -451,6 +452,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(names[27]).toBe(copy.keyboard.letterAria("m"));
   });
 
+  // ADR-0055: CI gate 3080 ms (40 runs) × 4 → 15_000.
   it("moves the CARET with the arrows, clamping at every edge", () => {
     const { play } = playFixture();
 
@@ -475,8 +477,9 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(document.activeElement).toBe(commandKey("erase"));
     press("Home");
     expect(document.activeElement).toBe(letterKey("q"));
-  });
+  }, 15_000);
 
+  // ADR-0055: CI gate 2302 ms (40 runs) × 4 → 10_000.
   it("stays inside the keyboard, and End on rows 1 and 2 is the command", () => {
     const { play } = playFixture();
 
@@ -493,7 +496,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(document.activeElement).toBe(letterKey("z"));
     press("ArrowUp");
     expect(document.activeElement).toBe(letterKey("s"));
-  });
+  }, 10_000);
 
   it("moves up and down to the key drawn nearest, not to the same index", () => {
     const { play } = playFixture();

@@ -249,6 +249,7 @@ describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)",
     }
   }
 
+  // ADR-0055: CI gate 3496 ms (40 runs) × 4 → 15_000.
   it.each(screens)(
     "%s free play starts with undo idle, and undo takes back the first move",
     async (_name, element) => {
@@ -267,6 +268,7 @@ describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)",
       expect(undoButton()).toHaveAttribute("aria-disabled", "true");
       vi.unstubAllGlobals();
     },
+    15_000,
   );
 
   describe("daily Sudoku", () => {
@@ -454,24 +456,29 @@ describe("every grid game redoes an undone move, and a new move drops it (T-WEB-
     }
   }
 
-  it.each(screens)("%s free play", async (_name, element) => {
-    vi.stubGlobal("fetch", vi.fn());
-    const { container } = render(element);
-    await flushGeneration();
-    expect(redoButton()).toHaveAttribute("aria-disabled", "true");
+  // ADR-0055: CI gate 2383 ms (40 runs) × 4 → 10_000.
+  it.each(screens)(
+    "%s free play",
+    async (_name, element) => {
+      vi.stubGlobal("fetch", vi.fn());
+      const { container } = render(element);
+      await flushGeneration();
+      expect(redoButton()).toHaveAttribute("aria-disabled", "true");
 
-    move(container);
-    const moved = cells(container);
-    fireEvent.click(undoButton());
-    expect(redoButton()).toHaveAttribute("aria-disabled", "false");
+      move(container);
+      const moved = cells(container);
+      fireEvent.click(undoButton());
+      expect(redoButton()).toHaveAttribute("aria-disabled", "false");
 
-    fireEvent.click(redoButton());
-    expect(cells(container)).toEqual(moved);
-    expect(redoButton()).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(redoButton());
+      expect(cells(container)).toEqual(moved);
+      expect(redoButton()).toHaveAttribute("aria-disabled", "true");
 
-    fireEvent.click(undoButton());
-    move(container, 20);
-    expect(redoButton()).toHaveAttribute("aria-disabled", "true");
-    vi.unstubAllGlobals();
-  });
+      fireEvent.click(undoButton());
+      move(container, 20);
+      expect(redoButton()).toHaveAttribute("aria-disabled", "true");
+      vi.unstubAllGlobals();
+    },
+    10_000,
+  );
 });

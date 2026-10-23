@@ -187,6 +187,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       },
     );
 
+    // ADR-0055: CI gate 2552 ms (40 runs) × 4 → 15_000.
     it.each(calls)(
       "no field of the row reaches the card except its date",
       async (_family, call, reader, callDated) => {
@@ -215,6 +216,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
         );
         expect(dated.equals(first)).toBe(false);
       },
+      15_000,
     );
   });
 
@@ -266,6 +268,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
       );
     });
 
+    // ADR-0055: CI gate 2541 ms (40 runs) × 4 → 15_000.
     it("the card's date comes from the DB CLOCK's own row, never from new Date()", async () => {
       spies.getTodayDaily.mockResolvedValue(row(game));
       const fromRow = Buffer.from(
@@ -283,7 +286,7 @@ describe("the OG image routes read the wall as an existence proof (T-WEB-S203)",
 
       expect(fromRow.equals(fromUrl)).toBe(true);
       expect(formatLongDate(PUBLISHED_DATE)).toBe("22 de fevereiro de 2026");
-    });
+    }, 15_000);
   });
 });
 
@@ -377,6 +380,7 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
     expect(sums).toContain("family=Fraunces:opsz,wght@36,500");
   });
 
+  // ADR-0055: CI gate 3100 ms (40 runs) × 4 → 15_000.
   it("the longest realistic card and the site card both rasterise", async () => {
     for (const [label, tree] of [
       [
@@ -418,7 +422,7 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
       expect.soft(png.readUInt32BE(16), label).toBe(1200);
       expect.soft(png.readUInt32BE(20), label).toBe(630);
     }
-  });
+  }, 15_000);
 
   it("removing the Fraunces face CHANGES the bytes — satori's silent fallback would not", async () => {
     const tree = () =>

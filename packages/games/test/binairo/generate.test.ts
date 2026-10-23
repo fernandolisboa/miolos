@@ -123,6 +123,7 @@ describe("generateBinairo", () => {
     );
   }, 25_000);
 
+  // ADR-0055: CI gate 2425 ms (40 runs) × 4 → 10_000.
   it("P3 — seed normalization: seeds alias modulo 2^32", () => {
     fc.assert(
       fc.property(seedArb, weekdayArb, (seed, weekday) => {
@@ -132,5 +133,5 @@ describe("generateBinairo", () => {
       }),
       { numRuns: 25 },
     );
-  });
+  }, 10_000);
 });
