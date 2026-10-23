@@ -1701,10 +1701,9 @@ describe("POST /completions — termo (#27, ADR-0038)", () => {
   it("T-API-S39: the decoys are dictionary words and the answer is accented", () => {
     expect(TERMO_DECOYS).toHaveLength(6);
     for (const word of TERMO_DECOYS) {
-      expect(
-        isValidGuess(word, false),
-        `${word} must be a dictionary word`,
-      ).toBe(true);
+      expect(isValidGuess(word), `${word} must be a dictionary word`).toBe(
+        true,
+      );
     }
     expect(termoAnswer.canonical).not.toBe(termoAnswer.normalized);
   });

@@ -318,7 +318,7 @@ function postedGuesses(fetchMock: ReturnType<typeof vi.fn>): string[][] {
 
 describe("the daily and archive board post a profanity form, and the server's 200 plays it (T-WEB-S1075)", () => {
   it("posts the typed form and plays the judged row", async () => {
-    expect(isValidGuess(PROFANITY, false)).toBe(false);
+    expect(isValidGuess(PROFANITY)).toBe(false);
     const fetchMock = stubJudge(null);
     const { result } = renderHook(() => useTermoPlay(DAILY));
     act(() => {

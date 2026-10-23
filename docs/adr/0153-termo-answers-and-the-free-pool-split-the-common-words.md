@@ -5,6 +5,7 @@
 **Supersedes in part:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) — hand-picked answers and the lemma preference; [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) decision 1 — the pool definition, and decision 5.3's marker; [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md) decision 3 — the list is no longer the 626 picks — and the Consequences' `select_answers.py`; [ADR-0152](./0152-the-termo-guess-dictionary-is-vero-plus-the-frozen-ime-forms.md) decision 5 — the pool.
 **Amends:** [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) — the `/modo-livre/termo` budget.
 **Fulfils:** [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md) decision 6 — the exclusion list.
+**Amended by:** [ADR-0154](./0154-profanity-as-a-termo-guess-is-a-remote-config-switch-off-by-default.md) (#435) — decision 5: profanity rows touch guesses through the `/admin` switch `termoAcceptsProfanity`, not `PROFANITY_IS_A_GUESS`.
 
 ## Context
 

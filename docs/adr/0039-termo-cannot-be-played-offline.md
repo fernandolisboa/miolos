@@ -4,6 +4,7 @@
 **Depends on:** [ADR-0004](./0004-no-unpublished-puzzle-reaches-the-client.md), [ADR-0026](./0026-completions-are-write-once-rows-on-time-is-derived.md), [ADR-0028](./0028-daily-play-routes-and-the-conclusion.md), [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md), [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md), [ADR-0038](./0038-termo-guesses-are-judged-by-a-stateless-server-route.md)
 **Amended by:** [ADR-0053](./0053-the-archive-is-a-public-past-only-read-and-a-late-write.md) — decision 3's *"429 is never terminal. **This repo emits none today**"* is false the moment #31 merges, and the causal clause that follows it is no longer the reason the case exists. The rule itself is strengthened, not falsified.
 **Amended by:** [ADR-0054](./0054-the-share-is-plain-text-and-the-card-is-a-nameplate.md) — decision 2's fifth-game route recipe, *"a slug, a `routes` entry, **two `force-dynamic` segments**, a conclusion view — **is still required**"*, grows by the two `opengraph-image.tsx` files #34 adds. See the annotation at decision 2, including why three consecutive audit passes cleared this file. *(Reciprocal line added at #34, alongside ADR-0053's; multiple `Amended by:` lines stack.)*
+**Amended by:** [ADR-0154](./0154-profanity-as-a-termo-guess-is-a-remote-config-switch-off-by-default.md) (#435) — decision 1: for the 41 profanity forms, "não está na lista" on the daily and the archive is the server's 422, a round trip, held while offline. Every other word is still refused on the device.
 
 ## Context
 

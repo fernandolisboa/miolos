@@ -2,6 +2,7 @@ import { addDays, termoGuessResponseSchema } from "@miolos/core";
 import { eq, sessions, sql, users } from "@miolos/db";
 import {
   dailyPuzzles,
+  getRemoteConfig,
   insertDailyPuzzle,
   setRemoteConfigValue,
   todaySaoPaulo,
@@ -38,6 +39,11 @@ vi.mock("../src/db", () => ({
   },
 }));
 
+vi.mock("@miolos/db/publishing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@miolos/db/publishing")>();
+  return { ...actual, getRemoteConfig: vi.fn(actual.getRemoteConfig) };
+});
+
 beforeAll(async () => {
   ctx = await createTestDb();
 }, 30_000);
@@ -47,6 +53,7 @@ beforeEach(async () => {
     sql`truncate table users, daily_puzzles, remote_config cascade`,
   );
   getDbCalls.mockClear();
+  vi.mocked(getRemoteConfig).mockClear();
   vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
 });
 
@@ -146,13 +153,12 @@ describe("POST /termo/guess", () => {
   it("T-API-S36: the decoys really are dictionary words and the answer really is one", () => {
     expect(DECOYS).toHaveLength(6);
     for (const word of DECOYS) {
-      expect(
-        isValidGuess(word, false),
-        `${word} must be a dictionary word`,
-      ).toBe(true);
+      expect(isValidGuess(word), `${word} must be a dictionary word`).toBe(
+        true,
+      );
     }
-    expect(isValidGuess(answer.normalized, false)).toBe(true);
-    expect(isValidGuess(NOT_A_WORD, true)).toBe(false);
+    expect(isValidGuess(answer.normalized)).toBe(true);
+    expect(isValidGuess(NOT_A_WORD)).toBe(false);
     expect(answer.canonical).not.toBe(answer.normalized);
   });
 
@@ -523,6 +529,41 @@ describe("POST /termo/guess — 422 invalid-guess", () => {
     const body = termoGuessResponseSchema.parse(await response.json());
     expect(body.status).toBe("playing");
     expect(body.tiles).toHaveLength(1);
+
+    const junk = await POST(
+      guessRequest({ token, body: guessBody(today, [NOT_A_WORD]) }),
+    );
+    expect(junk.status).toBe(422);
+    expect(await junk.json()).toEqual({ error: "invalid-guess" });
+  });
+
+  it("T-API-S386: the switch is read for a profanity form only, never for a dictionary word or a non-word", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", true);
+    const { token } = await createSession();
+
+    for (const word of [DECOYS[0] ?? "", NOT_A_WORD]) {
+      await POST(guessRequest({ token, body: guessBody(today, [word]) }));
+    }
+    expect(vi.mocked(getRemoteConfig).mock.calls).toHaveLength(0);
+
+    await POST(guessRequest({ token, body: guessBody(today, [PROFANITY]) }));
+    expect(vi.mocked(getRemoteConfig).mock.calls).toHaveLength(1);
+  });
+
+  it("T-API-S386: a failed switch read on a profanity form throws, so the route answers 500 and the client holds the turn; never a 200 or a 422", async () => {
+    const today = await todaySaoPaulo(ctx.db);
+    await seedTermo(today);
+    await setRemoteConfigValue(ctx.db, "termoAcceptsProfanity", true);
+    const { token } = await createSession();
+    vi.mocked(getRemoteConfig).mockRejectedValueOnce(
+      new Error("connection lost"),
+    );
+
+    await expect(
+      POST(guessRequest({ token, body: guessBody(today, [PROFANITY]) })),
+    ).rejects.toThrow("connection lost");
   });
 
   it("T-API-S387: with the switch off, a profanity form earlier in the list does not refuse a valid newest guess", async () => {

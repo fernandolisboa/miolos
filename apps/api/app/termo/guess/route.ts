@@ -9,7 +9,7 @@ import {
   getRemoteConfig,
   todaySaoPaulo,
 } from "@miolos/db/publishing";
-import { isValidGuess } from "@miolos/games/termo";
+import { isProfanityForm, isValidGuess } from "@miolos/games/termo";
 import type { NextRequest } from "next/server";
 
 import { corsHeaders, preflightResponse } from "../../../src/cors";
@@ -26,9 +26,8 @@ export function OPTIONS(): Response {
 
 async function acceptsGuess(db: Db, word: string): Promise<boolean> {
   return (
-    isValidGuess(word, false) ||
-    (isValidGuess(word, true) &&
-      (await getRemoteConfig(db)).termoAcceptsProfanity)
+    isValidGuess(word) ||
+    (isProfanityForm(word) && (await getRemoteConfig(db)).termoAcceptsProfanity)
   );
 }
 

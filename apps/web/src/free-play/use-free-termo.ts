@@ -9,6 +9,7 @@ import {
 import { drawFreeTermoWords } from "@miolos/games/termo-free";
 import { useCallback } from "react";
 
+import { freeTermoPlayReducer } from "../termo/state";
 import type {
   TermoJudge,
   TermoPlay,
@@ -74,5 +75,5 @@ export function useFreeTermoBoard(canonical: string): TermoPlay {
     (armed, guess) => judgeFreeGuess(armed, guess, canonical),
     [canonical],
   );
-  return useTermoBoard(FREE_PLAY_DATE, judge, false).play;
+  return useTermoBoard(FREE_PLAY_DATE, judge, freeTermoPlayReducer).play;
 }

@@ -324,7 +324,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
       { type: "tick", now: 2 },
       { type: "pause", now: 3 },
       { type: "resume", now: 4 },
-      { type: "submit", acceptsProfanity: true },
+      { type: "submit" },
       { type: "held", reason: "offline" },
 
       { type: "retry" },
@@ -336,9 +336,9 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
         answer: undefined,
       },
       ...letters(SECOND),
-      { type: "submit", acceptsProfanity: true },
+      { type: "submit" },
       { type: "rejected", reason: "not-in-list" },
-      { type: "submit", acceptsProfanity: true },
+      { type: "submit" },
       { type: "rejected", reason: "refused" },
     ];
 
@@ -392,7 +392,7 @@ describe("the row's composed name and the two live regions (T-WEB-S87)", () => {
   });
 
   it("re-announces an identical rejection through the nonce, without touching the notice's own text", () => {
-    expect(isValidGuess(INVALID, true)).toBe(false);
+    expect(isValidGuess(INVALID)).toBe(false);
     const { container } = render(<TermoScreen daily={DAILY} />);
 
     typeOnBody(INVALID);

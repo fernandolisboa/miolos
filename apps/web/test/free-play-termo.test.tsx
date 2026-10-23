@@ -1,7 +1,7 @@
 import { normalizeWord } from "@miolos/games";
 import {
   evaluateGuess,
-  isValidGuess,
+  isProfanityForm,
   MAX_GUESSES,
   TERMO_VALIDATION_WORDS,
   TERMO_VARIANTS,
@@ -249,7 +249,7 @@ describe("the Termo play view takes its chrome, not an archive flag (T-WEB-S703)
 
 describe("free play refuses a profanity form on the device, in every variant (T-WEB-S1077)", () => {
   it("Clássico, Dueto and Quarteto say “não está na lista” and play no row", async () => {
-    expect(isValidGuess(PROFANITY, true)).toBe(true);
+    expect(isProfanityForm(PROFANITY)).toBe(true);
     const { fetchMock } = stubNoIo();
     const classico = renderHook(() => useFreeTermoBoard(WORD)).result;
     for (const letter of PROFANITY) {

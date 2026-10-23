@@ -19,6 +19,7 @@ import {
 import { normalizeWord } from "../../src/normalize";
 import { PROFANITY_GUESSES } from "../../src/termo/profanity.generated";
 import {
+  isProfanityForm,
   isValidGuess,
   TERMO_VALIDATION_WORDS,
 } from "../../src/termo/word-list";
@@ -137,18 +138,18 @@ describe("termo word-list harness (ADR-0015)", () => {
     const profanity = new Set(readProfanity());
     for (const word of ispell) {
       expect(validation.has(word), word).toBe(true);
-      expect(isValidGuess(word, false), word).toBe(!profanity.has(word));
-      expect(isValidGuess(word, true), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(!profanity.has(word));
+      expect(isValidGuess(word) || isProfanityForm(word), word).toBe(true);
     }
   });
 
   it("accepts real words the IME list missed, and still refuses non-words", () => {
     for (const word of ["bolor", "chope", "sarau", "vocal", "sagui", "glifo"]) {
-      expect(isValidGuess(word, false), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(true);
     }
     for (const word of ["xqzwv", "https", "vldis", "zzzzz"]) {
-      expect(isValidGuess(word, false), word).toBe(false);
-      expect(isValidGuess(word, true), word).toBe(false);
+      expect(isValidGuess(word), word).toBe(false);
+      expect(isProfanityForm(word), word).toBe(false);
     }
   });
 
@@ -249,24 +250,24 @@ describe("termo word-list harness (ADR-0015)", () => {
     expect(forms.filter((word) => dictionary.has(word))).toEqual([]);
   });
 
-  it("a profanity form is refused without the switch and a guess with it", () => {
+  it("a profanity form is no dictionary word, and isProfanityForm knows it in any case or accent", () => {
     for (const word of PROFANITY_GUESSES.split("\n")) {
-      expect(isValidGuess(word, false), word).toBe(false);
-      expect(isValidGuess(word, true), word).toBe(true);
-      expect(isValidGuess(word.toUpperCase(), true), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(false);
+      expect(isProfanityForm(word), word).toBe(true);
+      expect(isProfanityForm(word.toUpperCase()), word).toBe(true);
     }
-    expect(isValidGuess("tesão", false)).toBe(false);
-    expect(isValidGuess("tesão", true)).toBe(true);
+    expect(isValidGuess("tesão")).toBe(false);
+    expect(isProfanityForm("tesão")).toBe(true);
   });
 
-  it("every dictionary word is a guess with the switch on or off", () => {
+  it("no dictionary word is a profanity form", () => {
     for (const word of TERMO_VALIDATION_WORDS) {
-      expect(isValidGuess(word, false), word).toBe(true);
-      expect(isValidGuess(word, true), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(true);
+      expect(isProfanityForm(word), word).toBe(false);
     }
   });
 
-  it("a five-letter string in neither list is refused with the switch on or off", () => {
+  it("a five-letter string in neither list is neither a guess nor a profanity form", () => {
     const known = new Set([
       ...TERMO_VALIDATION_WORDS,
       ...PROFANITY_GUESSES.split("\n"),
@@ -274,7 +275,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     fc.assert(
       fc.property(fc.stringMatching(/^[a-z]{5}$/), (word) => {
         fc.pre(!known.has(word));
-        return !isValidGuess(word, false) && !isValidGuess(word, true);
+        return !isValidGuess(word) && !isProfanityForm(word);
       }),
       { seed: 435, numRuns: 2000 },
     );
@@ -323,13 +324,13 @@ describe("termo word-list harness (ADR-0015)", () => {
     }
     expect(TERMO_ANSWERS).toHaveLength(TERMO_ANSWER_COUNT);
     expect(TERMO_VALIDATION_WORDS).toHaveLength(shippedGuesses().length);
-    expect(isValidGuess("ábaco", false)).toBe(true);
-    expect(isValidGuess("xqzwv", false)).toBe(false);
+    expect(isValidGuess("ábaco")).toBe(true);
+    expect(isValidGuess("xqzwv")).toBe(false);
   });
 
   it('accepts "áudio" and its unaccented typing "audio" as guesses (#140)', () => {
-    expect(isValidGuess("áudio", false)).toBe(true);
-    expect(isValidGuess("audio", false)).toBe(true);
+    expect(isValidGuess("áudio")).toBe(true);
+    expect(isValidGuess("audio")).toBe(true);
   });
 
   it("every additions.txt canonical is shaped, sorted, unique, and guessable through the shipped predicate", () => {
@@ -348,7 +349,7 @@ describe("termo word-list harness (ADR-0015)", () => {
     for (const word of additions) {
       expect(normalizeWord(word)).toMatch(NORMALIZED_SHAPE);
       expect(validation.has(normalizeWord(word)), word).toBe(true);
-      expect(isValidGuess(word, false), word).toBe(true);
+      expect(isValidGuess(word), word).toBe(true);
     }
   });
 

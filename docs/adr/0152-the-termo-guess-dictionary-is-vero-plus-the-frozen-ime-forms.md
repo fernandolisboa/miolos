@@ -3,7 +3,7 @@
 **Status:** Accepted — 2026-10-23 (issue #427, PR A)
 **Depends on:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md), [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md), [ADR-0147](./0147-a-termo-answer-may-return-after-365-days.md)
 **Supersedes in part:** [ADR-0015](./0015-termo-word-list-is-ai-curated-under-mechanical-constraints.md) — the validation dictionary taken from the IME-USP list alone; [ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md) — its Rejected "full hunspell expansion".
-**Amended by:** [ADR-0154](./0154-profanity-as-a-termo-guess-is-a-remote-config-switch-off-by-default.md) (#435) — decision 4: the constant is gone; whether a profanity form is a guess is the `/admin` switch `termoAcceptsProfanity`, off by default.
+**Superseded in part by:** [ADR-0154](./0154-profanity-as-a-termo-guess-is-a-remote-config-switch-off-by-default.md) (#435) — decision 4: the constant is gone; whether a profanity form is a guess is the `/admin` switch `termoAcceptsProfanity`, off by default.
 **Superseded in part by:** [ADR-0153](./0153-termo-answers-and-the-free-pool-split-the-common-words.md) (#427 PR B) — decision 5, the pool: common − `answers.csv` − excluded.
 **Amends:** [ADR-0062](./0062-termo-guess-dictionary-gaps-close-with-curated-additions.md) decision 2 — the blocklist no longer binds on guesses (decision 4 below); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) — the three Termo budgets; [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) decision 1 — the pool also leaves out the exclusion list.
 

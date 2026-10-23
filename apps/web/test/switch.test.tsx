@@ -25,24 +25,28 @@ function renderSwitch(props: { checked: boolean; disabled?: boolean }) {
 }
 
 describe("the shared Switch (T-WEB-S1080)", () => {
-  it("is a named, described button with role switch whose state is aria-checked, and a tap asks for the other state", () => {
-    for (const checked of [false, true]) {
+  it("is a button named and described by its ids, with type button", () => {
+    const { button } = renderSwitch({ checked: false });
+    expect(button.tagName).toBe("BUTTON");
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAccessibleName("Lembrete");
+    expect(button).toHaveAccessibleDescription(
+      "Avisa quando a sequência corre risco.",
+    );
+    expect(button.classList.contains(String(switchStyles.switch))).toBe(true);
+  });
+
+  it.each([false, true])(
+    "checked=%s is aria-checked and shows its children, and a tap asks for the other state",
+    (checked) => {
       const { onToggle, button } = renderSwitch({ checked });
-      expect(button.tagName).toBe("BUTTON");
-      expect(button).toHaveAttribute("type", "button");
-      expect(button).toHaveAccessibleName("Lembrete");
-      expect(button).toHaveAccessibleDescription(
-        "Avisa quando a sequência corre risco.",
-      );
       expect(button).toHaveAttribute("aria-checked", String(checked));
       expect(button).toHaveTextContent(checked ? "Ligado" : "Desligado");
-      expect(button.classList.contains(String(switchStyles.switch))).toBe(true);
 
       fireEvent.click(button);
       expect(onToggle).toHaveBeenCalledExactlyOnceWith(!checked);
-      document.body.innerHTML = "";
-    }
-  });
+    },
+  );
 
   it("disabled, it is announced as such and a tap does nothing", () => {
     const { onToggle, button } = renderSwitch({

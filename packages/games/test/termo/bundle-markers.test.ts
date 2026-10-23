@@ -109,7 +109,7 @@ describe("the client-bundle tripwire's word-list markers", () => {
         `\`${marker}\` is no longer a validation word: update this file, and any list in apps/web/scripts/route-client-js.mjs that names it (\`zurro\` is in EXPECTED_DAILY_SCOPE and FORBIDDEN_FREE_PLAY_SCOPE; \`abaco\` is in neither)`,
       ).toBe(true);
 
-      expect(isValidGuess(marker, false)).toBe(true);
+      expect(isValidGuess(marker)).toBe(true);
 
       expect(normalizeWord(marker)).toBe(marker);
     }

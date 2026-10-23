@@ -1,5 +1,6 @@
 import {
   deriveBoardStatus,
+  isProfanityForm,
   isValidGuess,
   MAX_GUESSES,
   WORD_LENGTH,
@@ -34,9 +35,33 @@ export function initTermoPlayState(date: string): TermoPlayState {
   };
 }
 
+export type TermoPlayReducer = (
+  state: TermoPlayState,
+  action: TermoPlayAction,
+) => TermoPlayState;
+
 export function termoPlayReducer(
   state: TermoPlayState,
   action: TermoPlayAction,
+): TermoPlayState {
+  return reduceTermoPlay(state, action, isWordOrProfanityDeferredToServer);
+}
+
+export function freeTermoPlayReducer(
+  state: TermoPlayState,
+  action: TermoPlayAction,
+): TermoPlayState {
+  return reduceTermoPlay(state, action, isValidGuess);
+}
+
+function isWordOrProfanityDeferredToServer(word: string): boolean {
+  return isValidGuess(word) || isProfanityForm(word);
+}
+
+function reduceTermoPlay(
+  state: TermoPlayState,
+  action: TermoPlayAction,
+  locallyAccepted: (word: string) => boolean,
 ): TermoPlayState {
   switch (action.type) {
     case "restore":
@@ -57,7 +82,7 @@ export function termoPlayReducer(
       if (!accepting(state) || word === null) {
         return state;
       }
-      if (!isValidGuess(word, action.acceptsProfanity)) {
+      if (!locallyAccepted(word)) {
         return noticed(state, copy.notInList);
       }
 

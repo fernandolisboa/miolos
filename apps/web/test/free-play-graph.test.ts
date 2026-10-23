@@ -287,16 +287,18 @@ describe("of every page and layout, only /modo-livre/sudoku reaches the Sudoku v
   });
 });
 
-describe("of every page and layout, only /modo-livre/termo reaches the free pool, none reaches the answer list, and of the free-play pages only it reaches the dictionary (T-WEB-S704)", () => {
+describe("of every page and layout, only /modo-livre/termo reaches the free pool, none reaches the answer list, of the free-play pages only it reaches the dictionary, and the profanity forms reach no route the dictionary does not (T-WEB-S704)", () => {
   const ANSWERS = "packages/games/src/termo-answers/answers.generated.ts";
   const POOL = "packages/games/src/termo-free/pool.generated.ts";
   const DICTIONARY = "packages/games/src/termo/words.generated.ts";
+  const PROFANITY = "packages/games/src/termo/profanity.generated.ts";
 
   it("walks files that exist", () => {
     for (const name of [
       ANSWERS,
       POOL,
       DICTIONARY,
+      PROFANITY,
       "packages/games/src/termo-answers/index.ts",
       "packages/games/src/termo-free/index.ts",
     ]) {
@@ -311,10 +313,12 @@ describe("of every page and layout, only /modo-livre/termo reaches the free pool
       dictionaryInFreePlay: routesReaching(DICTIONARY).filter((route) =>
         route.startsWith("apps/web/app/modo-livre/"),
       ),
+      profanity: routesReaching(PROFANITY),
     }).toEqual({
       pool: ["apps/web/app/modo-livre/termo/page.tsx"],
       answers: [],
       dictionaryInFreePlay: ["apps/web/app/modo-livre/termo/page.tsx"],
+      profanity: routesReaching(DICTIONARY),
     });
   });
 });
