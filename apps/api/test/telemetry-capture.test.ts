@@ -104,8 +104,11 @@ describe("captureEvent — the server-side PostHog capture (#33, ADR-0069)", () 
       properties: {},
     });
 
-    const init = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]?.[1] as RequestInit | undefined;
+    const hanging = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    await vi.waitFor(() => {
+      expect(hanging).toHaveBeenCalled();
+    });
+    const init = hanging.mock.calls[0]?.[1] as RequestInit | undefined;
     (init?.signal as AbortSignal | undefined)?.dispatchEvent(
       new Event("abort"),
     );

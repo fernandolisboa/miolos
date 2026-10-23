@@ -63,11 +63,12 @@ describe("what those modules are actually on, measured (T-WEB-S354)", () => {
     ]);
   });
 
+  // ADR-0055: CI gate 3576 ms (40 runs) × 4 → 15_000.
   it("puts `play-record.ts` on strictly more routes than `day-state.ts`", () => {
     const record = routesReaching(PLAY_RECORD);
     for (const route of routesReaching(DAY_STATE)) {
       expect(record).toContain(route);
     }
     expect(record.length).toBeGreaterThan(routesReaching(DAY_STATE).length);
-  });
+  }, 15_000);
 });

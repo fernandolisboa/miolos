@@ -248,12 +248,16 @@ describe("the settings render the defaults on the server and hydrate without a w
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
 
+    let root: ReturnType<typeof hydrateRoot> | undefined;
     act(() => {
-      hydrateRoot(container, <Probe />);
+      root = hydrateRoot(container, <Probe />);
     });
 
     expect(error).not.toHaveBeenCalled();
     expect(container.textContent).toBe("clock:false errors:true");
+    act(() => {
+      root?.unmount();
+    });
     container.remove();
   });
 });

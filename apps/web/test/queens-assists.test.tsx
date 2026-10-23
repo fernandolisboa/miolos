@@ -207,6 +207,7 @@ describe("Marcar ✕ automático crosses for a queen and takes back only its own
     expect(crossed(solved)).toEqual([]);
   });
 
+  // ADR-0055: CI gate 3353 ms (40 runs) × 4 → 15_000.
   it("saves its claims with the board, however many queens claim a ✕, and takes them back after a reload", () => {
     localStorage.clear();
     setQueens({ autoCross: true });
@@ -240,7 +241,7 @@ describe("Marcar ✕ automático crosses for a queen and takes back only its own
     expect(cell(at(0, 1))).toHaveClass(styles.cellMarked ?? "missing");
     place(at(0, 0));
     expect(cell(at(0, 1))).not.toHaveClass(styles.cellMarked ?? "missing");
-  });
+  }, 15_000);
 
   it("keeps the record's old shape while no ✕ is automatic", () => {
     localStorage.clear();

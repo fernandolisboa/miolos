@@ -20,7 +20,7 @@ import { solutionDigits } from "../src/sudoku/engine";
 import type { SudokuDigit } from "../src/sudoku/state";
 import { jsonResponse, urlOf } from "./fetch-stub";
 
-const chunk = { loads: 0 };
+const chunk = { loads: 0, settling: [] as Promise<unknown>[] };
 
 const DATE = "2026-07-31";
 const API_URL = "https://api.example.test";
@@ -108,13 +108,16 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_API_URL", API_URL);
   chunk.loads = 0;
-  vi.doMock("../src/play/conclusion-view", async () => {
+  vi.doMock("../src/play/conclusion-view", () => {
     chunk.loads += 1;
-    return await vi.importActual("../src/play/conclusion-view");
+    const actual = vi.importActual("../src/play/conclusion-view");
+    chunk.settling.push(actual);
+    return actual;
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await Promise.allSettled(chunk.settling.splice(0));
   vi.doUnmock("../src/play/conclusion-view");
   vi.doUnmock("../src/play/remote-conclusion-view");
   vi.unstubAllGlobals();

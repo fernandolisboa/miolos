@@ -709,6 +709,7 @@ describe("the free hints (T-WEB-9)", () => {
 });
 
 describe("closing the grid (T-WEB-9b)", () => {
+  // ADR-0055: CI gate 3633 ms (40 runs) × 4 → 15_000.
   it("swaps the conclusion in place, with no navigation at all", async () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
@@ -729,8 +730,9 @@ describe("closing the grid (T-WEB-9b)", () => {
     expect(router.push).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
     expect(sync.flushPendingCompletions).toHaveBeenCalled();
-  });
+  }, 15_000);
 
+  // ADR-0055: CI gate 3045 ms (40 runs) × 4 → 15_000.
   it("hands the completion it just built to the flush, not just the store", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
@@ -743,8 +745,9 @@ describe("closing the grid (T-WEB-9b)", () => {
       concluded: true,
       pendingSync: true,
     });
-  });
+  }, 15_000);
 
+  // ADR-0055: CI gate 2930 ms (40 runs) × 4 → 15_000.
   it("never claims the result is stranded on the device while it is online", () => {
     const { container } = render(<BinairoScreen daily={DAILY} />);
 
@@ -756,7 +759,7 @@ describe("closing the grid (T-WEB-9b)", () => {
     expect(
       screen.queryByText(messages.conclusion.sync.rejected),
     ).not.toBeInTheDocument();
-  });
+  }, 15_000);
 });
 
 describe("the count-up clock's visibility rules (T-WEB-9e)", () => {

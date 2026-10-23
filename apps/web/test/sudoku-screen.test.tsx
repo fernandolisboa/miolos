@@ -753,6 +753,7 @@ describe("the keyboard model (T-WEB-S28)", () => {
     expect(cellAt(container, FIRST_EMPTY).textContent).toBe("");
   });
 
+  // ADR-0055: CI gate 3092 ms (40 runs) × 4 → 15_000.
   it("writes with 1–9 and clears with 0, Backspace and Delete", () => {
     const { container } = render(<SudokuScreen daily={DAILY} />);
     const cell = cellAt(container, FIRST_EMPTY);
@@ -771,7 +772,7 @@ describe("the keyboard model (T-WEB-S28)", () => {
       fireEvent.keyDown(boardOf(), { key });
       expect(cell.textContent).toBe("");
     }
-  });
+  }, 15_000);
 
   it("prevents the page from scrolling under the caret", () => {
     render(<SudokuScreen daily={DAILY} />);

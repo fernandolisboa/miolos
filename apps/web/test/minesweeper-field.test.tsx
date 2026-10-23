@@ -72,6 +72,7 @@ function cellAt(index: number): HTMLElement {
 }
 
 describe("the minefield draws the engine's state, one button per cell (T-WEB-S885)", () => {
+  // ADR-0055: CI gate 2890 ms (40 runs) × 4 → 15_000.
   it("lays out the level's cells under one labelled group with a single tab stop", () => {
     mountField(newMinesweeperGame(MINESWEEPER_LEVELS.intermediate, SEED));
 
@@ -85,7 +86,7 @@ describe("the minefield draws the engine's state, one button per cell (T-WEB-S88
     expect(cellAt(0)).toHaveAccessibleName(
       copy.cellAria(1, 1, copy.cell.hidden),
     );
-  });
+  }, 15_000);
 
   it("names an open number, an empty cell, a flag and a question mark", () => {
     const game = Array.from({ length: 81 }, (_unused, first) =>

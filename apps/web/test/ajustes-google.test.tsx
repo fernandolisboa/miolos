@@ -239,7 +239,9 @@ describe("the sign-in outcome notice (T-WEB-S472)", () => {
     for (const sentence of Object.values(copy.outcome)) {
       expect(screen.queryByText(sentence)).toBeNull();
     }
-    expect(window.location.search).toBe("");
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
   });
 });
 

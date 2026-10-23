@@ -35,6 +35,7 @@ describe("nextColoredStep", () => {
     expect(nextColoredStep(clues, marks)).toBeNull();
   });
 
+  // ADR-0055: CI gate 2808 ms (40 runs) × 4 → 15_000.
   it("always agrees with the solution, step after step, until every pool picture is done", () => {
     for (const id of COLORED_SIZES.flatMap(poolIds)) {
       const { clues: puzzleClues, solution } = variantPuzzle(id);
@@ -49,5 +50,5 @@ describe("nextColoredStep", () => {
       }
       expect(marks, id).toEqual(solution);
     }
-  });
+  }, 15_000);
 });

@@ -249,6 +249,7 @@ describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)",
     }
   }
 
+  // ADR-0055: CI gate 3496 ms (40 runs) × 4 → 15_000.
   it.each(screens)(
     "%s free play starts with undo idle, and undo takes back the first move",
     async (_name, element) => {
@@ -267,6 +268,7 @@ describe("every grid game carries undo, and a daily undo is saved (T-WEB-S829)",
       expect(undoButton()).toHaveAttribute("aria-disabled", "true");
       vi.unstubAllGlobals();
     },
+    15_000,
   );
 
   describe("daily Sudoku", () => {

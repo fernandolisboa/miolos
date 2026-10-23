@@ -377,6 +377,7 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
     expect(sums).toContain("family=Fraunces:opsz,wght@36,500");
   });
 
+  // ADR-0055: CI gate 3100 ms (40 runs) × 4 → 15_000.
   it("the longest realistic card and the site card both rasterise", async () => {
     for (const [label, tree] of [
       [
@@ -418,7 +419,7 @@ describe("the committed fonts are the faces the card was designed against (T-WEB
       expect.soft(png.readUInt32BE(16), label).toBe(1200);
       expect.soft(png.readUInt32BE(20), label).toBe(630);
     }
-  });
+  }, 15_000);
 
   it("removing the Fraunces face CHANGES the bytes — satori's silent fallback would not", async () => {
     const tree = () =>

@@ -171,6 +171,7 @@ describe("GET /cron/publish auth (fail-closed, D15)", () => {
 });
 
 describe("GET /cron/publish top-up", () => {
+  // ADR-0055: every test below at 80_000 shares one driver, runTopUp; CI gate max 19 772 ms over 40 runs (T-API-S1) × 4.
   it("T-API-S1: tops an empty database up to depth 7 for EVERY game, with validated, correctly-dated content", async () => {
     const response = await authorizedRun();
     expect(response.status).toBe(200);
@@ -288,7 +289,7 @@ describe("GET /cron/publish top-up", () => {
       expect(validateMinesweeperDaily({ ...content, weekday }).ok).toBe(true);
       expect(row.seed).toBe(content.seed);
     }
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S2: a second run generates nothing for any game (idempotent reconciliation)", async () => {
     await authorizedRun();
@@ -301,7 +302,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await ctx.db.select().from(dailyPuzzles)).toHaveLength(
       7 * GAMES.length,
     );
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S3: tops up a partial buffer of every game, existing rows untouched (D14)", async () => {
     await authorizedRun();
@@ -333,7 +334,7 @@ describe("GET /cron/publish top-up", () => {
         );
       }
     }
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S4: 500 when BINAIRO alone sits below the effective threshold", async () => {
     await authorizedRun();
@@ -352,7 +353,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.termo.depth).toBe(7);
     expect(body.games.crossword.depth).toBe(7);
     expect(body.games.queens.depth).toBe(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S34a: 500 when TERMO alone sits below the effective threshold", async () => {
     await authorizedRun();
@@ -370,7 +371,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.sudoku.depth).toBe(7);
     expect(body.games.crossword.depth).toBe(7);
     expect(body.games.queens.depth).toBe(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S4: 500 when SUDOKU alone sits below the effective threshold", async () => {
     await authorizedRun();
@@ -388,7 +389,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.termo.depth).toBe(7);
     expect(body.games.crossword.depth).toBe(7);
     expect(body.games.queens.depth).toBe(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S4: 500 when NONOGRAM alone sits below the effective threshold", async () => {
     await authorizedRun();
@@ -406,7 +407,7 @@ describe("GET /cron/publish top-up", () => {
     expect(body.games.termo.depth).toBe(7);
     expect(body.games.crossword.depth).toBe(7);
     expect(body.games.queens.depth).toBe(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S4: a tuned-low depth is healthy for every game, not alarming (A3)", async () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 2 });
@@ -450,7 +451,7 @@ describe("GET /cron/publish top-up", () => {
       failures: [],
       error: null,
     });
-  }, 30_000);
+  }, 80_000);
 
   it("remote_config bufferDepth=3 generates exactly 3 rows per game (AC 4)", async () => {
     await ctx.db.insert(remoteConfig).values({ key: "bufferDepth", value: 3 });
@@ -461,7 +462,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("termo")).toHaveLength(3);
     expect(await rowsFor("crossword")).toHaveLength(3);
     expect(await rowsFor("queens")).toHaveLength(3);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S15: one game throwing never drains the other's top-up", async () => {
     insertFailures.add("binairo");
@@ -513,7 +514,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("termo")).toHaveLength(7);
     expect(await rowsFor("crossword")).toHaveLength(7);
     expect(await rowsFor("queens")).toHaveLength(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S21: the NONOGRAM top-up throwing never drains the others", async () => {
     insertFailures.add("nonogram");
@@ -567,7 +568,7 @@ describe("GET /cron/publish top-up", () => {
     expect(await rowsFor("termo")).toHaveLength(7);
     expect(await rowsFor("crossword")).toHaveLength(7);
     expect(await rowsFor("queens")).toHaveLength(7);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S34a: the TERMO top-up throwing never drains the others", async () => {
     insertFailures.add("termo");
@@ -599,7 +600,7 @@ describe("GET /cron/publish top-up", () => {
       expect(await rowsFor(game)).toHaveLength(7);
     }
     expect(await rowsFor("termo")).toHaveLength(0);
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S41: runTopUp never leaks a bound parameter into the response body", async () => {
     insertBadDate.add("termo");
@@ -640,7 +641,7 @@ describe("GET /cron/publish top-up", () => {
       );
       expect(collisions).toEqual([]);
     }
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S15b: a top-up that wrote rows and then threw reports the rows it wrote", async () => {
     insertFailAfter.set("binairo", 3);
@@ -665,7 +666,7 @@ describe("GET /cron/publish top-up", () => {
       game: "binairo",
       generated: 3,
     });
-  }, 30_000);
+  }, 80_000);
 
   it("T-API-S8: one structured log line per game, cost-ascending, in the shape the log query reads", async () => {
     await authorizedRun();
@@ -687,7 +688,7 @@ describe("GET /cron/publish top-up", () => {
         failures: [],
       });
     }
-  }, 30_000);
+  }, 80_000);
 });
 
 describe("GET /cron/publish order", () => {
@@ -706,7 +707,7 @@ describe("GET /cron/publish order", () => {
       "queens",
       "sudoku",
     ]);
-  }, 30_000);
+  }, 80_000);
 });
 
 describe("route config", () => {

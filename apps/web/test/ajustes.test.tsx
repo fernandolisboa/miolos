@@ -268,14 +268,18 @@ describe("the theme radios read the stored choice and apply a new one (T-WEB-S40
       container.querySelector<HTMLInputElement>('input[value="dark"]')?.checked,
     ).toBe(false);
 
+    let root: ReturnType<typeof hydrateRoot> | undefined;
     act(() => {
-      hydrateRoot(container, <ThemeSection />);
+      root = hydrateRoot(container, <ThemeSection />);
     });
 
     expect(
       container.querySelector<HTMLInputElement>('input[value="dark"]')?.checked,
     ).toBe(true);
 
+    act(() => {
+      root?.unmount();
+    });
     container.remove();
   });
 

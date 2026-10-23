@@ -451,6 +451,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(names[27]).toBe(copy.keyboard.letterAria("m"));
   });
 
+  // ADR-0055: CI gate 3080 ms (40 runs) × 4 → 15_000.
   it("moves the CARET with the arrows, clamping at every edge", () => {
     const { play } = playFixture();
 
@@ -475,7 +476,7 @@ describe("the keyboard is the composite widget (T-WEB-S88)", () => {
     expect(document.activeElement).toBe(commandKey("erase"));
     press("Home");
     expect(document.activeElement).toBe(letterKey("q"));
-  });
+  }, 15_000);
 
   it("stays inside the keyboard, and End on rows 1 and 2 is the command", () => {
     const { play } = playFixture();
