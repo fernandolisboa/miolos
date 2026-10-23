@@ -6,6 +6,8 @@
 **Amended by:** [ADR-0088](./0088-cruzadinha-free-play-ships-the-lexicon-on-its-own-route.md) (#279) — decision 1's `T-WEB-S375` also runs the specifiers at `apps/web/src/free-play/use-free-crossword.ts`, the one path exempt from the crossword ban: the graph is clean there, and `@miolos/games/crossword` stays banned at any other free-play path.
 **Amended by:** [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) (#300) — decision 1: `T-WEB-S374` allows `localStorage` in `apps/web/src/settings/settings.ts` and every other I/O pattern stays forbidden there and everywhere else on the graph.
 **Amended by:** [ADR-0114](./0114-termo-free-play-draws-from-a-pool-that-is-never-a-daily-answer.md) (#333) — decision 1's walled source is `packages/games/src/termo-answers`, not `termo`; decision 2's directory ban becomes an allow-list of the reused `termo/` modules.
+**Amended by:** [ADR-0149](./0149-game-settings-follow-the-account-on-devices-that-opt-in.md) (#317) — decision 1 holds on free play's own graph; the sync module rides the root layout.
+**Amended by:** [ADR-0150](./0150-free-play-campo-minado-keeps-a-best-time-per-level-and-offers-a-custom-size.md) (#425) — decision 1: `T-WEB-S374` allows `localStorage` in a second named store, `apps/web/src/free-play/minesweeper-store.ts`.
 
 ## Context
 

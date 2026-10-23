@@ -11,6 +11,11 @@ export {
   type MinesweeperStatus,
   type MinesweeperValidationResult,
 } from "./types";
+export {
+  MINESWEEPER_CUSTOM_LIMITS,
+  customMinesweeperSize,
+  maxCustomMines,
+} from "./custom";
 export { layMines, minesweeperField } from "./field";
 export {
   chordBlock,

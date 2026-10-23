@@ -11,5 +11,7 @@ declare module "csstype" {
     "--angle"?: string;
     "--ribbon"?: string;
     "--cell-ink"?: string;
+    "--rows"?: number;
+    "--columns"?: number;
   }
 }

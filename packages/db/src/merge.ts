@@ -180,6 +180,7 @@ export async function mergeAccounts(
              least(w.push_prompt_dismissed_at, l.push_prompt_dismissed_at),
            telemetry_opt_out_at =
              least(w.telemetry_opt_out_at, l.telemetry_opt_out_at),
+           game_settings = coalesce(w.game_settings, l.game_settings),
            updated_at = now()
       from users l
      where w.id = ${winnerId}::uuid
@@ -197,7 +198,15 @@ export async function mergeAccounts(
           or (l.telemetry_opt_out_at is not null
               and (w.telemetry_opt_out_at is null
                    or l.telemetry_opt_out_at < w.telemetry_opt_out_at))
+          or (w.game_settings is null and l.game_settings is not null)
            )
+  `);
+
+  await db.execute(sql`
+    update users
+       set game_settings = null,
+           updated_at = now()
+     where id = ${loserId}::uuid and game_settings is not null
   `);
 
   await db.execute(sql`

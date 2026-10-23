@@ -1,4 +1,8 @@
-import { layMines, MINESWEEPER_LEVELS } from "@miolos/games/minesweeper";
+import {
+  layMines,
+  MINESWEEPER_LEVELS,
+  type MinesweeperLevel,
+} from "@miolos/games/minesweeper";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,8 +16,11 @@ import { elapsedMs } from "../src/play/timer";
 const SEED = 20_261_015;
 const T0 = 1_000_000;
 
-function fresh(level: "beginner" | "intermediate" | "expert" = "beginner") {
-  return initMinesweeper(level, SEED, T0);
+function fresh(level: MinesweeperLevel = "beginner", seed = SEED) {
+  return initMinesweeper(
+    { level, size: MINESWEEPER_LEVELS[level], seed, best: null },
+    T0,
+  );
 }
 
 function open(play: MinesweeperPlay, index: number, now: number) {
@@ -160,7 +167,7 @@ describe("the clock starts at the first open, stops at the end, and the counter 
   });
 
   it("a first open that clears the whole board wins with the clock never started", () => {
-    const won = minesweeperReducer(initMinesweeper("beginner", 66_614, T0), {
+    const won = minesweeperReducer(fresh("beginner", 66_614), {
       type: "activate",
       index: 0,
       now: T0 + 3000,
@@ -176,7 +183,9 @@ describe("the clock starts at the first open, stops at the end, and the counter 
     const next = minesweeperReducer(played, {
       type: "new",
       level: "expert",
+      size: MINESWEEPER_LEVELS.expert,
       seed: 7,
+      best: null,
       now: T0 + 5000,
     });
 
@@ -185,5 +194,57 @@ describe("the clock starts at the first open, stops at the end, and the counter 
     expect(next.game.status).toBe("ready");
     expect(elapsedMs(next.timer, T0 + 99_000)).toBe(0);
     expect(minesLeft(next.game)).toBe(99);
+  });
+});
+
+describe("a deal carries its size and the level's best time, and moves keep them (T-WEB-S1043)", () => {
+  it("deals a custom size with no best time, and a level with the best it was given", () => {
+    const custom = initMinesweeper(
+      {
+        level: "custom",
+        size: { rows: 24, columns: 30, mines: 667 },
+        seed: SEED,
+        best: null,
+      },
+      T0,
+    );
+    expect(custom.level).toBe("custom");
+    expect(custom.game.size).toEqual({ rows: 24, columns: 30, mines: 667 });
+    expect(custom.game.open).toHaveLength(720);
+    expect(minesLeft(custom.game)).toBe(667);
+
+    const next = minesweeperReducer(custom, {
+      type: "new",
+      level: "beginner",
+      size: MINESWEEPER_LEVELS.beginner,
+      seed: 3,
+      best: 42,
+      now: T0 + 1,
+    });
+    expect(next.best).toBe(42);
+    expect(next.game.size).toEqual(MINESWEEPER_LEVELS.beginner);
+  });
+
+  it("keeps the best through moves, ticks, marks and the end of the game", () => {
+    let play = initMinesweeper(
+      {
+        level: "beginner",
+        size: MINESWEEPER_LEVELS.beginner,
+        seed: SEED,
+        best: 30,
+      },
+      T0,
+    );
+    play = open(play, 40, T0 + 1);
+    play = minesweeperReducer(play, { type: "tick", now: T0 + 1000 });
+    play = minesweeperReducer(play, {
+      type: "mark",
+      index: 0,
+      questionMarks: false,
+    });
+    play = open(play, firstMineAfter(40), T0 + 2000);
+
+    expect(play.game.status).toBe("lost");
+    expect(play.best).toBe(30);
   });
 });

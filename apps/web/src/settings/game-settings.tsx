@@ -22,7 +22,6 @@ const copy = messages.settings.games;
 type GameSetting = {
   [G in SettingsGame]: keyof Settings["games"][G];
 }[SettingsGame];
-type Setting = GameSetting | "showClock" | "endAnimation" | "mistakeLimit";
 type ChoiceValue = (typeof BINAIRO_FIRST_VALUES)[number] | LineCross;
 
 interface ChoiceOption {
@@ -56,14 +55,18 @@ function isChoice(setting: GameSetting): setting is keyof typeof CHOICES {
   return setting in CHOICES;
 }
 
+interface SettingCopy {
+  readonly label: string;
+  readonly hint: string;
+}
+
 function SettingText({
   id,
-  setting,
+  text,
 }: {
   readonly id: string;
-  readonly setting: Setting;
+  readonly text: SettingCopy;
 }) {
-  const text = copy.flags[setting];
   return (
     <span className={switchStyles.switchText}>
       <span id={`${id}-label`}>{text.label}</span>
@@ -74,19 +77,19 @@ function SettingText({
   );
 }
 
-function SettingSwitch({
-  flag,
+export function SettingSwitch({
+  text,
   checked,
   onChange,
 }: {
-  readonly flag: Setting;
+  readonly text: SettingCopy;
   readonly checked: boolean;
   readonly onChange: (value: boolean) => void;
 }) {
   const id = useId();
   return (
     <div className={switchStyles.switchRow}>
-      <SettingText id={id} setting={flag} />
+      <SettingText id={id} text={text} />
       <button
         type="button"
         role="switch"
@@ -124,7 +127,7 @@ function SettingChoice({
           : switchStyles.switchRow
       }
     >
-      <SettingText id={id} setting={setting} />
+      <SettingText id={id} text={copy.flags[setting]} />
       <div
         role="radiogroup"
         className={choiceStyles.choices}
@@ -180,7 +183,7 @@ export function GameSettings({
           <legend className={styles.legend}>{copy.general}</legend>
           {clock ? (
             <SettingSwitch
-              flag="showClock"
+              text={copy.flags.showClock}
               checked={settings.showClock}
               onChange={(value) => {
                 writeSettings({ ...readSettings(), showClock: value });
@@ -188,7 +191,7 @@ export function GameSettings({
             />
           ) : null}
           <SettingSwitch
-            flag="endAnimation"
+            text={copy.flags.endAnimation}
             checked={settings.endAnimation}
             onChange={(value) => {
               writeSettings({ ...readSettings(), endAnimation: value });
@@ -196,7 +199,7 @@ export function GameSettings({
           />
           {games.some((game) => game !== "minesweeper") ? (
             <SettingSwitch
-              flag="mistakeLimit"
+              text={copy.flags.mistakeLimit}
               checked={settings.mistakeLimit}
               onChange={(value) => {
                 writeSettings({ ...readSettings(), mistakeLimit: value });
@@ -218,7 +221,7 @@ export function GameSettings({
               typeof current === "boolean" ? (
                 <SettingSwitch
                   key={setting}
-                  flag={setting}
+                  text={copy.flags[setting]}
                   checked={current}
                   onChange={(value) => {
                     setGameSetting(game, setting, value);

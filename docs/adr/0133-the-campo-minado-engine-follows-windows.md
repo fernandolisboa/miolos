@@ -5,6 +5,7 @@
 **Amended by:** [ADR-0137](./0137-the-daily-campo-minado-field-never-needs-a-guess.md) — decision 3's waiver covers free play only: the daily field is generated around a fixed start and never needs a guess. The state carries `size` instead of `level`, and `layMines` takes a set of safe cells.
 **Superseded in part by:** [ADR-0138](./0138-campo-minado-joins-the-catalogue-as-the-seventh-daily.md) (#389) — the consequence *"`GAMES` in `packages/core` does not change"*: Campo Minado is the seventh daily.
 **Amends:** [ADR-0023](./0023-proved-not-sampled-property-testing.md) — for Campo Minado only, "every puzzle solvable" and "every puzzle unique" do not bind; seed → field stays deterministic, and the construction invariants below are proved.
+**Amended by:** [ADR-0150](./0150-free-play-campo-minado-keeps-a-best-time-per-level-and-offers-a-custom-size.md) (#425) — decision 5: free play adds a fourth, custom size within Windows' limits (`MINESWEEPER_CUSTOM_LIMITS`, `customMinesweeperSize`).
 
 ## Context
 

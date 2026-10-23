@@ -1,4 +1,5 @@
 import { DAILY_MINESWEEPER_SIZE } from "@miolos/core";
+import { MINESWEEPER_CUSTOM_LIMITS } from "@miolos/games/minesweeper";
 import { describe, expect, it } from "vitest";
 
 import { bodyOf, decl, pixels, stylesheet, token } from "./css-source";
@@ -17,6 +18,11 @@ const FIELD = bodyOf(MINE_CSS, ".field");
 const GAP = pixels(decl(FIELD, "gap"));
 const FIELD_PADDING = pixels(decl(FIELD, "padding"));
 const PAGE = bodyOf(MINE_CSS, ".pageMinefield");
+const SHARED = bodyOf(MINE_CSS, ".pageMinefield,\n.customSize");
+const CUSTOM = bodyOf(
+  MINE_CSS.slice(MINE_CSS.indexOf(SHARED) + SHARED.length),
+  ".customSize",
+);
 const PITCH = pixels(decl(PAGE, "--pitch"));
 const CHROME = (() => {
   const match = /^calc\(2 \* var\(--space-4\) \+ (\d+)px\)$/.exec(
@@ -107,10 +113,10 @@ describe("Campo Minado keeps 24px cells and scrolls the rest (T-WEB-S889)", () =
     "%s: its one floor is its columns at 25px plus the card, and no cell renders under 24px",
     (page, field, columns) => {
       expect(columnsOf(page, field)).toBe(columns);
-      expect(decl(PAGE, "--floor")).toBe(
+      expect(decl(SHARED, "--floor")).toBe(
         "calc(var(--columns) * var(--pitch) + var(--chrome))",
       );
-      expect(decl(PAGE, "--board-floor-side")).toBe("var(--floor)");
+      expect(decl(SHARED, "--board-floor-side")).toBe("var(--floor)");
       expect(decl(PAGE, "--board-min")).toBe("var(--floor)");
 
       const floor = columns * PITCH + CHROME;
@@ -177,10 +183,58 @@ describe("the daily field is 16 by 10, fits the well's height and keeps 24px cel
     expect(decl(daily, "--board-min")).toBe(
       `calc(${String(DAILY_MINESWEEPER_SIZE.rows)} * var(--pitch) + var(--chrome))`,
     );
-    expect(decl(PAGE, "--board-floor-side")).toBe("var(--floor)");
+    expect(decl(SHARED, "--board-floor-side")).toBe("var(--floor)");
     const floor = DAILY_MINESWEEPER_SIZE.columns * PITCH + CHROME;
     expect(
       renderedCell(floor, DAILY_MINESWEEPER_SIZE.columns),
     ).toBeGreaterThanOrEqual(CELL_FLOOR);
+  });
+});
+
+describe("a custom size derives its floor, height, aspect and ceiling from its rows and columns (T-WEB-S1050)", () => {
+  const { rows: ROWS, columns: COLUMNS } = MINESWEEPER_CUSTOM_LIMITS;
+
+  function ceiling(columns: number): number {
+    const floor = columns * PITCH + CHROME;
+    return Math.max(floor, Math.min(620, columns * 40 + CHROME));
+  }
+
+  it("is a box-less wrapper that shares the levels' floor", () => {
+    expect(decl(CUSTOM, "display")).toBe("contents");
+    expect(decl(CUSTOM, "--floor")).toBeUndefined();
+    expect(decl(CUSTOM, "--board-floor-side")).toBeUndefined();
+    expect(decl(SHARED, "--floor")).toBe(
+      "calc(var(--columns) * var(--pitch) + var(--chrome))",
+    );
+  });
+
+  it("reserves the floor card's height, never its width", () => {
+    expect(decl(CUSTOM, "--board-min")).toBe(
+      "calc(var(--rows) * var(--pitch) + var(--chrome))",
+    );
+    expect(decl(CUSTOM, "--board-aspect")).toBe(
+      "calc(var(--columns) / var(--rows))",
+    );
+  });
+
+  it("caps the card at 40px a cell up to 620px, and never below its floor", () => {
+    expect(decl(CUSTOM, "--board-max")?.replace(/\s+/g, " ")).toBe(
+      "max( var(--floor), min(620px, calc(var(--columns) * 40px + var(--chrome))) )",
+    );
+    expect(ceiling(9)).toBe(396);
+    expect(ceiling(16)).toBe(620);
+    expect(ceiling(30)).toBe(30 * PITCH + CHROME);
+  });
+
+  it("keeps every cell at 24px or more at the floor, whatever the size", () => {
+    for (let columns = COLUMNS.min; columns <= COLUMNS.max; columns += 1) {
+      const floor = columns * PITCH + CHROME;
+      expect(
+        renderedCell(floor, columns),
+        String(columns),
+      ).toBeGreaterThanOrEqual(CELL_FLOOR);
+      expect(ceiling(columns)).toBeGreaterThanOrEqual(floor);
+    }
+    expect(ROWS.max * PITCH + CHROME).toBe(636);
   });
 });
