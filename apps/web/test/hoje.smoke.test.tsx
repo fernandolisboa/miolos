@@ -1,4 +1,4 @@
-import { GAMES, type Game } from "@miolos/core";
+import { GAMES } from "@miolos/core";
 import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +14,7 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import { bodyOf, decl, stylesheet } from "./css-source";
+import { shownCards, tileFor } from "./hub-tile";
 
 const DATE = "2026-07-31";
 const ELAPSED_MS = 512_000;
@@ -102,13 +103,7 @@ const lostTermo = () =>
     outcome: "lost",
   });
 
-function cardFor(game: Game): HTMLElement {
-  const card = screen.getByText(messages.games[game].name).closest("article");
-  if (card === null) {
-    throw new Error(`the ${game} card is not inside an <article>`);
-  }
-  return card;
-}
+const cardFor = tileFor;
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -151,9 +146,10 @@ describe("Hoje page", () => {
     render(<HojePage />);
     for (const game of GAMES) {
       const copy = messages.games[game];
-      expect(screen.getByText(copy.name)).toBeInTheDocument();
-      expect(screen.getByText(copy.kicker)).toBeInTheDocument();
-      expect(screen.getByText(copy.description)).toBeInTheDocument();
+      const card = within(cardFor(game));
+      expect(card.getByText(copy.name)).toBeInTheDocument();
+      expect(card.getByText(copy.kicker)).toBeInTheDocument();
+      expect(card.getByText(copy.description)).toBeInTheDocument();
     }
     expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(
       GAMES.length,
@@ -217,9 +213,12 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     expect(card.getByText(ELAPSED)).toBeInTheDocument();
     expect(card.queryByText(messages.hoje.playCta)).not.toBeInTheDocument();
 
-    expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(
-      GAMES.length - 1,
-    );
+    expect(cardFor("sudoku")).toHaveAttribute("data-hub-done", "sudoku");
+    expect(
+      shownCards().filter((shown) =>
+        within(shown).queryByText(messages.hoje.playCta),
+      ),
+    ).toHaveLength(GAMES.length - 1);
     expect(
       screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
@@ -359,7 +358,7 @@ describe("the hub's first paint (T-WEB-S17)", () => {
     expect(readStorage).not.toHaveBeenCalled();
     expect(clock).not.toHaveBeenCalled();
     expect(markup).toContain(messages.hoje.completedOfTotal(0, GAMES.length));
-    expect(markup).not.toContain(messages.hoje.done);
+    expect(markup).not.toContain(`>${messages.hoje.done}<`);
     expect(markup).not.toContain(ELAPSED);
   });
 

@@ -2,15 +2,21 @@
 
 import { useState } from "react";
 
+import { HUB_CARDS_ID, HUB_DONE_ID } from "../src/hub/tuck";
 import { messages, playRoutes } from "../src/i18n";
 import { markOnboardingSeen } from "../src/onboarding/onboarding-client";
 import { useOnboardingState } from "../src/onboarding/use-onboarding-state";
 import styles from "./hub-onboarding.module.css";
 
+const SHOWN = [
+  `#${HUB_CARDS_ID} > :not([hidden])`,
+  `#${HUB_DONE_ID} li:not([hidden])`,
+];
+
 function moveFocusToFirstGame(): void {
-  const firstGameLink = Object.values(playRoutes)
-    .map((route) => `a[href="${route}"]`)
-    .join(",");
+  const firstGameLink = SHOWN.flatMap((scope) =>
+    Object.values(playRoutes).map((route) => `${scope} a[href="${route}"]`),
+  ).join(",");
   document.querySelector<HTMLAnchorElement>(firstGameLink)?.focus();
 }
 

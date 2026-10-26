@@ -102,6 +102,17 @@ export function useServerDayClaim(
   return claim.status === "pending" ? undefined : claim;
 }
 
+export function useServerDoneGames(date: string): readonly Game[] | undefined {
+  const truth = useDayTruth();
+  return useMemo(
+    () =>
+      truth === undefined || truth.date !== date
+        ? undefined
+        : GAMES.filter((game) => truth.games[game].status !== "pending"),
+    [truth, date],
+  );
+}
+
 export { refreshDayTruth as refreshServerDay } from "../day/day-truth";
 
 function entryFor(game: Game, date: string): DayEntry {

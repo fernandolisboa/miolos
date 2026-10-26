@@ -17,6 +17,7 @@ import {
   type SudokuPlayRecord,
 } from "../src/play/play-record";
 import { jsonResponse, urlOf } from "./fetch-stub";
+import { tileFor } from "./hub-tile";
 
 const SUDOKU_PUZZLE = generateDailySudoku({ seed: 20_260_731, weekday: 1 });
 
@@ -96,11 +97,7 @@ function stubFetchByUrl(day: () => Response | Promise<Response>) {
 }
 
 function cardFor(game: "termo" | "sudoku" | "nonogram" | "binairo") {
-  const card = screen.getByText(messages.games[game].name).closest("article");
-  if (card === null) {
-    throw new Error(`the ${game} card is not inside an <article>`);
-  }
-  return within(card);
+  return within(tileFor(game));
 }
 
 async function loadHojePage() {
@@ -138,7 +135,7 @@ describe("the hub's first paint is untouched (T-WEB-S239)", () => {
     const markup = renderToStaticMarkup(<HojePage />);
 
     expect(markup).toContain(messages.hoje.playCta);
-    expect(markup).not.toContain(messages.hoje.done);
+    expect(markup).not.toContain(`>${messages.hoje.done}<`);
     expect(markup).toContain(messages.hoje.completedOfTotal(0, GAMES.length));
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -258,7 +255,6 @@ describe("a cross-device done tile shows its time exactly as a local one (T-WEB-
   });
 
   it("is BYTE-IDENTICAL to the local tile's rendering of the same time, modulo the game", async () => {
-    writePlayRecord(concludedBinairo());
     stubFetchByUrl(() =>
       jsonResponse(
         200,
@@ -270,6 +266,8 @@ describe("a cross-device done tile shows its time exactly as a local one (T-WEB-
     const HojePage = await loadHojePage();
 
     render(<HojePage />);
+    writePlayRecord(concludedBinairo());
+    window.dispatchEvent(new StorageEvent("storage"));
 
     const elapsed = formatElapsed(BINAIRO_ELAPSED_MS);
     await waitFor(() => {

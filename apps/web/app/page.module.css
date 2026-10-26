@@ -48,7 +48,9 @@
   line-height: 1.25;
 }
 
+/* Room for the day stamp, so its arrival after hydration never moves the page. */
 .metaLine {
+  min-block-size: 20px;
   margin: 6px 0 0;
   font-size: 13px;
   color: var(--ink-2);
@@ -146,29 +148,41 @@
   transform: rotate(var(--tilt));
 }
 
-.card:nth-child(6n + 1) {
+.card:nth-child(6n + 1 of :not([hidden])) {
   --tilt: -0.8deg;
   --tape-tilt: -4deg;
 }
-.card:nth-child(6n + 2) {
+.card:nth-child(6n + 2 of :not([hidden])) {
   --tilt: 0.6deg;
   --tape-tilt: 3deg;
 }
-.card:nth-child(6n + 3) {
+.card:nth-child(6n + 3 of :not([hidden])) {
   --tilt: -0.5deg;
   --tape-tilt: -3deg;
 }
-.card:nth-child(6n + 4) {
+.card:nth-child(6n + 4 of :not([hidden])) {
   --tilt: 0.9deg;
   --tape-tilt: 5deg;
 }
-.card:nth-child(6n + 5) {
+.card:nth-child(6n + 5 of :not([hidden])) {
   --tilt: -0.6deg;
   --tape-tilt: -5deg;
 }
-.card:nth-child(6n + 6) {
+.card:nth-child(6n + 6 of :not([hidden])) {
   --tilt: 0.5deg;
   --tape-tilt: 3deg;
+}
+
+:root[data-hub-hold] .games,
+:root[data-hub-hold] .doneToday {
+  visibility: hidden;
+}
+
+.games[hidden],
+.card[hidden],
+.doneToday[hidden],
+.doneItem[hidden] {
+  display: none;
 }
 
 .tape {
@@ -288,6 +302,64 @@
 .doneResult {
   font-size: 14px;
   color: var(--ink-2);
+}
+
+.doneToday {
+  margin-top: var(--space-11);
+}
+
+.doneToday > .kicker {
+  margin-bottom: var(--space-3);
+}
+
+.doneList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 300px);
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doneRow {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: 0 18px;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.doneRow:hover {
+  color: var(--ink);
+}
+
+.doneRow:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.doneSwatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-tape);
+  background: var(--accent);
+}
+
+.doneName {
+  font: 550 18px/1.2 var(--font-display);
+}
+
+.doneRow > .doneResult {
+  margin-left: auto;
 }
 
 .doors {
@@ -546,7 +618,7 @@
     --cta-box-min-height: var(--touch-target-min);
   }
 
-  .card:last-child:nth-child(odd) {
+  .card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden])) {
     grid-column: 1 / -1;
     flex-direction: row;
     text-align: start;
@@ -582,12 +654,14 @@
     display: none;
   }
 
-  .card:last-child:nth-child(odd) .cardDescription {
+  .card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden]))
+    .cardDescription {
     display: block;
     font-size: 13px;
   }
 
-  .card:last-child:nth-child(odd) .action {
+  .card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden]))
+    .action {
     align-items: flex-start;
   }
 
@@ -610,6 +684,40 @@
 
   .doneResult {
     font-size: 13px;
+  }
+
+  .doneToday {
+    margin-top: var(--space-8);
+  }
+
+  .doneToday > .kicker {
+    margin-bottom: 10px;
+  }
+
+  .doneList {
+    display: block;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm) color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+
+  .doneItem:nth-child(n + 2 of :not([hidden])) {
+    border-top: 1px solid var(--line);
+  }
+
+  .doneRow {
+    gap: 10px;
+    padding: 0 14px;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .doneName {
+    flex: 1;
+    font-size: 17px;
   }
 
   .doors {
@@ -684,6 +792,12 @@
   .promoZoneMobile {
     display: block;
     margin-bottom: var(--space-5);
+  }
+}
+
+@media (max-width: 374px) {
+  .metaLine {
+    min-block-size: 38px;
   }
 }
 

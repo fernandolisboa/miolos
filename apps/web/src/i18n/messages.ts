@@ -270,6 +270,7 @@ export const messages = {
     playedAria: (game: string) => `${game} jogado`,
 
     completedAria: (game: string) => `${game} concluído`,
+    doneToday: "Feitos hoje",
     links: {
       aria: "Mais puzzles",
       freePlay: "Modo livre",
