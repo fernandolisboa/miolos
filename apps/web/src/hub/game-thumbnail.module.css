@@ -1,0 +1,218 @@
+.frame {
+  box-sizing: border-box;
+  display: block;
+  inline-size: 100%;
+  padding: 6%;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-cell);
+  box-shadow: var(--shadow-sm)
+    color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.board {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.tile {
+  fill: var(--thumb-fill, var(--paper-desk));
+  stroke: var(--thumb-edge, var(--line));
+  stroke-width: var(--thumb-edge-width, 1);
+}
+
+.letter,
+.numeral {
+  fill: var(--thumb-glyph, var(--ink));
+  font-size: 7.5px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.letter {
+  font-family: var(--font-display);
+}
+
+.numeral {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.strike,
+.underline {
+  fill: none;
+  stroke: var(--ink);
+}
+
+.strike {
+  stroke-width: 0.8;
+}
+
+.underline {
+  stroke-width: 1;
+}
+
+.boundary {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-linecap: square;
+}
+
+.outline {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.paper {
+  --thumb-fill: var(--paper-desk);
+}
+
+.correct {
+  --thumb-fill: var(--accent);
+  --thumb-edge: var(--ink);
+  --thumb-edge-width: 1.2;
+  --thumb-glyph: var(--ink-on-accent);
+}
+
+.present {
+  --thumb-fill: var(--paper-desk);
+  --thumb-edge: var(--ink);
+  --thumb-edge-width: 1.2;
+}
+
+.absent {
+  --thumb-fill: var(--paper-tint);
+  --thumb-edge: var(--line-soft);
+  --thumb-edge-width: 1.2;
+  --thumb-glyph: var(--ink-2);
+}
+
+.block {
+  --thumb-fill: var(--ink);
+  --thumb-edge: var(--ink);
+}
+
+.across {
+  --thumb-fill: color-mix(in srgb, var(--accent) 20%, var(--paper-desk));
+}
+
+.given {
+  --thumb-fill: var(--paper-tint);
+}
+
+.selected,
+.one {
+  --thumb-fill: var(--accent);
+  --thumb-edge: var(--accent);
+  --thumb-glyph: var(--ink-on-accent);
+}
+
+.filled {
+  --thumb-fill: var(--accent);
+  --thumb-edge: color-mix(in srgb, var(--ink) 50%, transparent);
+}
+
+.zero {
+  --thumb-fill: var(--paper-desk);
+  --thumb-edge: var(--ink);
+  --thumb-edge-width: 1.2;
+}
+
+.empty {
+  --thumb-fill: var(--paper-desk);
+}
+
+.empty .tile {
+  stroke-dasharray: 1.5 1;
+}
+
+.region1,
+.region2,
+.region3,
+.region4,
+.region5 {
+  --thumb-edge: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.region1 {
+  --thumb-fill: var(--queens-region-1);
+}
+
+.region2 {
+  --thumb-fill: var(--queens-region-2);
+}
+
+.region3 {
+  --thumb-fill: var(--queens-region-3);
+}
+
+.region4 {
+  --thumb-fill: var(--queens-region-4);
+}
+
+.region5 {
+  --thumb-fill: var(--queens-region-5);
+}
+
+.crown {
+  fill: var(--ink);
+}
+
+.cover {
+  --thumb-fill: var(--cell-cover);
+  --thumb-edge: transparent;
+}
+
+.rules {
+  fill: var(--line);
+}
+
+.bevelLight,
+.bevelDark {
+  fill: none;
+}
+
+.bevelLight {
+  stroke: color-mix(in srgb, white 40%, transparent);
+  stroke-width: 0.8;
+}
+
+.bevelDark {
+  stroke: color-mix(in srgb, black 28%, transparent);
+  stroke-width: 1.2;
+}
+
+.pole {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.pennant {
+  fill: var(--accent-app);
+}
+
+.open,
+.count1,
+.count2,
+.count3 {
+  --thumb-fill: var(--cell-open);
+  --thumb-edge: transparent;
+}
+
+.count1 {
+  --thumb-glyph: var(--mine-1);
+}
+
+.count2 {
+  --thumb-glyph: var(--mine-2);
+}
+
+.count3 {
+  --thumb-glyph: var(--mine-3);
+}
