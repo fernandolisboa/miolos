@@ -290,10 +290,12 @@
   --tilt: 0.4deg;
 }
 
-.door:hover {
-  color: var(--ink);
-  --door-shadow: 4px 4px 0;
-  transform: translate(1px, 1px) rotate(var(--tilt));
+@media (hover: hover) {
+  .door:hover {
+    color: var(--ink);
+    --door-shadow: 4px 4px 0;
+    transform: translate(1px, 1px) rotate(var(--tilt));
+  }
 }
 
 .door:focus-visible {
@@ -628,10 +630,6 @@
     --tilt: 0.5deg;
   }
 
-  .door:hover {
-    --door-shadow: var(--shadow-sm);
-  }
-
   .doorTape {
     top: -8px;
     left: 18px;
@@ -686,5 +684,11 @@
   .promoZoneMobile {
     display: block;
     margin-bottom: var(--space-5);
+  }
+}
+
+@media (max-width: 768px) and (hover: hover) {
+  .door:hover {
+    --door-shadow: var(--shadow-sm);
   }
 }
