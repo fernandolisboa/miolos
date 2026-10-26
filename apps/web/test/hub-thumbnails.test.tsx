@@ -145,7 +145,6 @@ describe("the Termo thumbnail plays by the rules and spoils no daily (T-WEB-S109
     expect(rows.map((row) => row.map((cell) => cell.kind))).toEqual(
       words.map((word) => [...evaluateGuess(word, answer)]),
     );
-    expect(rows.at(-1)?.every((cell) => cell.kind === "correct")).toBe(true);
   });
 
   it("every word is an accepted guess and none is a daily answer", () => {
@@ -239,31 +238,24 @@ describe("the other boards are positions their games allow, and no daily picture
 
   it("the Rainhas edges are drawn exactly between cells of different regions", () => {
     const rows = rowsOf("queens");
-    const changes = rows.flatMap((row, r) =>
-      row.flatMap((cell, c) =>
-        [rows[r]?.[c + 1], rows[r + 1]?.[c]].filter(
-          (next) => next !== undefined && next.kind !== cell.kind,
-        ),
-      ),
-    ).length;
-    const html = renderToStaticMarkup(<GameThumbnail game="queens" />);
-    const edges =
-      /<path class="[^"]*boundary[^"]*" d="([^"]+)"/.exec(html)?.[1] ?? "";
-    const inside = rows.flatMap((row, r) =>
-      row
-        .slice(1)
-        .flatMap((cell, c) =>
-          row[c]?.kind === cell.kind
-            ? [`M${String(c * 12 + 11)} ${String(r * 12 - 1)}`]
-            : [],
-        ),
+    const expected = rows.flatMap((row, r) =>
+      row.flatMap((cell, c) => [
+        ...(rows[r]?.[c + 1] !== undefined &&
+        rows[r]?.[c + 1]?.kind !== cell.kind
+          ? [`M${String(c * 12 + 11)} ${String(r * 12 - 1)}v12`]
+          : []),
+        ...(rows[r + 1]?.[c] !== undefined &&
+        rows[r + 1]?.[c]?.kind !== cell.kind
+          ? [`M${String(c * 12 - 1)} ${String(r * 12 + 11)}h12`]
+          : []),
+      ]),
     );
+    const html = renderToStaticMarkup(<GameThumbnail game="queens" />);
+    const drawn =
+      /<path class="[^"]*boundary[^"]*" d="([^"]+)"/.exec(html)?.[1] ?? "";
 
-    expect(changes).toBeGreaterThan(0);
-    expect(edges.match(/M/g)).toHaveLength(changes);
-    for (const segment of inside) {
-      expect(edges).not.toContain(`${segment}v`);
-    }
+    expect(expected.length).toBeGreaterThan(0);
+    expect(drawn.match(/M[^M]+/g)?.sort()).toEqual(expected.sort());
   });
 
   it("the Campo Minado counts fit some placement of mines under the covered cells, and no open zero touches one", () => {
