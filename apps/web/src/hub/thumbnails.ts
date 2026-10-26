@@ -121,7 +121,7 @@ export const THUMBNAILS: Readonly<Record<Game, Thumbnail>> = {
   nonogram: {
     columns: 5,
     tilt: 2,
-    cells: grid([".X.X.", "XXXXX", "XXXXX", ".XXX.", "..X.."], (key) => ({
+    cells: grid(["X...X", "XXXXX", "X.X.X", "XXXXX", ".XXX."], (key) => ({
       kind: key === "X" ? "filled" : "paper",
     })),
   },

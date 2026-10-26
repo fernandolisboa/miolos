@@ -5,21 +5,23 @@ import { GAMES, type Game } from "@miolos/core";
 import { evaluateGuess, isValidGuess } from "@miolos/games/termo";
 import { TERMO_ANSWERS } from "@miolos/games/termo-answers";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { GameThumbnail } from "../src/hub/game-thumbnail";
-import { THUMBNAILS, type CellKind } from "../src/hub/thumbnails";
+import {
+  THUMBNAILS,
+  type CellKind,
+  type ThumbnailCell,
+} from "../src/hub/thumbnails";
 import { messages } from "../src/i18n";
 import { accentVars } from "../src/play/accent";
 import { contrast, mixHex } from "./contrast";
 import { colorTokens, stylesheet } from "./css-source";
 import { closureOf, REPO_ROOT } from "./module-graph";
 
-// ADR-0055: contended local 1456 ms × 4 → 10_000.
-vi.setConfig({ testTimeout: 10_000 });
-
 const SHEET = stylesheet("src/hub/game-thumbnail.module.css");
 const HUB = "apps/web/src/hub/";
+const THUMBNAIL_MODULES = [`${HUB}game-thumbnail.tsx`, `${HUB}thumbnails.ts`];
 
 function declarationsOf(selector: string): ReadonlyMap<string, string> {
   const found = new Map<string, string>();
@@ -143,9 +145,7 @@ describe("the Termo thumbnail plays by the rules and spoils no daily (T-WEB-S109
     expect(rows.map((row) => row.map((cell) => cell.kind))).toEqual(
       words.map((word) => [...evaluateGuess(word, answer)]),
     );
-    expect(
-      evaluateGuess(answer, answer).every((state) => state === "correct"),
-    ).toBe(true);
+    expect(rows.at(-1)?.every((cell) => cell.kind === "correct")).toBe(true);
   });
 
   it("every word is an accepted guess and none is a daily answer", () => {
@@ -157,14 +157,180 @@ describe("the Termo thumbnail plays by the rules and spoils no daily (T-WEB-S109
   });
 });
 
+function rowsOf(game: Game): readonly (readonly ThumbnailCell[])[] {
+  const { columns, cells } = THUMBNAILS[game];
+  return Array.from({ length: cells.length / columns }, (_, row) =>
+    cells.slice(row * columns, (row + 1) * columns),
+  );
+}
+
+function neighbours(row: number, column: number, size: number) {
+  return [-1, 0, 1]
+    .flatMap((dr) => [-1, 0, 1].map((dc) => [row + dr, column + dc] as const))
+    .filter(
+      ([r, c]) =>
+        (r !== row || c !== column) && r >= 0 && c >= 0 && r < size && c < size,
+    );
+}
+
+describe("the other boards are positions their games allow, and no daily picture (T-WEB-S1095)", () => {
+  it("the Nonogram picture is no 5×5 motif, nor a mirrored one", () => {
+    const library = readFileSync(
+      join(REPO_ROOT, "packages/games/src/nonogram/motifs-5.ts"),
+      "utf8",
+    );
+    const motifs = [...library.matchAll(/rows: \[([^\]]+)\]/g)].map((match) =>
+      [...(match[1] ?? "").matchAll(/"([.#]+)"/g)].map((row) => row[1] ?? ""),
+    );
+    const picture = rowsOf("nonogram").map((row) =>
+      row.map((cell) => (cell.kind === "filled" ? "#" : ".")).join(""),
+    );
+
+    expect(motifs.length).toBeGreaterThan(30);
+    for (const motif of motifs) {
+      expect(picture).not.toEqual(motif);
+      expect(picture).not.toEqual(
+        motif.map((row) => [...row].reverse().join("")),
+      );
+    }
+  });
+
+  it("the Binairo rows and columns can still balance, with no three alike in a line", () => {
+    const grid = rowsOf("binairo").map((row) =>
+      row.map((cell) =>
+        cell.kind === "one" ? "1" : cell.kind === "zero" ? "0" : ".",
+      ),
+    );
+    const lines = [
+      ...grid,
+      ...grid.map((_, c) => grid.map((row) => row[c] ?? "")),
+    ].map((line) => line.join(""));
+
+    for (const line of lines) {
+      expect(line, line).not.toMatch(/000|111/);
+      for (const digit of ["0", "1"]) {
+        expect(line.split(digit).length - 1, line).toBeLessThanOrEqual(
+          line.length / 2,
+        );
+      }
+    }
+  });
+
+  it("the Rainhas crowns take one row, column and region each, and never touch", () => {
+    const crowns = rowsOf("queens").flatMap((row, r) =>
+      row.flatMap((cell, c) =>
+        cell.mark === "crown" ? [{ r, c, region: cell.kind }] : [],
+      ),
+    );
+
+    expect(new Set(crowns.map(({ r }) => r)).size).toBe(5);
+    expect(new Set(crowns.map(({ c }) => c)).size).toBe(5);
+    expect(new Set(crowns.map(({ region }) => region)).size).toBe(5);
+    for (const a of crowns) {
+      for (const b of crowns) {
+        if (a !== b) {
+          expect(
+            Math.max(Math.abs(a.r - b.r), Math.abs(a.c - b.c)),
+          ).toBeGreaterThan(1);
+        }
+      }
+    }
+  });
+
+  it("the Rainhas edges are drawn exactly between cells of different regions", () => {
+    const rows = rowsOf("queens");
+    const changes = rows.flatMap((row, r) =>
+      row.flatMap((cell, c) =>
+        [rows[r]?.[c + 1], rows[r + 1]?.[c]].filter(
+          (next) => next !== undefined && next.kind !== cell.kind,
+        ),
+      ),
+    ).length;
+    const html = renderToStaticMarkup(<GameThumbnail game="queens" />);
+    const edges =
+      /<path class="[^"]*boundary[^"]*" d="([^"]+)"/.exec(html)?.[1] ?? "";
+    const inside = rows.flatMap((row, r) =>
+      row
+        .slice(1)
+        .flatMap((cell, c) =>
+          row[c]?.kind === cell.kind
+            ? [`M${String(c * 12 + 11)} ${String(r * 12 - 1)}`]
+            : [],
+        ),
+    );
+
+    expect(changes).toBeGreaterThan(0);
+    expect(edges.match(/M/g)).toHaveLength(changes);
+    for (const segment of inside) {
+      expect(edges).not.toContain(`${segment}v`);
+    }
+  });
+
+  it("the Campo Minado counts fit some placement of mines under the covered cells, and no open zero touches one", () => {
+    const rows = rowsOf("minesweeper");
+    const size = rows.length;
+    const covered = rows.flatMap((row, r) =>
+      row.flatMap((cell, c) =>
+        cell.kind === "cover" ? [{ r, c, flag: cell.mark === "flag" }] : [],
+      ),
+    );
+    const fits = (mines: ReadonlySet<string>) =>
+      rows.every((row, r) =>
+        row.every((cell, c) =>
+          cell.kind === "cover"
+            ? true
+            : neighbours(r, c, size).filter(([nr, nc]) =>
+                mines.has(`${String(nr)},${String(nc)}`),
+              ).length === Number(cell.glyph ?? "0"),
+        ),
+      );
+    const placements = Array.from(
+      { length: 2 ** covered.length },
+      (_, bits) =>
+        new Set(
+          covered
+            .filter((_, at) => (bits >> at) & 1)
+            .map(({ r, c }) => `${String(r)},${String(c)}`),
+        ),
+    ).filter((mines) =>
+      covered.every(
+        ({ r, c, flag }) => !flag || mines.has(`${String(r)},${String(c)}`),
+      ),
+    );
+
+    expect(placements.some(fits)).toBe(true);
+    rows.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        if (cell.kind === "open") {
+          for (const [nr, nc] of neighbours(r, c, size)) {
+            expect(
+              rows[nr]?.[nc]?.kind,
+              `${String(nr)},${String(nc)}`,
+            ).not.toBe("cover");
+          }
+        }
+      });
+    });
+  });
+});
+
 describe("a thumbnail is decorative static markup that reaches no client module (T-WEB-S1092)", () => {
-  it.each(GAMES)("%s renders one hidden element with no handlers", (game) => {
+  it.each(GAMES)("%s renders as one hidden element", (game) => {
     const html = renderToStaticMarkup(<GameThumbnail game={game} />);
     const root = new DOMParser().parseFromString(html, "text/html").body;
 
     expect(root.children).toHaveLength(1);
     expect(root.firstElementChild?.getAttribute("aria-hidden")).toBe("true");
-    expect(html).not.toMatch(/\son[a-z]+=/i);
+  });
+
+  it("the component declares no handler and calls no hook", () => {
+    const source = readFileSync(
+      join(REPO_ROOT, `${HUB}game-thumbnail.tsx`),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/\bon[A-Z]\w*=/);
+    expect(source).not.toMatch(/\buse[A-Z]\w*\(/);
   });
 
   it("nothing the thumbnail imports is a client module", () => {
@@ -189,7 +355,9 @@ describe("a thumbnail is decorative static markup that reaches no client module 
     expect(clients.length).toBeGreaterThan(20);
     expect(
       clients.filter((client) =>
-        [...closureOf(client)].some((imported) => imported.startsWith(HUB)),
+        [...closureOf(client)].some((imported) =>
+          THUMBNAIL_MODULES.includes(imported),
+        ),
       ),
     ).toEqual([]);
   });

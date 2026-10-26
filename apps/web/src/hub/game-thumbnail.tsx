@@ -47,19 +47,20 @@ const MARKS: Record<Mark, ReactNode> = {
   ),
 };
 
-function isRegion(kind: CellKind | undefined): boolean {
-  return kind?.startsWith("region") ?? false;
-}
+const REGIONS: ReadonlySet<CellKind | undefined> = new Set<
+  CellKind | undefined
+>(["region1", "region2", "region3", "region4", "region5"]);
 
 function regionBoundaries(
   cells: readonly ThumbnailCell[],
   columns: number,
-  pitch: number,
+  gap: number,
 ): string {
-  const half = (pitch - CELL) / 2;
+  const pitch = CELL + gap;
+  const half = gap / 2;
   return cells
     .flatMap((cell, index) => {
-      if (!isRegion(cell.kind)) {
+      if (!REGIONS.has(cell.kind)) {
         return [];
       }
       const x = (index % columns) * pitch;
@@ -68,10 +69,10 @@ function regionBoundaries(
         index % columns < columns - 1 ? cells[index + 1] : undefined;
       const below = cells[index + columns];
       return [
-        isRegion(right?.kind) && right?.kind !== cell.kind
+        REGIONS.has(right?.kind) && right?.kind !== cell.kind
           ? `M${String(x + CELL + half)} ${String(y - half)}v${String(pitch)}`
           : "",
-        isRegion(below?.kind) && below?.kind !== cell.kind
+        REGIONS.has(below?.kind) && below?.kind !== cell.kind
           ? `M${String(x - half)} ${String(y + CELL + half)}h${String(pitch)}`
           : "",
       ];
@@ -117,7 +118,7 @@ export function GameThumbnail({ game }: { readonly game: Game }) {
   const pitch = CELL + gap;
   const width = columns * pitch - gap;
   const height = (cells.length / columns) * pitch - gap;
-  const boundaries = regionBoundaries(cells, columns, pitch);
+  const boundaries = regionBoundaries(cells, columns, gap);
 
   return (
     <span
@@ -130,7 +131,13 @@ export function GameThumbnail({ game }: { readonly game: Game }) {
         viewBox={`${String(-MARGIN)} ${String(-MARGIN)} ${String(width + 2 * MARGIN)} ${String(height + 2 * MARGIN)}`}
       >
         {ruled && (
-          <rect className={styles.rules} width={width} height={height} />
+          <rect
+            className={styles.rules}
+            x="-1"
+            y="-1"
+            width={width + 2}
+            height={height + 2}
+          />
         )}
         {cells.map((cell, index) => (
           <Cell
