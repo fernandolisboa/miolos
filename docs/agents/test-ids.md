@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1086`   | `S1085`        | `T-WEB-23`            |
+| `T-WEB`  | `S1096`   | `S1094`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#443 (hub thumbnails and taglines) reserved **`T-WEB-S1090…S1095`** and spent **`S1090…S1094`** in `hub-thumbnails.test.tsx`: S1090 every game has a well-formed thumbnail, S1091 the Termo rows are judged by `evaluateGuess` and spoil no daily answer, S1092 static `aria-hidden` markup that no client module reaches, S1093 glyph, mark and region-edge contrast in both themes, S1094 the seven card taglines. `S1095` is **burned**; `S1086…S1089` were left for #444.
 
 #440 (the Ajustes *Jogos* card behind tabs) spent **`T-WEB-S1084`** (`ajustes-game-tabs.test.tsx`: a tablist named *Jogo* with *Geral* and one tab per `settingsGames()` entry, each game's in its accent; only *Geral*'s panel shows, each panel labelled by its tab; the server markup selects *Geral* and hides the rest) and **`T-WEB-S1085`** (a click shows only that game's settings; arrows wrap, Home and End jump, focus and the single tab stop follow; other keys do nothing). Re-aimed in place: **`T-WEB-S593`** (opens each tab; every switch is toggled once, counted), **`S977`**, **`S609`** and **`S839`** (open their tab first), and **`T-WEB-S800`**'s columns case (now the tabs' 48rem side list, and the dialog's single 480px column).
 
