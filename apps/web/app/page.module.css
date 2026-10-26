@@ -122,6 +122,7 @@
 }
 
 .card {
+  --cta-box-min-height: 38px;
   box-sizing: border-box;
   /* The 0.1px keeps a row whose bases sum to exactly 100% from wrapping on a
      layout unit that rounds up (Firefox's is 1/60px). */
@@ -135,7 +136,6 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  --cta-box-min-height: 38px;
   padding: 34px var(--space-3) var(--space-4);
   background: var(--paper-card);
   border: 1px solid var(--line);

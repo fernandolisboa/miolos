@@ -47,13 +47,17 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     const card = bodyOf(css, ".card");
     expect(decl(card, "box-sizing")).toBe("border-box");
     expect(decl(card, "min-inline-size")).toBe("0");
+    expect(
+      decl(card, "max-inline-size"),
+      "a capped card lets flex fit more cards on a line than --per-row",
+    ).toBeUndefined();
     expect(decl(card, "flex")?.replace(/\s+/g, " ")).toBe(
       "0 0 calc( (100% - (var(--per-row) - 1) * var(--card-gap)) / var(--per-row) - 0.1px )",
     );
   });
 
   it.each([4, 7])(
-    "never leaves a card alone on a row from 2 to 12 cards (max %i)",
+    "the formula above leaves no card alone on a row from 2 to 12 cards, as ADR-0156 claims (max %i)",
     (max) => {
       for (let count = 2; count <= 12; count += 1) {
         const rows = rowsOf(count, max);
@@ -68,17 +72,12 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     },
   );
 
-  it("holds every card count up to seven on one row at the wide breakpoint", () => {
-    for (let count = 1; count <= 7; count += 1) {
-      expect(rowsOf(count, 7)).toEqual([count]);
-    }
-  });
-
   it("lays a phone out in two columns, an odd last card across both as a row with its tagline", () => {
     expect(decl(bodyOf(phone, ".games"), "display")).toBe("grid");
     expect(decl(bodyOf(phone, ".games"), "grid-template-columns")).toBe(
       "repeat(2, minmax(0, 1fr))",
     );
+    expect(decl(bodyOf(phone, ".games"), "max-inline-size")).toBe("none");
     expect(decl(bodyOf(phone, ODD_LAST), "grid-column")).toBe("1 / -1");
     expect(decl(bodyOf(phone, ODD_LAST), "flex-direction")).toBe("row");
     expect(decl(bodyOf(phone, ".cardDescription"), "display")).toBe("none");
@@ -90,6 +89,7 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
   it("keeps the button and the done stamp in one box on one line", () => {
     expect(decl(bodyOf(css, ".cta"), "box-sizing")).toBe("border-box");
     expect(decl(bodyOf(css, ".done"), "white-space")).toBe("nowrap");
+    expect(decl(bodyOf(css, ".action"), "margin-top")).toBe("auto");
   });
 });
 

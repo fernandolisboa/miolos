@@ -51,7 +51,7 @@ function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
 
 const CALENDAR_CELLS = Array.from({ length: 21 }, (_, cell) => cell);
 
-const CARD_COUNT: CSSProperties = { "--card-count": DAY_GAMES.length };
+const GRID_STYLE: CSSProperties = { "--card-count": DAY_GAMES.length };
 
 function Door({
   id,
@@ -119,7 +119,7 @@ export default function HojePage() {
           </div>
         </header>
 
-        <section className={styles.games} style={CARD_COUNT}>
+        <section className={styles.games} style={GRID_STYLE}>
           {DAY_GAMES.map((game) => (
             <article
               key={game}
