@@ -618,7 +618,7 @@
   .door {
     --tilt: -0.6deg;
     --door-shadow: var(--shadow-md);
-    --mark-w: 32px;
+    --mark-w: 28px;
     gap: 6px;
     min-height: 168px;
     padding: 22px 14px 14px;
@@ -650,11 +650,11 @@
   }
 
   .door:has(.archiveMark) {
-    --mark-w: 44px;
+    --mark-w: 36px;
   }
 
   .doorMark {
-    top: 10px;
+    top: 6px;
     right: 14px;
   }
 
@@ -663,7 +663,7 @@
   }
 
   .doorName > .kicker {
-    padding-right: calc(var(--mark-w) + var(--space-1));
+    padding-right: calc(var(--mark-w) + 2px);
   }
 
   .freePlayMark > span {

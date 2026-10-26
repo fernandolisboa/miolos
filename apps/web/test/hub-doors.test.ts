@@ -20,4 +20,11 @@ describe("the hub's two doors sit side by side at every width (T-WEB-S307)", () 
     expect(decl(doors, "display")).toBeUndefined();
     expect(decl(doors, "grid-template-columns")).toBeUndefined();
   });
+
+  it("never lets a door span both columns", () => {
+    const placements = [...css.matchAll(/\.door\b[^{]*\{([^}]*)\}/g)].filter(
+      ([, body]) => /(?:^|;)\s*grid-(?:column|area)\s*:/m.test(body ?? ""),
+    );
+    expect(placements.map(([rule]) => rule)).toEqual([]);
+  });
 });
