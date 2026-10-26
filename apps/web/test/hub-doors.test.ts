@@ -62,3 +62,13 @@ describe("the hub's two doors sit side by side at every width (T-WEB-S307)", () 
     ).toEqual([]);
   });
 });
+
+describe("a door keeps its ink under the global link hover (T-WEB-S1086)", () => {
+  it("declares the hover colour outside every media query", () => {
+    const hover = /^\.door:hover\s*\{([^}]*)\}/m.exec(css)?.[1] ?? "";
+    expect(
+      decl(hover, "color"),
+      "without it, globals.css's a:hover paints the door title in --accent-app",
+    ).toBe("var(--ink)");
+  });
+});
