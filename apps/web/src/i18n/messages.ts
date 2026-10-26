@@ -275,7 +275,11 @@ export const messages = {
     links: {
       aria: "Mais puzzles",
       freePlay: "Modo livre",
+      freePlayKicker: "Sem fim",
+      freePlayLead: "Quantos quiser, de qualquer jogo. Não conta na sequência.",
       archive: "Arquivo",
+      archiveKicker: "Passado",
+      archiveLead: "Os diários de cada dia, para jogar quando quiser.",
     },
     menu: {
       label: "Menu",

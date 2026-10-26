@@ -35,10 +35,16 @@ describe("the hub's primary nav is Modo livre, then Arquivo (T-WEB-S770)", () =>
     });
     const links = within(nav).getAllByRole("link");
 
-    expect(links.map((link) => link.textContent)).toEqual([
-      messages.hoje.links.freePlay,
-      messages.hoje.links.archive,
-    ]);
+    expect(links).toHaveLength(2);
+    const [freePlay, archive] = links;
+    expect(freePlay).toHaveAccessibleName(messages.hoje.links.freePlay);
+    expect(freePlay).toHaveAccessibleDescription(
+      messages.hoje.links.freePlayLead,
+    );
+    expect(archive).toHaveAccessibleName(messages.hoje.links.archive);
+    expect(archive).toHaveAccessibleDescription(
+      messages.hoje.links.archiveLead,
+    );
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       routes.freePlay,
       routes.archive,

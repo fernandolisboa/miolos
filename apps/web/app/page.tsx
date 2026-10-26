@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { AdSlot } from "../src/components/ad-slot";
 import { BrandMark, Wordmark } from "../src/components/brand-mark";
@@ -45,6 +46,47 @@ function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
       .join("")
       .trim(),
   };
+}
+
+const CALENDAR_CELLS = Array.from({ length: 21 }, (_, cell) => cell);
+
+function Door({
+  id,
+  href,
+  kicker,
+  title,
+  lead,
+  mark,
+}: {
+  id: string;
+  href: string;
+  kicker: string;
+  title: string;
+  lead: string;
+  mark: ReactNode;
+}) {
+  return (
+    <Link
+      className={styles.door}
+      href={href}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-lead`}
+    >
+      <span aria-hidden className={styles.doorTape} />
+      <span aria-hidden className={styles.doorMark}>
+        {mark}
+      </span>
+      <span className={styles.doorName}>
+        <span className={styles.kicker}>{kicker}</span>
+        <span id={`${id}-title`} className={styles.cardTitle}>
+          {title}
+        </span>
+      </span>
+      <span id={`${id}-lead`} className={styles.doorLead}>
+        {lead}
+      </span>
+    </Link>
+  );
 }
 
 export default function HojePage() {
@@ -101,16 +143,35 @@ export default function HojePage() {
 
         <HubAttach />
 
-        <nav
-          className={styles.secondaryLinks}
-          aria-label={messages.hoje.links.aria}
-        >
-          <Link className={styles.secondaryLink} href={routes.freePlay}>
-            {messages.hoje.links.freePlay}
-          </Link>
-          <Link className={styles.secondaryLink} href={routes.archive}>
-            {messages.hoje.links.archive}
-          </Link>
+        <nav className={styles.doors} aria-label={messages.hoje.links.aria}>
+          <Door
+            id="hub-door-free-play"
+            href={routes.freePlay}
+            kicker={messages.hoje.links.freePlayKicker}
+            title={messages.hoje.links.freePlay}
+            lead={messages.hoje.links.freePlayLead}
+            mark={
+              <span className={styles.freePlayMark}>
+                <span />
+                <span />
+                <span />
+              </span>
+            }
+          />
+          <Door
+            id="hub-door-archive"
+            href={routes.archive}
+            kicker={messages.hoje.links.archiveKicker}
+            title={messages.hoje.links.archive}
+            lead={messages.hoje.links.archiveLead}
+            mark={
+              <span className={styles.archiveMark}>
+                {CALENDAR_CELLS.map((cell) => (
+                  <span key={cell} />
+                ))}
+              </span>
+            }
+          />
         </nav>
 
         <p className={styles.signOff}>
