@@ -290,9 +290,12 @@
   --tilt: 0.4deg;
 }
 
+.door:hover {
+  color: var(--ink);
+}
+
 @media (hover: hover) {
   .door:hover {
-    color: var(--ink);
     --door-shadow: 4px 4px 0;
     transform: translate(1px, 1px) rotate(var(--tilt));
   }

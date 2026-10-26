@@ -14,23 +14,14 @@ const rules = [...css.matchAll(/([^{};]+)\{([^{}]*)\}/g)].map(
   }),
 );
 
-function rulesWhere(
-  targets: (subject: string, selector: string) => boolean,
-  property: RegExp,
-): string[] {
+function selectorsDeclaring(selector: RegExp, property: RegExp): string[] {
   return rules
     .filter(
-      ({ selector, properties }) =>
-        selector.split(",").some((part) => {
-          const subject =
-            part
-              .trim()
-              .split(/[\s>+~]+/)
-              .at(-1) ?? "";
-          return targets(subject, part);
-        }) && properties.some((name) => property.test(name)),
+      (rule) =>
+        selector.test(rule.selector) &&
+        rule.properties.some((name) => property.test(name)),
     )
-    .map(({ selector }) => selector);
+    .map((rule) => rule.selector);
 }
 
 describe("the hub's two doors sit side by side at every width (T-WEB-S307)", () => {
@@ -45,21 +36,29 @@ describe("the hub's two doors sit side by side at every width (T-WEB-S307)", () 
 
   it("never redefines the doors' grid in another rule", () => {
     expect(
-      rulesWhere(
-        (subject) => /^\.doors(?![\w-])/.test(subject),
-        /^(display|grid|grid-template.*|flex.*|columns)$/,
+      selectorsDeclaring(
+        /\.doors(?![\w-])|\bnav\b/,
+        /^(display|grid|grid-template.*|grid-auto.*|flex.*|columns)$/,
       ),
     ).toEqual([".doors"]);
   });
 
   it("never places or sizes a door against the grid", () => {
     expect(
-      rulesWhere(
-        (subject, selector) =>
-          /^\.door(?![\w-])/.test(subject) ||
-          (/\.doors(?![\w-])/.test(selector) && !/^\.doors/.test(subject)),
-        /^(grid-(column|row|area).*|width|min-width)$/,
+      selectorsDeclaring(
+        /\.door(?![\w-])|\.doors\s*[\s>+~]/,
+        /^(grid-(column|row|area).*|(min-)?(width|inline-size))$/,
       ),
+    ).toEqual([]);
+  });
+
+  it("uses no nested rules, which the two checks above cannot read", () => {
+    expect(
+      rules
+        .map((rule) => rule.selector)
+        .filter(
+          (selector) => selector.startsWith("@") || selector.includes("&"),
+        ),
     ).toEqual([]);
   });
 });
