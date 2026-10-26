@@ -259,20 +259,141 @@
   display: none;
 }
 
-.secondaryLinks {
-  display: flex;
-  justify-content: center;
-  gap: 56px;
+.doors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8);
   margin-top: var(--space-12);
 }
 
-.secondaryLink {
-  font-family: var(--font-display);
-  font-weight: 550;
-  font-size: 19px;
+.door {
+  --tilt: -0.5deg;
+  --mark-w: 72px;
+  --door-shadow: 5px 5px 0;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 196px;
+  padding: 40px var(--space-7) var(--space-6);
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--door-shadow) color-mix(in srgb, var(--ink) 14%, transparent);
+  color: var(--ink);
   text-decoration: none;
-  border-bottom: 2px solid var(--line);
-  padding-bottom: var(--space-1);
+  transform: rotate(var(--tilt));
+}
+
+.door:nth-child(2) {
+  --tilt: 0.4deg;
+}
+
+.door:hover {
+  color: var(--ink);
+}
+
+@media (hover: hover) {
+  .door:hover {
+    --door-shadow: 4px 4px 0;
+    transform: translate(1px, 1px) rotate(var(--tilt));
+  }
+}
+
+.door:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.doorTape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 78px;
+  height: 26px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: var(--radius-tape);
+  transform: translateX(-50%) rotate(-4deg);
+}
+
+.door:nth-child(2) .doorTape {
+  transform: translateX(-50%) rotate(3deg);
+}
+
+.doorMark {
+  position: absolute;
+  top: 36px;
+  right: var(--space-7);
+  width: var(--mark-w);
+}
+
+.door:has(.archiveMark) {
+  --mark-w: 84px;
+}
+
+.doorName {
+  display: flex;
+  flex-direction: column;
+  padding-right: calc(var(--mark-w) + var(--space-1));
+}
+
+.doorLead {
+  max-width: 32ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.freePlayMark {
+  position: relative;
+  display: block;
+  aspect-ratio: 6 / 5;
+}
+
+.freePlayMark > span {
+  position: absolute;
+  width: 55%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+}
+
+.freePlayMark > span:nth-child(1) {
+  left: 0;
+  top: 17%;
+  background: var(--accent-termo);
+  transform: rotate(-8deg);
+}
+
+.freePlayMark > span:nth-child(2) {
+  left: 24%;
+  top: 3%;
+  background: var(--accent-queens);
+  transform: rotate(5deg);
+}
+
+.freePlayMark > span:nth-child(3) {
+  left: 45%;
+  top: 29%;
+  background: var(--accent-sudoku);
+  transform: rotate(-3deg);
+}
+
+.archiveMark {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.archiveMark > span {
+  height: 10px;
+  border-radius: var(--radius-tape);
+  background: var(--line);
+}
+
+.archiveMark > span:nth-child(20) {
+  background: var(--ink);
 }
 
 .signOff {
@@ -494,16 +615,69 @@
     display: inline;
   }
 
-  .secondaryLinks {
-    flex-wrap: wrap;
-    gap: var(--space-7);
-    row-gap: var(--space-3);
-    margin-top: 26px;
+  .doors {
+    gap: 14px;
+    margin-top: var(--space-8);
   }
 
-  .secondaryLink {
-    font-size: 15px;
-    padding: var(--space-2) 0 3px;
+  .door {
+    --tilt: -0.6deg;
+    --door-shadow: var(--shadow-md);
+    --mark-w: 28px;
+    gap: 6px;
+    min-height: 168px;
+    padding: 22px 14px 14px;
+  }
+
+  .door:nth-child(2) {
+    --tilt: 0.5deg;
+  }
+
+  .doorTape {
+    top: -8px;
+    left: 18px;
+    width: 46px;
+    height: 16px;
+    transform: rotate(-4deg);
+  }
+
+  .door:nth-child(2) .doorTape {
+    transform: rotate(3deg);
+  }
+
+  .doorLead {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .door:has(.archiveMark) {
+    --mark-w: 36px;
+  }
+
+  .doorMark {
+    top: 6px;
+    right: 14px;
+  }
+
+  .doorName {
+    padding-right: 0;
+  }
+
+  .doorName > .kicker {
+    padding-right: calc(var(--mark-w) + 2px);
+  }
+
+  .freePlayMark > span {
+    border-radius: 3px;
+  }
+
+  .archiveMark {
+    gap: 2px;
+  }
+
+  .archiveMark > span {
+    height: 5px;
+    border-radius: 1px;
   }
 
   .promoZoneDesktop {
@@ -513,5 +687,11 @@
   .promoZoneMobile {
     display: block;
     margin-bottom: var(--space-5);
+  }
+}
+
+@media (max-width: 768px) and (hover: hover) {
+  .door:hover {
+    --door-shadow: var(--shadow-sm);
   }
 }
