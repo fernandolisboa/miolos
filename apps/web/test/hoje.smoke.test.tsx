@@ -214,12 +214,7 @@ describe("the hub's done/pending tiles (T-WEB-S16)", () => {
     const card = within(cardFor("sudoku"));
     expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
 
-    expect(
-      card.getByText(messages.hoje.doneResultLong(ELAPSED)),
-    ).toBeInTheDocument();
-    expect(
-      card.getByText(messages.hoje.doneResultShort(ELAPSED)),
-    ).toBeInTheDocument();
+    expect(card.getByText(ELAPSED)).toBeInTheDocument();
     expect(card.queryByText(messages.hoje.playCta)).not.toBeInTheDocument();
 
     expect(screen.getAllByText(messages.hoje.playCta)).toHaveLength(

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { AdSlot } from "../src/components/ad-slot";
 import { BrandMark, Wordmark } from "../src/components/brand-mark";
+import { GameThumbnail } from "../src/hub/game-thumbnail";
 import {
   locale,
   messages,
@@ -49,6 +50,8 @@ function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
 }
 
 const CALENDAR_CELLS = Array.from({ length: 21 }, (_, cell) => cell);
+
+const CARD_COUNT: CSSProperties = { "--card-count": DAY_GAMES.length };
 
 function Door({
   id,
@@ -116,7 +119,7 @@ export default function HojePage() {
           </div>
         </header>
 
-        <section className={styles.games}>
+        <section className={styles.games} style={CARD_COUNT}>
           {DAY_GAMES.map((game) => (
             <article
               key={game}
@@ -124,17 +127,21 @@ export default function HojePage() {
               style={accentVars(game)}
             >
               <div aria-hidden className={styles.tape} />
+              <span className={styles.thumb}>
+                <GameThumbnail game={game} />
+              </span>
               <div className={styles.cardBody}>
                 <p className={styles.kicker}>{messages.games[game].kicker}</p>
-                <h2 className={styles.cardTitle}>
+                <h2 className={styles.gameTitle}>
                   {messages.games[game].name}
                 </h2>
                 <p className={styles.cardDescription}>
                   {messages.games[game].description}
                 </p>
+                <div className={styles.action}>
+                  <HubCardAction game={game} date={isoDate} />
+                </div>
               </div>
-
-              <HubCardAction game={game} date={isoDate} />
             </article>
           ))}
         </section>

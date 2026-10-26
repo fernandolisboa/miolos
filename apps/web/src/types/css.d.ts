@@ -13,5 +13,6 @@ declare module "csstype" {
     "--cell-ink"?: string;
     "--rows"?: number;
     "--columns"?: number;
+    "--card-count"?: number;
   }
 }

@@ -4,12 +4,11 @@ import { dayMarkOf, type Game } from "@miolos/core";
 import Link from "next/link";
 
 import { formatElapsed, messages, playRoutes } from "../src/i18n";
+import { BLANK_VALUE } from "../src/play/blank-value";
 import { completedGames, useDayState } from "../src/play/day-state";
 import { DAY_GAMES } from "../src/play/day-games";
 import { useStats } from "../src/stats/use-stats";
 import styles from "./page.module.css";
-
-const BLANK_VALUE = " ";
 
 const LINEUP: ReadonlySet<Game> = new Set(DAY_GAMES);
 
@@ -74,12 +73,7 @@ export function HubCardAction({
 
       {elapsed !== undefined && (
         <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
-          <span className={styles.doneResultLong}>
-            {messages.hoje.doneResultLong(elapsed)}
-          </span>
-          <span className={styles.doneResultShort}>
-            {messages.hoje.doneResultShort(elapsed)}
-          </span>
+          {elapsed}
         </span>
       )}
     </Link>
@@ -109,18 +103,12 @@ function TermoDoneLink({ date }: { readonly date: string }) {
       </span>
       {guesses !== null ? (
         <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
-          <span className={styles.doneResultLong}>
-            {messages.hoje.doneResultLong(`${guesses}/6`)}
-          </span>
-          <span className={styles.doneResultShort}>
-            {messages.hoje.doneResultShort(`${guesses}/6`)}
-          </span>
+          {`${guesses}/6`}
         </span>
       ) : (
         stats === undefined && (
           <span aria-hidden className={`${styles.doneResult} tabular-nums`}>
-            <span className={styles.doneResultLong}>{BLANK_VALUE}</span>
-            <span className={styles.doneResultShort}>{BLANK_VALUE}</span>
+            {BLANK_VALUE}
           </span>
         )
       )}

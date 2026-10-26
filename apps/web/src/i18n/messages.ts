@@ -262,8 +262,6 @@ export const messages = {
     playCta: "Jogar hoje",
     playCtaShort: "Jogar",
     done,
-    doneResultLong: (elapsed: string) => `em ${elapsed}`,
-    doneResultShort: (elapsed: string) => elapsed,
     doneAria: (game: string, elapsed: string) =>
       `${game} concluído em ${elapsed}`,
     doneGuessesAria: (game: string, n: number) =>

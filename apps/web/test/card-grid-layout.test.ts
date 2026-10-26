@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { bodyOf, decl, stylesheet } from "./css-source";
 
+const ANGLE = /^-?\d+(\.\d+)?deg$/;
 const ROTATION = /^rotate\(-?\d+(\.\d+)?deg\)$/;
 const TAPE = /^(translateX\(-50%\) )?rotate\(-?[3-5]deg\)$/;
 const CYCLE = [1, 2, 3, 4, 5, 6] as const;
@@ -48,9 +49,8 @@ function rowCentres(
   );
 }
 
-describe("the hub and stats grids take any number of cards, the last row centred (T-WEB-S925)", () => {
+describe("the stats grid takes any number of cards, the last row centred, and no card is styled by its place (T-WEB-S925)", () => {
   const hub = stylesheet("app/page.module.css");
-  const hubMobile = bodyOf(hub, "@media (max-width: 768px)");
   const stats = stylesheet("app/estatisticas/page.module.css");
   const statsMobile = bodyOf(stats, "@media (max-width: 768px)");
 
@@ -60,47 +60,29 @@ describe("the hub and stats grids take any number of cards, the last row centred
     }
   });
 
-  it.each([
-    ["hub, desktop", hub, ".card"],
-    ["hub, ≤ 768px", hubMobile, ".card"],
-    ["stats", stats, ".gameCard"],
-  ])(
-    "rotates every card and its tape on a six-step cycle (%s)",
-    (_l, css, card) => {
-      for (const step of CYCLE) {
-        const selector = `${card}:nth-child(6n + ${String(step)})`;
-        expect(decl(bodyOf(css, selector), "transform"), selector).toMatch(
-          ROTATION,
-        );
-        expect(
-          decl(bodyOf(css, `${selector} .tape`), "transform"),
-          selector,
-        ).toMatch(TAPE);
-      }
-    },
-  );
-
-  it("lays the hub's cards three to a row on six tracks, the last row centred for every count", () => {
-    expect(trackCount(hub)).toBe(6);
-    expect(decl(bodyOf(hub, ".card"), "grid-column")).toBe("span 2");
-    const single = columnStart(
-      decl(bodyOf(hub, ".card:last-child:nth-child(3n + 1)"), "grid-column"),
-    );
-    const pair = columnStart(
-      decl(
-        bodyOf(hub, ".card:nth-last-child(2):nth-child(3n + 1)"),
-        "grid-column",
-      ),
-    );
-    for (let count = 1; count <= 13; count += 1) {
-      const centres = rowCentres(count, 6, (index, total) => {
-        const rowStart = (index - 1) % 3 === 0;
-        if (rowStart && index === total) return single;
-        if (rowStart && index === total - 1) return pair;
-        return undefined;
-      });
-      expect(centres, `${String(count)} cards`).toEqual(centres.map(() => 3.5));
+  it("rotates every stats card and its tape on a six-step cycle", () => {
+    for (const step of CYCLE) {
+      const selector = `.gameCard:nth-child(6n + ${String(step)})`;
+      expect(decl(bodyOf(stats, selector), "transform"), selector).toMatch(
+        ROTATION,
+      );
+      expect(
+        decl(bodyOf(stats, `${selector} .tape`), "transform"),
+        selector,
+      ).toMatch(TAPE);
     }
+  });
+
+  it("tilts every hub card and its tape on a six-step cycle, read once by each", () => {
+    for (const step of CYCLE) {
+      const body = bodyOf(hub, `.card:nth-child(6n + ${String(step)})`);
+      expect(decl(body, "--tilt"), String(step)).toMatch(ANGLE);
+      expect(decl(body, "--tape-tilt"), String(step)).toMatch(/^-?[3-5]deg$/);
+    }
+    expect(decl(bodyOf(hub, ".card"), "transform")).toBe("rotate(var(--tilt))");
+    expect(decl(bodyOf(hub, ".tape"), "transform")).toBe(
+      "translateX(-50%) rotate(var(--tape-tilt))",
+    );
   });
 
   it("lays the stats cards two to a row on four tracks, a lone last card centred, one column on a phone", () => {
