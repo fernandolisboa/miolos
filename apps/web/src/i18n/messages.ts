@@ -1058,7 +1058,7 @@ export const messages = {
     termo: {
       kicker: "Palavras",
       name: "Termo",
-      description: "Seis tentativas para a palavra do dia.",
+      description: "Cinco letras, seis chances, uma palavra.",
       play: {
         title: "Termo",
 
@@ -1141,7 +1141,7 @@ export const messages = {
     sudoku: {
       kicker: "Números",
       name: "Sudoku",
-      description: "De 1 a 9, sem repetição, no clássico 9×9.",
+      description: "Nove números, nenhuma repetição.",
       play: {
         title: "Sudoku",
 
@@ -1241,7 +1241,7 @@ export const messages = {
     nonogram: {
       kicker: "Imagem",
       name: "Nonogram",
-      description: "Revele a figura escondida pelos números.",
+      description: "Os números escondem um desenho.",
       play: {
         title: "Nonogram",
 
@@ -1307,7 +1307,7 @@ export const messages = {
     binairo: {
       kicker: "Lógica",
       name: "Binairo",
-      description: "Zeros e uns, em perfeito equilíbrio.",
+      description: "Zeros e uns em perfeito equilíbrio.",
       play: {
         title: "Binairo",
 
@@ -1356,7 +1356,7 @@ export const messages = {
     crossword: {
       kicker: "Pistas",
       name: "Cruzadinha",
-      description: "Preencha a grade com as respostas das pistas.",
+      description: "Pistas curtas, respostas que se cruzam.",
       play: {
         title: "Cruzadinha",
 
@@ -1417,7 +1417,7 @@ export const messages = {
     queens: {
       kicker: "Regiões",
       name: "Rainhas",
-      description: "Uma rainha por linha, coluna e região.",
+      description: "Uma coroa por linha, coluna e cor.",
       play: {
         title: "Rainhas",
 
@@ -1460,7 +1460,7 @@ export const messages = {
     minesweeper: {
       kicker: "Minas",
       name: "Campo Minado",
-      description: "Um campo por dia que se abre inteiro na lógica, sem chute.",
+      description: "O campo inteiro se abre na lógica, sem chute.",
       play: {
         title: "Campo Minado",
 
