@@ -99,85 +99,104 @@
 }
 
 .games {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: var(--space-7);
-  margin-top: 52px;
+  --max-per-row: 4;
+  --rows: round(up, var(--card-count) / var(--max-per-row), 1);
+  --per-row: round(up, var(--card-count) / var(--rows), 1);
+  --card-gap: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8) var(--card-gap);
+  inline-size: 100%;
+  max-inline-size: calc(
+    var(--per-row) * 230px + (var(--per-row) - 1) * var(--card-gap)
+  );
+  margin: 52px auto 0;
+}
+
+@media (min-width: 1280px) {
+  .games {
+    --max-per-row: 7;
+    --card-gap: var(--space-5);
+  }
 }
 
 .card {
-  grid-column: span 2;
+  --cta-box-min-height: 38px;
+  box-sizing: border-box;
+  /* The 0.1px keeps a row whose bases sum to exactly 100% from wrapping on a
+     layout unit that rounds up (Firefox's is 1/60px). */
+  flex: 0 0
+    calc(
+      (100% - (var(--per-row) - 1) * var(--card-gap)) / var(--per-row) - 0.1px
+    );
+  min-inline-size: 0;
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 250px;
-  --cta-box-min-height: 38px;
-  padding: var(--space-11) var(--space-6) var(--space-6);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 34px var(--space-3) var(--space-4);
   background: var(--paper-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   /* 5px 5px 0 sits between --shadow-md and --shadow-lg; no token carries it. */
   box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+  text-align: center;
+  transform: rotate(var(--tilt));
 }
 
 .card:nth-child(6n + 1) {
-  transform: rotate(-0.6deg);
+  --tilt: -0.8deg;
+  --tape-tilt: -4deg;
 }
 .card:nth-child(6n + 2) {
-  transform: rotate(0.5deg);
+  --tilt: 0.6deg;
+  --tape-tilt: 3deg;
 }
 .card:nth-child(6n + 3) {
-  transform: rotate(-0.4deg);
+  --tilt: -0.5deg;
+  --tape-tilt: -3deg;
 }
 .card:nth-child(6n + 4) {
-  transform: rotate(0.6deg);
+  --tilt: 0.9deg;
+  --tape-tilt: 5deg;
 }
 .card:nth-child(6n + 5) {
-  transform: rotate(-0.5deg);
+  --tilt: -0.6deg;
+  --tape-tilt: -5deg;
 }
 .card:nth-child(6n + 6) {
-  transform: rotate(0.4deg);
-}
-
-.card:last-child:nth-child(3n + 1) {
-  grid-column: 3 / span 2;
-}
-
-.card:nth-last-child(2):nth-child(3n + 1) {
-  grid-column: 2 / span 2;
+  --tilt: 0.5deg;
+  --tape-tilt: 3deg;
 }
 
 .tape {
   position: absolute;
   top: -12px;
   left: 50%;
-  width: 78px;
-  height: 26px;
-  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  width: 70px;
+  height: 24px;
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
   border-radius: var(--radius-tape);
+  transform: translateX(-50%) rotate(var(--tape-tilt));
 }
 
-.card:nth-child(6n + 1) .tape {
-  transform: translateX(-50%) rotate(-4deg);
-}
-.card:nth-child(6n + 2) .tape {
-  transform: translateX(-50%) rotate(3deg);
-}
-.card:nth-child(6n + 3) .tape {
-  transform: translateX(-50%) rotate(-3deg);
-}
-.card:nth-child(6n + 4) .tape {
-  transform: translateX(-50%) rotate(4deg);
-}
-.card:nth-child(6n + 5) .tape {
-  transform: translateX(-50%) rotate(-4deg);
-}
-.card:nth-child(6n + 6) .tape {
-  transform: translateX(-50%) rotate(3deg);
+.thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 92px;
+  aspect-ratio: 1;
 }
 
 .cardBody {
   flex: 1;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-inline-size: 0;
 }
 
 /* A shared rule's `var(--accent)` has no fixed contrast, so it colours no
@@ -195,19 +214,34 @@
   font: var(--text-card-title);
 }
 
+.action {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.gameTitle {
+  margin: 0;
+  font: 550 20px/1.1 var(--font-display);
+  text-wrap: balance;
+}
+
 .cardDescription {
-  margin: var(--space-2) 0 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.35;
   color: var(--ink-2);
   text-wrap: pretty;
 }
 
 .cta {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: var(--space-4);
   min-height: var(--cta-box-min-height);
   padding: var(--space-3) 0;
   background: var(--accent);
@@ -232,9 +266,10 @@
 .done {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
   min-height: var(--cta-box-min-height);
+  white-space: nowrap;
   text-decoration: none;
 }
 
@@ -253,10 +288,6 @@
 .doneResult {
   font-size: 14px;
   color: var(--ink-2);
-}
-
-.doneResultShort {
-  display: none;
 }
 
 .doors {
@@ -500,66 +531,36 @@
   }
 
   .games {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px var(--space-4);
+    max-inline-size: none;
     margin-top: 26px;
   }
 
   .card {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-3);
-    min-height: 48px;
-    padding: var(--space-4) 18px;
+    gap: 10px;
+    padding: var(--space-6) var(--space-3) var(--space-3);
     box-shadow: var(--shadow-md)
       color-mix(in srgb, var(--accent) 22%, transparent);
     --cta-box-min-height: var(--touch-target-min);
   }
 
-  .card:nth-child(6n + 1) {
-    transform: rotate(-0.4deg);
-  }
-  .card:nth-child(6n + 2) {
-    transform: rotate(0.4deg);
-  }
-  .card:nth-child(6n + 3) {
-    transform: rotate(-0.3deg);
-  }
-  .card:nth-child(6n + 4) {
-    transform: rotate(0.4deg);
-  }
-  .card:nth-child(6n + 5) {
-    transform: rotate(-0.4deg);
-  }
-  .card:nth-child(6n + 6) {
-    transform: rotate(0.3deg);
+  .card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    text-align: start;
+    transform: rotate(calc(var(--tilt) / 2));
   }
 
   .tape {
-    top: -9px;
-    left: 26px;
-    width: 54px;
-    height: 18px;
+    top: -10px;
+    width: 56px;
+    height: 20px;
   }
 
-  .card:nth-child(6n + 1) .tape {
-    transform: rotate(-4deg);
-  }
-  .card:nth-child(6n + 2) .tape {
-    transform: rotate(3deg);
-  }
-  .card:nth-child(6n + 3) .tape {
-    transform: rotate(-3deg);
-  }
-  .card:nth-child(6n + 4) .tape {
-    transform: rotate(4deg);
-  }
-  .card:nth-child(6n + 5) .tape {
-    transform: rotate(-4deg);
-  }
-  .card:nth-child(6n + 6) .tape {
-    transform: rotate(3deg);
+  .thumb {
+    inline-size: 72px;
   }
 
   .kicker {
@@ -573,12 +574,24 @@
     font-size: 22px;
   }
 
+  .gameTitle {
+    font-size: clamp(18px, 5.6vw, 20px);
+  }
+
   .cardDescription {
     display: none;
   }
 
+  .card:last-child:nth-child(odd) .cardDescription {
+    display: block;
+    font-size: 13px;
+  }
+
+  .card:last-child:nth-child(odd) .action {
+    align-items: flex-start;
+  }
+
   .cta {
-    margin-top: 0;
     padding: var(--space-3) var(--space-5);
     min-width: var(--touch-target-min);
   }
@@ -591,28 +604,12 @@
     display: inline;
   }
 
-  /* The DOM keeps the desktop order so the accessible name never depends on
-     a media query. */
-  .done {
-    flex-direction: row-reverse;
-    gap: var(--space-2);
-    margin-top: 0;
-  }
-
   .doneChip {
     padding: var(--space-1) 9px;
   }
 
   .doneResult {
     font-size: 13px;
-  }
-
-  .doneResultLong {
-    display: none;
-  }
-
-  .doneResultShort {
-    display: inline;
   }
 
   .doors {

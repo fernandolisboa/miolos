@@ -168,11 +168,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
     const card = cardFor("nonogram");
     expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
 
-    expect(
-      card.queryByText(
-        messages.hoje.doneResultLong(formatElapsed(SUDOKU_ELAPSED_MS)),
-      ),
-    ).toBeNull();
+    expect(card.queryByText(formatElapsed(SUDOKU_ELAPSED_MS))).toBeNull();
     expect(
       screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();
@@ -194,9 +190,7 @@ describe("a game completed on another device (T-WEB-S240)", () => {
     });
 
     expect(
-      cardFor("binairo").getByText(
-        messages.hoje.doneResultLong(formatElapsed(BINAIRO_ELAPSED_MS)),
-      ),
+      cardFor("binairo").getByText(formatElapsed(BINAIRO_ELAPSED_MS)),
     ).toBeInTheDocument();
     expect(
       cardFor("sudoku").getByLabelText(
@@ -257,12 +251,7 @@ describe("a cross-device done tile shows its time exactly as a local one (T-WEB-
     });
     const card = cardFor("nonogram");
     expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
-    expect(
-      card.getByText(messages.hoje.doneResultLong(elapsed)),
-    ).toBeInTheDocument();
-    expect(
-      card.getByText(messages.hoje.doneResultShort(elapsed)),
-    ).toBeInTheDocument();
+    expect(card.getByText(elapsed)).toBeInTheDocument();
     expect(
       screen.getByText(messages.hoje.completedOfTotal(1, GAMES.length)),
     ).toBeInTheDocument();

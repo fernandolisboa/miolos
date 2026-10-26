@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1096`   | `S1095`        | `T-WEB-23`            |
+| `T-WEB`  | `S1098`   | `S1097`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#445 (the hub's taped card grid, ADR-0156) spent **`T-WEB-S1096`** (`hub-card-grid.test.tsx`: the row length derives from `--card-count` alone, the wrap is centred and capped, each card takes exactly its share, no lone card from 2 to 12 cards, and the phone's two columns with an odd last card across both) and **`T-WEB-S1097`** (the page sets `--card-count` and renders one card per `DAY_GAMES` entry in order, each with one thumbnail). `S925` lost its hub grid arms to S1096 and now pins the stats grid, plus the hub's tilt cycle through `--tilt` and `--tape-tilt`.
 
 #444 (the hub's Modo livre and Arquivo doors) spent **`T-WEB-S1086`** (`hub-doors.test.ts`: the top-level `.door:hover` keeps `color: var(--ink)`, so the global `a:hover` never colours a door) and rewrote `S307` in place (the #169 paragraph below). `S1087…S1089` are burned, unspent.
 

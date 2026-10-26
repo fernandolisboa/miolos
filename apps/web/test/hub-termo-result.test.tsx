@@ -149,12 +149,7 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     );
     expect(link).toHaveAttribute("href", routes.termo);
     expect(card.getByText(messages.hoje.done)).toBeInTheDocument();
-    expect(
-      card.getByText(messages.hoje.doneResultLong("4/6")),
-    ).toBeInTheDocument();
-    expect(
-      card.getByText(messages.hoje.doneResultShort("4/6")),
-    ).toBeInTheDocument();
+    expect(card.getByText("4/6")).toBeInTheDocument();
   });
 
   it("keeps the shipped name and holds the result line box open while unsettled", () => {
@@ -213,9 +208,7 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     await waitFor(() => {
       expect(link.textContent).toBe(messages.hoje.done);
     });
-    expect(
-      within(cardFor("termo")).queryByText(messages.hoje.doneResultLong("4/6")),
-    ).not.toBeInTheDocument();
+    expect(within(cardFor("termo")).queryByText("4/6")).not.toBeInTheDocument();
   });
 
   it("leaves a LOST termo on the generic played path, with no /stats fetch at all", async () => {
@@ -261,12 +254,8 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     );
     expect(link).toHaveAttribute("href", routes.sudoku);
     expect(
-      sudoku.getByText(
-        messages.hoje.doneResultLong(formatElapsed(SUDOKU_ELAPSED_MS)),
-      ),
+      sudoku.getByText(formatElapsed(SUDOKU_ELAPSED_MS)),
     ).toBeInTheDocument();
-    expect(
-      sudoku.queryByText(messages.hoje.doneResultLong("4/6")),
-    ).not.toBeInTheDocument();
+    expect(sudoku.queryByText("4/6")).not.toBeInTheDocument();
   });
 });
