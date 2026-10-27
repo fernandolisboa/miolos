@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { deleteAccount } from "../../src/attach/attach-client";
 import { ConfirmAction } from "../../src/components/confirm-action";
+import { forgetServerDone } from "../../src/hub/server-done";
 import { deleteAccountAnchor, messages } from "../../src/i18n";
 import { writeSyncState } from "../../src/settings/sync-state";
 import styles from "./page.module.css";
@@ -28,6 +29,7 @@ export function DeleteAccount() {
           run={deleteAccount}
           onDone={() => {
             writeSyncState({ on: false, pending: false });
+            forgetServerDone();
             setDone(true);
           }}
         />

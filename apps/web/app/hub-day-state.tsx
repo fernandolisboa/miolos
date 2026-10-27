@@ -33,13 +33,13 @@ export function HubProgress({ date }: { readonly date: string }) {
   );
 }
 
-export interface DoneView {
+interface DoneView {
   readonly chip: string;
   readonly result: string | undefined;
   readonly label: string;
 }
 
-export function DoneSummary({
+function DoneSummary({
   game,
   date,
   entry,
@@ -108,22 +108,33 @@ export function HubCardAction({
   readonly game: Game;
   readonly date: string;
 }) {
-  const entry = useDayState(date)[game];
-  const tucked = useTucked(game);
-  const route = playRoutes[game];
+  return useTucked(game) ? (
+    <PlayLink game={game} />
+  ) : (
+    <CardStamp game={game} date={date} />
+  );
+}
 
-  if (entry.status === "pending" || tucked) {
-    return (
-      <Link className={styles.cta} href={route}>
-        <PlayLabel />
-      </Link>
-    );
+function CardStamp({
+  game,
+  date,
+}: {
+  readonly game: Game;
+  readonly date: string;
+}) {
+  const entry = useDayState(date)[game];
+  if (entry.status === "pending") {
+    return <PlayLink game={game} />;
   }
 
   return (
     <DoneSummary game={game} date={date} entry={entry}>
       {(view) => (
-        <Link className={styles.done} href={route} aria-label={view.label}>
+        <Link
+          className={styles.done}
+          href={playRoutes[game]}
+          aria-label={view.label}
+        >
           <span aria-hidden className={styles.doneChip}>
             {view.chip}
           </span>
@@ -145,9 +156,22 @@ export function DoneRow({
   readonly game: Game;
   readonly date: string;
 }) {
+  return useTucked(game) ? (
+    <DoneRowBody game={game} date={date} />
+  ) : (
+    <DoneRowLink game={game} view={undefined} />
+  );
+}
+
+function DoneRowBody({
+  game,
+  date,
+}: {
+  readonly game: Game;
+  readonly date: string;
+}) {
   const entry = useDayState(date)[game];
-  const tucked = useTucked(game);
-  if (!tucked || entry.status === "pending") {
+  if (entry.status === "pending") {
     return <DoneRowLink game={game} view={undefined} />;
   }
   return (
@@ -186,11 +210,11 @@ function DoneRowLink({
   );
 }
 
-function PlayLabel() {
+function PlayLink({ game }: { readonly game: Game }) {
   return (
-    <>
+    <Link className={styles.cta} href={playRoutes[game]}>
       <span className={styles.ctaLong}>{messages.hoje.playCta}</span>
       <span className={styles.ctaShort}>{messages.hoje.playCtaShort}</span>
-    </>
+    </Link>
   );
 }

@@ -99,6 +99,7 @@ function run(script: string): void {
 }
 
 const loadTuck = () => import("../src/hub/tuck");
+const loadServerDone = () => import("../src/hub/server-done");
 const loadHojePage = async () => (await import("../app/page")).default;
 
 interface Board {
@@ -209,13 +210,16 @@ describe("a daily finished today leaves the grid for Feitos hoje (T-WEB-S1098)",
   });
 
   it("counts a game the server holds as finished, and mirrors it for the next load of that day only", async () => {
-    const { mirrorServerDone, tuckedGames } = await loadTuck();
+    const { tuckedGames } = await loadTuck();
+    const { forgetServerDone, mirrorServerDone } = await loadServerDone();
     expect([...tuckedGames(DATE, ["queens"])]).toEqual(["queens"]);
 
     mirrorServerDone("2026-07-30", ["termo"]);
     expect([...tuckedGames(DATE)]).toEqual([]);
     mirrorServerDone(DATE, ["queens"]);
     expect([...tuckedGames(DATE)]).toEqual(["queens"]);
+    forgetServerDone();
+    expect([...tuckedGames(DATE)]).toEqual([]);
   });
 
   it("tucks nothing when storage throws", async () => {
@@ -297,6 +301,67 @@ describe("the board settles once, before hydration (T-WEB-S1100)", () => {
       root?.unmount();
     });
   });
+
+  it("lifts the hold on mount when the tuck script never ran", async () => {
+    document.documentElement.dataset.hubHold = "";
+    const HojePage = await loadHojePage();
+    render(<HojePage />);
+    expect(document.documentElement.dataset.hubHold).toBeUndefined();
+  });
+
+  it("polls each game's record from one place only, the card or the row that shows it", async () => {
+    writePlayRecord(sudoku());
+    writePlayRecord(lostTermo());
+    const poll = vi.spyOn(window, "setInterval");
+    const HojePage = await loadHojePage();
+    render(<HojePage />);
+    const perSecond = poll.mock.calls.filter(([, delay]) => delay === 1000);
+    expect(perSecond).toHaveLength(DAY_GAMES.length + 1);
+  });
+
+  it.each([
+    [
+      "a game finished after the script ran",
+      () => {
+        writePlayRecord(sudoku());
+      },
+      messages.hoje.playedAria(messages.games.termo.name),
+    ],
+    [
+      "a record gone after the script ran",
+      () => {
+        localStorage.removeItem(playRecordKey("termo", DATE));
+      },
+      messages.games.termo.name,
+    ],
+  ])(
+    "keeps what the script painted when storage changes before hydration: %s",
+    async (_name, change, row) => {
+      const HojePage = await loadHojePage();
+      const { tuckScript, holdScript } = await loadTuck();
+      const container = document.createElement("div");
+      document.body.append(container);
+      container.innerHTML = renderToString(<HojePage />);
+      writePlayRecord(lostTermo());
+      run(holdScript);
+      run(tuckScript(DATE));
+      change();
+
+      let root: ReturnType<typeof hydrateRoot> | undefined;
+      await act(async () => {
+        root = hydrateRoot(container, <HojePage />);
+        await Promise.resolve();
+      });
+
+      expect(boardOf(container)).toEqual(expected(["termo"]));
+      expect(
+        within(tileFor("termo")).getByRole("link", { name: row }),
+      ).toBeInTheDocument();
+      act(() => {
+        root?.unmount();
+      });
+    },
+  );
 
   it("renders the partition in the first commit after a client navigation, with no script", async () => {
     writePlayRecord(sudoku());
@@ -422,6 +487,23 @@ describe("a Feitos hoje row (T-WEB-S1103)", () => {
     expect(
       screen.getByRole("heading", { name: messages.hoje.doneToday }),
     ).toBeInTheDocument();
+  });
+
+  it("fetches Termo's result once, for its row and not its tucked card", async () => {
+    writePlayRecord({
+      ...lostTermo(),
+      guesses: [{ guess: "praga", tiles: Array(5).fill("correct") }],
+      outcome: "won",
+    } as TermoPlayRecord);
+    const HojePage = await loadHojePage();
+    render(<HojePage />);
+    await waitFor(() => {
+      expect(tileFor("termo").textContent).toContain(messages.hoje.done);
+    });
+    const stats = vi
+      .mocked(fetch)
+      .mock.calls.filter(([input]) => urlOf(input) === `${API_URL}/stats`);
+    expect(stats).toHaveLength(1);
   });
 
   it("shows only the name until the day's state is known", async () => {

@@ -10,7 +10,8 @@ import {
 } from "react";
 
 import { useServerDoneGames } from "../play/day-state";
-import { mirrorServerDone, tuckedGames } from "./tuck";
+import { mirrorServerDone } from "./server-done";
+import { liftHold, scriptedTuck, tuckedGames } from "./tuck";
 
 const NONE: ReadonlySet<Game> = new Set();
 
@@ -18,16 +19,19 @@ export const TuckedGames = createContext<ReadonlySet<Game>>(NONE);
 
 const neverChanges = () => () => undefined;
 
-// Read once per mount and never again (ADR-0157). On a hard load the
-// pre-paint script has already applied this partition to the server's markup.
+// Read once per mount and never again (ADR-0157). On a hard load React adopts
+// what the pre-paint script painted, as storage may have changed in between.
 export function useSettledTuck(date: string): ReadonlySet<Game> {
   const serverDone = useServerDoneGames(date);
   const settled = useRef<ReadonlySet<Game>>(undefined);
   const tucked = useSyncExternalStore(
     neverChanges,
-    () => (settled.current ??= tuckedGames(date, serverDone)),
+    () =>
+      (settled.current ??= scriptedTuck(date) ?? tuckedGames(date, serverDone)),
     () => NONE,
   );
+
+  useEffect(liftHold, []);
 
   useEffect(() => {
     if (serverDone !== undefined) {

@@ -99,10 +99,14 @@ describe("the deletion island (T-WEB-S142)", () => {
 });
 
 describe("a deleted account takes this device's sync flag with it (T-WEB-S1032)", () => {
-  it("clears miolos-settings-sync only once the deletion succeeded, so the fresh anonymous account is not seeded", async () => {
+  it("clears miolos-settings-sync and the hub's server mirror only once the deletion succeeded, so the fresh anonymous account inherits neither", async () => {
     window.localStorage.setItem(
       "miolos-settings-sync",
       JSON.stringify({ on: true, pending: true }),
+    );
+    window.localStorage.setItem(
+      "miolos:hub-server-done",
+      JSON.stringify({ date: "2026-07-31", games: ["termo"] }),
     );
     deleteAccountMock.mockResolvedValue(false);
     render(<DeleteAccount />);
@@ -116,6 +120,9 @@ describe("a deleted account takes this device's sync flag with it (T-WEB-S1032)"
       expect(deleteAccountMock).toHaveBeenCalledTimes(1);
     });
     expect(window.localStorage.getItem("miolos-settings-sync")).not.toBeNull();
+    expect(
+      window.localStorage.getItem("miolos:hub-server-done"),
+    ).not.toBeNull();
 
     deleteAccountMock.mockResolvedValue(true);
     fireEvent.click(
@@ -125,6 +132,7 @@ describe("a deleted account takes this device's sync flag with it (T-WEB-S1032)"
     );
     expect(await screen.findByText(messages.deleteAccount.done)).toBeVisible();
     expect(window.localStorage.getItem("miolos-settings-sync")).toBeNull();
+    expect(window.localStorage.getItem("miolos:hub-server-done")).toBeNull();
     expect(messages.privacy.collected.gameSettings).toContain(
       messages.settings.games.sync.label,
     );
