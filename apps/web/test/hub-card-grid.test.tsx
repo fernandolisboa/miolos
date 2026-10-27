@@ -107,6 +107,15 @@ describe("a desktop card wider than 400px lays out as a row, and its tilt eases 
     }
   });
 
+  it("keeps a lone card at one slot of a full row, with its full tilt", () => {
+    const lone = bodyOf(
+      desktop,
+      ".card:nth-child(1 of :not([hidden])):nth-last-child(1 of :not([hidden]))",
+    );
+    expect(decl(lone, "flex-basis")).toContain("/ var(--max-per-row)");
+    expect(decl(lone, "transform")).toBe("rotate(var(--tilt))");
+  });
+
   it("measures the card and eases its tilt only where round() exists", () => {
     const card = bodyOf(rounded, ".card");
     expect(decl(card, "container")).toBe("hub-card / inline-size");
