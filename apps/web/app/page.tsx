@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import { recordFor } from "@miolos/core";
+import type { ReactNode } from "react";
 
 import { AdSlot } from "../src/components/ad-slot";
 import { BrandMark, Wordmark } from "../src/components/brand-mark";
@@ -11,9 +12,9 @@ import {
   SAO_PAULO_TIME_ZONE,
   todaySaoPauloDate,
 } from "../src/i18n";
-import { accentVars } from "../src/play/accent";
 import { DAY_GAMES } from "../src/play/day-games";
 import { HubAttach } from "./hub-attach";
+import { HubBoard } from "./hub-board";
 import { HubCardAction, HubProgress } from "./hub-day-state";
 import { HubMenu } from "./hub-menu";
 import { HubOnboarding } from "./hub-onboarding";
@@ -50,8 +51,6 @@ function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
 }
 
 const CALENDAR_CELLS = Array.from({ length: 21 }, (_, cell) => cell);
-
-const GRID_STYLE: CSSProperties = { "--card-count": DAY_GAMES.length };
 
 function Door({
   id,
@@ -119,13 +118,11 @@ export default function HojePage() {
           </div>
         </header>
 
-        <section className={styles.games} style={GRID_STYLE}>
-          {DAY_GAMES.map((game) => (
-            <article
-              key={game}
-              className={styles.card}
-              style={accentVars(game)}
-            >
+        <HubBoard
+          key={isoDate}
+          date={isoDate}
+          cards={recordFor(DAY_GAMES, (game) => (
+            <>
               <div aria-hidden className={styles.tape} />
               <span className={styles.thumb}>
                 <GameThumbnail game={game} />
@@ -142,9 +139,9 @@ export default function HojePage() {
                   <HubCardAction game={game} date={isoDate} />
                 </div>
               </div>
-            </article>
+            </>
           ))}
-        </section>
+        />
 
         <HubOnboarding />
 

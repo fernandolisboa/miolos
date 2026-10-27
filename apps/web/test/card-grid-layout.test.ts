@@ -75,7 +75,10 @@ describe("the stats grid takes any number of cards, the last row centred, and no
 
   it("tilts every hub card and its tape on a six-step cycle, read once by each", () => {
     for (const step of CYCLE) {
-      const body = bodyOf(hub, `.card:nth-child(6n + ${String(step)})`);
+      const body = bodyOf(
+        hub,
+        `.card:nth-child(6n + ${String(step)} of :not([hidden]))`,
+      );
       expect(decl(body, "--tilt"), String(step)).toMatch(ANGLE);
       expect(decl(body, "--tape-tilt"), String(step)).toMatch(/^-?[3-5]deg$/);
     }

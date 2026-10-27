@@ -1,5 +1,4 @@
-import type { Game } from "@miolos/core";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HojePage from "../app/page";
@@ -10,6 +9,7 @@ import {
   type TermoPlayRecord,
 } from "../src/play/play-record";
 import { jsonResponse, urlOf } from "./fetch-stub";
+import { tileFor } from "./hub-tile";
 
 const DATE = "2026-07-31";
 const OTHER_DATE = "2026-07-30";
@@ -114,13 +114,7 @@ function stubFetchByUrl(stats: () => Response | Promise<Response>) {
   return fetchMock;
 }
 
-function cardFor(game: Game): HTMLElement {
-  const card = screen.getByText(messages.games[game].name).closest("article");
-  if (card === null) {
-    throw new Error(`the ${game} card is not inside an <article>`);
-  }
-  return card;
-}
+const cardFor = tileFor;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -185,7 +179,9 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
     );
 
     await waitFor(() => {
-      expect(link.textContent).toBe(messages.hoje.done);
+      expect(link.textContent).toBe(
+        `${messages.games.termo.name}${messages.hoje.done}`,
+      );
     });
   });
 
@@ -206,7 +202,9 @@ describe("the hub Termo tile's server-fetched result (T-WEB-S156)", () => {
       messages.hoje.completedAria(messages.games.termo.name),
     );
     await waitFor(() => {
-      expect(link.textContent).toBe(messages.hoje.done);
+      expect(link.textContent).toBe(
+        `${messages.games.termo.name}${messages.hoje.done}`,
+      );
     });
     expect(within(cardFor("termo")).queryByText("4/6")).not.toBeInTheDocument();
   });

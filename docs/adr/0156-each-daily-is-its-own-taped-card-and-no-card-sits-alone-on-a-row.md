@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-10-26 (issue #445, epic #442)
 **Depends on:** [ADR-0041](./0041-accents-colour-shapes-never-words.md), [ADR-0052](./0052-medals-are-derived-facts-plus-curated-grants.md)
 **Amends:** [ADR-0056](./0056-the-record-snapshot-cache-is-per-key-and-the-done-chip-wears-the-hub-word.md) consequence (e) — the archive day card now differs from the hub card in six ways: it also has no thumbnail.
+**Amended by:** [ADR-0157](./0157-feitos-hoje-settles-before-first-paint-and-never-moves-after.md) (#446) — a tucked card stays in the DOM with `hidden`, and the tilt cycle and the odd-last-card rule count only visible cards.
 
 ## Context
 

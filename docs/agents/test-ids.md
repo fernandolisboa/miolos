@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1098`   | `S1097`        | `T-WEB-23`            |
+| `T-WEB`  | `S1104`   | `S1103`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#446 (*Feitos hoje*, ADR-0157) spent **`T-WEB-S1098…S1103`** in `hub-feitos-hoje.test.tsx`: `S1098` the tuck rule (pending, completed, played, mixed, all, none, stray records, the day truth and its mirror, throwing storage), `S1099` the pre-paint script hides and counts exactly what `tuckedGames` says and lifts the hold, `S1100` hydration over the script's layout changes nothing and drops the scripts, a client navigation partitions in its first commit, `S1101` a game finished after mount keeps its card and is tucked on the next visit, `S1102` the hold, the `[hidden]` overrides and the slips, `S1103` the rows. Re-aimed in place: `S16`, `S17`, `S101`, `S156`, `S239`, `S248` (focus skips a tucked game), `S257` (the local tile is finished after mount), `S925` and `S1096` (the `of :not([hidden])` selectors); the hub tests find a game's tile through `test/hub-tile.ts`.
 
 #445 (the hub's taped card grid, ADR-0156) spent **`T-WEB-S1096`** (`hub-card-grid.test.tsx`: the row length derives from `--card-count` alone, the wrap is centred and capped, each card takes exactly its share, no lone card from 2 to 12 cards, and the phone's two columns with an odd last card across both) and **`T-WEB-S1097`** (the page sets `--card-count` and renders one card per `DAY_GAMES` entry in order, each with one thumbnail). `S925` lost its hub grid arms to S1096 and now pins the stats grid, plus the hub's tilt cycle through `--tilt` and `--tape-tilt`.
 

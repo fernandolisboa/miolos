@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HubOnboarding } from "../app/hub-onboarding";
 import HojePage from "../app/page";
-import { messages, playRoutes, routes } from "../src/i18n";
+import { messages, playRoutes, routes, todaySaoPauloDate } from "../src/i18n";
+import { playRecordKey } from "../src/play/play-record";
 import { bodyOf, decl, stylesheet } from "./css-source";
 
 const clientMock = vi.hoisted(() => ({
@@ -243,5 +244,21 @@ describe("the hub with the card never blocks play (T-WEB-S248)", () => {
     expect(screen.queryByText(messages.onboarding.invitation)).toBeNull();
     expect(document.activeElement).not.toBe(document.body);
     expect(document.activeElement?.getAttribute("href")).toBe(routes.termo);
+  });
+
+  it("moves focus past a game tucked into Feitos hoje, to the first card that shows", async () => {
+    const date = todaySaoPauloDate(new Date());
+    localStorage.setItem(
+      playRecordKey("termo", date),
+      JSON.stringify({ game: "termo", date, concluded: true }),
+    );
+    render(<HojePage />);
+    await screen.findByText(messages.onboarding.invitation);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: messages.onboarding.dismiss }),
+    );
+    expect(document.activeElement?.getAttribute("href")).toBe(routes.crossword);
+    localStorage.clear();
   });
 });

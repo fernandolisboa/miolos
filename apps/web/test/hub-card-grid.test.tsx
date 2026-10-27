@@ -9,7 +9,8 @@ import { bodyOf, decl, stylesheet } from "./css-source";
 const css = stylesheet("app/page.module.css");
 const wide = bodyOf(css, "@media (min-width: 1280px)");
 const phone = bodyOf(css, "@media (max-width: 768px)");
-const ODD_LAST = ".card:last-child:nth-child(odd)";
+const ODD_LAST =
+  ".card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden]))";
 
 function rowsOf(count: number, max: number): number[] {
   const rows = Math.ceil(count / max);
@@ -81,9 +82,9 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     expect(decl(bodyOf(phone, ODD_LAST), "grid-column")).toBe("1 / -1");
     expect(decl(bodyOf(phone, ODD_LAST), "flex-direction")).toBe("row");
     expect(decl(bodyOf(phone, ".cardDescription"), "display")).toBe("none");
-    expect(decl(bodyOf(phone, `${ODD_LAST} .cardDescription`), "display")).toBe(
-      "block",
-    );
+    expect(
+      decl(bodyOf(phone, `${ODD_LAST}\n    .cardDescription`), "display"),
+    ).toBe("block");
   });
 
   it("keeps the button and the done stamp in one box on one line", () => {
