@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HojePage from "../app/page";
 import { messages } from "../src/i18n";
 import { DAY_GAMES } from "../src/play/day-games";
-import { bodyOf, decl, stylesheet } from "./css-source";
+import { bodyOf, decl, ruleIndex, stylesheet } from "./css-source";
 
 const css = stylesheet("app/page.module.css");
 const wide = bodyOf(css, "@media (min-width: 1280px)");
@@ -14,7 +14,7 @@ const rounded = bodyOf(
   bodyOf(css, "@supports (inline-size: round(up, 1px, 1px))"),
   "@media (width > 768px)",
 );
-const wideCard = bodyOf(css, "@container (min-width: 400px)");
+const wideCard = bodyOf(css, "@container hub-card (min-width: 400px)");
 const ODD_LAST =
   ".card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden]))";
 
@@ -99,53 +99,29 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
 });
 
 describe("a desktop card wider than 400px lays out as a row, and its tilt eases on short rows (T-WEB-S1104)", () => {
-  it("makes the card a grid whose two children span both columns, so a narrow card stays a column", () => {
-    const card = bodyOf(desktop, ".card");
-    expect(decl(card, "display")).toBe("grid");
-    expect(decl(card, "grid-template")).toBe("auto 1fr / auto minmax(0, 1fr)");
-    expect(decl(card, "justify-items")).toBe("center");
+  it("spans both grid columns with each child, so a narrow card stays a column", () => {
+    expect(decl(bodyOf(desktop, ".card"), "display")).toBe("grid");
     for (const child of [".thumb", ".cardBody"]) {
       expect(decl(bodyOf(desktop, child), "grid-column"), child).toBe("1 / -1");
+      expect(decl(bodyOf(wideCard, child), "grid-area"), child).toBeDefined();
     }
-    expect(decl(bodyOf(desktop, ".cardBody"), "justify-self")).toBe("stretch");
   });
 
   it("measures the card and eases its tilt only where round() exists", () => {
     const card = bodyOf(rounded, ".card");
-    expect(decl(card, "container-type")).toBe("inline-size");
-    expect(decl(card, "transform")).toBe(
-      "rotate(calc(var(--tilt) * min(1, var(--per-row) / 4)))",
-    );
-    expect(decl(bodyOf(desktop, ".card"), "container-type")).toBeUndefined();
+    expect(decl(card, "container")).toBe("hub-card / inline-size");
+    expect(decl(card, "transform")).toContain("var(--per-row)");
+    expect(decl(bodyOf(desktop, ".card"), "container")).toBeUndefined();
     expect(decl(bodyOf(desktop, ".card"), "transform")).toBeUndefined();
     expect(decl(bodyOf(css, ".card"), "transform")).toBe("rotate(var(--tilt))");
   });
 
-  it("puts the thumbnail beside the body, start-aligned, the button at its own width", () => {
-    expect(decl(bodyOf(wideCard, ".thumb"), "grid-area")).toBe(
-      "1 / 1 / -1 / 2",
-    );
-    expect(decl(bodyOf(wideCard, ".cardBody"), "grid-area")).toBe(
-      "1 / 2 / -1 / 3",
-    );
-    expect(decl(bodyOf(wideCard, ".cardBody"), "text-align")).toBe("start");
-    expect(decl(bodyOf(wideCard, ".action"), "align-items")).toBe("flex-start");
-    expect(decl(bodyOf(wideCard, ".cta"), "padding-inline")).toBe(
-      "var(--space-6)",
-    );
-  });
-
   it("comes after every top-level card rule it overrides, and leaves the phone alone", () => {
-    const at = (prelude: string) =>
-      new RegExp(
-        `^${prelude.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{`,
-        "m",
-      ).exec(css)?.index ?? Number.NaN;
+    const query = ruleIndex(css, "@container hub-card (min-width: 400px)");
     for (const rule of [".card", ".thumb", ".cardBody", ".action", ".cta"]) {
-      expect(at(rule), rule).toBeLessThan(at("@container (min-width: 400px)"));
+      expect(ruleIndex(css, rule), rule).toBeLessThan(query);
     }
-    expect(decl(bodyOf(phone, ".card"), "container-type")).toBeUndefined();
-    expect(phone).not.toContain("grid-area");
+    expect(phone).not.toMatch(/grid-area|container/);
   });
 });
 

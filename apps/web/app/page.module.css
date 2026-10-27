@@ -568,13 +568,13 @@
 @supports (inline-size: round(up, 1px, 1px)) {
   @media (width > 768px) {
     .card {
-      container-type: inline-size;
+      container: hub-card / inline-size;
       transform: rotate(calc(var(--tilt) * min(1, var(--per-row) / 4)));
     }
   }
 }
 
-@container (min-width: 400px) {
+@container hub-card (min-width: 400px) {
   .thumb {
     grid-area: 1 / 1 / -1 / 2;
     margin-inline-start: var(--space-4);
