@@ -11,7 +11,7 @@ import {
 
 import { useServerDoneGames } from "../play/day-state";
 import { mirrorServerDone } from "./server-done";
-import { liftHold, scriptedTuck, tuckedGames } from "./tuck";
+import { endSettling, scriptedTuck, tuckedGames } from "./tuck";
 
 const NONE: ReadonlySet<Game> = new Set();
 
@@ -31,7 +31,7 @@ export function useSettledTuck(date: string): ReadonlySet<Game> {
     () => NONE,
   );
 
-  useEffect(liftHold, []);
+  useEffect(endSettling, []);
 
   useEffect(() => {
     if (serverDone !== undefined) {

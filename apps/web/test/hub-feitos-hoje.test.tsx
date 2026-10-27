@@ -297,6 +297,9 @@ describe("the board settles once, before hydration (T-WEB-S1100)", () => {
     expect(recoverable).not.toHaveBeenCalled();
     expect(consoleError).not.toHaveBeenCalled();
     expect(container.querySelector("script")).toBeNull();
+    expect(
+      container.querySelector<HTMLElement>("#hub-cards")?.dataset.hubSettled,
+    ).toBeUndefined();
     act(() => {
       root?.unmount();
     });

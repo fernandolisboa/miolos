@@ -64,8 +64,12 @@ export function scriptedTuck(date: string): ReadonlySet<Game> | undefined {
   );
 }
 
-export function liftHold(): void {
+export function endSettling(): void {
   delete document.documentElement.dataset[HOLD];
+  const grid = document.getElementById(HUB_CARDS_ID);
+  if (grid !== null) {
+    delete grid.dataset[SETTLED];
+  }
 }
 
 const literal = (value: unknown) =>
