@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-10-26 (issue #446, epic #442)
 **Depends on:** [ADR-0079](./0079-the-theme-is-a-device-preference-applied-before-paint.md), [ADR-0156](./0156-each-daily-is-its-own-taped-card-and-no-card-sits-alone-on-a-row.md)
+**Amended in place:** #452 — decision 5: desktop slips share the content box in equal tracks instead of a fixed 300px.
 **Amends:** ADR-0156's consequence that a tucked card must leave the DOM; [ADR-0031](./0031-per-device-day-state-is-a-local-monotone-safe-affordance.md) decision 1, since the tuck rule derives "finished" a second time, from the raw records, because it must run before any bundle has loaded.
 
 ## Context
@@ -14,7 +15,7 @@ A daily finished today leaves the hub's card grid for a compact *Feitos hoje* li
 2. **One partition per visit.** `useSettledTuck` reads the same rule (`tuckedGames`, Zod over the raw records) once per mount through `useSyncExternalStore`, so hydration renders the server's markup and the next commit writes the attributes the script already set. Its mount effect lifts the hold, in case the script never ran, and clears the stamp, so a later mount reads storage again. Only the card or the row that shows a game subscribes to its day state. A client navigation reads it in the first commit and renders no script. Afterwards nothing re-partitions: a game finished in another tab or confirmed by the server flips its card's stamp in place, and the next visit tucks it.
 3. **Hide, don't remove.** React-owned nodes cannot leave the DOM before hydration, so tucked cards and untucked rows carry `hidden`, and the tilt cycle and the phone's odd-last-card rule count `:not([hidden])` through `:nth-child(… of S)`.
 4. **The server's word survives the visit.** When the day truth arrives, the games it holds as finished are mirrored to `miolos:hub-server-done` (`src/hub/server-done.ts`) for that date; a game finished on another device is tucked from the next load on. Deleting the account clears it.
-5. **A row never shows a wrong word.** Until its state is known a row shows only its swatch and name; the chip and the result fill in place. Desktop slips have one fixed width, so filling them never re-wraps the list.
+5. **A row never shows a wrong word.** Until its state is known a row shows only its swatch and name; the chip and the result fill in place. Desktop slips share the content box in equal tracks of at least 330px (`repeat(auto-fit, minmax(330px, 1fr))`; a tucked row is `display: none` and takes no track), so the list ends where the doors do and a track's width depends only on the box and the slip count: filling a slip never re-wraps the list. 330px keeps "Campo Minado" on one line.
 
 ## Consequences
 

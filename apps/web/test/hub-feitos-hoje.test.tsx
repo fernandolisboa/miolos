@@ -447,9 +447,9 @@ describe("the hub's stylesheet hides a tucked tile and counts only what shows (T
     ).toBe("none");
   });
 
-  it("draws the rows as fixed-width slips, and as one sheet of 52px rows on a phone", () => {
+  it("draws the rows as equal slips across the content box, and as one sheet of 52px rows on a phone", () => {
     expect(decl(bodyOf(css, ".doneList"), "grid-template-columns")).toBe(
-      "repeat(auto-fill, 300px)",
+      "repeat(auto-fit, minmax(330px, 1fr))",
     );
     expect(decl(bodyOf(css, ".doneRow"), "min-height")).toBe("52px");
     expect(decl(bodyOf(phone, ".doneList"), "display")).toBe("block");

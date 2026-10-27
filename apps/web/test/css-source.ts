@@ -10,12 +10,21 @@ export function stylesheet(relativePath: string): string {
   );
 }
 
-export function bodyOf(css: string, prelude: string): string {
+function opening(css: string, prelude: string): RegExpExecArray {
   const opener = new RegExp(`^[ \\t]*${escape(prelude)}[ \\t]*\\{`, "m");
   const match = opener.exec(css);
   if (match === null) {
     throw new Error(`no block for \`${prelude}\``);
   }
+  return match;
+}
+
+export function ruleIndex(css: string, prelude: string): number {
+  return opening(css, prelude).index;
+}
+
+export function bodyOf(css: string, prelude: string): string {
+  const match = opening(css, prelude);
   const open = match.index + match[0].length - 1;
   let depth = 0;
   for (let index = open; index < css.length; index += 1) {

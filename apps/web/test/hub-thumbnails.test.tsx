@@ -336,6 +336,7 @@ describe("a thumbnail is decorative static markup that reaches no client module 
     }
   });
 
+  // ADR-0055: CI gate 5317 ms (10 runs) × 4 → 25_000.
   it("no client module reaches the hub's thumbnails", () => {
     const clients = [
       ...sourceFiles("apps/web/src"),
@@ -352,7 +353,7 @@ describe("a thumbnail is decorative static markup that reaches no client module 
         ),
       ),
     ).toEqual([]);
-  });
+  }, 25_000);
 });
 
 describe("every glyph, mark and region edge on a thumbnail clears the DESIGN.md floors (T-WEB-S1093)", () => {

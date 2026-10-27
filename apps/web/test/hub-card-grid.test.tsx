@@ -4,11 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HojePage from "../app/page";
 import { messages } from "../src/i18n";
 import { DAY_GAMES } from "../src/play/day-games";
-import { bodyOf, decl, stylesheet } from "./css-source";
+import { bodyOf, decl, ruleIndex, stylesheet } from "./css-source";
 
 const css = stylesheet("app/page.module.css");
 const wide = bodyOf(css, "@media (min-width: 1280px)");
 const phone = bodyOf(css, "@media (max-width: 768px)");
+const desktop = bodyOf(css, "@media (width > 768px)");
+const rounded = bodyOf(
+  bodyOf(css, "@supports (inline-size: round(up, 1px, 1px))"),
+  "@media (width > 768px)",
+);
+const wideCard = bodyOf(css, "@container hub-card (min-width: 400px)");
 const ODD_LAST =
   ".card:nth-last-child(1 of :not([hidden])):nth-child(odd of :not([hidden]))";
 
@@ -33,15 +39,14 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     expect(decl(bodyOf(wide, ".games"), "--max-per-row")).toBe("7");
   });
 
-  it("wraps and centres the rows, capped so a short row stays a row of cards", () => {
+  it("wraps and centres the rows across the whole content box, uncapped", () => {
     const games = bodyOf(css, ".games");
     expect(decl(games, "display")).toBe("flex");
     expect(decl(games, "flex-wrap")).toBe("wrap");
     expect(decl(games, "justify-content")).toBe("center");
-    expect(decl(games, "inline-size")).toBe("100%");
-    expect(decl(games, "max-inline-size")?.replace(/\s+/g, " ")).toBe(
-      "calc( var(--per-row) * 230px + (var(--per-row) - 1) * var(--card-gap) )",
-    );
+    expect(decl(games, "max-inline-size")).toBeUndefined();
+    expect(decl(games, "margin")).toBeUndefined();
+    expect(decl(bodyOf(wide, ".games"), "max-inline-size")).toBeUndefined();
   });
 
   it("gives each card exactly its share of the row, whatever its content", () => {
@@ -78,7 +83,6 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     expect(decl(bodyOf(phone, ".games"), "grid-template-columns")).toBe(
       "repeat(2, minmax(0, 1fr))",
     );
-    expect(decl(bodyOf(phone, ".games"), "max-inline-size")).toBe("none");
     expect(decl(bodyOf(phone, ODD_LAST), "grid-column")).toBe("1 / -1");
     expect(decl(bodyOf(phone, ODD_LAST), "flex-direction")).toBe("row");
     expect(decl(bodyOf(phone, ".cardDescription"), "display")).toBe("none");
@@ -91,6 +95,33 @@ describe("the hub's cards wrap into balanced, centred rows of at most seven (T-W
     expect(decl(bodyOf(css, ".cta"), "box-sizing")).toBe("border-box");
     expect(decl(bodyOf(css, ".done"), "white-space")).toBe("nowrap");
     expect(decl(bodyOf(css, ".action"), "margin-top")).toBe("auto");
+  });
+});
+
+describe("a desktop card wider than 400px lays out as a row, and its tilt eases on short rows (T-WEB-S1104)", () => {
+  it("spans both grid columns with each child, so a narrow card stays a column", () => {
+    expect(decl(bodyOf(desktop, ".card"), "display")).toBe("grid");
+    for (const child of [".thumb", ".cardBody"]) {
+      expect(decl(bodyOf(desktop, child), "grid-column"), child).toBe("1 / -1");
+      expect(decl(bodyOf(wideCard, child), "grid-area"), child).toBeDefined();
+    }
+  });
+
+  it("measures the card and eases its tilt only where round() exists", () => {
+    const card = bodyOf(rounded, ".card");
+    expect(decl(card, "container")).toBe("hub-card / inline-size");
+    expect(decl(card, "transform")).toContain("var(--per-row)");
+    expect(decl(bodyOf(desktop, ".card"), "container")).toBeUndefined();
+    expect(decl(bodyOf(desktop, ".card"), "transform")).toBeUndefined();
+    expect(decl(bodyOf(css, ".card"), "transform")).toBe("rotate(var(--tilt))");
+  });
+
+  it("comes after every top-level card rule it overrides, and leaves the phone alone", () => {
+    const query = ruleIndex(css, "@container hub-card (min-width: 400px)");
+    for (const rule of [".card", ".thumb", ".cardBody", ".action", ".cta"]) {
+      expect(ruleIndex(css, rule), rule).toBeLessThan(query);
+    }
+    expect(phone).not.toMatch(/grid-area|container/);
   });
 });
 
