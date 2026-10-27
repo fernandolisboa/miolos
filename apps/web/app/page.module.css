@@ -545,14 +545,22 @@
   text-underline-offset: 3px;
 }
 
-/* A card wider than 400px lays out as a row; a narrow one keeps the column,
-   since both children span the grid. The tilt eases on short rows. */
+/* A card over 400px lays out as a row; a narrow one stays a column, both
+   children spanning the grid. A lone card keeps one slot of a full row. */
 @media (width > 768px) {
   .card {
     display: grid;
     grid-template: auto 1fr / auto minmax(0, 1fr);
     justify-items: center;
     column-gap: var(--space-6);
+  }
+
+  .card:nth-child(1 of :not([hidden])):nth-last-child(1 of :not([hidden])) {
+    flex-basis: calc(
+      (100% - (var(--max-per-row) - 1) * var(--card-gap)) / var(--max-per-row) -
+        0.1px
+    );
+    transform: rotate(var(--tilt));
   }
 
   .thumb {
