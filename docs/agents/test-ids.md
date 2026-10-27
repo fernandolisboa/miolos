@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1104`   | `S1103`        | `T-WEB-23`            |
+| `T-WEB`  | `S1105`   | `S1104`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#452 (the hub's rows span the content box) spent **`T-WEB-S1104`** (`hub-card-grid.test.tsx`: the desktop card is a grid whose children span both columns, the container and the eased tilt only behind `@supports` on `round()`, a card over 400px lays out as a row, and those rules follow every top-level rule they override while the phone takes none). Re-aimed in place: `S1096` (the rows are uncapped) and `S1102` (the slips are `auto-fit` tracks of at least 330px).
 
 #446 (*Feitos hoje*, ADR-0157) spent **`T-WEB-S1098…S1103`** in `hub-feitos-hoje.test.tsx`: `S1098` the tuck rule (pending, completed, played, mixed, all, none, stray records, the day truth and its mirror, throwing storage), `S1099` the pre-paint script hides and counts exactly what `tuckedGames` says and lifts the hold, `S1100` hydration over the script's layout changes nothing and drops the scripts, a client navigation partitions in its first commit, `S1101` a game finished after mount keeps its card and is tucked on the next visit, `S1102` the hold, the `[hidden]` overrides and the slips, `S1103` the rows. Re-aimed in place: `S16`, `S17`, `S101`, `S156`, `S239`, `S248` (focus skips a tucked game), `S257` (the local tile is finished after mount), `S925` and `S1096` (the `of :not([hidden])` selectors); the hub tests find a game's tile through `test/hub-tile.ts`.
 
