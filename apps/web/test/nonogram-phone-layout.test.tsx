@@ -50,7 +50,7 @@ describe("the frame stays 3px and the inner group rules are thinner (T-WEB-S1106
   });
 });
 
-function variant(selected: string, onSelect = vi.fn(), focusOnMount = false) {
+function variant(selected: string, onSelect = vi.fn()) {
   return {
     ...choice({
       label: "Variante",
@@ -60,7 +60,7 @@ function variant(selected: string, onSelect = vi.fn(), focusOnMount = false) {
       optionAria: (option) => `Variante: ${option}`,
       onSelect,
     }),
-    toggle: { on: "cores", off: "classico", icon: null, focusOnMount },
+    toggle: { on: "cores", off: "classico", icon: null },
   };
 }
 
@@ -81,14 +81,17 @@ describe("the Cores variant is one toggle button (T-WEB-S1107)", () => {
     expect(onSelect).toHaveBeenLastCalledWith("classico");
   });
 
-  it("takes focus on mount only when asked and focus was lost", () => {
-    const { unmount } = render(
-      <ChoiceToggle {...variant("cores", vi.fn(), true)} />,
-    );
-    expect(document.activeElement).toBe(screen.getByRole("button"));
-    unmount();
+  it("takes focus back on its next mount only when it held focus as it unmounted", () => {
+    const first = render(<ChoiceToggle {...variant("classico")} />);
+    screen.getByRole("button").focus();
+    first.unmount();
 
-    render(<ChoiceToggle {...variant("cores", vi.fn(), false)} />);
+    const second = render(<ChoiceToggle {...variant("cores")} />);
+    expect(document.activeElement).toBe(screen.getByRole("button"));
+    (document.activeElement as HTMLElement).blur();
+    second.unmount();
+
+    render(<ChoiceToggle {...variant("cores")} />);
     expect(document.activeElement).toBe(document.body);
   });
 });

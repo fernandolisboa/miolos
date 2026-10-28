@@ -13,7 +13,6 @@ export interface Choice {
     readonly on: string;
     readonly off: string;
     readonly icon: ReactNode;
-    readonly focusOnMount: boolean;
   };
 }
 

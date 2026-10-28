@@ -199,8 +199,10 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     await flushGeneration();
     fireEvent.click(radio(level.aria(level.leve)));
     await flushGeneration();
+    coresToggle().focus();
     fireEvent.click(coresToggle());
     await coloredBoard();
+    expect(document.activeElement).toBe(coresToggle());
 
     const { palette } = LEVE.clues;
     palette.forEach((letter, at) => {
@@ -242,5 +244,14 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
       palette.map((letter) => `var(--tone-${letter})`).sort(),
     );
     expect(fetchMock).not.toHaveBeenCalled();
+
+    const again = screen.getByRole("button", {
+      name: messages.freePlay.solved.again.nonogram,
+    });
+    again.focus();
+    fireEvent.click(again);
+    await coloredBoard();
+    expect(coresToggle()).toHaveAttribute("aria-pressed", "true");
+    expect(document.activeElement).not.toBe(coresToggle());
   });
 });

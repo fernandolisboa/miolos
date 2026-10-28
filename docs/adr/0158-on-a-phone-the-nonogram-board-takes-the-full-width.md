@@ -1,7 +1,7 @@
 # ADR-0158 — On a phone the Nonogram board takes the full width, Cores is a toggle, and the group rules are thinner
 
 **Status:** Accepted — 2026-10-28 (issue #455)
-**Amends:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) decision 3 (the Nonogram's phone floor); [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 2 (rule widths); [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) (the *Variante* control).
+**Amends:** [ADR-0103](./0103-boards-size-from-the-space-they-have-not-from-fixed-cells.md) decision 3 (the Nonogram's phone floor); [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 2 (rule widths); [ADR-0132](./0132-the-coloured-nonogram-is-a-free-play-variant-loaded-on-demand.md) decision 1 (the *Variante* control).
 
 ## Context
 
@@ -10,7 +10,7 @@ Fernando could not play a 15×15 Nonogram on his phone without zooming, and a pi
 ## Decision
 
 1. **Up to 480px wide, the Nonogram well's floor is the column's width** (`--board-min: min(100vw − 2 × --space-4, --board-max)` on `.pageNonogram`), so the board always spans the column and the page scrolls if it must. It covers the daily, the archive and free play, which share `nonogramPageModifier`. Wider screens, landscape phones and foldables keep ADR-0103's sizing. The gutter mirrors `.page`'s phone padding (pinned by T-WEB-S1105).
-2. **Cores is one toggle button** beside the level chips, on the same row: `aria-pressed`, labelled *Variante: Cores*, icon only. Its icon is a 3×3 grid, every cell in the game accent when off and in four picture tones when on, each cell outlined in ink. Off looks like an idle chip; on sinks with an ink border. The variant is still a `Choice` (with `toggle: { on, off }`), so the solved card names it. Focus returns to the toggle after the switch remounts the screen.
+2. **Cores is one toggle button** beside the level chips, on the same row: `aria-pressed`, labelled *Variante: Cores*, icon only. Its icon is a 3×3 grid, every cell in the game accent when off and in four picture tones when on, each cell outlined in ink. Off looks like an idle chip; on sinks with an ink border. The variant is still a `Choice` (with `toggle: { on, off }`), so the solved card names it. When the toggle held focus as the screen remounted, its next mount takes focus back; any other remount leaves focus alone.
 3. **The inner group rules are 2.5px; the frame stays 3px** on all four edges (`cellEdgeTop`/`cellEdgeLeft` join right and bottom). Contrast is unchanged: same `--ink`.
 
 ## Consequences

@@ -5,7 +5,7 @@
 **Amends:** [ADR-0046](./0046-free-play-routes-levels-and-the-ephemeral-session.md) decisions 2 and 3; [ADR-0094](./0094-the-secondary-mouse-button-writes-the-opposite-mark.md) decisions 4 and 5; [ADR-0104](./0104-a-nonogram-clue-number-is-struck-when-the-marks-place-it.md) decision 3; [ADR-0121](./0121-the-solved-nonogram-picture-is-painted-in-its-motifs-tones.md) decision 3; [ADR-0037](./0037-the-nonogram-board-is-a-three-state-brush-board.md) decision 4; [ADR-0035](./0035-the-nonogram-board-is-a-ruled-continuous-field.md) decision 7; [ADR-0018](./0018-i18n-is-an-in-repo-typed-message-module.md) (copy home); [ADR-0102](./0102-player-settings-are-device-local-and-mostrar-erros-is-an-opt-in-assist.md) decision 3 (the wrong-cell flag); [ADR-0112](./0112-the-grid-game-routes-bundle-budget-is-a-leak-tripwire.md) (re-measured, no budget changed).
 **Amended by:** [ADR-0143](./0143-the-nonogram-crosses-a-line-its-fills-complete.md) (#402) — Cores crosses a line whose tones form its clue, under the same setting as Clássico.
 **Amended at #386:** Cores strikes a chip its marks place, under *Riscar números resolvidos* (ADR-0104 on tone runs), with a 2 px line-through in the chip's `--cell-ink`.
-**Amended by:** [ADR-0158](./0158-on-a-phone-the-nonogram-board-takes-the-full-width.md) (#455) — the *Variante* is one *Cores* toggle beside the level chips, not a second row of chips.
+**Amended by:** [ADR-0158](./0158-on-a-phone-the-nonogram-board-takes-the-full-width.md) (#455) — decision 1: the *Variante* is one *Cores* toggle beside the level chips, not a second row of chips.
 
 ## Context
 

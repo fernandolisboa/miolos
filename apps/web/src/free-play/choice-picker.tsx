@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { messages } from "../i18n";
 import { FREE_PLAY_LEVELS, type FreePlayLevel } from "./catalog";
@@ -91,19 +91,31 @@ export function ChoicePicker({ label, options, selected, onSelect }: Choice) {
   );
 }
 
+const refocusOnMount = new Set<string>();
+
 export function ChoiceToggle({
+  label,
   options,
   selected,
   onSelect,
   toggle,
 }: Choice & { readonly toggle: NonNullable<Choice["toggle"]> }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const { on, off, focusOnMount } = toggle;
-  useEffect(() => {
-    if (focusOnMount && document.activeElement === document.body) {
-      buttonRef.current?.focus();
+  const { on, off } = toggle;
+  useLayoutEffect(() => {
+    const button = buttonRef.current;
+    if (
+      refocusOnMount.delete(label) &&
+      document.activeElement === document.body
+    ) {
+      button?.focus();
     }
-  }, [focusOnMount]);
+    return () => {
+      if (button !== null && document.activeElement === button) {
+        refocusOnMount.add(label);
+      }
+    };
+  }, [label]);
 
   const option = options.find((candidate) => candidate.key === on);
   const pressed = selected === on;

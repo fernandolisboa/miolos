@@ -46,27 +46,19 @@ export function NonogramFreeScreen({
 }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
   const [variant, setVariant] = useState<NonogramVariant>("classico");
-  const [toggled, setToggled] = useState(false);
   const choices = [
-    levelChoice(level, (next) => {
-      setToggled(false);
-      setLevel(next);
-    }),
+    levelChoice(level, setLevel),
     {
       ...variantChoice(
         NONOGRAM_VARIANTS,
         messages.freePlay.variant,
         variant,
-        (next) => {
-          setToggled(true);
-          setVariant(next);
-        },
+        setVariant,
       ),
       toggle: {
-        on: "cores",
-        off: "classico",
+        on: "cores" satisfies NonogramVariant,
+        off: "classico" satisfies NonogramVariant,
         icon: <ColoredGridIcon />,
-        focusOnMount: toggled,
       },
     },
   ];
