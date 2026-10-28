@@ -21,6 +21,7 @@ import {
 } from "./catalog";
 import type { Choice } from "./choice";
 import { levelChoice, variantChoice } from "./choice-picker";
+import { ColoredGridIcon } from "./colored-grid-icon";
 import {
   NonogramFreeShell,
   PictureFreeFrame,
@@ -45,14 +46,29 @@ export function NonogramFreeScreen({
 }) {
   const [level, setLevel] = useState<FreePlayLevel>(DEFAULT_FREE_PLAY_LEVEL);
   const [variant, setVariant] = useState<NonogramVariant>("classico");
+  const [toggled, setToggled] = useState(false);
   const choices = [
-    levelChoice(level, setLevel),
-    variantChoice(
-      NONOGRAM_VARIANTS,
-      messages.freePlay.variant,
-      variant,
-      setVariant,
-    ),
+    levelChoice(level, (next) => {
+      setToggled(false);
+      setLevel(next);
+    }),
+    {
+      ...variantChoice(
+        NONOGRAM_VARIANTS,
+        messages.freePlay.variant,
+        variant,
+        (next) => {
+          setToggled(true);
+          setVariant(next);
+        },
+      ),
+      toggle: {
+        on: "cores",
+        off: "classico",
+        icon: <ColoredGridIcon />,
+        focusOnMount: toggled,
+      },
+    },
   ];
 
   return variant === "classico" ? (

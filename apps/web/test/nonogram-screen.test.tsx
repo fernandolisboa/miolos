@@ -1337,16 +1337,22 @@ describe("the board geometry (T-WEB-S48)", () => {
     expect(decl(cell, "border-top")).toBe(hairline);
     expect(decl(cell, "border-left")).toBe(hairline);
     expect(decl(bodyOf(GAME_CSS, ".cellRuleTop"), "border-top-width")).toBe(
-      "3px",
+      "2.5px",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleTop"), "border-top-color")).toBe(
       "var(--ink)",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleLeft"), "border-left-width")).toBe(
-      "3px",
+      "2.5px",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellRuleLeft"), "border-left-color")).toBe(
       "var(--ink)",
+    );
+    expect(decl(bodyOf(GAME_CSS, ".cellEdgeTop"), "border-top")).toBe(
+      "3px solid var(--ink)",
+    );
+    expect(decl(bodyOf(GAME_CSS, ".cellEdgeLeft"), "border-left")).toBe(
+      "3px solid var(--ink)",
     );
     expect(decl(bodyOf(GAME_CSS, ".cellEdgeRight"), "border-right")).toBe(
       "3px solid var(--ink)",
@@ -1551,9 +1557,13 @@ describe("the board geometry (T-WEB-S48)", () => {
         const row = Math.floor(index / side);
         const column = index % side;
         const classes = cellAt(container, index).classList;
-        expect(classes.contains(className("cellRuleTop"))).toBe(row % 5 === 0);
+        expect(classes.contains(className("cellEdgeTop"))).toBe(row === 0);
+        expect(classes.contains(className("cellEdgeLeft"))).toBe(column === 0);
+        expect(classes.contains(className("cellRuleTop"))).toBe(
+          row > 0 && row % 5 === 0,
+        );
         expect(classes.contains(className("cellRuleLeft"))).toBe(
-          column % 5 === 0,
+          column > 0 && column % 5 === 0,
         );
         expect(classes.contains(className("cellEdgeRight"))).toBe(
           column === side - 1,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { messages } from "../i18n";
 import { FREE_PLAY_LEVELS, type FreePlayLevel } from "./catalog";
@@ -88,5 +88,38 @@ export function ChoicePicker({ label, options, selected, onSelect }: Choice) {
         </button>
       ))}
     </div>
+  );
+}
+
+export function ChoiceToggle({
+  options,
+  selected,
+  onSelect,
+  toggle,
+}: Choice & { readonly toggle: NonNullable<Choice["toggle"]> }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { on, off, focusOnMount } = toggle;
+  useEffect(() => {
+    if (focusOnMount && document.activeElement === document.body) {
+      buttonRef.current?.focus();
+    }
+  }, [focusOnMount]);
+
+  const option = options.find((candidate) => candidate.key === on);
+  const pressed = selected === on;
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      aria-pressed={pressed}
+      aria-label={option?.aria}
+      title={option?.label}
+      className={styles.choiceToggle}
+      onClick={() => {
+        onSelect(pressed ? off : on);
+      }}
+    >
+      {toggle.icon}
+    </button>
   );
 }

@@ -11,7 +11,8 @@ import {
 import screen from "../play/screen.module.css";
 import { FREE_PLAY_BACK } from "./back";
 import { choiceLabel, type Choice } from "./choice";
-import { ChoicePicker } from "./choice-picker";
+import { ChoicePicker, ChoiceToggle } from "./choice-picker";
+import styles from "./free-play.module.css";
 
 function choiceStat(choice: Choice): PlayChromeStat {
   return {
@@ -54,9 +55,21 @@ export function FreePlayChrome({
       picker={picker}
       rules={rules}
     >
-      {choices?.map((choice) => (
-        <ChoicePicker key={choice.label} {...choice} />
-      ))}
+      {choices === undefined ? null : (
+        <div className={styles.choiceRow}>
+          {choices.map((choice) =>
+            choice.toggle === undefined ? (
+              <ChoicePicker key={choice.label} {...choice} />
+            ) : (
+              <ChoiceToggle
+                key={choice.label}
+                {...choice}
+                toggle={choice.toggle}
+              />
+            ),
+          )}
+        </div>
+      )}
       {children}
     </PlayScreenChrome>
   );

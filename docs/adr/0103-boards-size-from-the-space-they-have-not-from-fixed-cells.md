@@ -7,6 +7,7 @@
 **Amends:** ADR-0035 decision 7 (its exemption stands, the control height above changes); [ADR-0029](./0029-shared-daily-play-layer-in-apps-web-src-play.md) (`BoardCard` takes the controls as a node); [ADR-0041](./0041-accents-colour-shapes-never-words.md) consequence (d) (the kickers hide at 1023px on the play screen, 1140px on the conclusion).
 **Amended by:** [ADR-0123](./0123-on-a-phone-the-rules-sit-behind-an-i-and-the-hint-shares-the-reset-row.md) (#375) — decision 6: in one column the hint shares the reset row and the confirm opens upward as a card. [ADR-0111](./0111-cruzadinha-free-play-offers-5x5-or-7x7.md) (#330) — decision 8: a 7×7 free-play Cruzadinha has a 232px floor on its page modifier; 5×5 keeps 200px. [ADR-0117](./0117-the-daily-cruzadinha-is-7x7.md) (#330) — decision 8: the 232px 7×7 floor applies to the daily and the archive too, not only to free play.
 **Amended by:** [ADR-0136](./0136-campo-minado-free-play-screen.md) (#373) — decision 3: a game may keep its cell floor by scrolling inside the well (`--board-floor-side`; the scrolling and the shadow's room live in the game's own sheet).
+**Amended by:** [ADR-0158](./0158-on-a-phone-the-nonogram-board-takes-the-full-width.md) (#455) — decision 3: up to 480px wide the Nonogram's floor is the column's width, so its board spans the phone and the page scrolls.
 
 ## Context
 

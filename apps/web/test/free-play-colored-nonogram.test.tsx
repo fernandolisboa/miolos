@@ -59,6 +59,10 @@ function radio(name: string): HTMLElement {
   return screen.getByRole("radio", { name });
 }
 
+function coresToggle(): HTMLElement {
+  return screen.getByRole("button", { name: variant.aria(variant.cores) });
+}
+
 const variant = messages.freePlay.variant;
 const level = messages.freePlay.level;
 
@@ -140,7 +144,7 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     render(<NonogramFreeScreen deps={seeds()} />);
     await flushGeneration();
 
-    fireEvent.click(radio(variant.aria(variant.cores)));
+    fireEvent.click(coresToggle());
     expect(
       await screen.findByText(messages.freePlay.error.title),
     ).toBeInTheDocument();
@@ -158,32 +162,31 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     render(<NonogramFreeScreen deps={seeds()} />);
     await flushGeneration();
 
-    expect(radio(variant.aria(variant.classico))).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(
+      screen.queryByRole("radio", { name: variant.aria(variant.classico) }),
+    ).toBeNull();
+    expect(coresToggle()).toHaveAttribute("aria-pressed", "false");
     expect(cells()).toHaveLength(100);
     expect(chips()).toBe(0);
 
-    fireEvent.click(radio(variant.aria(variant.cores)));
+    coresToggle().focus();
+    fireEvent.click(coresToggle());
     await coloredBoard();
-    expect(radio(variant.aria(variant.cores))).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(coresToggle()).toHaveAttribute("aria-pressed", "true");
+    expect(document.activeElement).toBe(coresToggle());
     expect(cells()).toHaveLength(100);
 
     fireEvent.click(radio(level.aria(level.leve)));
     await flushGeneration();
     await coloredBoard();
     expect(cells()).toHaveLength(25);
-    expect(radio(variant.aria(variant.cores))).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(coresToggle()).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(radio(variant.aria(variant.classico)));
+    coresToggle().focus();
+    fireEvent.click(coresToggle());
     await flushGeneration();
+    expect(coresToggle()).toHaveAttribute("aria-pressed", "false");
+    expect(document.activeElement).toBe(coresToggle());
     expect(cells()).toHaveLength(25);
     expect(chips()).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -196,7 +199,7 @@ describe("Variante picks Clássico or Cores, Cores loads on demand at the curren
     await flushGeneration();
     fireEvent.click(radio(level.aria(level.leve)));
     await flushGeneration();
-    fireEvent.click(radio(variant.aria(variant.cores)));
+    fireEvent.click(coresToggle());
     await coloredBoard();
 
     const { palette } = LEVE.clues;
