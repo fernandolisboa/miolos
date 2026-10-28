@@ -94,6 +94,16 @@ describe("the Cores variant is one toggle button (T-WEB-S1107)", () => {
     render(<ChoiceToggle {...variant("cores")} />);
     expect(document.activeElement).toBe(document.body);
   });
+
+  it("forgets the focus it held once the remount's commit is over", async () => {
+    const first = render(<ChoiceToggle {...variant("classico")} />);
+    screen.getByRole("button").focus();
+    first.unmount();
+    await Promise.resolve();
+
+    render(<ChoiceToggle {...variant("cores")} />);
+    expect(document.activeElement).toBe(document.body);
+  });
 });
 
 describe("the toggle looks like an idle chip until pressed (T-WEB-S1108)", () => {

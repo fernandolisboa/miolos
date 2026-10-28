@@ -113,6 +113,7 @@ export function ChoiceToggle({
     return () => {
       if (button !== null && document.activeElement === button) {
         refocusOnMount.add(label);
+        queueMicrotask(() => refocusOnMount.delete(label));
       }
     };
   }, [label]);
