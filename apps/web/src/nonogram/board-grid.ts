@@ -37,8 +37,10 @@ export function sameStrikes(
 
 export function ruleClasses(row: number, column: number, size: number): string {
   return [
-    row % GROUP === 0 ? styles.cellRuleTop : "",
-    column % GROUP === 0 ? styles.cellRuleLeft : "",
+    row === 0 ? styles.cellEdgeTop : "",
+    column === 0 ? styles.cellEdgeLeft : "",
+    row > 0 && row % GROUP === 0 ? styles.cellRuleTop : "",
+    column > 0 && column % GROUP === 0 ? styles.cellRuleLeft : "",
     column === size - 1 ? styles.cellEdgeRight : "",
     row === size - 1 ? styles.cellEdgeBottom : "",
   ]

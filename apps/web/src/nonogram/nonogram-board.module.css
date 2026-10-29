@@ -1,5 +1,5 @@
 /* File order is load-bearing: test/css-source.ts `bodyOf` is first-match, so top-level
-   rules come first, then the 768px block, then reduced motion; one top-level `.cell`. */
+   rules come first, then the 768px and 480px blocks, then reduced motion; one top-level `.cell`. */
 
 .pageNonogram {
   --grid-card-rot: -0.7deg;
@@ -83,13 +83,21 @@
 }
 
 .cellRuleTop {
-  border-top-width: 3px;
+  border-top-width: 2.5px;
   border-top-color: var(--ink);
 }
 
 .cellRuleLeft {
-  border-left-width: 3px;
+  border-left-width: 2.5px;
   border-left-color: var(--ink);
+}
+
+.cellEdgeTop {
+  border-top: 3px solid var(--ink);
+}
+
+.cellEdgeLeft {
+  border-left: 3px solid var(--ink);
 }
 
 .cellEdgeRight {
@@ -275,6 +283,13 @@
 
   .affordance {
     display: none;
+  }
+}
+
+/* A phone's board takes the column's width and the page scrolls instead; the gutter is `.page`'s 768px padding. */
+@media (max-width: 480px) {
+  .pageNonogram {
+    --board-min: min(100vw - 2 * var(--space-4), var(--board-max));
   }
 }
 

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export interface Choice {
   readonly label: string;
   readonly options: readonly {
@@ -7,6 +9,11 @@ export interface Choice {
   }[];
   readonly selected: string;
   readonly onSelect: (key: string) => void;
+  readonly toggle?: {
+    readonly on: string;
+    readonly off: string;
+    readonly icon: ReactNode;
+  };
 }
 
 export function choice<T extends string | number>({

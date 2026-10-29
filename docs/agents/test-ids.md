@@ -40,8 +40,10 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1105`   | `S1104`        | `T-WEB-23`            |
+| `T-WEB`  | `S1109`   | `S1108`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
+
+#455 (the Nonogram on a phone, ADR-0158) spent **`T-WEB-S1105…S1108`** in `nonogram-phone-layout.test.tsx`: `S1105` the phone `--board-min` and its gutter mirror, `S1106` the 2.5px group rules against the 3px frame, `S1107` the Cores toggle (pressed state, flip, focus on remount), `S1108` its stylesheet (idle chip off, sunk on, ink icon outline, forced colours). Re-aimed in place: `S48` A4 and C1 (frame classes apart from group rules) and `S877` (the variant is a toggle; focus returns to it).
 
 #452 (the hub's rows span the content box) spent **`T-WEB-S1104`** (`hub-card-grid.test.tsx`, the wide card as a row; a lone card keeps one slot, added in place by the follow-up). Re-aimed in place: `S1096` (the rows are uncapped) and `S1102` (the slips are `auto-fit` tracks of at least 330px).
 
