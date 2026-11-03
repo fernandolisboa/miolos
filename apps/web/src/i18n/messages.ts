@@ -482,7 +482,6 @@ export const messages = {
     backToIndex: "← Arquivo",
     backToIndexAria: "Voltar para o Arquivo",
 
-    months: { heading: "Por mês" },
     empty:
       "O arquivo começa quando o primeiro puzzle do dia sai. Volte amanhã.",
 
@@ -504,6 +503,13 @@ export const messages = {
     month: {
       previousAria: (month: string) => `Mês anterior · ${month}`,
       nextAria: (month: string) => `Próximo mês · ${month}`,
+    },
+
+    picker: {
+      monthsHint: "Escolher outro mês",
+      yearsHint: "Escolher outro ano",
+      previousYearAria: (year: string) => `Ano anterior · ${year}`,
+      nextYearAria: (year: string) => `Próximo ano · ${year}`,
     },
 
     day: {

@@ -4,6 +4,7 @@ export {
   formatElapsed,
   formatLongDate,
   formatMonth,
+  formatMonthShort,
   formatShortDate,
 } from "./format";
 export { locale, ogLocale } from "./locale";

@@ -15,6 +15,11 @@ const monthFormat = new Intl.DateTimeFormat(locale, {
   timeZone: "UTC",
 });
 
+const monthNameFormat = new Intl.DateTimeFormat(locale, {
+  month: "short",
+  timeZone: "UTC",
+});
+
 const dayAndMonthFormat = new Intl.DateTimeFormat(locale, {
   day: "numeric",
   month: "long",
@@ -32,12 +37,20 @@ const dayNumberFormat = new Intl.DateTimeFormat(locale, {
   timeZone: "UTC",
 });
 
+function withoutDot(abbreviation: string): string {
+  return abbreviation.replace(/\.$/, "");
+}
+
 export function formatLongDate(isoDate: string): string {
   return longDateFormat.format(utcNoon(isoDate));
 }
 
 export function formatMonth(isoDate: string): string {
   return monthFormat.format(utcNoon(isoDate));
+}
+
+export function formatMonthShort(isoDate: string): string {
+  return withoutDot(monthNameFormat.format(utcNoon(isoDate)));
 }
 
 export function formatDayAndMonth(isoDate: string): string {
@@ -48,7 +61,7 @@ export function formatShortDate(isoDate: string): string {
   const parts = shortDateFormat.formatToParts(utcNoon(isoDate));
   const day = parts.find((part) => part.type === "day")?.value ?? "";
   const month = parts.find((part) => part.type === "month")?.value ?? "";
-  return `${day} ${month.replace(/\.$/, "")}`.trim();
+  return `${day} ${withoutDot(month)}`.trim();
 }
 
 export function formatDayNumber(isoDate: string): string {
