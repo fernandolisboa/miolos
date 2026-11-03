@@ -1,11 +1,11 @@
 import type { StatsCalendarResponse } from "@miolos/core";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ArchiveIndexView } from "../app/arquivo/index-view";
 import { ArchiveMonthView } from "../app/arquivo/month-view";
 import StatsPage from "../app/estatisticas/page";
-import { adjacentMonths } from "../src/archive/calendar";
+import { adjacentPeriods } from "../src/archive/calendar";
 import {
   formatLongDate,
   formatMonth,
@@ -197,8 +197,8 @@ describe("the archive steps between months on the calendar itself (T-WEB-S792)",
     expect(parts[2]).toHaveAttribute("aria-hidden");
   });
 
-  it("the month list marks the month on screen", () => {
-    render(
+  it("the month grid marks the month on screen", () => {
+    const { container } = render(
       <ArchiveMonthView
         month="2026-09"
         dates={new Set(["2026-09-01"])}
@@ -206,47 +206,44 @@ describe("the archive steps between months on the calendar itself (T-WEB-S792)",
       />,
     );
 
-    const current = screen.getByRole("link", {
-      name: formatMonth("2026-09-01"),
-    });
-    expect(current).toHaveAttribute("aria-current", "true");
-    expect(
-      screen
-        .getAllByRole("link", { name: /^\w+ de 2026$/ })
-        .filter((link) => link.hasAttribute("aria-current")),
-    ).toEqual([current]);
+    const grid = container.querySelector("[class*='periodGrid']");
+    const marked = [
+      ...(grid as HTMLElement).querySelectorAll('[aria-current="true"]'),
+    ];
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toHaveAttribute("href", "/arquivo/mes/2026-09");
   });
 });
 
-describe("the current month chip keeps its label on hover (T-WEB-S792)", () => {
+describe("the current month cell keeps its label on hover (T-WEB-S792)", () => {
   it("its paper label outranks `.page a:hover`", () => {
     const sheet = stylesheet("app/arquivo/arquivo.module.css");
-    const chip = bodyOf(
+    const cell = bodyOf(
       sheet,
-      '.page .monthChip[aria-current="true"],\n.page .monthChip[aria-current="true"]:hover',
+      '.page .periodCellLink[aria-current="true"],\n.page .periodCellLink[aria-current="true"]:hover',
     );
-    expect(decl(chip, "color")).toBe("var(--paper-card)");
-    expect(decl(chip, "background")).toBe("var(--ink)");
+    expect(decl(cell, "color")).toBe("var(--paper-card)");
+    expect(decl(cell, "background")).toBe("var(--ink)");
   });
 });
 
-describe("adjacentMonths (T-WEB-S793)", () => {
+describe("adjacentPeriods (T-WEB-S793)", () => {
   const MONTHS = ["2026-10", "2026-09", "2026-08"];
 
   it("steps one month each way, and stops at both ends", () => {
-    expect(adjacentMonths(MONTHS, "2026-09")).toEqual({
+    expect(adjacentPeriods(MONTHS, "2026-09")).toEqual({
       previous: "2026-08",
       next: "2026-10",
     });
-    expect(adjacentMonths(MONTHS, "2026-10")).toEqual({
+    expect(adjacentPeriods(MONTHS, "2026-10")).toEqual({
       previous: "2026-09",
       next: undefined,
     });
-    expect(adjacentMonths(MONTHS, "2026-08")).toEqual({
+    expect(adjacentPeriods(MONTHS, "2026-08")).toEqual({
       previous: undefined,
       next: "2026-09",
     });
-    expect(adjacentMonths(MONTHS, "2026-05")).toEqual({
+    expect(adjacentPeriods(MONTHS, "2026-05")).toEqual({
       previous: undefined,
       next: undefined,
     });

@@ -36,8 +36,8 @@ afterEach(() => {
 const dayAria = messages.archive.calendar.dayAria;
 
 describe("the archive index (T-WEB-S167)", () => {
-  it("renders the newest month's clickable calendar and one link per archived month, newest first", () => {
-    render(
+  it("renders the newest month's clickable calendar, and a month grid holding one link per archived month", () => {
+    const { container } = render(
       <ArchiveIndexView
         calendar={{
           month: "2026-08",
@@ -65,12 +65,15 @@ describe("the archive index (T-WEB-S167)", () => {
     expect(newest).toHaveAttribute("href", "/arquivo/2026-08-13");
     expect(newest).toHaveTextContent("13");
 
-    const months = screen.getAllByRole("link", { name: /^\w+ de 2026$/ });
+    expect(screen.queryByText("Por mês")).toBeNull();
+    const monthGrid = container.querySelector("[class*='periodGrid']");
+    expect(monthGrid).toHaveAttribute("inert");
+    const months = [...(monthGrid as HTMLElement).querySelectorAll("a")];
     expect(months.map((link) => link.getAttribute("href"))).toEqual([
-      "/arquivo/mes/2026-08",
       "/arquivo/mes/2026-07",
+      "/arquivo/mes/2026-08",
     ]);
-    expect(months[0]).toHaveTextContent(formatMonth("2026-08-01"));
+    expect(months[1]).toHaveAccessibleName(formatMonth("2026-08-01"));
   });
 
   it("keeps a month href in the body whenever a month exists — the visual gate's discovery grammar", () => {
@@ -154,7 +157,7 @@ describe("the ragged archive, which is the real one (T-WEB-S182)", () => {
     }
   });
 
-  it("the payload bounds hold — a full 31-day month is 31 day anchors, one chip per month", () => {
+  it("the payload bounds hold — 31 day anchors, the back link, one month step, and one month-grid link per month of the year", () => {
     const dates = new Set(
       Array.from(
         { length: 31 },
@@ -170,9 +173,8 @@ describe("the ragged archive, which is the real one (T-WEB-S182)", () => {
 
     expect(container.querySelectorAll("a")).toHaveLength(35);
 
-    expect(screen.getAllByRole("link", { name: /^\w+ de 2026$/ })).toHaveLength(
-      2,
-    );
+    const monthGrid = container.querySelector("[class*='periodGrid']");
+    expect((monthGrid as HTMLElement).querySelectorAll("a")).toHaveLength(2);
 
     const grid = container.querySelector("[class*='calendarGrid']");
     expect(within(grid as HTMLElement).getAllByRole("listitem")).toHaveLength(

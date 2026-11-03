@@ -52,16 +52,51 @@ export function archiveCalendarMonth(
   });
 }
 
-export function adjacentMonths(
-  months: readonly string[],
-  month: string,
+export function adjacentPeriods(
+  newestFirst: readonly string[],
+  period: string,
 ): {
   readonly previous: string | undefined;
   readonly next: string | undefined;
 } {
-  const index = months.indexOf(month);
+  const index = newestFirst.indexOf(period);
   return {
-    previous: index === -1 ? undefined : months[index + 1],
-    next: index <= 0 ? undefined : months[index - 1],
+    previous: index === -1 ? undefined : newestFirst[index + 1],
+    next: index <= 0 ? undefined : newestFirst[index - 1],
   };
+}
+
+export interface ArchivePeriodCell {
+  readonly period: string;
+
+  readonly linked: boolean;
+}
+
+export function publishedYears(months: readonly string[]): readonly string[] {
+  return [...new Set(months.map((month) => month.slice(0, 4)))];
+}
+
+export function archiveYears(
+  months: readonly string[],
+): readonly ArchivePeriodCell[] {
+  const published = publishedYears(months);
+  if (published.length === 0) {
+    return [];
+  }
+  const newest = Number(published[0]);
+  const oldest = Number(published.at(-1));
+  return Array.from({ length: newest - oldest + 1 }, (_, index) => {
+    const period = String(oldest + index);
+    return { period, linked: published.includes(period) };
+  });
+}
+
+export function yearMonths(
+  year: string,
+  months: readonly string[],
+): readonly ArchivePeriodCell[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const period = `${year}-${String(index + 1).padStart(2, "0")}`;
+    return { period, linked: months.includes(period) };
+  });
 }

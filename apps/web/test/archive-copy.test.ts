@@ -36,7 +36,8 @@ describe("the archive's copy lives in messages.archive (T-WEB-S181)", () => {
     expect(typeof copy.title).toBe("string");
     expect(typeof copy.lead).toBe("string");
     expect(typeof copy.empty).toBe("string");
-    expect(typeof copy.months.heading).toBe("string");
+    expect(typeof copy.picker.monthsHint).toBe("string");
+    expect(typeof copy.picker.yearsHint).toBe("string");
     expect(typeof copy.play.note).toBe("string");
 
     expect(copy.calendar.weekdays).toHaveLength(7);

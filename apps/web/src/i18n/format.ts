@@ -15,6 +15,11 @@ const monthFormat = new Intl.DateTimeFormat(locale, {
   timeZone: "UTC",
 });
 
+const monthNameFormat = new Intl.DateTimeFormat(locale, {
+  month: "short",
+  timeZone: "UTC",
+});
+
 const dayAndMonthFormat = new Intl.DateTimeFormat(locale, {
   day: "numeric",
   month: "long",
@@ -38,6 +43,10 @@ export function formatLongDate(isoDate: string): string {
 
 export function formatMonth(isoDate: string): string {
   return monthFormat.format(utcNoon(isoDate));
+}
+
+export function formatMonthShort(isoDate: string): string {
+  return monthNameFormat.format(utcNoon(isoDate)).replace(/\.$/, "");
 }
 
 export function formatDayAndMonth(isoDate: string): string {
