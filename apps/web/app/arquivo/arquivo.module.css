@@ -372,6 +372,15 @@
     gap: 2px;
   }
 
+  .calendarMonth {
+    font-size: 19px;
+  }
+
+  .calendarTitle {
+    gap: var(--space-1);
+    padding-inline: var(--space-1);
+  }
+
   .cards {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -380,5 +389,13 @@
      `aria-hidden="true"`, which is what React ships on this chip. */
   .doneChip {
     padding: var(--space-1) 9px;
+  }
+}
+
+/* Below 390px seven 44px columns overflow the card, so the day cells shrink to fit. */
+@media (max-width: 389px) {
+  .weekdays,
+  .calendarGrid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }

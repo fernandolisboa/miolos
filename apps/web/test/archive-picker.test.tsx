@@ -114,7 +114,7 @@ describe("the calendar drills from days to months to years (T-WEB-S1110)", () =>
     fireEvent.click(within(title()).getByRole("button"));
 
     expect(
-      within(card).queryByRole("button", { name: copy.nextYearAria("2027") }),
+      within(card).queryByRole("button", { name: /^Próximo ano/ }),
     ).toBeNull();
     fireEvent.click(
       within(card).getByRole("button", { name: copy.previousYearAria("2025") }),
@@ -200,6 +200,16 @@ describe("the picker's stylesheet (T-WEB-S1112)", () => {
     const cell = bodyOf(sheet, ".periodCellLink,\n.periodCellInert");
     expect(decl(cell, "font-family")).toBe("var(--font-ui)");
     expect(decl(cell, "font-variant-numeric")).toBe("tabular-nums");
+  });
+
+  it("below 390px the day columns shrink instead of overflowing the card", () => {
+    const narrow = sheet.slice(sheet.indexOf("@media (max-width: 389px)"));
+    expect(
+      decl(
+        bodyOf(narrow, ".weekdays,\n  .calendarGrid"),
+        "grid-template-columns",
+      ),
+    ).toBe("repeat(7, minmax(0, 1fr))");
   });
 
   it("a period cell is at least a touch target tall", () => {

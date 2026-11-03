@@ -68,7 +68,6 @@ export function adjacentPeriods(
 
 export interface ArchivePeriodCell {
   readonly period: string;
-
   readonly linked: boolean;
 }
 
