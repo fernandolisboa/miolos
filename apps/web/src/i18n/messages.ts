@@ -6,9 +6,9 @@ import {
 } from "@miolos/core";
 
 const wordmark = "Miolos";
-const tagline = "jogos de raciocínio por dia";
+const tagline = "puzzles de raciocínio, novos todo dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
-const signOff = "Um puzzle novo de cada, todos os dias, igual para todo mundo.";
+const signOff = "Um puzzle novo de cada jogo, todo dia, igual para todo mundo.";
 
 const freePlayDescriptions: Partial<Record<Game, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
@@ -242,7 +242,7 @@ const cellAriaQueens = (
 export const messages = {
   meta: {
     title: `${wordmark} — ${tagline}`,
-    description: `${taglineCapitalised} — Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. ${signOff}`,
+    description: `Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. ${signOff} Grátis e sem cadastro.`,
   },
   brand: {
     wordmark,
@@ -279,7 +279,7 @@ export const messages = {
       archive: "Arquivo",
       archiveKicker: "Passado",
       archiveLead:
-        "Os puzzles dos dias que passaram, para jogar quando quiser.",
+        "Todos os puzzles desde o primeiro dia. Não conta na sequência.",
     },
     menu: {
       label: "Menu",
@@ -632,7 +632,7 @@ export const messages = {
     },
   },
   attach: {
-    invitation: "Sua sequência merece um plano B.",
+    invitation: "A sua sequência ainda não tem um e-mail para recuperá-la.",
     lead: "Vincule um e-mail e a sequência sobrevive a qualquer aparelho perdido ou limpo.",
     emailLabel: "Seu e-mail",
     recoveryLabel:
@@ -1311,7 +1311,7 @@ export const messages = {
     binairo: {
       kicker: "Lógica",
       name: "Binairo",
-      description: "Zeros e uns em perfeito equilíbrio.",
+      description: "Zeros e uns, nunca três iguais seguidos.",
       play: {
         title: "Binairo",
 
