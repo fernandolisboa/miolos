@@ -17,5 +17,5 @@ export const ogCopy = {
     `Cartão do ${messages.brand.wordmark} — ${messages.archive.title} de ${month}`,
   dailyTitle: (name: string) => `${name} de hoje — ${messages.brand.wordmark}`,
   dailyDescription: (name: string) =>
-    `${name} de hoje no ${messages.brand.wordmark}: um puzzle novo por dia, igual para todo mundo. Grátis e sem cadastro.`,
+    `${name} de hoje no ${messages.brand.wordmark}: o mesmo puzzle para todo mundo. Será que você resolve? Grátis e sem cadastro.`,
 };

@@ -5,10 +5,27 @@ import {
   type RemoteConfigKey,
 } from "@miolos/core";
 
+import { DAY_GAMES } from "../play/day-games";
+import { locale } from "./locale";
+
 const wordmark = "Miolos";
 const tagline = "puzzles de raciocínio, novos todo dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada jogo, todo dia, igual para todo mundo.";
+
+const gameNames = {
+  termo: "Termo",
+  crossword: "Cruzadinha",
+  sudoku: "Sudoku",
+  nonogram: "Nonogram",
+  binairo: "Binairo",
+  queens: "Rainhas",
+  minesweeper: "Campo Minado",
+} as const satisfies Record<Game, string>;
+
+const dayGameList = new Intl.ListFormat(locale, { type: "conjunction" }).format(
+  DAY_GAMES.map((game) => gameNames[game]),
+);
 
 const freePlayDescriptions: Partial<Record<Game, string>> = {
   termo: "Seis tentativas e uma palavra nova a cada partida.",
@@ -242,7 +259,7 @@ const cellAriaQueens = (
 export const messages = {
   meta: {
     title: `${wordmark} — ${tagline}`,
-    description: `Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. ${signOff} Grátis e sem cadastro.`,
+    description: `${dayGameList}. ${signOff} Grátis e sem cadastro.`,
   },
   brand: {
     wordmark,
@@ -279,7 +296,7 @@ export const messages = {
       archive: "Arquivo",
       archiveKicker: "Passado",
       archiveLead:
-        "Todos os puzzles desde o primeiro dia. Não conta na sequência.",
+        "Perdeu algum dia? Está tudo aqui, desde o primeiro. Só não vale para a sequência.",
     },
     menu: {
       label: "Menu",
@@ -632,7 +649,7 @@ export const messages = {
     },
   },
   attach: {
-    invitation: "A sua sequência ainda não tem um e-mail para recuperá-la.",
+    invitation: "Sua sequência merece um plano B.",
     lead: "Vincule um e-mail e a sequência sobrevive a qualquer aparelho perdido ou limpo.",
     emailLabel: "Seu e-mail",
     recoveryLabel:
@@ -656,7 +673,7 @@ export const messages = {
   },
   onboarding: {
     invitation: "Puzzles do dia, iguais para todo mundo.",
-    lead: "Termo, Cruzadinha, Sudoku, Nonogram, Binairo, Rainhas e Campo Minado. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.",
+    lead: `${dayGameList}. Resolva pelo menos um dos puzzles do dia e a sua sequência começa.`,
     rollover: "A virada é à meia-noite, no horário de Brasília.",
     noAccount: "Sem cadastro — é só jogar.",
     dismiss: "Entendi",
@@ -1061,7 +1078,7 @@ export const messages = {
   games: {
     termo: {
       kicker: "Palavras",
-      name: "Termo",
+      name: gameNames.termo,
       description: "Cinco letras, seis chances, uma palavra.",
       play: {
         title: "Termo",
@@ -1144,7 +1161,7 @@ export const messages = {
     },
     sudoku: {
       kicker: "Números",
-      name: "Sudoku",
+      name: gameNames.sudoku,
       description: "Nove números, nenhuma repetição.",
       play: {
         title: "Sudoku",
@@ -1244,7 +1261,7 @@ export const messages = {
     },
     nonogram: {
       kicker: "Imagem",
-      name: "Nonogram",
+      name: gameNames.nonogram,
       description: "Os números escondem um desenho.",
       play: {
         title: "Nonogram",
@@ -1310,8 +1327,8 @@ export const messages = {
     },
     binairo: {
       kicker: "Lógica",
-      name: "Binairo",
-      description: "Zeros e uns, nunca três iguais seguidos.",
+      name: gameNames.binairo,
+      description: "Zeros e uns que odeiam andar em trio.",
       play: {
         title: "Binairo",
 
@@ -1359,7 +1376,7 @@ export const messages = {
     },
     crossword: {
       kicker: "Pistas",
-      name: "Cruzadinha",
+      name: gameNames.crossword,
       description: "Pistas curtas, respostas que se cruzam.",
       play: {
         title: "Cruzadinha",
@@ -1420,7 +1437,7 @@ export const messages = {
     },
     queens: {
       kicker: "Regiões",
-      name: "Rainhas",
+      name: gameNames.queens,
       description: "Uma coroa por linha, coluna e cor.",
       play: {
         title: "Rainhas",
@@ -1463,7 +1480,7 @@ export const messages = {
     },
     minesweeper: {
       kicker: "Minas",
-      name: "Campo Minado",
+      name: gameNames.minesweeper,
       description: "O campo inteiro se abre na lógica, sem chute.",
       play: {
         title: "Campo Minado",
