@@ -23,6 +23,7 @@ describe("the privacy policy page (T-WEB-S141)", () => {
     expect(markup).toContain('data-page="privacidade"');
     expect(markup).toContain(messages.privacy.title);
 
+    expect(messages.privacy.deletion.contactEmail).toBe("miolos@filx.app");
     expect(markup).toContain(messages.privacy.deletion.contactEmail);
     expect(markup).toContain(
       `mailto:${messages.privacy.deletion.contactEmail}`,
@@ -49,6 +50,13 @@ describe("the privacy policy page (T-WEB-S141)", () => {
     expect(markup).toContain(messages.privacy.collected.medals);
 
     expect(markup).toContain(messages.privacy.collected.push);
+
+    expect(markup).toContain(messages.privacy.controller.body);
+    expect(messages.privacy.controller.body).toContain(
+      "FILX Tecnologia Ltda. (CNPJ 42.352.077/0001-70)",
+    );
+    expect(markup).toContain(messages.privacy.controller.channelLead);
+    expect(markup).toContain(messages.privacy.controller.vendors);
   });
 });
 

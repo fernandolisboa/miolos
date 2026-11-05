@@ -30,7 +30,7 @@ beforeEach(async () => {
   vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
   vi.stubEnv("VAPID_PUBLIC_KEY", "BTestPublicKey");
   vi.stubEnv("VAPID_PRIVATE_KEY", "test-private-key");
-  vi.stubEnv("VAPID_SUBJECT", "mailto:privacidade@miolos.app");
+  vi.stubEnv("VAPID_SUBJECT", "mailto:miolos@filx.app");
 });
 
 afterEach(() => {

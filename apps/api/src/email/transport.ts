@@ -11,8 +11,6 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 const SENDER = "Miolos <miolos@filx.app>";
 
-const REPLY_TO = "privacidade@miolos.app";
-
 const SEND_TIMEOUT_MS = 10_000;
 
 const RATE_LIMIT_WAIT_MS = 1_000;
@@ -41,7 +39,6 @@ async function requestResend(message: ResendMessage): Promise<number> {
     },
     body: JSON.stringify({
       from: SENDER,
-      reply_to: REPLY_TO,
       to: [message.to],
       subject: message.subject,
       text: message.text,

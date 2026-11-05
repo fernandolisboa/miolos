@@ -170,7 +170,7 @@ describe("the hub menu closes like a disclosure (T-WEB-S772)", () => {
 });
 
 describe("the hub footer holds the legal links (T-WEB-S773)", () => {
-  it("is the page's contentinfo, with Privacidade and Termos and nothing else", () => {
+  it("is the page's contentinfo, with Privacidade and Termos as its only links and the company line", () => {
     render(<HojePage />);
     const footer = screen.getByRole("contentinfo");
     const links = within(footer).getAllByRole("link");
@@ -183,6 +183,10 @@ describe("the hub footer holds the legal links (T-WEB-S773)", () => {
       messages.hoje.footer.privacy,
       messages.hoje.footer.terms,
     ]);
+    expect(
+      within(footer).getByText(messages.hoje.footer.company),
+    ).toBeVisible();
+    expect(messages.hoje.footer.company).toContain("FILX Tecnologia");
     expect(
       within(screen.getByRole("main")).queryByText(
         messages.hoje.footer.privacy,

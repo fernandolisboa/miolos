@@ -14,6 +14,24 @@ export default function PrivacyPage() {
       </div>
 
       <section className={styles.section}>
+        <h2 className={styles.heading}>
+          {messages.privacy.controller.heading}
+        </h2>
+        <p className={styles.body}>{messages.privacy.controller.body}</p>
+        <p className={styles.body}>
+          {messages.privacy.controller.channelLead}{" "}
+          <a
+            className={styles.contact}
+            href={`mailto:${messages.privacy.deletion.contactEmail}`}
+          >
+            {messages.privacy.deletion.contactEmail}
+          </a>
+          .
+        </p>
+        <p className={styles.body}>{messages.privacy.controller.vendors}</p>
+      </section>
+
+      <section className={styles.section}>
         <h2 className={styles.heading}>{messages.privacy.collected.heading}</h2>
         <ul className={styles.list}>
           <li>{messages.privacy.collected.account}</li>

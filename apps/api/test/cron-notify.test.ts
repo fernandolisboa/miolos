@@ -41,7 +41,7 @@ beforeEach(async () => {
   vi.stubEnv("CRON_SECRET", SECRET);
   vi.stubEnv("VAPID_PUBLIC_KEY", "BTestPublicKey");
   vi.stubEnv("VAPID_PRIVATE_KEY", "test-private-key");
-  vi.stubEnv("VAPID_SUBJECT", "mailto:privacidade@miolos.app");
+  vi.stubEnv("VAPID_SUBJECT", "mailto:miolos@filx.app");
   vi.stubEnv("RESEND_API_KEY", "re_test_key");
   vi.stubEnv("WEB_ORIGIN", "https://miolos.app");
 });

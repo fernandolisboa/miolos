@@ -1,6 +1,7 @@
 # ADR-0160 — Transactional mail sends from filx.app
 
 **Status:** Accepted — 2026-11-05
+**Amended by:** [ADR-0161](./0161-miolos-mail-has-one-address-miolos-at-filx-app.md) decision 2 (no reply-to; `miolos@filx.app` is a real mailbox)
 **Amends:** [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) decision 10 (the sender identity)
 
 ## Context

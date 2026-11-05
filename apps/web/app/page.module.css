@@ -545,6 +545,14 @@
   text-underline-offset: 3px;
 }
 
+.footerCompany {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
 /* A card over 400px lays out as a row; a narrow one stays a column, both
    children spanning the grid. A lone card keeps one slot of a full row. */
 @media (width > 768px) {

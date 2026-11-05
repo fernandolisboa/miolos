@@ -12,6 +12,10 @@ const wordmark = "Miolos";
 const tagline = "puzzles de raciocínio, novos todo dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada jogo, todo dia, igual para todo mundo.";
+const company = "FILX Tecnologia";
+const companyCnpj = "42.352.077/0001-70";
+const companyLegal = `FILX Tecnologia Ltda. (CNPJ ${companyCnpj})`;
+const contactEmail = "miolos@filx.app";
 
 const gameNames = {
   termo: "Termo",
@@ -306,6 +310,7 @@ export const messages = {
     footer: {
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
+      company: `O ${wordmark} é feito pela ${company} · CNPJ ${companyCnpj}`,
     },
   },
   play: {
@@ -734,6 +739,14 @@ export const messages = {
     title: "Política de Privacidade",
     intro:
       "O Miolos funciona sem cadastro: você joga com uma conta anônima criada neste aparelho. Esta página diz o que coletamos, para quê, e como apagar tudo.",
+    controller: {
+      heading: "Quem cuida dos seus dados",
+      body: `O Miolos é feito e mantido pela ${companyLegal}. É ela a controladora dos seus dados: decide o que é coletado, para quê, e responde por isso.`,
+      channelLead:
+        "Para pedir uma cópia, corrigir ou apagar os seus dados, ou para qualquer dúvida de privacidade, o canal é o e-mail",
+      vendors:
+        "Alguns serviços recebem parte desses dados para o Miolos funcionar: a Vercel (hospedagem do site), o Neon (banco de dados), a Resend (envio de e-mails), o Proton (a caixa de e-mail do Miolos), o PostHog (medições de uso), o Google (só se você entrar com o Google) e o serviço de notificações do seu navegador (só se você ativar o lembrete). Alguns deles ficam fora do Brasil.",
+    },
     collected: {
       heading: "O que coletamos",
       account:
@@ -743,8 +756,7 @@ export const messages = {
       google:
         "O código que identifica a sua conta Google, somente se você escolher entrar com o Google. Não recebemos do Google o seu nome, a sua foto nem o seu e-mail. Para desconectar, use Ajustes.",
 
-      telemetry:
-        "Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Para parar de enviar, desligue as medições de uso em Ajustes: isso vale para as medições seguintes, nesta conta. Se você limpar o navegador, nasce uma conta anônima nova, com as medições ligadas, até você entrar de novo na sua conta. Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para privacidade@miolos.app.",
+      telemetry: `Medições técnicas mínimas de uso e desempenho: quando um puzzle começa e quando termina, quanto tempo levou, e quando uma sequência se quebra. Não gravamos a sua tela, as suas sessões, nem o conteúdo dos puzzles. Essas medições ficam ligadas à sua conta anônima, nunca ao seu e-mail, e são processadas pelo PostHog, um provedor fora do Brasil (Estados Unidos). Para parar de enviar, desligue as medições de uso em Ajustes: isso vale para as medições seguintes, nesta conta. Se você limpar o navegador, nasce uma conta anônima nova, com as medições ligadas, até você entrar de novo na sua conta. Excluir a conta apaga tudo o que guardamos aqui; para apagar também o que já está com o provedor, escreva para ${contactEmail}.`,
 
       medals:
         "As medalhas: a maioria é calculada do seu histórico de jogos; algumas são concedidas manualmente pela equipe e ficam registradas na sua conta. Todas são apagadas junto com a conta.",
@@ -773,7 +785,7 @@ export const messages = {
         "A exclusão é imediata e você mesmo faz, nesta página, na seção abaixo: apaga a conta, a sequência e todo o histórico, de uma vez.",
       contactLead:
         "Também atendemos pedidos de exclusão e qualquer dúvida de privacidade pelo e-mail",
-      contactEmail: "privacidade@miolos.app",
+      contactEmail,
     },
     noPassword: {
       heading: "O que não existe aqui",
@@ -784,8 +796,7 @@ export const messages = {
   },
   terms: {
     title: "Termos de Uso",
-    intro:
-      "O Miolos é um site de puzzles diários. Esta página diz, em palavras simples, o que você pode esperar da gente — e o que esperamos de você.",
+    intro: `O Miolos é um site de puzzles diários, feito pela ${companyLegal}. Esta página diz, em palavras simples, o que você pode esperar da gente — e o que esperamos de você.`,
     free: {
       heading: "Jogar é grátis",
       body: "Todos os puzzles são gratuitos: o desafio do dia, o arquivo e o modo livre. Não vendemos acesso a nenhum deles.",
@@ -822,7 +833,7 @@ export const messages = {
     contact: {
       heading: "Fale com a gente",
       lead: "Dúvidas sobre estes termos? Escreva para",
-      email: "privacidade@miolos.app",
+      email: contactEmail,
     },
     revision:
       "Estes termos crescem junto com o produto: uma versão completa acompanha as próximas funcionalidades.",
