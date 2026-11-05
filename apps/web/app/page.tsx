@@ -200,6 +200,7 @@ export default function HojePage() {
         <Link className={styles.footerLink} href={routes.terms}>
           {messages.hoje.footer.terms}
         </Link>
+        <p className={styles.footerCompany}>{messages.hoje.footer.company}</p>
       </footer>
     </div>
   );

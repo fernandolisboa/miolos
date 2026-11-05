@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { streakReminderBody, streakReminderSubject } from "../src/email/copy";
+import {
+  magicLinkBody,
+  streakReminderBody,
+  streakReminderSubject,
+} from "../src/email/copy";
 import { sendReminderEmail } from "../src/email/transport";
 
 type Sent = { url: string; body: string };
@@ -40,6 +44,9 @@ describe("the streak reminder email (#199, ADR-0083)", () => {
         "Você recebe este lembrete porque pediu lembretes por e-mail no Miolos.",
         "No máximo um por dia, e nunca propaganda.",
         "Para não receber mais, desmarque o lembrete por e-mail em Ajustes: https://miolos.app/ajustes",
+        "",
+        "-- ",
+        "O Miolos é feito pela FILX Tecnologia.",
       ].join("\n"),
     );
     expect(streakReminderBody(1, "https://miolos.app")).toContain(
@@ -77,6 +84,16 @@ describe("the streak reminder email (#199, ADR-0083)", () => {
       false,
     );
     expect(unkeyed).toHaveLength(0);
+  });
+
+  it("T-API-S193b: both emails end with the same signature naming FILX Tecnologia", () => {
+    const signature = "\n\n-- \nO Miolos é feito pela FILX Tecnologia.";
+    expect(
+      magicLinkBody("https://miolos.app/vincular?t=x").endsWith(signature),
+    ).toBe(true);
+    expect(
+      streakReminderBody(3, "https://miolos.app").endsWith(signature),
+    ).toBe(true);
   });
 
   it("T-API-S193a: a 429 waits a second and retries once; a second 429 counts as not sent", async () => {

@@ -13,11 +13,23 @@
 
 ---
 
-## NOW — one ⚡ action, one ⚡ decision and one optional lookup
+## NOW — the FILX paperwork, one ⚡ decision and two optional items
 
 *(Section numbers were positional and moved three times before the section emptied on 2026-08-21. Several Done rows carry that old numbering in their "Was pending in" column; each row is about its own subject, not about whatever held that number. **Cite Done rows by subject, never by section number.** As promised there, the next item filed starts at §1 again — this is it.)*
 
 *The old §1 (what Miolos does on a day with no Termo, #200, then #427's swear-word question), §2 (the Google OAuth client, #280) and §3 (Campo Minado best times and a custom size, #425) are done and in Done. §4 and §5 keep their numbers.*
+
+### §7 Make FILX the real owner of Miolos, and ask a lawyer three things
+
+The site now names **FILX Tecnologia Ltda.** (CNPJ 42.352.077/0001-70) as the controller of the data and the maker of Miolos: Privacidade, Termos, the Hoje footer and both emails. The Termos also say the Miolos name, brand and puzzles belong to "us". Spike report: https://claude.ai/artifact/HBiMeraLPHPCyhbSXnyfiU
+
+- **Do:**
+  1. Sign a short document that gives FILX the Miolos code, name and brand (cessão or licença; a lawyer picks which). Move the `miolos.app` domain to FILX.
+  2. Ask a lawyer: (a) does Marco Civil art. 15 (keep IP + date/time access logs for 6 months) apply to FILX running free sites with no ads? (b) for PostHog, Vercel, Neon, Resend and Proton (the privacidade@ mailbox), is naming them on Privacidade enough, or must FILX sign the ANPD standard clauses (Res. CD/ANPD 19/2024)? (c) does a free puzzle site need anything more for players under 18?
+  3. Ask your accountant whether FILX's CNAE (6209-1/00) covers running the sites, and how to book FILX paying foreign services (Vercel, Resend).
+- **Verify:** the document is signed; the three answers are written on the spike thread or here.
+- **Blocks:** nothing on the site. If (a) is "yes", an agent adds a 6-month access log and a line on Privacidade.
+- **Source:** the FILX spike (2026-11-05).
 
 ### §6 Optional: three orphaned Resend records on `miolos.app` — ADR-0160
 

@@ -12,6 +12,9 @@ const wordmark = "Miolos";
 const tagline = "puzzles de raciocínio, novos todo dia";
 const taglineCapitalised = `${tagline.charAt(0).toUpperCase()}${tagline.slice(1)}`;
 const signOff = "Um puzzle novo de cada jogo, todo dia, igual para todo mundo.";
+const company = "FILX Tecnologia";
+const companyCnpj = "42.352.077/0001-70";
+const companyLegal = `FILX Tecnologia Ltda. (CNPJ ${companyCnpj})`;
 
 const gameNames = {
   termo: "Termo",
@@ -306,6 +309,7 @@ export const messages = {
     footer: {
       privacy: "Política de Privacidade",
       terms: "Termos de Uso",
+      company: `O ${wordmark} é feito pela ${company} · CNPJ ${companyCnpj}`,
     },
   },
   play: {
@@ -734,6 +738,14 @@ export const messages = {
     title: "Política de Privacidade",
     intro:
       "O Miolos funciona sem cadastro: você joga com uma conta anônima criada neste aparelho. Esta página diz o que coletamos, para quê, e como apagar tudo.",
+    controller: {
+      heading: "Quem cuida dos seus dados",
+      body: `O Miolos é feito e mantido pela ${companyLegal}. É ela a controladora dos seus dados: decide o que é coletado, para quê, e responde por isso.`,
+      channelLead:
+        "Para pedir uma cópia, corrigir ou apagar os seus dados, ou para qualquer dúvida de privacidade, o canal é o e-mail",
+      vendors:
+        "Alguns serviços recebem parte desses dados para o Miolos funcionar: a Vercel (hospedagem do site), o Neon (banco de dados), a Resend (envio de e-mails), o Proton (a caixa do e-mail de privacidade), o PostHog (medições de uso), o Google (só se você entrar com o Google) e o serviço de notificações do seu navegador (só se você ativar o lembrete). Alguns deles ficam fora do Brasil.",
+    },
     collected: {
       heading: "O que coletamos",
       account:
@@ -784,8 +796,7 @@ export const messages = {
   },
   terms: {
     title: "Termos de Uso",
-    intro:
-      "O Miolos é um site de puzzles diários. Esta página diz, em palavras simples, o que você pode esperar da gente — e o que esperamos de você.",
+    intro: `O Miolos é um site de puzzles diários, feito pela ${companyLegal}. Esta página diz, em palavras simples, o que você pode esperar da gente — e o que esperamos de você.`,
     free: {
       heading: "Jogar é grátis",
       body: "Todos os puzzles são gratuitos: o desafio do dia, o arquivo e o modo livre. Não vendemos acesso a nenhum deles.",

@@ -11,6 +11,9 @@ describe("the terms-of-use page (T-WEB-S293)", () => {
     expect(markup).toContain('data-page="termos"');
     expect(markup).toContain(messages.terms.title);
     expect(markup).toContain(messages.terms.intro);
+    expect(messages.terms.intro).toContain(
+      "FILX Tecnologia Ltda. (CNPJ 42.352.077/0001-70)",
+    );
 
     expect(markup).toContain(messages.terms.free.body);
     expect(markup).toContain(messages.terms.account.body);
