@@ -156,7 +156,7 @@ describe("the policy says where measurements are turned off (T-WEB-S1022)", () =
     );
     expect(messages.privacy.collected.telemetry).toContain("seguintes");
     expect(messages.privacy.collected.telemetry).toContain(
-      "privacidade@miolos.app",
+      messages.privacy.deletion.contactEmail,
     );
   });
 });

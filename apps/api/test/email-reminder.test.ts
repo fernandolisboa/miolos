@@ -62,7 +62,6 @@ describe("the streak reminder email (#199, ADR-0083)", () => {
     const body: unknown = JSON.parse(sent[0]?.body ?? "{}");
     expect(body).toEqual({
       from: "Miolos <miolos@filx.app>",
-      reply_to: "privacidade@miolos.app",
       to: ["ana@example.org"],
       subject: streakReminderSubject,
       text: streakReminderBody(3, "https://miolos.app"),
