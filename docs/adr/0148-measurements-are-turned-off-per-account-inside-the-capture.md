@@ -1,6 +1,7 @@
 # ADR-0148 — Measurements are turned off per account, inside the capture
 
 **Status:** Accepted — 2026-10-22 (issue #37)
+**Amended by:** [ADR-0161](./0161-miolos-mail-has-one-address-miolos-at-filx-app.md) — the published mailbox is `miolos@filx.app`; `privacidade@miolos.app` no longer exists
 **Amends:** [ADR-0069](./0069-telemetry-is-five-server-anchored-events-over-a-hand-rolled-capture.md) decision 5 ("no opt-out UI")
 
 ## Context

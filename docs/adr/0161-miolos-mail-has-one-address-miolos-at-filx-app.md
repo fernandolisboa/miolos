@@ -1,7 +1,7 @@
 # ADR-0161 — Miolos mail has one address: miolos@filx.app
 
 **Status:** Accepted — 2026-11-05
-**Amends:** [ADR-0160](./0160-transactional-mail-sends-from-filx-app.md) decision 2 (the reply-to)
+**Amends:** [ADR-0160](./0160-transactional-mail-sends-from-filx-app.md) decision 2 (the reply-to); [ADR-0050](./0050-email-attach-magic-link-tokens-consents-and-the-lgpd-minimum.md) decision 12, [ADR-0069](./0069-telemetry-is-five-server-anchored-events-over-a-hand-rolled-capture.md) decision 5 and [ADR-0148](./0148-measurements-are-turned-off-per-account-inside-the-capture.md) (the mailbox they name)
 
 ## Context
 
