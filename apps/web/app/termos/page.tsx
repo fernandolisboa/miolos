@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { messages, routes } from "../../src/i18n";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = { alternates: { canonical: routes.terms } };
 
 export default function TermsPage() {
   return (

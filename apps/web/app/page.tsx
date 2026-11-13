@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { recordFor } from "@miolos/core";
 import type { ReactNode } from "react";
 
@@ -22,6 +23,8 @@ import { HubStreak } from "./hub-streak";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { alternates: { canonical: routes.home } };
 
 function todayInSaoPaulo(now: Date): { weekday: string; rest: string } {
   const parts = new Intl.DateTimeFormat(locale, {
