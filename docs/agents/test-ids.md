@@ -40,7 +40,7 @@ The second `sort` is not decoration. `sort -u` alone is **lexical**, so it order
 | `T-CORE` | `S220`    | `S217`         | never used            |
 | `T-DB`   | `S161`    | `S160`         | `T-DB-21`             |
 | `T-API`  | `S390`    | `S389`         | `T-API-16`            |
-| `T-WEB`  | `S1113`   | `S1112`        | `T-WEB-23`            |
+| `T-WEB`  | `S1114`   | `S1113`        | `T-WEB-23`            |
 | `T-LINT` | `S74`     | `S73`          | `T-LINT-10`           |
 
 #461 (the archive calendar picks months and years in place, ADR-0159) spent **`T-WEB-S1109…S1112`** in `archive-picker.test.tsx`: `S1109` the periods (`archiveYears`, `publishedYears`, `yearMonths`, `formatMonthShort`), `S1110` the drill-down (title to months to years, year steps, only months and years with puzzles are interactive, the current month returns to its days), `S1111` Escape climbs one level with focus on the title, `S1112` the stacked views, the period cells' face, and the day columns shrinking below 390px. Re-aimed in place: `S167` and `S182` (the month grid replaces the month list; the href stays in the markup), `S792` (the month grid marks the month on screen; the current cell keeps its label on hover), `S793` (`adjacentPeriods`) and `S181` (the picker hints replace `months.heading`).

@@ -1,11 +1,16 @@
 import { GAMES } from "@miolos/core";
+import type { Metadata } from "next";
 import Link from "next/link";
 
-import { freePlayRoutes, messages } from "../../src/i18n";
+import { freePlayRoutes, messages, routes } from "../../src/i18n";
 import { accentVars } from "../../src/play/accent";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import { OfflineNote } from "../../src/free-play/offline-note";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = {
+  alternates: { canonical: routes.freePlay },
+};
 
 export default function FreePlayIndexPage() {
   return (

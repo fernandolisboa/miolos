@@ -1,7 +1,11 @@
-import { messages } from "../../src/i18n";
+import type { Metadata } from "next";
+
+import { messages, routes } from "../../src/i18n";
 import { PageTopBar } from "../../src/components/page-top-bar";
 import { DeleteAccount } from "./delete-account";
 import styles from "./page.module.css";
+
+export const metadata: Metadata = { alternates: { canonical: routes.privacy } };
 
 export default function PrivacyPage() {
   return (
