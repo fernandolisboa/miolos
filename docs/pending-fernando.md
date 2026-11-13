@@ -23,7 +23,7 @@
 
 Google picked `https://www.miolos.app/` as the home page's canonical because `www` answered a **307** (temporary) redirect and the home declared no canonical. On 2026-11-13 Fernando chose "Sim, faça você" on a decision card and an agent added `www.miolos.app` to **miolos-web** on Vercel as a **308** redirect to `miolos.app` (`curl -sI https://www.miolos.app/` answers `308`). Every page the sitemap lists outside the archive now declares itself canonical (T-WEB-S1113), and Search Console had found no sitemap.
 
-- **Do:**
+- **Do:** after the canonical PR is live on production (steps 2 and 3 fail before it):
   1. Search Console → **Sitemaps** → add `sitemap.xml` → Submit.
   2. **URL inspection** → `https://miolos.app/` → *Request indexing*.
   3. **Pages** → *Duplicate without user-selected canonical* → **Validate fix**. Leave *Page with redirect* (http and www must redirect) and *Crawled - currently not indexed* (the API root and font files are not pages) alone: both are normal.
